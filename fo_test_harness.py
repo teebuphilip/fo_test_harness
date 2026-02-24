@@ -1295,6 +1295,7 @@ it will be considered DELETED. QA will flag it as missing and you'll loop foreve
 **CRITICAL FILE PATH RULES (BOILERPLATE MODE):**
 - Output files ONLY under `business/**`.
 - REQUIRED: include `business/README-INTEGRATION.md`.
+- REQUIRED: include `business/package.json`.
 - Every code block MUST have an explicit **FILE: path/to/file** header.
 - Do NOT emit unlabeled code fences.
 **HARD FAIL CONDITIONS:**
@@ -1304,6 +1305,7 @@ it will be considered DELETED. QA will flag it as missing and you'll loop foreve
 **FILE: business/models/Client.js**
 **FILE: business/services/ReportService.js**
 **FILE: business/tests/report_service.test.js**
+**FILE: business/package.json**
 **INVALID EXAMPLES (DO NOT OUTPUT):**
 **FILE: backend/tests/test_clients.py**
 **FILE: frontend/src/components/ClientList.jsx**
@@ -1311,6 +1313,7 @@ it will be considered DELETED. QA will flag it as missing and you'll loop foreve
 **PRE-PROMPT CHECKLIST (MUST PASS BEFORE YOU OUTPUT):**
 - All files are under `business/**`.
 - `business/README-INTEGRATION.md` is included.
+- `business/package.json` is included.
 - Every code block has a **FILE:** header.
 - No unlabeled code fences.
 """
