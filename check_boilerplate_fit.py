@@ -9,12 +9,16 @@ If YES: outputs the exact file list Claude should build in business/
 If NO:  outputs why it does not fit and what custom approach is needed
 
 USAGE:
-    ./check_boilerplate_fit.py <intake_json> <boilerplate_zip>
+    ./check_boilerplate_fit.py <intake_json> <boilerplate_zip_or_dir>
 
 EXAMPLES:
     ./check_boilerplate_fit.py \\
         intake_hero_runs/wynwood_thoroughbreds/wynwood_thoroughbreds.json \\
         /path/to/teebu-saas-platform.zip
+
+    ./check_boilerplate_fit.py \\
+        intake_hero_runs/wynwood_thoroughbreds/wynwood_thoroughbreds.json \\
+        /path/to/teebu-saas-platform
 
 OUTPUT:
     Terminal: colored verdict summary
@@ -85,23 +89,14 @@ def print_info(text: str):
 # BOILERPLATE ZIP READER
 # ============================================================
 
-def read_boilerplate_manifest(zip_path: Path) -> str:
+def read_boilerplate_manifest(path: Path) -> str:
     """
     Extract a structured manifest of what the boilerplate provides.
 
-    We read:
-      - The 4 directives (most important — they tell Claude what's built)
-      - The top-level README
-      - The saas-boilerplate README
-      - backend/main.py route list (what endpoints already exist)
-      - frontend/src/pages/ file list (what pages already exist)
-      - teebu-shared-libs README (what libraries are available)
-
-    We do NOT inline every file — that would blow the token budget.
-    We give Claude enough to make a fit decision.
+    Accepts either a ZIP file or a directory path.
     """
-    if not zip_path.exists():
-        raise FileNotFoundError(f"Boilerplate ZIP not found: {zip_path}")
+    if not path.exists():
+        raise FileNotFoundError(f"Boilerplate not found: {path}")
 
     # Files we want to read in full
     FULL_READ_PATTERNS = [
@@ -122,22 +117,30 @@ def read_boilerplate_manifest(zip_path: Path) -> str:
         'teebu-shared-libs/lib/',
     ]
 
+    def normalize(p: str) -> str:
+        return p.replace('\\', '/').lstrip('./')
+
     bundle = []
     bundle.append("<<<BEGIN_BOILERPLATE_MANIFEST>>>")
     bundle.append("")
 
-    with zipfile.ZipFile(zip_path, 'r') as zf:
-        all_names = zf.namelist()
+    if path.is_dir():
+        # Directory mode
+        all_names = []
+        for root, _, files in os.walk(path):
+            for file in files:
+                file_path = Path(root) / file
+                rel = normalize(str(file_path.relative_to(path)))
+                all_names.append(rel)
 
         # Read full content for key files
         bundle.append("## FULL CONTENT: KEY DIRECTIVE AND README FILES")
         bundle.append("")
         for name in sorted(all_names):
-            # Match any path ending with one of our target filenames
             for pattern in FULL_READ_PATTERNS:
                 if name.endswith(pattern) or name.endswith(pattern.lstrip('/')):
                     try:
-                        content = zf.read(name).decode('utf-8', errors='replace')
+                        content = (path / name).read_text(encoding='utf-8', errors='replace')
                         bundle.append(f"<<<BEGIN_FILE: {name}>>>")
                         bundle.append(content)
                         bundle.append(f"<<<END_FILE: {name}>>>")
@@ -161,6 +164,43 @@ def read_boilerplate_manifest(zip_path: Path) -> str:
         bundle.append("## COMPLETE FILE TREE")
         for name in sorted(all_names):
             bundle.append(f"  {name}")
+
+    else:
+        # ZIP mode
+        with zipfile.ZipFile(path, 'r') as zf:
+            all_names = [normalize(n) for n in zf.namelist()]
+
+            # Read full content for key files
+            bundle.append("## FULL CONTENT: KEY DIRECTIVE AND README FILES")
+            bundle.append("")
+            for name in sorted(all_names):
+                for pattern in FULL_READ_PATTERNS:
+                    if name.endswith(pattern) or name.endswith(pattern.lstrip('/')):
+                        try:
+                            content = zf.read(name).decode('utf-8', errors='replace')
+                            bundle.append(f"<<<BEGIN_FILE: {name}>>>")
+                            bundle.append(content)
+                            bundle.append(f"<<<END_FILE: {name}>>>")
+                            bundle.append("")
+                        except Exception as e:
+                            bundle.append(f"<<<SKIP: {name} — {e}>>>")
+                        break
+
+            # Add file listings for structural context
+            bundle.append("## FILE LISTINGS: BOILERPLATE STRUCTURE")
+            bundle.append("")
+            for pattern in LIST_ONLY_PATTERNS:
+                matching = [n for n in all_names if pattern in n and not n.endswith('/')]
+                if matching:
+                    bundle.append(f"### Files under {pattern}")
+                    for f in sorted(matching):
+                        bundle.append(f"  {f}")
+                    bundle.append("")
+
+            # Full file tree for complete picture
+            bundle.append("## COMPLETE FILE TREE")
+            for name in sorted(all_names):
+                bundle.append(f"  {name}")
 
     bundle.append("")
     bundle.append("<<<END_BOILERPLATE_MANIFEST>>>")
@@ -512,6 +552,10 @@ Examples:
   ./check_boilerplate_fit.py \\
       intake_hero_runs/wynwood_thoroughbreds/wynwood_thoroughbreds.json \\
       /path/to/teebu-saas-platform.zip
+
+  ./check_boilerplate_fit.py \\
+      intake_hero_runs/wynwood_thoroughbreds/wynwood_thoroughbreds.json \\
+      /path/to/teebu-saas-platform
         """
     )
 
@@ -521,9 +565,9 @@ Examples:
         help='Path to combined intake JSON (output of run_intake_v7.sh)'
     )
     parser.add_argument(
-        'boilerplate_zip',
+        'boilerplate_path',
         type=Path,
-        help='Path to teebu-saas-platform.zip'
+        help='Path to teebu-saas-platform.zip or teebu-saas-platform/ directory'
     )
 
     args = parser.parse_args()
@@ -539,8 +583,8 @@ Examples:
         print_error(f"Intake file not found: {args.intake_file}")
         sys.exit(1)
 
-    if not args.boilerplate_zip.exists():
-        print_error(f"Boilerplate ZIP not found: {args.boilerplate_zip}")
+    if not args.boilerplate_path.exists():
+        print_error(f"Boilerplate not found: {args.boilerplate_path}")
         sys.exit(1)
 
     # Create output directory
@@ -548,7 +592,7 @@ Examples:
 
     print_header("BOILERPLATE FIT CHECKER")
     print_info(f"Intake:     {args.intake_file}")
-    print_info(f"Boilerplate: {args.boilerplate_zip}")
+    print_info(f"Boilerplate: {args.boilerplate_path}")
 
     # Load intake JSON
     print_info("Loading intake JSON...")
@@ -568,12 +612,12 @@ Examples:
     print_success(f"Loaded intake: {startup_id}")
 
     # Read boilerplate manifest
-    print_info("Reading boilerplate ZIP...")
+    print_info("Reading boilerplate (ZIP or directory)...")
     try:
-        boilerplate_manifest = read_boilerplate_manifest(args.boilerplate_zip)
+        boilerplate_manifest = read_boilerplate_manifest(args.boilerplate_path)
         print_success("Boilerplate manifest built")
     except Exception as e:
-        print_error(f"Failed to read boilerplate ZIP: {e}")
+        print_error(f"Failed to read boilerplate: {e}")
         sys.exit(1)
 
     # Build prompt

@@ -1541,10 +1541,11 @@ Execute deployment using the locked FO Deploy Governance provided below.
 class FOHarness:
     """Main orchestrator for BUILD → QA → DEPLOY"""
 
-    def __init__(self, intake_file: Path, block: str, do_deploy: bool):
+    def __init__(self, intake_file: Path, block: str, do_deploy: bool, cli_args: argparse.Namespace = None):
         self.intake_file = intake_file
         self.block       = block.upper()   # 'A' or 'B'
         self.do_deploy   = do_deploy
+        self.cli_args    = cli_args
 
         # Load intake JSON
         # Handles both pure JSON and marker-wrapped formats
@@ -1601,6 +1602,9 @@ class FOHarness:
         self.run_dir = Config.OUTPUT_DIR / f'{self.startup_id}_BLOCK_{self.block}_{timestamp}'
         self.run_dir.mkdir(parents=True, exist_ok=True)
 
+        # Persist run metadata for traceability
+        self._write_run_metadata()
+
         # Initialize components
         self.claude    = ClaudeClient()
         self.chatgpt   = ChatGPTClient()
@@ -1613,6 +1617,27 @@ class FOHarness:
         print_info(f"Boilerplate:   {'YES' if self.use_boilerplate else 'NO'}")
         print_info(f"Deploy:        {'YES' if self.do_deploy else 'NO — ZIP output only'}")
         print_info(f"Run directory: {self.run_dir}")
+
+    def _write_run_metadata(self):
+        """Write a run metadata file with CLI args and effective settings."""
+        metadata = {
+            "timestamp": datetime.now().isoformat(),
+            "intake_file": str(self.intake_file),
+            "startup_id": self.startup_id,
+            "block": self.block,
+            "deploy": self.do_deploy,
+            "tech_stack": self.tech_stack,
+            "effective_tech_stack": self.effective_tech_stack,
+            "use_boilerplate": self.use_boilerplate,
+            "build_governance_zip": str(Config.BUILD_GOVERNANCE_ZIP),
+            "deploy_governance_zip": str(Config.DEPLOY_GOVERNANCE_ZIP) if self.do_deploy else None,
+            "platform_boilerplate_dir": str(Config.PLATFORM_BOILERPLATE_DIR),
+            "cli_args": vars(self.cli_args) if self.cli_args else None
+        }
+
+        metadata_path = self.run_dir / 'run_metadata.json'
+        with open(metadata_path, 'w') as f:
+            json.dump(metadata, f, indent=2)
 
     def _log_claude_usage(self, response: dict, iteration: int, is_continuation: bool = False, continuation_num: int = 0) -> dict:
         """
@@ -2596,6 +2621,19 @@ Generate 2-3 test files with **FILE:** headers."""
         if artifact_count < min_count:
             errors.append(f"Only {artifact_count} artifacts in manifest (expected at least {min_count})")
 
+        # Check 7: Boilerplate integration (pre-flight guardrail)
+        if getattr(self, 'use_boilerplate', False):
+            non_business_paths = [p for p in manifest_files if not p.startswith('business/')]
+            if non_business_paths:
+                sample = ", ".join(non_business_paths[:5])
+                errors.append(f"Boilerplate build contains non-business paths: {sample}")
+                if len(non_business_paths) > 5:
+                    errors.append(f"  ... and {len(non_business_paths) - 5} more")
+
+            has_integration_readme = any(p == 'business/README-INTEGRATION.md' for p in manifest_files)
+            if not has_integration_readme:
+                errors.append("Missing required boilerplate integration doc: business/README-INTEGRATION.md")
+
         return len(errors) == 0, errors, missing_files
 
     def execute_build_qa_loop(self) -> Tuple[bool, str]:
@@ -3400,7 +3438,7 @@ Examples:
 
     # Run
     try:
-        harness = FOHarness(args.intake_file, block, do_deploy=args.deploy)
+        harness = FOHarness(args.intake_file, block, do_deploy=args.deploy, cli_args=args)
         success = harness.run()
         sys.exit(0 if success else 1)
 
