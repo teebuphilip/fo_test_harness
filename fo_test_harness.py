@@ -852,16 +852,19 @@ class ArtifactManager:
         else:
             print_warning(f"  → Generated: build_state.json (IN_PROGRESS — no completion marker found)")
 
-        # Always generate artifact_manifest.json from actual extracted files
+        self._write_artifact_manifest(artifacts_dir)
+
+        return count
+
+    def _write_artifact_manifest(self, artifacts_dir: Path):
+        """Generate artifact_manifest.json from files in artifacts_dir."""
         manifest_path = artifacts_dir / 'artifact_manifest.json'
         manifest_artifacts = []
         for file_path in sorted(artifacts_dir.rglob('*')):
             if file_path.is_file():
                 rel_path = str(file_path.relative_to(artifacts_dir))
-                # Skip metadata files themselves
                 if rel_path in ('artifact_manifest.json', 'build_state.json', 'execution_declaration.json'):
                     continue
-                # Compute SHA256
                 file_content = file_path.read_bytes()
                 sha256 = hashlib.sha256(file_content).hexdigest()
                 manifest_artifacts.append({
@@ -880,7 +883,31 @@ class ArtifactManager:
             json.dump(manifest, f, indent=2)
         print_info(f"  → Generated: artifact_manifest.json ({len(manifest_artifacts)} files)")
 
-        return count
+    def prune_non_business_artifacts(self, iteration: int):
+        """Remove non-business artifacts and regenerate manifest."""
+        artifacts_dir = self.build_dir / f'iteration_{iteration:02d}_artifacts'
+        if not artifacts_dir.exists():
+            return
+
+        removed = 0
+        for file_path in sorted(artifacts_dir.rglob('*')):
+            if not file_path.is_file():
+                continue
+            rel_path = str(file_path.relative_to(artifacts_dir))
+            if rel_path in ('artifact_manifest.json', 'build_state.json', 'execution_declaration.json'):
+                continue
+            if not rel_path.startswith('business/'):
+                file_path.unlink()
+                removed += 1
+
+        # Remove empty directories
+        for dir_path in sorted(artifacts_dir.rglob('*'), reverse=True):
+            if dir_path.is_dir() and not any(dir_path.iterdir()):
+                dir_path.rmdir()
+
+        if removed:
+            print_warning(f"  → Pruned {removed} non-business artifact(s)")
+            self._write_artifact_manifest(artifacts_dir)
 
     def save_qa_report(self, iteration: int, report: str):
         """Save QA report from ChatGPT"""
@@ -1281,6 +1308,11 @@ it will be considered DELETED. QA will flag it as missing and you'll loop foreve
 **FILE: backend/tests/test_clients.py**
 **FILE: frontend/src/components/ClientList.jsx**
 **FILE: package.json**
+**PRE-PROMPT CHECKLIST (MUST PASS BEFORE YOU OUTPUT):**
+- All files are under `business/**`.
+- `business/README-INTEGRATION.md` is included.
+- Every code block has a **FILE:** header.
+- No unlabeled code fences.
 """
 
         # Inject external integration policy
@@ -2927,6 +2959,10 @@ Continue now with proper **FILE:** format:"""
                         print_success(f"Build complete — {len(all_files)} files extracted")
 
                     self.artifacts.save_build_output(iteration, build_output)
+
+                    # Post-build pruning for boilerplate mode: keep business/** only
+                    if self.use_boilerplate:
+                        self.artifacts.prune_non_business_artifacts(iteration)
 
                     # FIX #6: save defect fix artifact on iterations 2+
                     if iteration > 1 and previous_defects:
