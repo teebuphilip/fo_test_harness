@@ -1,0 +1,4751 @@
+[2026-02-13T10:36:17.918625]
+You are a senior software architect evaluating whether a SaaS boilerplate
+is a good fit for a specific business idea.
+
+Your job is to:
+1. Analyze the business intake data carefully
+2. Review what the boilerplate already provides
+3. Determine if this business fits the boilerplate architecture
+4. If YES: produce a precise technical decomposition of what needs to be built
+5. Output a structured JSON verdict
+
+---
+
+## BUSINESS INTAKE DATA
+
+Startup ID:   wynwood_thoroughbreds
+Startup Name: Wynwood Thoroughbreds
+
+### Block A (Tier 1 analysis):
+Not present
+
+### Block B (Tier 2 analysis):
+Not present
+
+### Hero Answers (founder Q&A):
+{
+  "Q1_problem_customer": "People want to be part of horse ownership but do not trust large syndicates due to high markups, lack of transparency, and impersonal experiences.",
+  "Q2_target_user": [
+    "New or emerging owners entering the sport",
+    "Passionate racing fans seeking deeper involvement",
+    "Professionals or small investors interested in breeding strategy and long-term value"
+  ],
+  "Q3_success_metric": "Within 30 days: professional brand, simple website, small engaged email list, 1\u20132 ownership or breeding opportunities, and first paying members.",
+  "Q4_must_have_features": [
+    "Ownership membership access",
+    "Monthly horse and breeding updates",
+    "Educational content",
+    "Direct communication with founder",
+    "Simple brand website",
+    "Shopify merchandise store"
+  ],
+  "Q5_non_goals": [
+    "Competing with large-scale micro-share platforms",
+    "Becoming a mass-market syndicate",
+    "Building a complex tech platform",
+    "Losing boutique, personal-touch positioning"
+  ],
+  "Q6_constraints": {
+    "brand_positioning": "Boutique, high-touch, transparent",
+    "compliance": "Must follow racing and syndicate regulations",
+    "promise_limits": "No overpromising financial returns",
+    "scale_limits": "Do not dilute brand with too many horses"
+  },
+  "Q7_data_sources": [
+    "Equineline",
+    "TrueNicks",
+    "Racing entries and results feeds"
+  ],
+  "Q8_integrations": [
+    "Payment processor",
+    "Email automation tools",
+    "Shopify store"
+  ],
+  "Q9_risks": [
+    "Loss of transparency",
+    "Brand dilution from too many horses",
+    "Overpromising returns",
+    "Regulatory compliance issues"
+  ],
+  "Q10_shipping_preference": "Start with a simple website, brand identity, and first ownership opportunities before adding technical complexity."
+}
+
+---
+
+## BOILERPLATE MANIFEST
+
+The following is what the Teebu SaaS boilerplate already provides.
+Read it carefully before making your verdict.
+
+<<<BEGIN_BOILERPLATE_MANIFEST>>>
+
+## FULL CONTENT: KEY DIRECTIVE AND README FILES
+
+<<<BEGIN_FILE: teebu-saas-platform/README.md>>>
+# Teebu SaaS Platform - Complete Package
+
+**Everything needed to build 25 automated businesses.**
+
+---
+
+## What's In This Package
+
+```
+teebu-saas-platform/
+│
+├── teebu-shared-libs/          # 5 production libraries
+│   ├── lib/                    # Library code
+│   │   ├── stripe_lib.py       # Payments (828 lines)
+│   │   ├── mailerlite_lib.py   # Email (680 lines)
+│   │   ├── auth0_lib.py        # Auth (750 lines)
+│   │   ├── git_lib.py          # Git ops (720 lines)
+│   │   └── analytics_lib.py    # GA4 (650 lines)
+│   ├── tests/                  # Library tests
+│   │   ├── test_stripe_lib.py
+│   │   ├── test_mailerlite_lib.py
+│   │   ├── test_auth0_lib.py
+│   │   ├── test_git_lib.py
+│   │   └── test_analytics_lib.py
+│   ├── config/                 # Config templates
+│   │   ├── af_stripe_config.json
+│   │   ├── af_mailerlite_config.json
+│   │   ├── af_auth0_config.json
+│   │   ├── af_git_config.json
+│   │   ├── fo_stripe_config.json
+│   │   ├── fo_mailerlite_config.json
+│   │   ├── fo_auth0_config.json
+│   │   ├── fo_git_config.json
+│   │   └── analytics_config.json
+│   ├── run_all_tests.py
+│   └── requirements.txt
+│
+└── saas-boilerplate/           # Full-stack SaaS boilerplate
+    ├── backend/                # FastAPI backend
+    │   ├── core/
+    │   │   ├── loader.py       # Auto-loads business routes
+    │   │   └── database.py     # SQLAlchemy ORM
+    │   ├── tests/              # Boilerplate tests
+    │   ├── main.py             # Entry point
+    │   └── requirements.txt
+    ├── frontend/               # React frontend
+    │   └── src/
+    │       ├── core/
+    │       │   └── loader.js   # Auto-loads business pages
+    │       ├── pages/          # 10 generic pages
+    │       ├── components/     # 5 reusable components
+    │       ├── hooks/          # 2 custom hooks
+    │       └── __tests__/      # Frontend tests
+    ├── business/               # YOUR CODE GOES HERE
+    │   ├── backend/routes/     # Drop .py files
+    │   ├── frontend/pages/     # Drop .jsx files
+    │   └── config/
+    │       └── business_config.json
+    └── directives/             # Instructions for Claude/FO
+        ├── BUILD_DIRECTIVE.md
+        ├── backend_directive.md
+        ├── frontend_directive.md
+        └── testing_directive.md
+```
+
+---
+
+## Quick Start
+
+### 1. Validate Libraries
+
+```bash
+cd teebu-shared-libs
+pip install -r requirements.txt --break-system-packages
+python run_all_tests.py
+
+# Expected:
+# ✓ 74 tests passed
+```
+
+### 2. Configure Business
+
+```bash
+cd saas-boilerplate
+cp business/config/business_config.json.example business/config/business_config.json
+# Edit with your business details
+```
+
+### 3. Start Backend
+
+```bash
+cd saas-boilerplate/backend
+pip install -r requirements.txt --break-system-packages
+uvicorn main:app --reload
+
+# Logs show:
+# ✓ Database initialized
+# ✓ Loaded 0 business route(s)
+# API ready at http://localhost:8000
+```
+
+### 4. Start Frontend
+
+```bash
+cd saas-boilerplate/frontend
+npm install
+npm start
+
+# Opens http://localhost:3000
+```
+
+### 5. Add Business Logic
+
+```bash
+# Backend: drop file here
+business/backend/routes/your_feature.py
+
+# Frontend: drop file here
+business/frontend/pages/YourPage.jsx
+
+# Auto-loads on startup - zero integration
+```
+
+---
+
+## Auto-Loader (Key Feature)
+
+**Drop files → They work. No imports. No registration.**
+
+```python
+# business/backend/routes/email_rules.py
+from fastapi import APIRouter
+
+router = APIRouter()  # Required
+
+@router.get("/list")
+def list_rules():
+    return {"rules": []}
+
+# Result: /api/email_rules/list works immediately
+```
+
+```jsx
+// business/frontend/pages/EmailDashboard.jsx
+export default function EmailDashboard() {
+  return <div>Email Dashboard</div>;
+}
+
+// Result: /dashboard/email-dashboard works immediately
+```
+
+---
+
+## Libraries Summary
+
+| Library | Lines | Purpose |
+|---|---|---|
+| stripe_lib.py | 828 | Payments, subscriptions, webhooks |
+| mailerlite_lib.py | 680 | Email campaigns, subscribers |
+| auth0_lib.py | 750 | Users, roles, auth |
+| git_lib.py | 720 | Repo management |
+| analytics_lib.py | 650 | GA4 event tracking |
+| **Total** | **3,628** | |
+
+---
+
+## Boilerplate Summary
+
+| Category | Count |
+|---|---|
+| Backend routes | 7 generic endpoints |
+| Frontend pages | 10 generic pages |
+| Components | 5 reusable components |
+| Tests (boilerplate) | 8 test files |
+| Test templates (business) | 2 templates |
+| Directives | 4 files |
+| Documentation | 8 files |
+
+---
+
+## For Each New Business
+
+```bash
+# 1. Copy boilerplate
+cp -r saas-boilerplate/ my-new-business/
+
+# 2. Edit config
+vi my-new-business/business/config/business_config.json
+
+# 3. Give Claude directive
+claude --context directives/BUILD_DIRECTIVE.md \
+       --context directives/backend_directive.md \
+       "Build [BusinessName] features in business/"
+
+# 4. Test
+cd my-new-business/saas-boilerplate/backend
+pytest tests/
+
+# 5. Deploy
+./deploy.sh
+```
+
+**Time per business: ~14 minutes**
+**25 businesses: ~6 hours**
+
+---
+
+## Running All Tests
+
+### Library Tests
+```bash
+cd teebu-shared-libs
+python run_all_tests.py
+# 74 tests
+```
+
+### Boilerplate Backend Tests
+```bash
+cd saas-boilerplate/backend
+python run_tests.py
+# 4 test files
+```
+
+### Boilerplate Frontend Tests
+```bash
+cd saas-boilerplate/frontend
+npm test
+# 4 test files
+```
+
+### Business Tests (per business)
+```bash
+# Copy templates, adapt, run
+pytest business/backend/tests/
+npm test -- business/frontend/tests/
+```
+
+---
+
+## Directives
+
+All 4 directives updated for v2.0 auto-loader architecture:
+
+- **BUILD_DIRECTIVE.md** - Master build instructions
+- **backend_directive.md** - Backend patterns (no integration)
+- **frontend_directive.md** - Frontend patterns (no integration)
+- **testing_directive.md** - Testing patterns
+
+**Key rule in all directives:**
+```
+DO NOT edit main.py or App.js
+DO NOT import or register anything
+Just drop files in business/ - they auto-load
+```
+
+---
+
+## Project Stats
+
+| Metric | Value |
+|---|---|
+| Total files | 100+ |
+| Total lines of code | 8,000+ |
+| Libraries | 5 |
+| Test files | 16 |
+| Directives | 4 |
+| Documentation files | 12 |
+| Time to set up new business | 14 min |
+| Time to deploy | 8 min |
+| Time saved per business | 107 hours |
+| Time saved × 25 businesses | 2,675 hours |
+
+---
+
+## Architecture
+
+```
+AF Portfolio (25 businesses)
+     ↓
+Uses saas-boilerplate (this package)
+     ↓
+Uses teebu-shared-libs (this package)
+     ↓
+Stripe + Auth0 + MailerLite + GA4 + Git
+```
+
+**One package. Everything needed. Ready to scale.**
+
+<<<END_FILE: teebu-saas-platform/README.md>>>
+
+<<<BEGIN_FILE: teebu-saas-platform/saas-boilerplate/README.md>>>
+# SaaS Boilerplate
+
+**Config-driven SaaS starter for rapid deployment of multiple businesses.**
+
+Change one JSON file → complete branded SaaS app.
+
+---
+
+## What You Get
+
+**Backend (FastAPI):**
+- Auth0 login/signup integration
+- Stripe subscriptions + webhooks
+- MailerLite email capture
+- Google Analytics tracking
+- RESTful API with all endpoints
+- Config-driven business settings
+
+**Frontend (React + Tailwind):**
+- Home page with hero, features, testimonials
+- Pricing page (loads from config)
+- Login/Signup (Auth0)
+- Dashboard (protected routes)
+- Account settings (subscription management)
+- Contact form
+- Terms/Privacy pages (loads from config)
+- Fully responsive
+
+**One Config File Changes Everything:**
+- Business name, tagline, colors
+- All page content
+- Pricing plans
+- Features, testimonials
+- Legal text
+- Footer links
+
+---
+
+## Quick Start
+
+### 1. Install Dependencies
+
+```bash
+# Backend
+cd backend
+pip install -r requirements.txt --break-system-packages
+
+# Frontend
+cd ../frontend
+npm install
+```
+
+### 2. Configure
+
+```bash
+# Backend - copy and edit
+cp backend/.env.example backend/.env
+# Fill in: Stripe, Auth0, MailerLite, GA4 keys
+
+# Copy business config
+cp business_config.json backend/config/
+cp business_config.json frontend/src/config/
+
+# Copy library configs
+cp *_config.json backend/config/
+```
+
+### 3. Run
+
+```bash
+# Backend (terminal 1)
+cd backend
+uvicorn main:app --reload --port 8000
+
+# Frontend (terminal 2)
+cd frontend
+npm start
+```
+
+Visit: http://localhost:3000
+
+---
+
+## Project Structure
+
+```
+saas-boilerplate/
+├── backend/
+│   ├── main.py                 # FastAPI app (CREATED)
+│   ├── requirements.txt        # Python deps (CREATED)
+│   ├── .env.example           # Env vars template (CREATED)
+│   ├── config/
+│   │   ├── business_config.json
+│   │   ├── stripe_config.json
+│   │   ├── mailerlite_config.json
+│   │   ├── auth0_config.json
+│   │   └── analytics_config.json
+│   └── libs/                  # Symlink to shared-libs
+│       ├── stripe_lib.py
+│       ├── mailerlite_lib.py
+│       ├── auth0_lib.py
+│       ├── git_lib.py
+│       └── analytics_lib.py
+│
+├── frontend/
+│   ├── package.json           # Dependencies (CREATED)
+│   ├── tailwind.config.js     # Tailwind setup
+│   ├── public/
+│   │   ├── index.html
+│   │   ├── logo.svg
+│   │   └── favicon.ico
+│   └── src/
+│       ├── index.js           # Entry point
+│       ├── App.js             # Main app component
+│       ├── config/
+│       │   └── business_config.json
+│       ├── pages/
+│       │   ├── Home.jsx
+│       │   ├── Pricing.jsx
+│       │   ├── Login.jsx
+│       │   ├── Signup.jsx
+│       │   ├── Dashboard.jsx
+│       │   ├── AccountSettings.jsx
+│       │   ├── Terms.jsx
+│       │   ├── Privacy.jsx
+│       │   ├── FAQ.jsx
+│       │   └── Contact.jsx
+│       ├── components/
+│       │   ├── Navbar.jsx
+│       │   ├── Footer.jsx
+│       │   ├── PricingCard.jsx
+│       │   ├── FeatureCard.jsx
+│       │   └── ProtectedRoute.jsx
+│       ├── hooks/
+│       │   ├── useConfig.js
+│       │   └── useAnalytics.js
+│       └── utils/
+│           └── api.js         # Axios client
+│
+├── business_config.json       # MAIN CONFIG FILE
+└── README.md                  # This file
+```
+
+---
+
+## Backend API Endpoints
+
+**Configuration:**
+- `GET /api/config` - Get full client-safe config
+- `GET /api/config/{page}` - Get specific page config
+
+**Auth:**
+- `POST /api/auth/signup` - Create user (Auth0 + MailerLite + Analytics)
+- `POST /api/auth/send-verification` - Send verification email
+- `POST /api/auth/password-reset` - Trigger password reset
+
+**Subscriptions:**
+- `POST /api/subscribe` - Create checkout session
+- `POST /api/cancel-subscription` - Cancel subscription
+- `POST /api/webhooks/stripe` - Handle Stripe webhooks
+
+**Analytics:**
+- `POST /api/analytics/track` - Track custom event
+- `POST /api/analytics/page-view` - Track page view
+
+**Contact:**
+- `POST /api/contact` - Submit contact form
+
+**User Management:**
+- `GET /api/user/{user_id}` - Get user details
+- `PUT /api/user/{user_id}` - Update user
+- `DELETE /api/user/{user_id}` - Delete account
+
+**Docs:**
+- `GET /docs` - Interactive API documentation (Swagger)
+
+---
+
+## Frontend Key Files
+
+### src/App.js
+```jsx
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { Auth0Provider } from '@auth0/auth0-react';
+import Home from './pages/Home';
+import Pricing from './pages/Pricing';
+import Login from './pages/Login';
+import Signup from './pages/Signup';
+import Dashboard from './pages/Dashboard';
+import AccountSettings from './pages/AccountSettings';
+import Terms from './pages/Terms';
+import Privacy from './pages/Privacy';
+import FAQ from './pages/FAQ';
+import Contact from './pages/Contact';
+import Navbar from './components/Navbar';
+import Footer from './components/Footer';
+import ProtectedRoute from './components/ProtectedRoute';
+import config from './config/business_config.json';
+
+function App() {
+  return (
+    <Auth0Provider
+      domain={config.metadata.auth0_domain}
+      clientId={config.metadata.auth0_client_id}
+      redirectUri={window.location.origin}
+    >
+      <BrowserRouter>
+        <Navbar />
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/pricing" element={<Pricing />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/faq" element={<FAQ />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/terms" element={<Terms />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/dashboard" element={
+            <ProtectedRoute><Dashboard /></ProtectedRoute>
+          } />
+          <Route path="/settings" element={
+            <ProtectedRoute><AccountSettings /></ProtectedRoute>
+          } />
+        </Routes>
+        <Footer />
+      </BrowserRouter>
+    </Auth0Provider>
+  );
+}
+
+export default App;
+```
+
+### src/pages/Home.jsx
+```jsx
+import { useNavigate } from 'react-router-dom';
+import config from '../config/business_config.json';
+import useAnalytics from '../hooks/useAnalytics';
+
+function Home() {
+  const navigate = useNavigate();
+  const analytics = useAnalytics();
+  const { hero, features, social_proof, final_cta } = config.home;
+  const { primary_color } = config.branding;
+
+  const handleCTA = () => {
+    analytics.trackEvent('cta_click', { location: 'hero' });
+    navigate('/signup');
+  };
+
+  return (
+    <div className="min-h-screen">
+      {/* Hero Section */}
+      <section className="py-20 px-4" style={{ backgroundColor: primary_color + '10' }}>
+        <div className="max-w-6xl mx-auto text-center">
+          <h1 className="text-5xl font-bold mb-6">{hero.headline}</h1>
+          <p className="text-xl text-gray-600 mb-8">{hero.subheadline}</p>
+          <button 
+            onClick={handleCTA}
+            className="px-8 py-4 rounded-lg text-white text-lg"
+            style={{ backgroundColor: primary_color }}
+          >
+            {hero.cta_primary}
+          </button>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section className="py-20 px-4">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {features.map((feature, i) => (
+              <div key={i} className="text-center p-6 rounded-lg shadow-sm">
+                <div className="text-4xl mb-4">{feature.icon}</div>
+                <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
+                <p className="text-gray-600">{feature.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials */}
+      <section className="py-20 px-4 bg-gray-50">
+        <div className="max-w-4xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-8">
+            {social_proof.testimonials.map((t, i) => (
+              <div key={i} className="bg-white p-8 rounded-lg shadow">
+                <p className="text-lg mb-4">"{t.quote}"</p>
+                <div className="flex items-center">
+                  <div className="w-12 h-12 bg-gray-200 rounded-full mr-4" />
+                  <div>
+                    <p className="font-semibold">{t.author}</p>
+                    <p className="text-sm text-gray-600">{t.title}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Final CTA */}
+      <section className="py-20 px-4" style={{ backgroundColor: primary_color }}>
+        <div className="max-w-4xl mx-auto text-center text-white">
+          <h2 className="text-4xl font-bold mb-4">{final_cta.headline}</h2>
+          <p className="text-xl mb-8">{final_cta.subheadline}</p>
+          <button 
+            onClick={handleCTA}
+            className="px-8 py-4 bg-white rounded-lg text-lg"
+            style={{ color: primary_color }}
+          >
+            {final_cta.button_text}
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+export default Home;
+```
+
+### src/pages/Pricing.jsx
+```jsx
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth0 } from '@auth0/auth0-react';
+import config from '../config/business_config.json';
+import useAnalytics from '../hooks/useAnalytics';
+import api from '../utils/api';
+
+function Pricing() {
+  const [billingCycle, setBillingCycle] = useState('monthly');
+  const navigate = useNavigate();
+  const { isAuthenticated, loginWithRedirect } = useAuth0();
+  const analytics = useAnalytics();
+  const { headline, subheadline, plans, faq } = config.pricing;
+
+  const handleSubscribe = async (plan) => {
+    analytics.trackEvent('pricing_cta_click', { 
+      plan: plan.name,
+      billing: billingCycle 
+    });
+
+    if (!isAuthenticated) {
+      loginWithRedirect({ screen_hint: 'signup' });
+      return;
+    }
+
+    // Create subscription
+    const priceId = billingCycle === 'monthly' 
+      ? plan.stripe_price_id_monthly 
+      : plan.stripe_price_id_annual;
+
+    try {
+      const response = await api.post('/subscribe', { price_id: priceId });
+      window.location.href = response.data.payment_link;
+    } catch (error) {
+      console.error('Subscription error:', error);
+    }
+  };
+
+  return (
+    <div className="min-h-screen py-20 px-4">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-16">
+          <h1 className="text-5xl font-bold mb-4">{headline}</h1>
+          <p className="text-xl text-gray-600">{subheadline}</p>
+        </div>
+
+        {/* Billing Toggle */}
+        <div className="flex justify-center mb-12">
+          <div className="inline-flex rounded-lg border border-gray-300 p-1">
+            <button
+              onClick={() => setBillingCycle('monthly')}
+              className={`px-6 py-2 rounded-md ${
+                billingCycle === 'monthly' ? 'bg-blue-600 text-white' : ''
+              }`}
+            >
+              Monthly
+            </button>
+            <button
+              onClick={() => setBillingCycle('annual')}
+              className={`px-6 py-2 rounded-md ${
+                billingCycle === 'annual' ? 'bg-blue-600 text-white' : ''
+              }`}
+            >
+              Annual (Save 20%)
+            </button>
+          </div>
+        </div>
+
+        {/* Plans */}
+        <div className="grid md:grid-cols-3 gap-8 mb-20">
+          {plans.map((plan, i) => (
+            <div 
+              key={i} 
+              className={`bg-white rounded-lg shadow-lg p-8 ${
+                plan.popular ? 'border-4 border-blue-600 relative' : ''
+              }`}
+            >
+              {plan.popular && (
+                <span className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-4 py-1 rounded-full text-sm">
+                  Most Popular
+                </span>
+              )}
+              <h3 className="text-2xl font-bold mb-2">{plan.name}</h3>
+              <p className="text-gray-600 mb-6">{plan.description}</p>
+              <div className="mb-6">
+                <span className="text-5xl font-bold">
+                  ${billingCycle === 'monthly' ? plan.price_monthly : plan.price_annual}
+                </span>
+                <span className="text-gray-600">
+                  /{billingCycle === 'monthly' ? 'month' : 'year'}
+                </span>
+                {billingCycle === 'annual' && plan.annual_savings && (
+                  <p className="text-sm text-green-600 mt-2">{plan.annual_savings}</p>
+                )}
+              </div>
+              <ul className="mb-8 space-y-3">
+                {plan.features.map((feature, j) => (
+                  <li key={j} className="flex items-start">
+                    <span className="text-green-600 mr-2">✓</span>
+                    <span>{feature}</span>
+                  </li>
+                ))}
+              </ul>
+              <button
+                onClick={() => handleSubscribe(plan)}
+                className="w-full py-3 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+              >
+                {plan.cta_text}
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {/* FAQ */}
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-3xl font-bold text-center mb-12">Frequently Asked Questions</h2>
+          <div className="space-y-6">
+            {faq.map((item, i) => (
+              <div key={i} className="bg-white rounded-lg shadow p-6">
+                <h3 className="font-semibold text-lg mb-2">{item.question}</h3>
+                <p className="text-gray-600">{item.answer}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default Pricing;
+```
+
+### src/hooks/useAnalytics.js
+```jsx
+import { useCallback } from 'react';
+import { useAuth0 } from '@auth0/auth0-react';
+import api from '../utils/api';
+
+function useAnalytics() {
+  const { user } = useAuth0();
+
+  const trackEvent = useCallback((eventName, eventParams = {}) => {
+    api.post('/analytics/track', {
+      event_name: eventName,
+      user_id: user?.sub,
+      event_params: eventParams
+    }).catch(err => console.error('Analytics error:', err));
+  }, [user]);
+
+  const trackPageView = useCallback((pagePath, pageTitle) => {
+    api.post('/analytics/page-view', {
+      page_path: pagePath,
+      page_title: pageTitle,
+      user_id: user?.sub
+    }).catch(err => console.error('Analytics error:', err));
+  }, [user]);
+
+  return { trackEvent, trackPageView };
+}
+
+export default useAnalytics;
+```
+
+### src/utils/api.js
+```jsx
+import axios from 'axios';
+
+const api = axios.create({
+  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8000/api',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+export default api;
+```
+
+---
+
+## Skinning for Different Businesses
+
+### InboxTamer → CourtDominion
+
+Edit `business_config.json`:
+
+```json
+{
+  "business": {
+    "name": "CourtDominion",
+    "tagline": "Dominate your fantasy basketball league",
+    "description": "Advanced analytics and AI-powered insights...",
+    "domain": "courtdominion.com"
+  },
+  "branding": {
+    "primary_color": "#FF6B35",  // Orange
+    "secondary_color": "#004E89",  // Navy
+    ...
+  },
+  "home": {
+    "hero": {
+      "headline": "Win Your Fantasy Basketball League",
+      "subheadline": "AI-powered player projections, matchup analysis...",
+      ...
+    },
+    "features": [
+      {
+        "icon": "🏀",
+        "title": "Player Projections",
+        "description": "ML-powered predictions for every player..."
+      },
+      ...
+    ]
+  },
+  "pricing": {
+    "plans": [
+      {
+        "name": "Free",
+        "price_monthly": 0,
+        ...
+      },
+      {
+        "name": "Pro",
+        "price_monthly": 29,  // Different price
+        ...
+      }
+    ]
+  }
+}
+```
+
+**Swap logo:**
+- Replace `frontend/public/logo.svg`
+- Replace `frontend/public/favicon.ico`
+
+**Deploy as new business:**
+- Copy boilerplate
+- Edit config
+- Deploy
+
+**Time: ~10 minutes**
+
+---
+
+## Deployment
+
+### Backend (Railway, Heroku, DigitalOcean)
+
+```bash
+# Add Procfile
+echo "web: uvicorn main:app --host 0.0.0.0 --port \$PORT" > Procfile
+
+# Set environment variables in platform
+# Deploy
+```
+
+### Frontend (Vercel, Netlify)
+
+```bash
+# Build
+npm run build
+
+# Deploy build/ directory
+# Set env vars: REACT_APP_API_URL
+```
+
+### Full Stack (Single Server)
+
+```bash
+# Build frontend
+cd frontend && npm run build
+
+# Serve from FastAPI
+# Add in main.py:
+from fastapi.staticfiles import StaticFiles
+app.mount("/", StaticFiles(directory="../frontend/build", html=True))
+```
+
+---
+
+## Environment Variables
+
+### Backend (.env)
+```
+PORT=8000
+STRIPE_SECRET_KEY=sk_xxx
+MAILERLITE_API_KEY=xxx
+AUTH0_DOMAIN=xxx.auth0.com
+AUTH0_CLIENT_ID=xxx
+AUTH0_CLIENT_SECRET=xxx
+GA4_MEASUREMENT_ID=G-XXX
+GA4_API_SECRET=xxx
+```
+
+### Frontend (.env)
+```
+REACT_APP_API_URL=https://api.yourbusiness.com
+REACT_APP_AUTH0_DOMAIN=xxx.auth0.com
+REACT_APP_AUTH0_CLIENT_ID=xxx
+```
+
+---
+
+## Testing
+
+### Backend
+```bash
+# Install pytest
+pip install pytest pytest-asyncio
+
+# Run tests
+pytest
+```
+
+### Frontend
+```bash
+# Run tests
+npm test
+```
+
+---
+
+## Next Steps
+
+1. **Complete frontend implementation:**
+   - All page components (Home, Pricing, Dashboard, etc)
+   - Components (Navbar, Footer, PricingCard, etc)
+   - Protected routes with Auth0
+   - Tailwind styling
+
+2. **Add features:**
+   - User dashboard (show subscription status)
+   - Billing portal (update payment, view invoices)
+   - Email preferences
+   - Feature gates based on plan
+
+3. **Deploy:**
+   - Backend to Railway/Heroku
+   - Frontend to Vercel/Netlify
+   - Configure DNS
+   - Set up SSL
+
+4. **Monitor:**
+   - Check GA4 for user behavior
+   - Monitor Stripe for MRR
+   - Track API errors
+
+---
+
+## File Generation
+
+Want me to generate all the missing frontend files? I can create:
+- All page components (Home, Pricing, Dashboard, etc)
+- All shared components (Navbar, Footer, etc)
+- Tailwind config
+- Index.html template
+- Complete working React app
+
+**Say "generate frontend" and I'll create all files.**
+
+---
+
+## Summary
+
+**What's done:**
+✅ Backend FastAPI with all integrations (main.py)
+✅ Requirements.txt
+✅ .env.example
+✅ Package.json
+✅ Code examples for key frontend files
+✅ Complete business_config.json
+✅ Deployment instructions
+
+**What's needed:**
+- Remaining frontend components (I can generate all)
+- Tailwind config
+- Testing
+- Documentation
+
+**Time to launch new business:**
+- Copy boilerplate: 1 min
+- Edit business_config.json: 5 min
+- Swap logo: 1 min
+- Deploy: 3 min
+**Total: ~10 minutes**
+
+**Ready to generate all frontend files?**
+
+<<<END_FILE: teebu-saas-platform/saas-boilerplate/README.md>>>
+
+<<<BEGIN_FILE: teebu-saas-platform/saas-boilerplate/business/README.md>>>
+# Business Directory
+
+**Put all your custom business logic here.**
+
+## Structure:
+- `backend/routes/` - Your API endpoints
+- `frontend/pages/` - Your React pages  
+- `config/` - Your business configuration
+
+## The boilerplate auto-loads everything from this directory.
+
+See `../directives/BUILD_DIRECTIVE.md` for complete instructions.
+
+<<<END_FILE: teebu-saas-platform/saas-boilerplate/business/README.md>>>
+
+<<<BEGIN_FILE: teebu-saas-platform/saas-boilerplate/directives/BUILD_DIRECTIVE.md>>>
+# BUILD DIRECTIVE - InboxTamer Example
+
+**READ THIS FIRST: Instructions for Claude Code / FounderOps / AF Scripts**
+
+---
+
+## Overview
+
+This project uses a **plugin architecture**:
+- **saas-boilerplate/** = Generic code (DON'T TOUCH)
+- **business/** = Your custom code (BUILD HERE)
+
+The boilerplate automatically loads everything from `business/`.
+
+---
+
+## Directory Structure
+
+```
+project-root/
+├── saas-boilerplate/           # GENERIC - Don't modify
+│   ├── backend/core/           # Generic routes (auth, payments, etc)
+│   ├── frontend/src/core/      # Generic components
+│   └── [infrastructure files]
+│
+├── business/                   # CUSTOM - Build here
+│   ├── backend/routes/         # Add your API endpoints here
+│   ├── frontend/pages/         # Add your React pages here
+│   └── config/
+│       └── business_config.json
+│
+└── directives/                 # INSTRUCTIONS
+    ├── BUILD_DIRECTIVE.md      # This file
+    ├── backend_directive.md    # Backend instructions
+    └── frontend_directive.md   # Frontend instructions
+```
+
+---
+
+## ⚡ CRITICAL: Auto-Loader - Zero Integration Required
+
+**THE BOILERPLATE HAS AUTO-LOADER. YOU DO NOT INTEGRATE. YOU JUST DROP FILES.**
+
+### What This Means
+
+Starting in v2.0, the boilerplate **automatically scans and loads** everything in `business/`.
+
+**DO NOT:**
+- ❌ Import your routes in main.py
+- ❌ Call app.include_router()
+- ❌ Edit main.py at all
+- ❌ Import your pages in App.js
+- ❌ Add <Route> definitions
+- ❌ Edit App.js at all
+
+**DO:**
+- ✅ Drop files in business/backend/routes/
+- ✅ Drop files in business/frontend/pages/
+- ✅ Start server
+- ✅ Files auto-load
+
+**That's it. No integration. Files appear as endpoints/pages automatically.**
+
+---
+
+## What Gets Auto-Loaded
+
+### Backend: Any file in `business/backend/routes/*.py`
+
+**Requirements:**
+- Must have a `router` variable (FastAPI router)
+- Router will be automatically mounted to `/api/{filename}`
+
+**Example:** `business/backend/routes/email_rules.py`
+```python
+from fastapi import APIRouter
+
+router = APIRouter()  # REQUIRED variable name
+
+@router.get("/list")
+def list_rules():
+    return {"rules": []}
+```
+
+**Result:** Endpoint available at `/api/email_rules/list`
+
+**NO IMPORT NEEDED. NO REGISTRATION NEEDED.**
+
+---
+
+### Frontend: Any file in `business/frontend/pages/*.jsx`
+
+**Requirements:**
+- Must export default a React component
+- Filename determines route path (PascalCase → kebab-case)
+
+**Example:** `business/frontend/pages/EmailDashboard.jsx`
+```jsx
+export default function EmailDashboard() {
+  return <div>Email Dashboard</div>;
+}
+```
+
+**Result:** Page available at `/dashboard/email-dashboard`
+
+**NO IMPORT NEEDED. NO ROUTE DEFINITION NEEDED.**
+
+---
+
+## Verification (How To Know It Worked)
+
+### Backend
+Start server and check logs:
+```bash
+cd saas-boilerplate/backend
+uvicorn main:app --reload
+
+# You should see:
+# ✓ Database initialized
+# ✓ Loaded: email_rules -> /api/email_rules
+# ✓ Loaded: schedule -> /api/schedule
+# Successfully loaded 2 business route(s)
+```
+
+Test endpoint:
+```bash
+curl http://localhost:8000/api/email_rules/list
+```
+
+### Frontend
+Start dev server and check console:
+```bash
+cd saas-boilerplate/frontend
+npm start
+
+# Console shows:
+# ✓ Loaded business page: EmailDashboard -> /dashboard/email-dashboard
+```
+
+Visit page:
+```
+http://localhost:3000/dashboard/email-dashboard
+```
+
+**If you see these logs, auto-loader is working. You're done.**
+
+---
+
+## Configuration
+
+### Edit `business/config/business_config.json`
+
+This controls ALL text, colors, pricing, features:
+
+```json
+{
+  "business": {
+    "name": "InboxTamer",
+    "tagline": "Your tagline here"
+  },
+  "branding": {
+    "primary_color": "#3B82F6"
+  },
+  "home": {
+    "hero": {
+      "headline": "Your headline"
+    }
+  }
+}
+```
+
+**The boilerplate reads this and applies it everywhere.**
+
+---
+
+## Build Instructions by Role
+
+### For Claude Code:
+
+```
+You are building InboxTamer.
+
+1. Read: directives/backend_directive.md for backend requirements
+2. Read: directives/frontend_directive.md for frontend requirements
+3. Create files in business/ directory ONLY
+4. Never modify saas-boilerplate/ directory
+5. Use boilerplate's shared libraries (already imported)
+6. Test endpoints at http://localhost:8000/api/your-route
+```
+
+### For FounderOps:
+
+```
+Customer wants: [Business idea from intake]
+
+1. Analyze business requirements
+2. Determine what custom logic is needed
+3. Check directives/{service}_directive.md for patterns
+4. Generate code in business/ directory
+5. Update business/config/business_config.json with branding
+6. Never touch saas-boilerplate/ - it's infrastructure
+```
+
+### For AF Scripts:
+
+```bash
+#!/bin/bash
+# Automated build for AF portfolio
+
+BUSINESS_NAME=$1
+BUSINESS_IDEA=$2
+
+# 1. Copy boilerplate
+cp -r saas-boilerplate/ "$BUSINESS_NAME/"
+
+# 2. Read directives
+cat directives/BUILD_DIRECTIVE.md
+
+# 3. Generate business logic
+# Pass to Claude Code with directive context
+
+# 4. Deploy
+cd "$BUSINESS_NAME"
+./deploy.sh
+```
+
+---
+
+## What Boilerplate Provides (Already Built)
+
+### Backend Routes (DON'T REBUILD):
+- ✅ `/api/auth/signup` - User registration
+- ✅ `/api/auth/login` - User login (via Auth0)
+- ✅ `/api/payments/subscribe` - Create subscription
+- ✅ `/api/payments/cancel` - Cancel subscription
+- ✅ `/api/webhooks/stripe` - Stripe webhooks
+- ✅ `/api/analytics/track` - Track events
+- ✅ `/api/contact` - Contact form
+
+### Frontend Pages (DON'T REBUILD):
+- ✅ Home page (from config)
+- ✅ Pricing page (from config)
+- ✅ Login/Signup (Auth0)
+- ✅ Generic Dashboard
+- ✅ Account Settings
+- ✅ Terms/Privacy
+- ✅ FAQ
+- ✅ Contact
+
+### Components (DON'T REBUILD):
+- ✅ Navbar with auth
+- ✅ Footer
+- ✅ Pricing cards
+- ✅ Feature cards
+- ✅ Protected routes
+
+### Integrations (ALREADY CONFIGURED):
+- ✅ Stripe payments
+- ✅ Auth0 authentication
+- ✅ MailerLite emails
+- ✅ Google Analytics
+- ✅ Git operations
+
+---
+
+## What You Need to Build (Business Logic)
+
+### Example: InboxTamer
+
+#### Backend Routes Needed:
+```
+business/backend/routes/
+├── inbox.py          # Connect Gmail/Outlook via OAuth
+├── rules.py          # Email rule CRUD
+├── ai_sorting.py     # AI categorization
+└── analytics.py      # Email analytics (custom)
+```
+
+#### Frontend Pages Needed:
+```
+business/frontend/pages/
+├── InboxDashboard.jsx    # Main email view
+├── RulesEditor.jsx       # Create/edit rules
+├── EmailAnalytics.jsx    # Charts and insights
+└── Settings.jsx          # InboxTamer-specific settings
+```
+
+#### Config Updates:
+```json
+{
+  "business": {"name": "InboxTamer"},
+  "home": {
+    "hero": {"headline": "Tame Your Inbox in Minutes"}
+  },
+  "pricing": {
+    "plans": [
+      {"name": "Pro", "price_monthly": 49}
+    ]
+  }
+}
+```
+
+---
+
+## Example: CourtDominion
+
+#### Backend Routes Needed:
+```
+business/backend/routes/
+├── nba_data.py       # Fetch NBA stats
+├── projections.py    # ML player projections
+├── lineup.py         # Lineup optimizer
+└── leagues.py        # User leagues CRUD
+```
+
+#### Frontend Pages Needed:
+```
+business/frontend/pages/
+├── PlayerDashboard.jsx   # Player stats and projections
+├── LineupBuilder.jsx     # Drag-drop lineup tool
+├── Projections.jsx       # Projection engine
+└── Leagues.jsx           # Manage leagues
+```
+
+---
+
+## File Naming Conventions
+
+### Backend:
+- **Route files:** snake_case (e.g., `email_rules.py`)
+- **Classes:** PascalCase (e.g., `EmailRule`)
+- **Functions:** snake_case (e.g., `get_rules()`)
+
+### Frontend:
+- **Components:** PascalCase (e.g., `EmailDashboard.jsx`)
+- **Files:** PascalCase (e.g., `RulesEditor.jsx`)
+- **Functions:** camelCase (e.g., `handleSubmit()`)
+
+---
+
+## Using Boilerplate Services
+
+### In Backend Routes:
+
+```python
+# business/backend/routes/your_route.py
+from fastapi import APIRouter, Depends
+from saas_boilerplate.core.auth import get_current_user
+from saas_boilerplate.core.analytics import track_event
+
+router = APIRouter()
+
+@router.post("/your-endpoint")
+async def your_endpoint(user = Depends(get_current_user)):
+    # Use shared analytics
+    track_event("feature_used", user_id=user.id)
+    
+    # Your business logic here
+    return {"success": True}
+```
+
+### In Frontend Pages:
+
+```jsx
+// business/frontend/pages/YourPage.jsx
+import { useAuth } from 'saas-boilerplate/core/hooks';
+import { Navbar, Footer } from 'saas-boilerplate/core/components';
+
+export default function YourPage() {
+  const { user } = useAuth();
+  
+  return (
+    <>
+      <Navbar />
+      <div>Your custom content</div>
+      <Footer />
+    </>
+  );
+}
+```
+
+---
+
+## Testing Your Custom Code
+
+### Backend:
+```bash
+cd saas-boilerplate/backend
+uvicorn main:app --reload
+
+# Test your custom endpoint
+curl http://localhost:8000/api/your-route/your-endpoint
+```
+
+### Frontend:
+```bash
+cd saas-boilerplate/frontend
+npm start
+
+# Visit your custom page
+open http://localhost:3000/dashboard/your-page
+```
+
+---
+
+## Deployment
+
+### What Gets Deployed:
+
+1. **Boilerplate (infrastructure)** - generic code
+2. **Business directory** - your custom logic
+3. **Config** - your branding/content
+
+### Deploy Command:
+```bash
+./deploy.sh --business=inboxtamer
+```
+
+This deploys both layers as one application.
+
+---
+
+## Common Patterns
+
+### Pattern 1: CRUD API
+```python
+# business/backend/routes/items.py
+from fastapi import APIRouter
+
+router = APIRouter()
+
+@router.get("/")
+def list_items(): return []
+
+@router.post("/")
+def create_item(item: dict): return item
+
+@router.get("/{id}")
+def get_item(id: str): return {}
+
+@router.put("/{id}")
+def update_item(id: str, item: dict): return item
+
+@router.delete("/{id}")
+def delete_item(id: str): return {"deleted": True}
+```
+
+### Pattern 2: React Data Table
+```jsx
+// business/frontend/pages/ItemsList.jsx
+import { useState, useEffect } from 'react';
+import api from 'saas-boilerplate/utils/api';
+
+export default function ItemsList() {
+  const [items, setItems] = useState([]);
+  
+  useEffect(() => {
+    api.get('/items').then(r => setItems(r.data));
+  }, []);
+  
+  return (
+    <table>
+      {items.map(item => <tr key={item.id}>{item.name}</tr>)}
+    </table>
+  );
+}
+```
+
+---
+
+## Error Handling
+
+### Backend:
+```python
+from fastapi import HTTPException
+
+@router.get("/risky")
+def risky_operation():
+    try:
+        # Your logic
+        return {"success": True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+```
+
+### Frontend:
+```jsx
+async function handleAction() {
+  try {
+    await api.post('/your-endpoint');
+  } catch (error) {
+    alert('Error: ' + error.message);
+  }
+}
+```
+
+---
+
+## Security Notes
+
+### Authentication (Already Handled):
+- All routes under `/api/*` can use `Depends(get_current_user)`
+- All frontend pages can use `useAuth()` hook
+- Protected routes auto-redirect to login
+
+### Authorization (You Build):
+```python
+@router.get("/admin-only")
+def admin_only(user = Depends(get_current_user)):
+    if user.role != "admin":
+        raise HTTPException(status_code=403)
+    return {"data": "secret"}
+```
+
+---
+
+## Checklist
+
+Before marking business logic "complete":
+
+### Backend:
+- [ ] All custom routes in `business/backend/routes/`
+- [ ] Routes have proper error handling
+- [ ] Routes use shared auth if needed
+- [ ] API tested with curl/Postman
+- [ ] Analytics events tracked
+
+### Frontend:
+- [ ] All custom pages in `business/frontend/pages/`
+- [ ] Pages use shared components (Navbar, Footer)
+- [ ] Pages handle loading/error states
+- [ ] Mobile responsive
+- [ ] Analytics tracked
+
+### Config:
+- [ ] business_config.json updated with all content
+- [ ] Pricing plans have correct Stripe IDs
+- [ ] All text/colors customized
+- [ ] Logo replaced
+
+### Testing:
+- [ ] Backend responds at localhost:8000
+- [ ] Frontend loads at localhost:3000
+- [ ] Custom pages accessible
+- [ ] Auth flow works
+- [ ] Payment flow works
+
+---
+
+## Getting Help
+
+### Documentation:
+- Backend patterns: `directives/backend_directive.md`
+- Frontend patterns: `directives/frontend_directive.md`
+- Boilerplate API: `saas-boilerplate/API.md`
+
+### Examples:
+- See `business/` directory for starter examples
+- Each directive has code snippets
+
+---
+
+## Summary
+
+**You are building business logic ONLY.**
+
+✅ Auth, payments, emails, analytics → Already done  
+✅ Generic pages (Home, Pricing, etc) → Already done  
+✅ All infrastructure → Already done  
+
+❌ DON'T touch `saas-boilerplate/`  
+✅ DO build in `business/`  
+✅ DO update `business/config/business_config.json`  
+
+**The boilerplate auto-loads everything from `business/`.**
+
+---
+
+**Ready to build? Start with:**
+1. Read `directives/backend_directive.md`
+2. Read `directives/frontend_directive.md`
+3. Create your first route in `business/backend/routes/`
+4. Create your first page in `business/frontend/pages/`
+5. Test locally
+6. Deploy
+
+**Go build. 🚀**
+
+<<<END_FILE: teebu-saas-platform/saas-boilerplate/directives/BUILD_DIRECTIVE.md>>>
+
+<<<BEGIN_FILE: teebu-saas-platform/saas-boilerplate/directives/backend_directive.md>>>
+# Backend Directive - For Claude Code / FounderOps
+
+**Instructions for building backend business logic**
+
+---
+
+## ⚡ CRITICAL: Auto-Loader - No Integration Required
+
+**THE BOILERPLATE AUTOMATICALLY LOADS YOUR ROUTES. DO NOT EDIT MAIN.PY.**
+
+### What You Do
+1. Create file in `business/backend/routes/`
+2. Include `router = APIRouter()` variable
+3. Done - it auto-loads
+
+### What You DON'T Do
+❌ Import your route in main.py
+❌ Call app.include_router()
+❌ Edit main.py at all
+❌ Register anything manually
+
+**Files in business/backend/routes/*.py automatically become /api/{filename} endpoints.**
+
+---
+
+## Location
+
+**ALL backend code goes in:** `business/backend/routes/`
+
+---
+
+## File Structure
+
+```python
+# business/backend/routes/your_feature.py
+
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+from typing import List, Optional
+
+# Import shared services (already available)
+from saas_boilerplate.core.auth import get_current_user
+from saas_boilerplate.core.analytics import track_event
+from saas_boilerplate.core.database import get_db
+from sqlalchemy.orm import Session
+
+# REQUIRED: Must export a router variable
+router = APIRouter(tags=["your-feature"])
+
+# Define your models
+class YourModel(BaseModel):
+    name: str
+    value: int
+
+# Define your endpoints
+@router.get("/")
+def list_items():
+    return {"items": []}
+
+@router.post("/")
+def create_item(item: YourModel, user = Depends(get_current_user)):
+    # Your business logic here
+    track_event("item_created", user_id=user.id)
+    return {"success": True, "item": item}
+```
+
+**Result:** 
+- Endpoints auto-mounted to `/api/your_feature/`
+- No import needed
+- No registration needed
+- Just start the server
+
+---
+
+## Available Shared Services
+
+### 1. Authentication
+
+```python
+from saas_boilerplate.core.auth import get_current_user
+
+@router.get("/protected")
+def protected_route(user = Depends(get_current_user)):
+    # user.id, user.email, user.name available
+    return {"user_id": user.id}
+```
+
+### 2. Analytics
+
+```python
+from saas_boilerplate.core.analytics import track_event, track_page_view
+
+@router.post("/action")
+def some_action(user = Depends(get_current_user)):
+    track_event("button_clicked", user_id=user.id, event_params={
+        "button": "save",
+        "page": "dashboard"
+    })
+    return {"success": True}
+```
+
+### 3. Stripe (Payments)
+
+```python
+from saas_boilerplate.libs.stripe_lib import load_stripe_lib
+
+stripe = load_stripe_lib('config/stripe_config.json')
+
+@router.post("/custom-payment")
+def custom_payment():
+    result = stripe.create_subscription_product(
+        business_name="Custom Product",
+        description="..."
+    )
+    return result
+```
+
+### 4. MailerLite (Email)
+
+```python
+from saas_boilerplate.libs.mailerlite_lib import load_mailerlite_lib
+
+mailer = load_mailerlite_lib('config/mailerlite_config.json')
+
+@router.post("/subscribe-to-feature")
+def subscribe_feature(email: str):
+    result = mailer.add_subscriber(
+        email=email,
+        fields={"feature": "custom"},
+        groups=["feature_subscribers"]
+    )
+    return result
+```
+
+### 5. Database (If Added)
+
+```python
+from saas_boilerplate.core.database import get_db
+from sqlalchemy.orm import Session
+
+@router.get("/items")
+def get_items(db: Session = Depends(get_db)):
+    # Use SQLAlchemy
+    items = db.query(YourModel).all()
+    return items
+```
+
+---
+
+## Common Patterns
+
+### Pattern 1: CRUD API
+
+```python
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+from typing import List
+
+router = APIRouter()
+
+# In-memory storage (replace with DB later)
+items = []
+
+class Item(BaseModel):
+    id: Optional[int] = None
+    name: str
+    description: str
+
+@router.get("/", response_model=List[Item])
+def list_items():
+    return items
+
+@router.post("/", response_model=Item)
+def create_item(item: Item):
+    item.id = len(items) + 1
+    items.append(item)
+    return item
+
+@router.get("/{item_id}", response_model=Item)
+def get_item(item_id: int):
+    item = next((i for i in items if i.id == item_id), None)
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return item
+
+@router.put("/{item_id}", response_model=Item)
+def update_item(item_id: int, updated: Item):
+    for i, item in enumerate(items):
+        if item.id == item_id:
+            updated.id = item_id
+            items[i] = updated
+            return updated
+    raise HTTPException(status_code=404, detail="Item not found")
+
+@router.delete("/{item_id}")
+def delete_item(item_id: int):
+    global items
+    items = [i for i in items if i.id != item_id]
+    return {"deleted": True}
+```
+
+### Pattern 2: External API Integration
+
+```python
+import requests
+from fastapi import APIRouter, HTTPException
+
+router = APIRouter()
+
+@router.get("/external-data")
+async def fetch_external_data(query: str):
+    try:
+        response = requests.get(
+            f"https://api.example.com/data",
+            params={"q": query},
+            headers={"Authorization": "Bearer YOUR_API_KEY"}
+        )
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        raise HTTPException(status_code=500, detail=str(e))
+```
+
+### Pattern 3: File Upload
+
+```python
+from fastapi import APIRouter, File, UploadFile
+import shutil
+
+router = APIRouter()
+
+@router.post("/upload")
+async def upload_file(file: UploadFile = File(...)):
+    # Save file
+    file_path = f"uploads/{file.filename}"
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    
+    return {"filename": file.filename, "path": file_path}
+```
+
+### Pattern 4: Background Task
+
+```python
+from fastapi import APIRouter, BackgroundTasks
+
+router = APIRouter()
+
+def process_data(item_id: int):
+    # Long-running task
+    import time
+    time.sleep(10)
+    print(f"Processed {item_id}")
+
+@router.post("/process/{item_id}")
+async def start_processing(item_id: int, background_tasks: BackgroundTasks):
+    background_tasks.add_task(process_data, item_id)
+    return {"message": "Processing started"}
+```
+
+### Pattern 5: Webhooks
+
+```python
+from fastapi import APIRouter, Request, HTTPException
+import hmac
+import hashlib
+
+router = APIRouter()
+
+@router.post("/webhook")
+async def handle_webhook(request: Request):
+    # Verify signature
+    signature = request.headers.get("X-Webhook-Signature")
+    body = await request.body()
+    
+    expected = hmac.new(
+        b"your_webhook_secret",
+        body,
+        hashlib.sha256
+    ).hexdigest()
+    
+    if signature != expected:
+        raise HTTPException(status_code=400, detail="Invalid signature")
+    
+    # Process webhook
+    data = await request.json()
+    # Handle data...
+    
+    return {"received": True}
+```
+
+---
+
+## Error Handling
+
+### Standard Pattern:
+
+```python
+from fastapi import HTTPException
+from pydantic import ValidationError
+
+@router.get("/risky")
+def risky_operation(param: str):
+    try:
+        # Your logic that might fail
+        if not param:
+            raise ValueError("param is required")
+        
+        result = some_operation(param)
+        return {"result": result}
+        
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
+    except Exception as e:
+        # Log error
+        print(f"Error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+```
+
+---
+
+## Testing Your Routes
+
+### 1. Start Backend:
+```bash
+cd saas-boilerplate/backend
+uvicorn main:app --reload
+```
+
+### 2. Test with curl:
+```bash
+# GET request
+curl http://localhost:8000/api/your_feature/
+
+# POST request
+curl -X POST http://localhost:8000/api/your_feature/ \
+  -H "Content-Type: application/json" \
+  -d '{"name": "test", "value": 123}'
+```
+
+### 3. Interactive Docs:
+- Open: http://localhost:8000/docs
+- Test all endpoints interactively
+
+---
+
+## Example: InboxTamer Email Rules
+
+```python
+# business/backend/routes/email_rules.py
+
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, EmailStr
+from typing import List, Optional
+from saas_boilerplate.core.auth import get_current_user
+from saas_boilerplate.core.analytics import track_event
+
+router = APIRouter(tags=["email-rules"])
+
+# In-memory storage (replace with DB)
+rules = {}
+
+class EmailRule(BaseModel):
+    id: Optional[int] = None
+    user_id: str
+    name: str
+    condition: str  # "from", "subject", "body"
+    value: str      # What to match
+    action: str     # "archive", "label", "delete"
+    label: Optional[str] = None
+
+@router.get("/", response_model=List[EmailRule])
+def list_rules(user = Depends(get_current_user)):
+    """Get all email rules for current user"""
+    user_rules = [r for r in rules.values() if r.user_id == user.id]
+    track_event("rules_viewed", user_id=user.id)
+    return user_rules
+
+@router.post("/", response_model=EmailRule)
+def create_rule(rule: EmailRule, user = Depends(get_current_user)):
+    """Create new email rule"""
+    rule.user_id = user.id
+    rule.id = len(rules) + 1
+    rules[rule.id] = rule
+    
+    track_event("rule_created", user_id=user.id, event_params={
+        "condition": rule.condition,
+        "action": rule.action
+    })
+    
+    return rule
+
+@router.get("/{rule_id}", response_model=EmailRule)
+def get_rule(rule_id: int, user = Depends(get_current_user)):
+    """Get specific rule"""
+    rule = rules.get(rule_id)
+    if not rule or rule.user_id != user.id:
+        raise HTTPException(status_code=404, detail="Rule not found")
+    return rule
+
+@router.put("/{rule_id}", response_model=EmailRule)
+def update_rule(rule_id: int, updated: EmailRule, user = Depends(get_current_user)):
+    """Update existing rule"""
+    if rule_id not in rules or rules[rule_id].user_id != user.id:
+        raise HTTPException(status_code=404, detail="Rule not found")
+    
+    updated.id = rule_id
+    updated.user_id = user.id
+    rules[rule_id] = updated
+    
+    track_event("rule_updated", user_id=user.id)
+    return updated
+
+@router.delete("/{rule_id}")
+def delete_rule(rule_id: int, user = Depends(get_current_user)):
+    """Delete rule"""
+    if rule_id not in rules or rules[rule_id].user_id != user.id:
+        raise HTTPException(status_code=404, detail="Rule not found")
+    
+    del rules[rule_id]
+    track_event("rule_deleted", user_id=user.id)
+    return {"deleted": True}
+
+@router.post("/{rule_id}/test")
+def test_rule(rule_id: int, email_content: dict, user = Depends(get_current_user)):
+    """Test rule against sample email"""
+    rule = rules.get(rule_id)
+    if not rule or rule.user_id != user.id:
+        raise HTTPException(status_code=404, detail="Rule not found")
+    
+    # Simple matching logic
+    matches = False
+    if rule.condition == "from":
+        matches = rule.value.lower() in email_content.get("from", "").lower()
+    elif rule.condition == "subject":
+        matches = rule.value.lower() in email_content.get("subject", "").lower()
+    elif rule.condition == "body":
+        matches = rule.value.lower() in email_content.get("body", "").lower()
+    
+    return {
+        "matches": matches,
+        "action": rule.action if matches else None
+    }
+```
+
+---
+
+## Database Integration (Optional)
+
+### Add SQLAlchemy:
+
+```python
+# business/backend/models.py
+from sqlalchemy import Column, Integer, String, ForeignKey
+from saas_boilerplate.core.database import Base
+
+class YourModel(Base):
+    __tablename__ = "your_table"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String, ForeignKey("users.id"))
+    name = Column(String)
+    value = Column(Integer)
+```
+
+```python
+# business/backend/routes/your_route.py
+from sqlalchemy.orm import Session
+from saas_boilerplate.core.database import get_db
+from ..models import YourModel
+
+@router.get("/items")
+def list_items(db: Session = Depends(get_db)):
+    return db.query(YourModel).all()
+
+@router.post("/items")
+def create_item(item: dict, db: Session = Depends(get_db)):
+    db_item = YourModel(**item)
+    db.add(db_item)
+    db.commit()
+    db.refresh(db_item)
+    return db_item
+```
+
+---
+
+## Security Checklist
+
+- [ ] All sensitive routes use `Depends(get_current_user)`
+- [ ] User can only access their own data
+- [ ] Input validation with Pydantic models
+- [ ] API keys/secrets in environment variables
+- [ ] Error messages don't leak sensitive info
+- [ ] Rate limiting on expensive operations
+
+---
+
+## Performance Tips
+
+- Use `async def` for I/O-bound operations
+- Use background tasks for long-running jobs
+- Cache expensive queries
+- Paginate large lists
+- Use database indexes
+
+---
+
+## Ready to Build
+
+1. Create file: `business/backend/routes/your_feature.py`
+2. Define router with endpoints
+3. Test at http://localhost:8000/docs
+4. Integrate with frontend
+
+**The boilerplate handles everything else.**
+
+<<<END_FILE: teebu-saas-platform/saas-boilerplate/directives/backend_directive.md>>>
+
+<<<BEGIN_FILE: teebu-saas-platform/saas-boilerplate/directives/frontend_directive.md>>>
+# Frontend Directive - For Claude Code / FounderOps
+
+**Instructions for building frontend business pages**
+
+---
+
+## ⚡ CRITICAL: Auto-Loader - No Integration Required
+
+**THE BOILERPLATE AUTOMATICALLY LOADS YOUR PAGES. DO NOT EDIT APP.JS.**
+
+### What You Do
+1. Create file in `business/frontend/pages/`
+2. Export default component
+3. Done - it auto-loads
+
+### What You DON'T Do
+❌ Import your component in App.js
+❌ Add <Route> definition
+❌ Edit App.js at all
+❌ Configure routing manually
+
+**Files in business/frontend/pages/*.jsx automatically become /dashboard/{kebab-case} routes.**
+
+---
+
+## Location
+
+**ALL frontend pages go in:** `business/frontend/pages/`
+
+---
+
+## File Structure
+
+```jsx
+// business/frontend/pages/YourPage.jsx
+
+import { useState, useEffect } from 'react';
+import { useAuth } from 'saas-boilerplate/core/hooks';
+import { Navbar, Footer } from 'saas-boilerplate/core/components';
+import api from 'saas-boilerplate/utils/api';
+
+export default function YourPage() {
+  const { user } = useAuth();
+  const [data, setData] = useState([]);
+  
+  useEffect(() => {
+    // Load data from your custom API
+    api.get('/your-feature').then(r => setData(r.data));
+  }, []);
+  
+  return (
+    <div className="min-h-screen">
+      <Navbar />
+      <main className="max-w-7xl mx-auto py-8 px-4">
+        <h1 className="text-3xl font-bold mb-6">Your Page</h1>
+        {/* Your custom content */}
+      </main>
+      <Footer />
+    </div>
+  );
+}
+```
+
+**Result:** 
+- Page auto-available at `/dashboard/your-page`
+- No import needed
+- No route definition needed
+- Just start the dev server
+
+---
+
+## Available Shared Components
+
+### 1. Layout Components
+
+```jsx
+import { Navbar, Footer } from 'saas-boilerplate/core/components';
+
+export default function YourPage() {
+  return (
+    <>
+      <Navbar />
+      <main>Your content</main>
+      <Footer />
+    </>
+  );
+}
+```
+
+### 2. Authentication Hook
+
+```jsx
+import { useAuth } from 'saas-boilerplate/core/hooks';
+
+export default function YourPage() {
+  const { user, isLoading, logout } = useAuth();
+  
+  if (isLoading) return <div>Loading...</div>;
+  
+  return <div>Welcome {user?.name}</div>;
+}
+```
+
+### 3. Analytics Hook
+
+```jsx
+import { useAnalytics } from 'saas-boilerplate/core/hooks';
+import { useEffect } from 'react';
+
+export default function YourPage() {
+  const analytics = useAnalytics();
+  
+  useEffect(() => {
+    analytics.trackPageView('/your-page', 'Your Page Title');
+  }, []);
+  
+  const handleAction = () => {
+    analytics.trackEvent('button_clicked', { button: 'submit' });
+  };
+  
+  return <button onClick={handleAction}>Submit</button>;
+}
+```
+
+### 4. Config Hook
+
+```jsx
+import { useConfig } from 'saas-boilerplate/core/hooks';
+
+export default function YourPage() {
+  const config = useConfig();
+  
+  return (
+    <h1 style={{ color: config.branding.primary_color }}>
+      Welcome to {config.business.name}
+    </h1>
+  );
+}
+```
+
+### 5. API Client
+
+```jsx
+import api from 'saas-boilerplate/utils/api';
+
+export default function YourPage() {
+  const handleSubmit = async (data) => {
+    try {
+      const response = await api.post('/your-endpoint', data);
+      alert('Success!');
+    } catch (error) {
+      alert('Error: ' + error.message);
+    }
+  };
+  
+  return <form onSubmit={handleSubmit}>...</form>;
+}
+```
+
+---
+
+## Common Patterns
+
+### Pattern 1: Data Table
+
+```jsx
+import { useState, useEffect } from 'react';
+import api from 'saas-boilerplate/utils/api';
+import { Navbar, Footer } from 'saas-boilerplate/core/components';
+
+export default function ItemsList() {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    api.get('/items')
+      .then(r => setItems(r.data))
+      .finally(() => setLoading(false));
+  }, []);
+  
+  if (loading) return <div>Loading...</div>;
+  
+  return (
+    <>
+      <Navbar />
+      <div className="max-w-7xl mx-auto py-8 px-4">
+        <h1 className="text-3xl font-bold mb-6">Items</h1>
+        <table className="w-full">
+          <thead>
+            <tr>
+              <th className="text-left py-2">Name</th>
+              <th className="text-left py-2">Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map(item => (
+              <tr key={item.id} className="border-t">
+                <td className="py-2">{item.name}</td>
+                <td className="py-2">{item.value}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <Footer />
+    </>
+  );
+}
+```
+
+### Pattern 2: Form
+
+```jsx
+import { useState } from 'react';
+import api from 'saas-boilerplate/utils/api';
+import { useConfig } from 'saas-boilerplate/core/hooks';
+
+export default function CreateItem() {
+  const config = useConfig();
+  const [formData, setFormData] = useState({ name: '', value: 0 });
+  const [status, setStatus] = useState('');
+  
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setStatus('submitting');
+    
+    try {
+      await api.post('/items', formData);
+      setStatus('success');
+      setFormData({ name: '', value: 0 });
+    } catch (error) {
+      setStatus('error');
+    }
+  };
+  
+  return (
+    <form onSubmit={handleSubmit} className="max-w-md mx-auto p-6">
+      <h2 className="text-2xl font-bold mb-4">Create Item</h2>
+      
+      <div className="mb-4">
+        <label className="block text-sm font-medium mb-1">Name</label>
+        <input
+          type="text"
+          value={formData.name}
+          onChange={e => setFormData({...formData, name: e.target.value})}
+          className="w-full px-4 py-2 border rounded-lg"
+          required
+        />
+      </div>
+      
+      <div className="mb-4">
+        <label className="block text-sm font-medium mb-1">Value</label>
+        <input
+          type="number"
+          value={formData.value}
+          onChange={e => setFormData({...formData, value: parseInt(e.target.value)})}
+          className="w-full px-4 py-2 border rounded-lg"
+          required
+        />
+      </div>
+      
+      <button
+        type="submit"
+        disabled={status === 'submitting'}
+        className="w-full py-3 rounded-lg text-white"
+        style={{ backgroundColor: config.branding.primary_color }}
+      >
+        {status === 'submitting' ? 'Saving...' : 'Create Item'}
+      </button>
+      
+      {status === 'success' && (
+        <p className="text-green-600 mt-4">Item created successfully!</p>
+      )}
+      {status === 'error' && (
+        <p className="text-red-600 mt-4">Error creating item</p>
+      )}
+    </form>
+  );
+}
+```
+
+### Pattern 3: Dashboard with Stats
+
+```jsx
+import { useState, useEffect } from 'react';
+import { useAuth, useConfig } from 'saas-boilerplate/core/hooks';
+import api from 'saas-boilerplate/utils/api';
+
+export default function Dashboard() {
+  const { user } = useAuth();
+  const config = useConfig();
+  const [stats, setStats] = useState({ total: 0, active: 0, pending: 0 });
+  
+  useEffect(() => {
+    api.get('/stats').then(r => setStats(r.data));
+  }, []);
+  
+  return (
+    <div className="max-w-7xl mx-auto py-8 px-4">
+      <h1 className="text-3xl font-bold mb-8">
+        Welcome back, {user?.name}!
+      </h1>
+      
+      <div className="grid md:grid-cols-3 gap-6">
+        <StatCard
+          title="Total Items"
+          value={stats.total}
+          color={config.branding.primary_color}
+        />
+        <StatCard
+          title="Active"
+          value={stats.active}
+          color={config.branding.secondary_color}
+        />
+        <StatCard
+          title="Pending"
+          value={stats.pending}
+          color={config.branding.accent_color}
+        />
+      </div>
+    </div>
+  );
+}
+
+function StatCard({ title, value, color }) {
+  return (
+    <div className="bg-white rounded-lg shadow p-6">
+      <h3 className="text-lg font-semibold mb-2">{title}</h3>
+      <p className="text-4xl font-bold" style={{ color }}>
+        {value}
+      </p>
+    </div>
+  );
+}
+```
+
+### Pattern 4: Modal Dialog
+
+```jsx
+import { useState } from 'react';
+
+export default function YourPage() {
+  const [showModal, setShowModal] = useState(false);
+  
+  return (
+    <>
+      <button onClick={() => setShowModal(true)}>
+        Open Modal
+      </button>
+      
+      {showModal && (
+        <Modal onClose={() => setShowModal(false)}>
+          <h2>Modal Title</h2>
+          <p>Modal content</p>
+        </Modal>
+      )}
+    </>
+  );
+}
+
+function Modal({ children, onClose }) {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+        {children}
+        <button
+          onClick={onClose}
+          className="mt-4 w-full py-2 bg-gray-200 rounded-lg"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  );
+}
+```
+
+### Pattern 5: Tabs
+
+```jsx
+import { useState } from 'react';
+
+export default function TabbedPage() {
+  const [activeTab, setActiveTab] = useState('overview');
+  
+  return (
+    <div className="max-w-7xl mx-auto py-8 px-4">
+      <div className="border-b mb-6">
+        <nav className="flex space-x-8">
+          <Tab active={activeTab === 'overview'} onClick={() => setActiveTab('overview')}>
+            Overview
+          </Tab>
+          <Tab active={activeTab === 'details'} onClick={() => setActiveTab('details')}>
+            Details
+          </Tab>
+          <Tab active={activeTab === 'settings'} onClick={() => setActiveTab('settings')}>
+            Settings
+          </Tab>
+        </nav>
+      </div>
+      
+      {activeTab === 'overview' && <OverviewTab />}
+      {activeTab === 'details' && <DetailsTab />}
+      {activeTab === 'settings' && <SettingsTab />}
+    </div>
+  );
+}
+
+function Tab({ active, onClick, children }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`py-4 px-1 border-b-2 font-medium ${
+        active 
+          ? 'border-blue-600 text-blue-600' 
+          : 'border-transparent text-gray-500 hover:text-gray-700'
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+```
+
+---
+
+## Styling (Tailwind CSS)
+
+### Available Classes:
+```jsx
+// Layout
+<div className="container mx-auto">           // Center with max-width
+<div className="flex items-center">           // Flexbox
+<div className="grid grid-cols-3 gap-4">     // Grid
+
+// Spacing
+<div className="p-4">      // Padding all sides
+<div className="py-8">     // Padding top/bottom
+<div className="mb-6">     // Margin bottom
+
+// Typography
+<h1 className="text-3xl font-bold">          // Large bold heading
+<p className="text-gray-600">                // Gray text
+
+// Colors
+<div className="bg-white">                   // White background
+<div className="text-blue-600">              // Blue text
+<div className="border-gray-200">            // Gray border
+
+// Interactive
+<button className="hover:bg-blue-700">       // Hover state
+<input className="focus:ring-2">             // Focus ring
+```
+
+### Use Config Colors:
+```jsx
+const config = useConfig();
+
+<div style={{ backgroundColor: config.branding.primary_color }}>
+  Primary color element
+</div>
+```
+
+---
+
+## Example: InboxTamer Email Dashboard
+
+```jsx
+// business/frontend/pages/EmailDashboard.jsx
+
+import { useState, useEffect } from 'react';
+import { useAuth, useAnalytics } from 'saas-boilerplate/core/hooks';
+import { Navbar, Footer } from 'saas-boilerplate/core/components';
+import api from 'saas-boilerplate/utils/api';
+
+export default function EmailDashboard() {
+  const { user } = useAuth();
+  const analytics = useAnalytics();
+  const [emails, setEmails] = useState([]);
+  const [filter, setFilter] = useState('all');
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    analytics.trackPageView('/dashboard/email', 'Email Dashboard');
+    loadEmails();
+  }, [filter]);
+  
+  const loadEmails = async () => {
+    setLoading(true);
+    try {
+      const response = await api.get('/inbox/emails', {
+        params: { filter }
+      });
+      setEmails(response.data);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const handleArchive = async (emailId) => {
+    await api.post(`/inbox/emails/${emailId}/archive`);
+    analytics.trackEvent('email_archived', { email_id: emailId });
+    loadEmails();
+  };
+  
+  return (
+    <>
+      <Navbar />
+      <div className="max-w-7xl mx-auto py-8 px-4">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold">Email Dashboard</h1>
+          <button
+            onClick={loadEmails}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg"
+          >
+            Refresh
+          </button>
+        </div>
+        
+        {/* Filters */}
+        <div className="mb-6 flex space-x-4">
+          <FilterButton
+            active={filter === 'all'}
+            onClick={() => setFilter('all')}
+          >
+            All
+          </FilterButton>
+          <FilterButton
+            active={filter === 'important'}
+            onClick={() => setFilter('important')}
+          >
+            Important
+          </FilterButton>
+          <FilterButton
+            active={filter === 'unread'}
+            onClick={() => setFilter('unread')}
+          >
+            Unread
+          </FilterButton>
+        </div>
+        
+        {/* Email List */}
+        {loading ? (
+          <div className="text-center py-12">Loading emails...</div>
+        ) : emails.length === 0 ? (
+          <div className="text-center py-12 text-gray-500">
+            No emails found
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {emails.map(email => (
+              <EmailCard
+                key={email.id}
+                email={email}
+                onArchive={() => handleArchive(email.id)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+      <Footer />
+    </>
+  );
+}
+
+function FilterButton({ active, onClick, children }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`px-4 py-2 rounded-lg ${
+        active
+          ? 'bg-blue-600 text-white'
+          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function EmailCard({ email, onArchive }) {
+  return (
+    <div className="bg-white border rounded-lg p-4 hover:shadow-md transition-shadow">
+      <div className="flex justify-between items-start">
+        <div className="flex-1">
+          <div className="flex items-center mb-2">
+            <span className="font-semibold">{email.from}</span>
+            {email.important && (
+              <span className="ml-2 text-xs bg-red-100 text-red-600 px-2 py-1 rounded">
+                Important
+              </span>
+            )}
+          </div>
+          <h3 className="font-medium mb-1">{email.subject}</h3>
+          <p className="text-sm text-gray-600">{email.preview}</p>
+        </div>
+        <button
+          onClick={onArchive}
+          className="ml-4 text-gray-400 hover:text-gray-600"
+        >
+          Archive
+        </button>
+      </div>
+    </div>
+  );
+}
+```
+
+---
+
+## State Management
+
+### Simple (useState):
+```jsx
+const [data, setData] = useState([]);
+```
+
+### Complex (useReducer):
+```jsx
+const [state, dispatch] = useReducer(reducer, initialState);
+
+function reducer(state, action) {
+  switch (action.type) {
+    case 'ADD_ITEM':
+      return { ...state, items: [...state.items, action.item] };
+    case 'REMOVE_ITEM':
+      return { ...state, items: state.items.filter(i => i.id !== action.id) };
+    default:
+      return state;
+  }
+}
+```
+
+---
+
+## Error Handling
+
+```jsx
+const [error, setError] = useState(null);
+
+useEffect(() => {
+  api.get('/data')
+    .then(r => setData(r.data))
+    .catch(err => setError(err.message));
+}, []);
+
+if (error) {
+  return (
+    <div className="text-center py-12">
+      <p className="text-red-600">Error: {error}</p>
+      <button onClick={() => window.location.reload()}>
+        Retry
+      </button>
+    </div>
+  );
+}
+```
+
+---
+
+## Loading States
+
+```jsx
+if (loading) {
+  return (
+    <div className="flex items-center justify-center py-12">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+    </div>
+  );
+}
+```
+
+---
+
+## Responsive Design
+
+```jsx
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+  {/* 1 column on mobile, 2 on tablet, 3 on desktop */}
+</div>
+
+<div className="hidden md:block">
+  {/* Only show on desktop */}
+</div>
+
+<div className="block md:hidden">
+  {/* Only show on mobile */}
+</div>
+```
+
+---
+
+## Testing Your Pages
+
+### 1. Start Frontend:
+```bash
+cd saas-boilerplate/frontend
+npm start
+```
+
+### 2. Visit Your Page:
+```
+http://localhost:3000/dashboard/your-page
+```
+
+### 3. Check Console:
+- Open browser DevTools
+- Look for errors
+- Verify API calls
+
+---
+
+## Checklist
+
+- [ ] Page file in `business/frontend/pages/`
+- [ ] Uses Navbar and Footer
+- [ ] Handles loading state
+- [ ] Handles error state
+- [ ] Responsive (mobile + desktop)
+- [ ] Analytics tracked
+- [ ] Uses config colors
+- [ ] API calls work
+- [ ] No console errors
+
+---
+
+## Ready to Build
+
+1. Create file: `business/frontend/pages/YourPage.jsx`
+2. Add component with layout
+3. Connect to your backend API
+4. Style with Tailwind
+5. Test at http://localhost:3000
+
+**The boilerplate handles routing and infrastructure.**
+
+<<<END_FILE: teebu-saas-platform/saas-boilerplate/directives/frontend_directive.md>>>
+
+<<<BEGIN_FILE: teebu-saas-platform/saas-boilerplate/directives/testing_directive.md>>>
+# Testing Directive - For Claude Code / FounderOps
+
+**Instructions for testing boilerplate and business logic**
+
+---
+
+## ⚡ Note: Auto-Loader Architecture
+
+**The boilerplate uses AUTO-LOADER. Routes and pages load automatically.**
+
+This means:
+- No imports needed in main.py or App.js
+- Tests also don't need imports
+- Just test the endpoint/page directly
+
+---
+
+## Test Layers Overview
+
+```
+1. Library Tests (teebu-shared-libs)
+   ├── test_stripe_lib.py
+   ├── test_mailerlite_lib.py
+   ├── test_auth0_lib.py
+   ├── test_git_lib.py
+   └── test_analytics_lib.py
+   Status: ✅ Already created and passing
+
+2. Boilerplate Tests (saas-boilerplate)
+   ├── Backend: test auth, payments, config, analytics
+   └── Frontend: test components, pages, hooks
+   Status: ✅ Created (run to validate infrastructure)
+
+3. Business Tests (business/)
+   ├── Backend: test your custom routes
+   └── Frontend: test your custom pages
+   Status: ⏳ You create these per business
+```
+
+---
+
+## Running Tests
+
+### 1. Library Tests (One-Time Validation)
+
+```bash
+cd teebu-shared-libs/
+python run_all_tests.py
+
+# Expected output:
+# ✓ test_stripe_lib.py - 7 passed
+# ✓ test_mailerlite_lib.py - 15 passed
+# ✓ test_auth0_lib.py - 19 passed
+# ✓ test_git_lib.py - 19 passed
+# ✓ test_analytics_lib.py - 14 passed
+# TOTAL: 74 tests passed
+```
+
+### 2. Boilerplate Tests (Infrastructure Validation)
+
+**Backend:**
+```bash
+cd saas-boilerplate/backend/
+python run_tests.py
+
+# Or specific test:
+pytest tests/test_auth_routes.py -v
+pytest tests/test_payment_routes.py -v
+pytest tests/test_config_loading.py -v
+pytest tests/test_analytics_routes.py -v
+```
+
+**Frontend:**
+```bash
+cd saas-boilerplate/frontend/
+npm test
+
+# Or specific test:
+npm test -- Navbar.test.jsx
+npm test -- Home.test.jsx
+```
+
+### 3. Business Tests (Your Custom Logic)
+
+**Backend:**
+```bash
+cd business/backend/
+pytest tests/ -v
+```
+
+**Frontend:**
+```bash
+cd business/frontend/
+npm test
+```
+
+---
+
+## Backend Testing Guide
+
+### File Location
+
+**Boilerplate tests:** `saas-boilerplate/backend/tests/test_*.py`
+**Business tests:** `business/backend/tests/test_*.py`
+
+### Test Template
+
+```python
+"""
+Test your custom business route
+File: business/backend/tests/test_email_rules.py
+"""
+
+import pytest
+from fastapi.testclient import TestClient
+from unittest.mock import patch, MagicMock
+import sys
+import os
+
+# Import app
+sys.path.insert(0, os.path.abspath(os.path.join(
+    os.path.dirname(__file__), 
+    '../../../saas-boilerplate/backend'
+)))
+
+from main import app
+
+client = TestClient(app)
+
+class TestEmailRules:
+    """Test InboxTamer email rules API"""
+    
+    def test_list_rules(self):
+        """Test GET /api/email_rules/"""
+        response = client.get("/api/email_rules/")
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert isinstance(data, list)
+    
+    def test_create_rule(self):
+        """Test POST /api/email_rules/"""
+        rule = {
+            "name": "Archive Newsletters",
+            "condition": "from",
+            "value": "@newsletter.com",
+            "action": "archive"
+        }
+        
+        response = client.post("/api/email_rules/", json=rule)
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["name"] == rule["name"]
+        assert "id" in data
+    
+    @patch('saas_boilerplate.core.auth.get_current_user')
+    def test_authenticated_endpoint(self, mock_auth):
+        """Test endpoint requiring authentication"""
+        # Mock authenticated user
+        mock_auth.return_value = MagicMock(
+            id="auth0|123",
+            email="test@example.com"
+        )
+        
+        response = client.get("/api/email_rules/")
+        assert response.status_code == 200
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])
+```
+
+### Common Test Patterns
+
+**Pattern 1: Test CRUD Operations**
+```python
+def test_create_item(self):
+    response = client.post("/api/items/", json={"name": "test"})
+    assert response.status_code == 200
+
+def test_read_item(self):
+    response = client.get("/api/items/1")
+    assert response.status_code == 200
+
+def test_update_item(self):
+    response = client.put("/api/items/1", json={"name": "updated"})
+    assert response.status_code == 200
+
+def test_delete_item(self):
+    response = client.delete("/api/items/1")
+    assert response.status_code == 200
+```
+
+**Pattern 2: Test Authentication**
+```python
+@patch('saas_boilerplate.core.auth.get_current_user')
+def test_requires_auth(self, mock_auth):
+    mock_auth.return_value = MagicMock(id="auth0|123")
+    response = client.get("/api/protected/")
+    assert response.status_code == 200
+
+def test_rejects_unauthenticated(self):
+    response = client.get("/api/protected/")
+    assert response.status_code == 401
+```
+
+**Pattern 3: Test Validation**
+```python
+def test_validates_input(self):
+    response = client.post("/api/items/", json={"invalid": "data"})
+    assert response.status_code == 422  # Validation error
+
+def test_requires_fields(self):
+    response = client.post("/api/items/", json={})
+    assert response.status_code == 422
+```
+
+**Pattern 4: Test Error Handling**
+```python
+@patch('business.backend.routes.items.external_service')
+def test_handles_external_failure(self, mock_service):
+    mock_service.side_effect = Exception("Service down")
+    
+    response = client.get("/api/items/")
+    assert response.status_code == 500
+```
+
+---
+
+## Frontend Testing Guide
+
+### File Location
+
+**Boilerplate tests:** `saas-boilerplate/frontend/src/__tests__/`
+**Business tests:** `business/frontend/tests/`
+
+### Test Template
+
+```jsx
+/**
+ * Test your custom page
+ * File: business/frontend/tests/EmailDashboard.test.jsx
+ */
+
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { BrowserRouter } from 'react-router-dom';
+import EmailDashboard from '../pages/EmailDashboard';
+import api from 'saas-boilerplate/utils/api';
+
+// Mock API
+jest.mock('saas-boilerplate/utils/api');
+
+// Mock hooks
+jest.mock('saas-boilerplate/core/hooks', () => ({
+  useAuth: () => ({
+    user: { sub: 'auth0|123', name: 'Test User' }
+  }),
+  useAnalytics: () => ({
+    trackPageView: jest.fn(),
+    trackEvent: jest.fn()
+  })
+}));
+
+describe('EmailDashboard', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+  
+  test('renders page title', () => {
+    render(
+      <BrowserRouter>
+        <EmailDashboard />
+      </BrowserRouter>
+    );
+    
+    expect(screen.getByText(/Email Dashboard/i)).toBeInTheDocument();
+  });
+  
+  test('loads emails on mount', async () => {
+    const mockEmails = [
+      { id: 1, subject: 'Test Email', from: 'test@example.com' }
+    ];
+    
+    api.get = jest.fn().mockResolvedValue({ data: mockEmails });
+    
+    render(
+      <BrowserRouter>
+        <EmailDashboard />
+      </BrowserRouter>
+    );
+    
+    await waitFor(() => {
+      expect(screen.getByText(/Test Email/i)).toBeInTheDocument();
+    });
+    
+    expect(api.get).toHaveBeenCalledWith('/inbox/emails', expect.any(Object));
+  });
+  
+  test('handles archive button click', async () => {
+    api.get = jest.fn().mockResolvedValue({ data: [] });
+    api.post = jest.fn().mockResolvedValue({ data: { success: true } });
+    
+    render(
+      <BrowserRouter>
+        <EmailDashboard />
+      </BrowserRouter>
+    );
+    
+    const archiveButton = screen.getByText(/Archive/i);
+    fireEvent.click(archiveButton);
+    
+    await waitFor(() => {
+      expect(api.post).toHaveBeenCalledWith('/inbox/emails/1/archive');
+    });
+  });
+});
+```
+
+### Common Test Patterns
+
+**Pattern 1: Test Rendering**
+```jsx
+test('renders component', () => {
+  render(<YourComponent />);
+  expect(screen.getByText(/Expected Text/i)).toBeInTheDocument();
+});
+```
+
+**Pattern 2: Test User Interactions**
+```jsx
+test('handles button click', () => {
+  render(<YourComponent />);
+  
+  const button = screen.getByText(/Submit/i);
+  fireEvent.click(button);
+  
+  expect(screen.getByText(/Success/i)).toBeInTheDocument();
+});
+```
+
+**Pattern 3: Test Async Data Loading**
+```jsx
+test('loads data', async () => {
+  api.get = jest.fn().mockResolvedValue({ data: mockData });
+  
+  render(<YourComponent />);
+  
+  await waitFor(() => {
+    expect(screen.getByText(/Data/i)).toBeInTheDocument();
+  });
+});
+```
+
+**Pattern 4: Test Forms**
+```jsx
+test('submits form', async () => {
+  api.post = jest.fn().mockResolvedValue({ data: { success: true } });
+  
+  render(<YourForm />);
+  
+  const input = screen.getByLabelText(/Name/i);
+  fireEvent.change(input, { target: { value: 'Test Name' } });
+  
+  const submit = screen.getByText(/Submit/i);
+  fireEvent.click(submit);
+  
+  await waitFor(() => {
+    expect(api.post).toHaveBeenCalledWith('/endpoint', {
+      name: 'Test Name'
+    });
+  });
+});
+```
+
+---
+
+## Test-Driven Development (TDD) Workflow
+
+### For New Features
+
+**Step 1: Write Test First**
+```python
+# business/backend/tests/test_new_feature.py
+def test_new_endpoint():
+    response = client.get("/api/new_feature/")
+    assert response.status_code == 200
+    # Test should FAIL (endpoint doesn't exist yet)
+```
+
+**Step 2: Implement Minimum Code**
+```python
+# business/backend/routes/new_feature.py
+from fastapi import APIRouter
+
+router = APIRouter()
+
+@router.get("/")
+def get_feature():
+    return {}  # Minimum to pass test
+```
+
+**Step 3: Run Test**
+```bash
+pytest business/backend/tests/test_new_feature.py
+# Should PASS now
+```
+
+**Step 4: Add More Tests, Refine Implementation**
+```python
+def test_returns_correct_data():
+    response = client.get("/api/new_feature/")
+    data = response.json()
+    assert "items" in data
+    # Fails again, add logic to pass
+```
+
+---
+
+## Integration Testing
+
+### Test Boilerplate + Business Logic Together
+
+```python
+class TestIntegration:
+    """Test business logic integrates with boilerplate"""
+    
+    @patch('main.analytics')
+    def test_business_route_tracks_analytics(self, mock_analytics):
+        """Verify your route uses boilerplate analytics"""
+        mock_analytics.track_event.return_value = {"success": True}
+        
+        # Call your business endpoint
+        response = client.post("/api/your_feature/action")
+        
+        # Verify it used boilerplate analytics
+        mock_analytics.track_event.assert_called_once()
+    
+    @patch('main.auth0')
+    def test_business_route_requires_auth(self, mock_auth0):
+        """Verify your route uses boilerplate auth"""
+        # Call without auth should fail
+        response = client.get("/api/your_feature/protected")
+        assert response.status_code == 401
+```
+
+---
+
+## Coverage Goals
+
+### Minimum Coverage
+
+**Backend:**
+- ✅ All routes return correct status codes
+- ✅ All routes validate input
+- ✅ All routes handle errors
+- ✅ Auth-required routes reject unauthenticated requests
+
+**Frontend:**
+- ✅ All pages render without crashing
+- ✅ All interactive elements work (buttons, forms)
+- ✅ All API calls are made correctly
+- ✅ Loading and error states display
+
+### Good Coverage (Aim For)
+
+**Backend:** 80%+ code coverage
+```bash
+pytest --cov=business/backend/routes --cov-report=html
+```
+
+**Frontend:** 70%+ code coverage
+```bash
+npm test -- --coverage
+```
+
+---
+
+## Continuous Integration
+
+### GitHub Actions Example
+
+```yaml
+# .github/workflows/test.yml
+name: Tests
+
+on: [push, pull_request]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.9'
+      - name: Install dependencies
+        run: |
+          cd saas-boilerplate/backend
+          pip install -r requirements.txt
+          pip install pytest pytest-cov
+      - name: Run tests
+        run: |
+          cd saas-boilerplate/backend
+          pytest tests/ -v --cov
+  
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Node
+        uses: actions/setup-node@v2
+        with:
+          node-version: '18'
+      - name: Install dependencies
+        run: |
+          cd saas-boilerplate/frontend
+          npm install
+      - name: Run tests
+        run: |
+          cd saas-boilerplate/frontend
+          npm test -- --coverage
+```
+
+---
+
+## Testing Checklist
+
+### Before Committing Code
+
+**Backend:**
+- [ ] All new routes have tests
+- [ ] Tests cover success cases
+- [ ] Tests cover error cases
+- [ ] Tests cover validation
+- [ ] All tests pass: `pytest tests/ -v`
+
+**Frontend:**
+- [ ] All new pages/components have tests
+- [ ] Tests cover rendering
+- [ ] Tests cover user interactions
+- [ ] Tests cover API calls
+- [ ] All tests pass: `npm test`
+
+### Before Deploying
+
+- [ ] All library tests pass
+- [ ] All boilerplate tests pass
+- [ ] All business tests pass
+- [ ] Integration tests pass
+- [ ] Manual testing complete
+
+---
+
+## Common Issues & Solutions
+
+### Backend
+
+**Issue:** Tests can't find main.py
+```python
+# Solution: Fix path
+sys.path.insert(0, os.path.abspath(os.path.join(
+    os.path.dirname(__file__), 
+    '../../../saas-boilerplate/backend'
+)))
+```
+
+**Issue:** Mock not working
+```python
+# Solution: Patch at the right location
+@patch('main.stripe')  # Patch where it's used, not where it's defined
+```
+
+### Frontend
+
+**Issue:** Component not rendering in test
+```jsx
+// Solution: Wrap in Router and providers
+render(
+  <BrowserRouter>
+    <YourComponent />
+  </BrowserRouter>
+);
+```
+
+**Issue:** Async test failing
+```jsx
+// Solution: Use waitFor
+await waitFor(() => {
+  expect(screen.getByText(/Text/i)).toBeInTheDocument();
+});
+```
+
+---
+
+## Resources
+
+**Backend Testing:**
+- FastAPI Testing: https://fastapi.tiangolo.com/tutorial/testing/
+- Pytest Docs: https://docs.pytest.org/
+- Mock/Patch: https://docs.python.org/3/library/unittest.mock.html
+
+**Frontend Testing:**
+- React Testing Library: https://testing-library.com/react
+- Jest: https://jestjs.io/
+- Testing Best Practices: https://kentcdodds.com/blog/common-mistakes-with-react-testing-library
+
+---
+
+## Summary
+
+**3 Test Layers:**
+1. Libraries (validate libs work)
+2. Boilerplate (validate infrastructure)
+3. Business (validate YOUR logic)
+
+**Run tests at each layer:**
+- Libraries: One-time validation
+- Boilerplate: On infrastructure updates
+- Business: On every code change
+
+**All tests must pass before deploy.**
+
+**Templates provided in:**
+- `saas-boilerplate/backend/tests/` (boilerplate examples)
+- `saas-boilerplate/frontend/src/__tests__/` (boilerplate examples)
+- `business/backend/tests/test_template.py` (your backend template)
+- `business/frontend/tests/test_template.jsx` (your frontend template)
+
+**Copy templates, adapt to your features, run tests, ship with confidence. ✅**
+
+<<<END_FILE: teebu-saas-platform/saas-boilerplate/directives/testing_directive.md>>>
+
+<<<BEGIN_FILE: teebu-saas-platform/teebu-shared-libs/README.md>>>
+# AF/FO Shared Libraries
+
+**Production-ready Python libraries for automating SaaS business deployments.**
+
+Built for solo operators who need deterministic, debuggable systems.
+
+---
+
+## Overview
+
+Four integrated libraries that eliminate deployment bottlenecks for the AutoFounder (AF) portfolio and FounderOps (FO) build system:
+
+| Library | Purpose | Key Features |
+|---------|---------|--------------|
+| **stripe_lib** | Payment processing | Subscriptions, payment links, webhooks |
+| **mailerlite_lib** | Email marketing | Subscribers, campaigns, automation |
+| **auth0_lib** | Authentication | Users, roles, password flows |
+| **git_lib** | Version control | Repos, commits, branches, remotes |
+
+**Time Savings:** 37-62 hours per 25 business deployments
+
+---
+
+## Quick Start
+
+### 1. Install
+
+```bash
+# Clone repository
+git clone https://github.com/teebu/teebu-shared-libs.git
+cd teebu-shared-libs
+
+# Install dependencies
+pip install -r requirements.txt --break-system-packages
+
+# Verify git is installed
+git --version
+```
+
+### 2. Configure
+
+Edit config files with your API credentials:
+
+```bash
+# AF Portfolio configs
+af_stripe_config.json       # Stripe API key
+af_mailerlite_config.json   # MailerLite API key
+af_auth0_config.json        # Auth0 credentials
+af_git_config.json          # GitHub/GitLab token
+
+# FO Customer configs
+fo_stripe_config.json
+fo_mailerlite_config.json
+fo_auth0_config.json
+fo_git_config.json
+```
+
+### 3. Test
+
+```bash
+# Run all tests
+python run_all_tests.py
+
+# Or test individually
+python run_all_tests.py stripe
+python run_all_tests.py mailerlite
+python run_all_tests.py auth0
+python run_all_tests.py git
+```
+
+### 4. Use
+
+```python
+from stripe_lib import load_stripe_lib
+from mailerlite_lib import load_mailerlite_lib
+from auth0_lib import load_auth0_lib
+from git_lib import load_git_lib
+
+# Load libraries
+stripe = load_stripe_lib('af_stripe_config.json')
+mailer = load_mailerlite_lib('af_mailerlite_config.json')
+auth = load_auth0_lib('af_auth0_config.json')
+git = load_git_lib('af_git_config.json')
+
+# Use them
+stripe.create_complete_subscription_product(
+    business_name="InboxTamer",
+    monthly_price_dollars=49.00
+)
+```
+
+---
+
+## Features
+
+### Shared Design
+
+All four libraries share:
+
+- ✅ **Config-driven** - Separate AF and FO accounts
+- ✅ **Configurable logging** - ERROR/INFO/DEBUG levels
+- ✅ **Automatic retry** - Exponential backoff on failures
+- ✅ **Terminal-friendly** - Designed for vi/bash workflows
+- ✅ **Comprehensive errors** - Detailed error information
+- ✅ **Consistent API** - Same patterns across all libraries
+- ✅ **Heavy documentation** - Comments and examples everywhere
+
+### Stripe Library
+
+```python
+# Create complete subscription setup
+result = stripe.create_complete_subscription_product(
+    business_name="YourBusiness",
+    monthly_price_dollars=49.00,
+    annual_price_dollars=499.00
+)
+
+payment_link = result["monthly_payment_link"]
+```
+
+**Features:**
+- Product and price creation
+- Payment link generation
+- Subscription management
+- Webhook verification
+- Cancellation support
+
+[Full Stripe Documentation →](README_STRIPE_LIB.md)
+
+### MailerLite Library
+
+```python
+# Add subscriber to email list
+result = mailer.add_subscriber(
+    email="user@example.com",
+    fields={"name": "John Doe"},
+    groups=["welcome_group_id"]
+)
+
+# Set up welcome automation
+result = mailer.setup_welcome_automation(
+    business_name="YourBusiness"
+)
+```
+
+**Features:**
+- Subscriber management
+- Group operations
+- Campaign tracking
+- Automation workflows
+- Webhook support
+
+### Auth0 Library
+
+```python
+# Create user
+result = auth.create_user(
+    email="user@example.com",
+    password="SecurePassword123!",
+    email_verified=False
+)
+
+# Set up basic auth structure
+result = auth.setup_basic_auth(
+    business_name="YourBusiness"
+)
+```
+
+**Features:**
+- User CRUD operations
+- Role management
+- Password reset flows
+- Email verification
+- Token management
+
+### Git Library
+
+```python
+# Set up new repository
+result = git.setup_new_repo(
+    repo_path="/repos/your-business",
+    remote_url="https://github.com/user/repo.git",
+    initial_files={
+        "README.md": "# Your Business",
+        ".gitignore": "*.pyc\n__pycache__/"
+    }
+)
+
+# Commit and push
+git.add_and_commit(repo_path, "Update code")
+git.push(repo_path, remote="origin", branch="main")
+```
+
+**Features:**
+- Repository initialization
+- Commit operations
+- Branch management
+- Tag operations
+- Remote operations (GitHub/GitLab)
+
+---
+
+## Installation
+
+### System Requirements
+
+- **Python:** 3.9+
+- **Git:** 2.x+ (system package)
+- **OS:** macOS, Linux, Windows (WSL)
+
+### Python Dependencies
+
+```bash
+pip install -r requirements.txt --break-system-packages
+```
+
+Installs:
+- `stripe>=7.0.0` - Stripe API client
+- `requests>=2.31.0` - HTTP library for MailerLite/Auth0
+
+### Git Installation
+
+```bash
+# macOS
+brew install git
+
+# Ubuntu/Debian
+sudo apt-get install git
+
+# Verify
+git --version
+```
+
+---
+
+## Configuration
+
+### Config File Structure
+
+All libraries use JSON config files:
+
+```json
+{
+  "api_key_or_credentials": "YOUR_KEY_HERE",
+  "account_name": "Your Account Name",
+  "log_level": "INFO",
+  "log_file": "operations.log"
+}
+```
+
+### Getting API Credentials
+
+**Stripe:**
+1. Go to https://dashboard.stripe.com/test/apikeys
+2. Copy "Secret key" (starts with `sk_test_` for testing)
+3. Add to `af_stripe_config.json` or `fo_stripe_config.json`
+
+**MailerLite:**
+1. Go to https://dashboard.mailerlite.com/integrations/api
+2. Generate API key
+3. Add to `af_mailerlite_config.json` or `fo_mailerlite_config.json`
+
+**Auth0:**
+1. Go to https://manage.auth0.com/dashboard
+2. Create Machine-to-Machine Application
+3. Authorize for Auth0 Management API
+4. Grant scopes: `read:users`, `create:users`, `update:users`, `delete:users`, `read:roles`, `create:roles`, `update:roles`
+5. Copy Domain, Client ID, Client Secret
+6. Add to `af_auth0_config.json` or `fo_auth0_config.json`
+
+**Git (optional for remote operations):**
+1. GitHub: https://github.com/settings/tokens (Generate personal access token)
+2. GitLab: https://gitlab.com/-/profile/personal_access_tokens
+3. Add to `af_git_config.json` or `fo_git_config.json`
+
+### Multi-Account Support
+
+Use separate configs for AF (your portfolio) vs FO (customer deployments):
+
+```python
+# AF operations (your account)
+af_stripe = load_stripe_lib('af_stripe_config.json')
+
+# FO operations (customer account)
+fo_stripe = load_stripe_lib('fo_stripe_config.json')
+```
+
+---
+
+## Testing
+
+### Test Suite
+
+Four comprehensive test suites validate all functionality:
+
+```bash
+# Run all tests
+python run_all_tests.py
+
+# Run individual tests
+python run_all_tests.py stripe      # ~30 seconds
+python run_all_tests.py mailerlite  # ~45 seconds
+python run_all_tests.py auth0       # ~60 seconds
+python run_all_tests.py git         # ~30 seconds (local only)
+```
+
+### What Gets Tested
+
+- ✅ Config loading and validation
+- ✅ Library initialization
+- ✅ All CRUD operations
+- ✅ Convenience methods
+- ✅ Error handling
+- ✅ Retry logic
+- ✅ Automatic cleanup (where possible)
+
+### Test Requirements
+
+**Stripe:** Test mode API key  
+**MailerLite:** Valid API key (creates/deletes test data)  
+**Auth0:** M2M application with proper scopes  
+**Git:** No API credentials needed (local operations only)
+
+See [TESTING_GUIDE.md](TESTING_GUIDE.md) for complete details.
+
+---
+
+## Usage Examples
+
+### Complete Business Setup
+
+```python
+from stripe_lib import load_stripe_lib
+from mailerlite_lib import load_mailerlite_lib
+from auth0_lib import load_auth0_lib
+from git_lib import load_git_lib
+
+def setup_af_business(business_name, monthly_price):
+    """Complete automated setup for one AF business"""
+    
+    # Load all libraries
+    stripe = load_stripe_lib('af_stripe_config.json')
+    mailer = load_mailerlite_lib('af_mailerlite_config.json')
+    auth = load_auth0_lib('af_auth0_config.json')
+    git = load_git_lib('af_git_config.json')
+    
+    print(f"Setting up {business_name}...")
+    
+    # 1. Payment processing
+    payment = stripe.create_complete_subscription_product(
+        business_name=business_name,
+        monthly_price_dollars=monthly_price
+    )
+    
+    # 2. Email marketing
+    email = mailer.setup_welcome_automation(
+        business_name=business_name
+    )
+    
+    # 3. Authentication
+    authentication = auth.setup_basic_auth(
+        business_name=business_name
+    )
+    
+    # 4. Git repository
+    repo = git.setup_new_repo(
+        repo_path=f"/repos/{business_name.lower()}",
+        remote_url=f"https://github.com/af/{business_name.lower()}.git",
+        initial_files={
+            "README.md": f"# {business_name}",
+            ".gitignore": "*.pyc\n__pycache__/\n.env"
+        }
+    )
+    
+    print(f"✓ {business_name} ready!")
+    print(f"  Payment: {payment['monthly_payment_link']}")
+    print(f"  Email group: {email['group']['id']}")
+    print(f"  Roles: {list(authentication['roles'].keys())}")
+    print(f"  Repo: {repo['repo_path']}")
+    
+    return {
+        "payment_link": payment["monthly_payment_link"],
+        "email_group_id": email["group"]["id"],
+        "auth_roles": authentication["roles"],
+        "repo_commit": repo.get("commit_hash")
+    }
+
+# Set up InboxTamer
+config = setup_af_business("InboxTamer", 49.00)
+```
+
+**Time:** ~30 seconds per business  
+**Manual alternative:** 90-150 minutes per business
+
+### User Signup Flow
+
+```python
+def handle_user_signup(email, password, name):
+    """Complete user signup across all systems"""
+    
+    auth = load_auth0_lib('af_auth0_config.json')
+    mailer = load_mailerlite_lib('af_mailerlite_config.json')
+    
+    # 1. Create Auth0 user
+    user = auth.create_user(
+        email=email,
+        password=password,
+        user_metadata={"name": name}
+    )
+    
+    if not user["success"]:
+        return {"error": "Account creation failed"}
+    
+    # 2. Add to email list
+    subscriber = mailer.add_subscriber(
+        email=email,
+        fields={"name": name},
+        groups=["new_users_group_id"]
+    )
+    
+    # 3. Assign default role
+    auth.assign_roles_to_user(
+        user_id=user["data"]["user_id"],
+        role_ids=["user_role_id"]
+    )
+    
+    # 4. Send verification email
+    auth.send_verification_email(user["data"]["user_id"])
+    
+    return {
+        "success": True,
+        "user_id": user["data"]["user_id"]
+    }
+```
+
+### Batch Deploy 25 Businesses
+
+```python
+AF_PORTFOLIO = [
+    {"name": "InboxTamer", "price": 49.00},
+    {"name": "LeadGenerator", "price": 29.00},
+    {"name": "ContentScheduler", "price": 39.00},
+    # ... 22 more
+]
+
+for business in AF_PORTFOLIO:
+    config = setup_af_business(
+        business_name=business["name"],
+        monthly_price=business["price"]
+    )
+    
+    # Save config
+    with open(f"configs/{business['name'].lower()}.json", 'w') as f:
+        json.dump(config, f, indent=2)
+
+print(f"✓ Deployed {len(AF_PORTFOLIO)} businesses in ~12.5 minutes")
+```
+
+---
+
+## Logging & Debugging
+
+### Log Levels
+
+All libraries support three log levels:
+
+| Level | When to Use | What Gets Logged |
+|-------|-------------|------------------|
+| `ERROR` | Production (quiet) | Only failures |
+| `INFO` | Normal operation | Operations and results |
+| `DEBUG` | Troubleshooting | Everything (requests, retries, full responses) |
+
+### Change Log Level
+
+**Method 1: Edit config file (requires restart)**
+
+```json
+{
+  "log_level": "DEBUG"
+}
+```
+
+**Method 2: Environment variable (no restart for new processes)**
+
+```bash
+export STRIPE_LOG_LEVEL=DEBUG
+export MAILERLITE_LOG_LEVEL=DEBUG
+export AUTH0_LOG_LEVEL=DEBUG
+export GIT_LOG_LEVEL=DEBUG
+
+python your_script.py
+```
+
+### Log Files
+
+Logs are written to both stdout (terminal) and files:
+
+```bash
+# Watch logs in real-time
+tail -f stripe_operations.log
+tail -f mailerlite_operations.log
+tail -f auth0_operations.log
+tail -f git_operations.log
+
+# Search logs
+grep ERROR stripe_operations.log
+grep InboxTamer mailerlite_operations.log
+```
+
+### Example Debug Output
+
+```
+2025-01-21 10:23:45 [STRIPE-LIB] INFO - Creating subscription product: InboxTamer
+2025-01-21 10:23:45 [STRIPE-LIB] DEBUG - CREATE_PRODUCT[InboxTamer] - Attempt 1/3 | {"kwargs": {...}}
+2025-01-21 10:23:46 [STRIPE-LIB] INFO - CREATE_PRODUCT[InboxTamer] - SUCCESS | {"attempt": 1, "elapsed_sec": 0.234}
+2025-01-21 10:23:46 [STRIPE-LIB] DEBUG - CREATE_PRODUCT[InboxTamer] - Full response | {"response": {...}}
+```
+
+---
+
+## Error Handling
+
+### Standard Return Format
+
+All library methods return a consistent format:
+
+```python
+{
+    "success": bool,           # True if operation succeeded
+    "data": dict,             # Result data (if success=True)
+    "error": str,             # Error message (if success=False)
+    "error_detail": dict,     # Full error details (if available)
+    "attempts": int,          # Number of retry attempts made
+    "elapsed_sec": float      # Time taken
+}
+```
+
+### Error Handling Pattern
+
+```python
+result = stripe.create_subscription_product(
+    business_name="Test",
+    description="Test product"
+)
+
+if not result["success"]:
+    # Handle error
+    print(f"Operation failed: {result['error']}")
+    print(f"Status code: {result.get('status_code')}")
+    print(f"Attempts: {result.get('attempts')}")
+    
+    # Full details in DEBUG mode
+    if 'error_detail' in result:
+        print(f"Details: {result['error_detail']}")
+    
+    # Take action
+    if result.get('status_code') == 401:
+        print("Invalid API key")
+    elif result.get('status_code') == 429:
+        print("Rate limited - wait and retry")
+else:
+    # Success
+    data = result["data"]
+    print(f"Product created: {data['id']}")
+```
+
+### Automatic Retry
+
+All libraries retry failed operations automatically:
+
+- **Attempts:** 3 (configurable)
+- **Backoff:** Exponential (1s, 2s, 4s)
+- **Retryable errors:** Network issues, rate limits, 5xx errors
+- **Non-retryable:** 400, 401, 403, 404 errors
+
+Retry behavior is logged at DEBUG level.
+
+---
+
+## Security
+
+### Credentials Management
+
+**Never commit API keys to Git:**
+
+```bash
+# Add to .gitignore
+*_config.json
+*.log
+.env
+```
+
+**Use environment variables in production:**
+
+```python
+import os
+
+config = {
+    "stripe_secret_key": os.getenv("STRIPE_SECRET_KEY"),
+    "mailerlite_api_key": os.getenv("MAILERLITE_API_KEY"),
+    # ...
+}
+
+stripe = load_stripe_lib_from_dict(config)
+```
+
+### Security Features
+
+**Stripe:**
+- ✅ PCI-scope minimized (no raw card data)
+- ✅ Webhook signature verification
+- ✅ Token-based authentication
+
+**Auth0:**
+- ✅ Passwords redacted in logs
+- ✅ Management token auto-refresh
+- ✅ Secure password reset flows
+
+**MailerLite:**
+- ✅ API key-based auth (Bearer token)
+- ✅ HTTPS only
+
+**Git:**
+- ✅ Token injection for remote URLs
+- ✅ Support for GitHub/GitLab tokens
+- ✅ No credentials in logs
+
+---
+
+## Production Deployment
+
+### Recommended Structure
+
+```
+production/
+├── teebu-shared-libs/          # Git submodule or pip install
+├── af-portfolio/
+│   ├── configs/
+│   │   ├── af_stripe_config.json
+│   │   ├── af_mailerlite_config.json
+│   │   ├── af_auth0_config.json
+│   │   └── af_git_config.json
+│   ├── deploy_business.py
+│   └── manage_portfolio.py
+└── fo-build-system/
+    ├── configs/
+    │   ├── fo_stripe_config.json
+    │   ├── fo_mailerlite_config.json
+    │   ├── fo_auth0_config.json
+    │   └── fo_git_config.json
+    └── build_customer.py
+```
+
+### Environment Variables
+
+```bash
+# Production environment
+export STRIPE_SECRET_KEY="sk_live_..."
+export MAILERLITE_API_KEY="..."
+export AUTH0_CLIENT_ID="..."
+export AUTH0_CLIENT_SECRET="..."
+export GITHUB_TOKEN="..."
+
+# Log level
+export STRIPE_LOG_LEVEL=INFO
+export MAILERLITE_LOG_LEVEL=INFO
+export AUTH0_LOG_LEVEL=INFO
+export GIT_LOG_LEVEL=INFO
+```
+
+### Monitoring
+
+```python
+import logging
+
+# Set up application logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(name)s] %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('app.log'),
+        logging.StreamHandler()
+    ]
+)
+
+# Libraries will log to their own files
+# Plus you can capture application-level events
+```
+
+---
+
+## Troubleshooting
+
+### Common Issues
+
+**"Invalid API key"**
+- ✓ Verify key is correct in config
+- ✓ For Stripe: Use test mode key (sk_test_...)
+- ✓ Check for extra spaces when copying
+- ✓ Ensure config file is being loaded
+
+**"Permission denied" (Auth0)**
+- ✓ Verify M2M app has required scopes
+- ✓ Re-authorize if scopes changed
+- ✓ Check client_id and client_secret match
+
+**"Rate limit exceeded"**
+- ✓ Wait 60 seconds before retrying
+- ✓ Reduce request frequency
+- ✓ Libraries include retry logic
+
+**"Git command not found"**
+- ✓ Install Git: `brew install git` (macOS) or `apt-get install git` (Linux)
+- ✓ Verify: `git --version`
+
+**Tests fail partway through**
+- ✓ Enable DEBUG logging
+- ✓ Check error messages
+- ✓ Verify API credentials
+- ✓ Clean up test data manually if needed
+
+### Debug Checklist
+
+1. ✓ Enable DEBUG logging
+2. ✓ Check log files
+3. ✓ Verify API credentials
+4. ✓ Check API status pages
+5. ✓ Run individual tests
+6. ✓ Review error details
+7. ✓ Check rate limits
+
+### API Status Pages
+
+- Stripe: https://status.stripe.com
+- MailerLite: https://status.mailerlite.com
+- Auth0: https://status.auth0.com
+- GitHub: https://www.githubstatus.com
+
+---
+
+## Contributing
+
+### Development Setup
+
+```bash
+# Clone repo
+git clone https://github.com/teebu/teebu-shared-libs.git
+cd teebu-shared-libs
+
+# Install in development mode
+pip install -e .
+
+# Run tests
+python run_all_tests.py
+```
+
+### Code Style
+
+- Heavy commenting (explain why, not just what)
+- Consistent error handling
+- Comprehensive logging
+- Type hints encouraged
+- Docstrings for all public methods
+
+### Pull Request Process
+
+1. Create feature branch
+2. Add tests for new functionality
+3. Ensure all tests pass
+4. Update documentation
+5. Submit PR with clear description
+
+---
+
+## License
+
+Proprietary - Teebu (AF/FO Systems)
+
+---
+
+## Changelog
+
+### v1.0.0 (2025-01-21)
+
+**Initial Release**
+
+- ✅ Stripe library - Payment processing
+- ✅ MailerLite library - Email marketing
+- ✅ Auth0 library - Authentication
+- ✅ Git library - Version control
+- ✅ Complete test coverage (4 test suites)
+- ✅ Comprehensive documentation
+- ✅ Config-driven multi-account support
+- ✅ Automatic retry with backoff
+- ✅ Configurable logging (ERROR/INFO/DEBUG)
+
+---
+
+## Support
+
+### Documentation
+
+- **Complete Guide:** [ALL_LIBRARIES_SUMMARY.txt](ALL_LIBRARIES_SUMMARY.txt)
+- **Stripe Details:** [README_STRIPE_LIB.md](README_STRIPE_LIB.md)
+- **Testing Guide:** [TESTING_GUIDE.md](TESTING_GUIDE.md)
+- **Source Code:** All libraries are heavily commented
+
+### Getting Help
+
+1. Check documentation
+2. Review library source code (comments explain everything)
+3. Enable DEBUG logging
+4. Check log files
+5. Review test examples
+
+---
+
+## Acknowledgments
+
+Built for solo operators who need:
+- ✅ Deterministic systems (no surprises)
+- ✅ Debuggable operations (verbose when needed)
+- ✅ Terminal-friendly workflows (vi/bash)
+- ✅ Production-ready code (proper error handling)
+
+**Time savings: 37-62 hours per 25 business deployments**
+
+---
+
+## Quick Reference
+
+### Load Libraries
+
+```python
+from stripe_lib import load_stripe_lib
+from mailerlite_lib import load_mailerlite_lib
+from auth0_lib import load_auth0_lib
+from git_lib import load_git_lib
+```
+
+### Essential Operations
+
+```python
+# Stripe
+stripe.create_complete_subscription_product(name, price)
+stripe.cancel_subscription(subscription_id)
+
+# MailerLite
+mailer.add_subscriber(email, fields, groups)
+mailer.setup_welcome_automation(business_name)
+
+# Auth0
+auth.create_user(email, password)
+auth.setup_basic_auth(business_name)
+
+# Git
+git.setup_new_repo(repo_path, remote_url, initial_files)
+git.add_and_commit(repo_path, message)
+git.push(repo_path, remote, branch)
+```
+
+### Run Tests
+
+```bash
+python run_all_tests.py              # All tests
+python run_all_tests.py stripe       # Individual
+```
+
+### Enable Debug Logging
+
+```bash
+export STRIPE_LOG_LEVEL=DEBUG
+export MAILERLITE_LOG_LEVEL=DEBUG
+export AUTH0_LOG_LEVEL=DEBUG
+export GIT_LOG_LEVEL=DEBUG
+```
+
+---
+
+**Ready to ship? Start with InboxTamer. Then scale to 25 businesses. Hit $15k/month. You have the tools.**
+
+<<<END_FILE: teebu-saas-platform/teebu-shared-libs/README.md>>>
+
+## FILE LISTINGS: BOILERPLATE STRUCTURE
+
+### Files under saas-boilerplate/backend/
+  teebu-saas-platform/saas-boilerplate/backend/.env.example
+  teebu-saas-platform/saas-boilerplate/backend/.gitignore
+  teebu-saas-platform/saas-boilerplate/backend/config/analytics_config.example.json
+  teebu-saas-platform/saas-boilerplate/backend/config/business_config.json
+  teebu-saas-platform/saas-boilerplate/backend/core/__init__.py
+  teebu-saas-platform/saas-boilerplate/backend/core/database.py
+  teebu-saas-platform/saas-boilerplate/backend/core/loader.py
+  teebu-saas-platform/saas-boilerplate/backend/main.py
+  teebu-saas-platform/saas-boilerplate/backend/models_example.py
+  teebu-saas-platform/saas-boilerplate/backend/pytest.ini
+  teebu-saas-platform/saas-boilerplate/backend/requirements.txt
+  teebu-saas-platform/saas-boilerplate/backend/run_tests.py
+  teebu-saas-platform/saas-boilerplate/backend/tests/test_analytics_routes.py
+  teebu-saas-platform/saas-boilerplate/backend/tests/test_auth_routes.py
+  teebu-saas-platform/saas-boilerplate/backend/tests/test_config_loading.py
+  teebu-saas-platform/saas-boilerplate/backend/tests/test_payment_routes.py
+
+### Files under saas-boilerplate/frontend/src/pages/
+  teebu-saas-platform/saas-boilerplate/frontend/src/pages/AccountSettings.jsx
+  teebu-saas-platform/saas-boilerplate/frontend/src/pages/Contact.jsx
+  teebu-saas-platform/saas-boilerplate/frontend/src/pages/Dashboard.jsx
+  teebu-saas-platform/saas-boilerplate/frontend/src/pages/FAQ.jsx
+  teebu-saas-platform/saas-boilerplate/frontend/src/pages/Home.jsx
+  teebu-saas-platform/saas-boilerplate/frontend/src/pages/Login.jsx
+  teebu-saas-platform/saas-boilerplate/frontend/src/pages/Pricing.jsx
+  teebu-saas-platform/saas-boilerplate/frontend/src/pages/Privacy.jsx
+  teebu-saas-platform/saas-boilerplate/frontend/src/pages/Signup.jsx
+  teebu-saas-platform/saas-boilerplate/frontend/src/pages/Terms.jsx
+
+### Files under saas-boilerplate/frontend/src/components/
+  teebu-saas-platform/saas-boilerplate/frontend/src/components/FeatureCard.jsx
+  teebu-saas-platform/saas-boilerplate/frontend/src/components/Footer.jsx
+  teebu-saas-platform/saas-boilerplate/frontend/src/components/Navbar.jsx
+  teebu-saas-platform/saas-boilerplate/frontend/src/components/PricingCard.jsx
+  teebu-saas-platform/saas-boilerplate/frontend/src/components/ProtectedRoute.jsx
+
+### Files under teebu-shared-libs/lib/
+  teebu-saas-platform/teebu-shared-libs/lib/analytics_lib.py
+  teebu-saas-platform/teebu-shared-libs/lib/auth0_lib.py
+  teebu-saas-platform/teebu-shared-libs/lib/git_lib.py
+  teebu-saas-platform/teebu-shared-libs/lib/mailerlite_lib.py
+  teebu-saas-platform/teebu-shared-libs/lib/stripe_lib.py
+
+## COMPLETE FILE TREE
+  teebu-saas-platform/
+  teebu-saas-platform/README.md
+  teebu-saas-platform/saas-boilerplate/
+  teebu-saas-platform/saas-boilerplate/AUTO_LOADER_DATABASE.md
+  teebu-saas-platform/saas-boilerplate/DELIVERY_MANIFEST.md
+  teebu-saas-platform/saas-boilerplate/DEPLOYMENT.md
+  teebu-saas-platform/saas-boilerplate/DIRECTIVE_UPDATES.md
+  teebu-saas-platform/saas-boilerplate/PLUGIN_ARCHITECTURE.md
+  teebu-saas-platform/saas-boilerplate/QUICKSTART.md
+  teebu-saas-platform/saas-boilerplate/README.md
+  teebu-saas-platform/saas-boilerplate/TESTING_SUMMARY.md
+  teebu-saas-platform/saas-boilerplate/backend/
+  teebu-saas-platform/saas-boilerplate/backend/.env.example
+  teebu-saas-platform/saas-boilerplate/backend/.gitignore
+  teebu-saas-platform/saas-boilerplate/backend/config/
+  teebu-saas-platform/saas-boilerplate/backend/config/analytics_config.example.json
+  teebu-saas-platform/saas-boilerplate/backend/config/business_config.json
+  teebu-saas-platform/saas-boilerplate/backend/core/
+  teebu-saas-platform/saas-boilerplate/backend/core/__init__.py
+  teebu-saas-platform/saas-boilerplate/backend/core/database.py
+  teebu-saas-platform/saas-boilerplate/backend/core/loader.py
+  teebu-saas-platform/saas-boilerplate/backend/main.py
+  teebu-saas-platform/saas-boilerplate/backend/models_example.py
+  teebu-saas-platform/saas-boilerplate/backend/pytest.ini
+  teebu-saas-platform/saas-boilerplate/backend/requirements.txt
+  teebu-saas-platform/saas-boilerplate/backend/run_tests.py
+  teebu-saas-platform/saas-boilerplate/backend/tests/
+  teebu-saas-platform/saas-boilerplate/backend/tests/test_analytics_routes.py
+  teebu-saas-platform/saas-boilerplate/backend/tests/test_auth_routes.py
+  teebu-saas-platform/saas-boilerplate/backend/tests/test_config_loading.py
+  teebu-saas-platform/saas-boilerplate/backend/tests/test_payment_routes.py
+  teebu-saas-platform/saas-boilerplate/business/
+  teebu-saas-platform/saas-boilerplate/business/README.md
+  teebu-saas-platform/saas-boilerplate/business/backend/
+  teebu-saas-platform/saas-boilerplate/business/backend/tests/
+  teebu-saas-platform/saas-boilerplate/business/backend/tests/test_template.py
+  teebu-saas-platform/saas-boilerplate/business/frontend/
+  teebu-saas-platform/saas-boilerplate/business/frontend/tests/
+  teebu-saas-platform/saas-boilerplate/business/frontend/tests/test_template.jsx
+  teebu-saas-platform/saas-boilerplate/business/{backend/
+  teebu-saas-platform/saas-boilerplate/business/{backend/routes,frontend/
+  teebu-saas-platform/saas-boilerplate/business/{backend/routes,frontend/pages,config}/
+  teebu-saas-platform/saas-boilerplate/directives/
+  teebu-saas-platform/saas-boilerplate/directives/BUILD_DIRECTIVE.md
+  teebu-saas-platform/saas-boilerplate/directives/backend_directive.md
+  teebu-saas-platform/saas-boilerplate/directives/frontend_directive.md
+  teebu-saas-platform/saas-boilerplate/directives/testing_directive.md
+  teebu-saas-platform/saas-boilerplate/frontend/
+  teebu-saas-platform/saas-boilerplate/frontend/.env.example
+  teebu-saas-platform/saas-boilerplate/frontend/.gitignore
+  teebu-saas-platform/saas-boilerplate/frontend/package.json
+  teebu-saas-platform/saas-boilerplate/frontend/postcss.config.js
+  teebu-saas-platform/saas-boilerplate/frontend/public/
+  teebu-saas-platform/saas-boilerplate/frontend/public/index.html
+  teebu-saas-platform/saas-boilerplate/frontend/public/manifest.json
+  teebu-saas-platform/saas-boilerplate/frontend/src/
+  teebu-saas-platform/saas-boilerplate/frontend/src/App.js
+  teebu-saas-platform/saas-boilerplate/frontend/src/__tests__/
+  teebu-saas-platform/saas-boilerplate/frontend/src/__tests__/components/
+  teebu-saas-platform/saas-boilerplate/frontend/src/__tests__/components/Navbar.test.jsx
+  teebu-saas-platform/saas-boilerplate/frontend/src/__tests__/components/ProtectedRoute.test.jsx
+  teebu-saas-platform/saas-boilerplate/frontend/src/__tests__/hooks/
+  teebu-saas-platform/saas-boilerplate/frontend/src/__tests__/hooks/useAnalytics.test.js
+  teebu-saas-platform/saas-boilerplate/frontend/src/__tests__/pages/
+  teebu-saas-platform/saas-boilerplate/frontend/src/__tests__/pages/Home.test.jsx
+  teebu-saas-platform/saas-boilerplate/frontend/src/__tests__/{components,pages,hooks}/
+  teebu-saas-platform/saas-boilerplate/frontend/src/components/
+  teebu-saas-platform/saas-boilerplate/frontend/src/components/FeatureCard.jsx
+  teebu-saas-platform/saas-boilerplate/frontend/src/components/Footer.jsx
+  teebu-saas-platform/saas-boilerplate/frontend/src/components/Navbar.jsx
+  teebu-saas-platform/saas-boilerplate/frontend/src/components/PricingCard.jsx
+  teebu-saas-platform/saas-boilerplate/frontend/src/components/ProtectedRoute.jsx
+  teebu-saas-platform/saas-boilerplate/frontend/src/config/
+  teebu-saas-platform/saas-boilerplate/frontend/src/config/business_config.json
+  teebu-saas-platform/saas-boilerplate/frontend/src/core/
+  teebu-saas-platform/saas-boilerplate/frontend/src/core/loader.js
+  teebu-saas-platform/saas-boilerplate/frontend/src/hooks/
+  teebu-saas-platform/saas-boilerplate/frontend/src/hooks/useAnalytics.js
+  teebu-saas-platform/saas-boilerplate/frontend/src/hooks/useConfig.js
+  teebu-saas-platform/saas-boilerplate/frontend/src/index.css
+  teebu-saas-platform/saas-boilerplate/frontend/src/index.js
+  teebu-saas-platform/saas-boilerplate/frontend/src/pages/
+  teebu-saas-platform/saas-boilerplate/frontend/src/pages/AccountSettings.jsx
+  teebu-saas-platform/saas-boilerplate/frontend/src/pages/Contact.jsx
+  teebu-saas-platform/saas-boilerplate/frontend/src/pages/Dashboard.jsx
+  teebu-saas-platform/saas-boilerplate/frontend/src/pages/FAQ.jsx
+  teebu-saas-platform/saas-boilerplate/frontend/src/pages/Home.jsx
+  teebu-saas-platform/saas-boilerplate/frontend/src/pages/Login.jsx
+  teebu-saas-platform/saas-boilerplate/frontend/src/pages/Pricing.jsx
+  teebu-saas-platform/saas-boilerplate/frontend/src/pages/Privacy.jsx
+  teebu-saas-platform/saas-boilerplate/frontend/src/pages/Signup.jsx
+  teebu-saas-platform/saas-boilerplate/frontend/src/pages/Terms.jsx
+  teebu-saas-platform/saas-boilerplate/frontend/src/setupTests.js
+  teebu-saas-platform/saas-boilerplate/frontend/src/utils/
+  teebu-saas-platform/saas-boilerplate/frontend/src/utils/api.js
+  teebu-saas-platform/saas-boilerplate/frontend/src/{pages,components,hooks,utils,config}/
+  teebu-saas-platform/saas-boilerplate/frontend/tailwind.config.js
+  teebu-saas-platform/saas-boilerplate/setup.sh
+  teebu-saas-platform/teebu-shared-libs/
+  teebu-saas-platform/teebu-shared-libs/GA4_SETUP_GUIDE.md
+  teebu-saas-platform/teebu-shared-libs/README.md
+  teebu-saas-platform/teebu-shared-libs/README_STRIPE_LIB.md
+  teebu-saas-platform/teebu-shared-libs/TESTING_GUIDE.md
+  teebu-saas-platform/teebu-shared-libs/config/
+  teebu-saas-platform/teebu-shared-libs/config/af_auth0_config.json
+  teebu-saas-platform/teebu-shared-libs/config/af_git_config.json
+  teebu-saas-platform/teebu-shared-libs/config/af_mailerlite_config.json
+  teebu-saas-platform/teebu-shared-libs/config/af_stripe_config.json
+  teebu-saas-platform/teebu-shared-libs/config/analytics_config.json
+  teebu-saas-platform/teebu-shared-libs/config/fo_auth0_config.json
+  teebu-saas-platform/teebu-shared-libs/config/fo_git_config.json
+  teebu-saas-platform/teebu-shared-libs/config/fo_mailerlite_config.json
+  teebu-saas-platform/teebu-shared-libs/config/fo_stripe_config.json
+  teebu-saas-platform/teebu-shared-libs/lib/
+  teebu-saas-platform/teebu-shared-libs/lib/analytics_lib.py
+  teebu-saas-platform/teebu-shared-libs/lib/auth0_lib.py
+  teebu-saas-platform/teebu-shared-libs/lib/git_lib.py
+  teebu-saas-platform/teebu-shared-libs/lib/mailerlite_lib.py
+  teebu-saas-platform/teebu-shared-libs/lib/stripe_lib.py
+  teebu-saas-platform/teebu-shared-libs/requirements.txt
+  teebu-saas-platform/teebu-shared-libs/run_all_tests.py
+  teebu-saas-platform/teebu-shared-libs/tests/
+  teebu-saas-platform/teebu-shared-libs/tests/test_analytics_lib.py
+  teebu-saas-platform/teebu-shared-libs/tests/test_auth0_lib.py
+  teebu-saas-platform/teebu-shared-libs/tests/test_git_lib.py
+  teebu-saas-platform/teebu-shared-libs/tests/test_mailerlite_lib.py
+  teebu-saas-platform/teebu-shared-libs/tests/test_stripe_lib.py
+  teebu-saas-platform/teebu-shared-libs/{lib,tests,config}/
+  teebu-saas-platform/{teebu-shared-libs,saas-boilerplate}/
+
+<<<END_BOILERPLATE_MANIFEST>>>
+
+---
+
+## YOUR ANALYSIS TASK
+
+Answer these questions:
+
+**FIT ASSESSMENT:**
+1. Is this a web-based SaaS product? (boilerplate is FastAPI + React)
+2. Does it need standard auth (login/signup)? (already built)
+3. Does it need payments/subscriptions? (Stripe already built)
+4. Does it need email marketing? (MailerLite already built)
+5. Does it need analytics? (GA4 already built)
+6. Is the core value in business logic, not infrastructure?
+7. Are there any hard blockers? (native mobile, blockchain, real-time video, etc.)
+
+**TECHNICAL DECOMPOSITION (only if YES):**
+For each feature in the intake, identify:
+- Exact filename for backend route (snake_case.py)
+- Exact filename for frontend page (PascalCase.jsx)
+- Key data models needed
+- Any external APIs or integrations needed beyond what boilerplate provides
+- Confidence level: HIGH (clear from intake) / MEDIUM (reasonable assumption) / LOW (ambiguous)
+
+**AMBIGUITIES:**
+List any features where the intake does not have enough detail for
+deterministic implementation. Be specific about what is missing.
+
+---
+
+## OUTPUT FORMAT
+
+You MUST respond with ONLY a JSON object. No preamble. No explanation outside the JSON.
+The JSON must parse cleanly.
+
+{
+  "startup_id": "wynwood_thoroughbreds",
+  "startup_name": "Wynwood Thoroughbreds",
+  "analyzed_at": "ISO_TIMESTAMP",
+  "verdict": "YES" or "NO",
+  "fit_score": 0-10,
+  "fit_summary": "One sentence explaining the verdict",
+
+  "boilerplate_covers": [
+    "List of features the boilerplate already handles for this business"
+  ],
+
+  "business_layer": {
+    "backend_routes": [
+      {
+        "filename": "snake_case.py",
+        "route_prefix": "/api/filename",
+        "purpose": "What this route does",
+        "key_endpoints": ["GET /", "POST /", "DELETE /{id}"],
+        "data_models": ["ModelName: field1 (type), field2 (type)"],
+        "external_deps": ["Any external API or service needed"],
+        "confidence": "HIGH | MEDIUM | LOW",
+        "confidence_reason": "Why this confidence level"
+      }
+    ],
+    "frontend_pages": [
+      {
+        "filename": "PascalCase.jsx",
+        "route_path": "/dashboard/kebab-case",
+        "purpose": "What this page shows/does",
+        "key_components": ["List of UI elements needed"],
+        "api_calls": ["Which backend routes it calls"],
+        "confidence": "HIGH | MEDIUM | LOW",
+        "confidence_reason": "Why this confidence level"
+      }
+    ],
+    "config_updates": {
+      "business_name": "Name for business_config.json",
+      "tagline": "Tagline",
+      "primary_color": "#hexcode or 'unknown'",
+      "pricing_plans": ["Plan names and rough prices if known"],
+      "notes": "Any other config changes needed"
+    }
+  },
+
+  "ambiguities": [
+    {
+      "feature": "Which feature is ambiguous",
+      "missing": "What specific information is missing",
+      "impact": "HIGH | MEDIUM | LOW",
+      "suggestion": "What question to ask the founder to resolve this"
+    }
+  ],
+
+  "blockers": [
+    "Only populated if verdict is NO — list hard architectural blockers"
+  ],
+
+  "recommendation": "2-3 sentences of concrete next-step advice"
+}
+
+Respond with ONLY the JSON. No markdown fences. No explanation. Pure JSON.
+

@@ -1,0 +1,83 @@
+{
+  "version": "1.0.0-local-override",
+  "description": "External integration policy - LOCAL OVERRIDE for testing",
+  "warning": "This is a LOCAL-ONLY override. Should be added to governance ZIP as fo_build_external_integration_policy.json",
+
+  "policy": {
+    "when_integration_underspecified": "use_mock_placeholder",
+    "rationale": "Prevents hallucination of real external services when intake is ambiguous"
+  },
+
+  "rules": {
+    "external_service_selection": {
+      "if_provider_specified": "use_specified_provider_with_placeholder_config",
+      "if_provider_ambiguous": "use_mock_api",
+      "if_provider_missing": "fail_with_clarification_request",
+      "examples": {
+        "specified": "Equineline API, TrueNicks API (provider name given, even without endpoint)",
+        "ambiguous": "Racing data feeds (generic category, no provider)",
+        "missing": "Data feeds (no context)"
+      },
+      "clarification": "Provider name alone (e.g., 'Equineline API') is SUFFICIENT. Use placeholder config (.env vars) for endpoint/auth. Do NOT mock if provider name is given."
+    },
+
+    "mock_api_pattern": {
+      "description": "When provider is ambiguous, use mock/placeholder API",
+      "implementation": {
+        "class_name": "MockRacingDataService",
+        "endpoint": "http://localhost:3000/mock-api",
+        "data": "hardcoded_sample_data",
+        "documentation": "README must state: 'Replace MockRacingDataService with real provider (DRF, Equibase, etc.)'"
+      }
+    },
+
+    "real_provider_requirements": {
+      "must_specify": [
+        "provider_name"
+      ],
+      "optional_nice_to_have": [
+        "api_endpoint",
+        "authentication_method"
+      ],
+      "if_endpoint_missing": "Use placeholder config in .env.example (EQUINELINE_API_URL=https://api.equineline.com, EQUINELINE_API_KEY=your_key_here)",
+      "examples": [
+        {
+          "provider": "Equineline API",
+          "action": "Create EquinelineService.js with env var for endpoint/auth",
+          "config": ".env.example should have EQUINELINE_API_URL and EQUINELINE_API_KEY"
+        },
+        {
+          "provider": "TrueNicks API",
+          "action": "Create TrueNicksService.js with env var for endpoint/auth",
+          "config": ".env.example should have TRUENICKS_API_URL and TRUENICKS_API_KEY"
+        }
+      ]
+    }
+  },
+
+  "clarification_request_template": {
+    "trigger": "When external integration lacks provider specification",
+    "output": "CLARIFICATION_NEEDED: External integration underspecified\n\nTask: {task_id} - {task_description}\n\nRequired information:\n1. Which data provider should be used?\n2. What is the API endpoint?\n3. How should authentication be handled?\n\nOptions:\n- Specify real provider (e.g., 'Use DRF API at https://api.dailyracingform.com')\n- Use mock/placeholder (I will create MockDataService)\n\nWithout clarification, I cannot proceed per fo_build_prohibitions.json (no implicit_defaults)."
+  },
+
+  "integration_categories": {
+    "racing_data": {
+      "common_providers": ["DRF", "Equibase", "Racing Post", "TimeformUS"],
+      "default_action": "use_mock_api_if_ambiguous"
+    },
+    "payment_processing": {
+      "common_providers": ["Stripe", "PayPal", "Square"],
+      "default_action": "fail_if_not_specified"
+    },
+    "email_services": {
+      "common_providers": ["SendGrid", "Mailgun", "AWS SES"],
+      "default_action": "use_mock_api_if_ambiguous"
+    },
+    "shopify": {
+      "provider": "Shopify",
+      "default_action": "use_specified_provider"
+    }
+  },
+
+  "prompt_injection": "**EXTERNAL INTEGRATION POLICY:**\n\nWhen integrating with external services:\n1. If provider NAME is given (e.g., 'Equineline API', 'TrueNicks', 'Stripe') → Create REAL service with placeholder config\n2. If only generic category (e.g., 'racing data feeds', 'payment processor') → use MockAPIService\n3. If nothing specified → output CLARIFICATION_NEEDED\n\n**REAL Provider Integration (when name is given):**\n- Create service class named after provider (e.g., EquinelineService.js, TrueNicksService.js)\n- Use environment variables for endpoint/auth (EQUINELINE_API_URL, EQUINELINE_API_KEY)\n- Add placeholders to .env.example with comments explaining where to get credentials\n- Document in README: 'Sign up for Equineline API at https://equineline.com/api'\n\n**Mock Service (only for generic categories):**\n- If intake says 'racing data feeds' without provider name → MockRacingDataService\n- Document in README: 'Replace mock with real provider (Equineline, DRF, etc.)'\n\n**DO NOT:**\n- Create mock services when provider name is specified\n- Guess provider names when not mentioned\n- Hardcode real API credentials"
+}

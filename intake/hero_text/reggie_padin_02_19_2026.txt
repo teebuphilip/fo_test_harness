@@ -1,0 +1,238 @@
+
+1    What problem are you trying to solve?
+
+    Organizations lack a centralized intelligence system that connects AI adoption, workforce development, and measurable business performance. Learning investments are measured operationally (courses completed, hours delivered) rather than economically (productivity, revenue contribution, talent velocity). The product solves the absence of a structured AI Workforce Intelligence platform that quantifies readiness, identifies KPI gaps, and forecasts business impact.
+
+2    Who is the primary user or customer for this solution?
+
+    Primary user: AI Learning Consultants, fractional CLOs, workforce transformation advisors.
+
+    Economic buyer: CHROs, CLOs, COOs, private equity operators, and executive teams seeking measurable AI workforce performance visibility.
+
+3    What is the simplest possible version of the product that would still be useful?
+
+    An AI Workforce Performance Snapshot platform consisting of:
+
+Frontend (User Experience):
+
+    Secure authentication and role-based access
+
+    Clean executive-style dashboard
+
+    Structured client data input forms
+
+    KPI score visualizations (gauges, charts)
+
+    Risk exposure indicators
+
+    Downloadable executive-ready report
+
+Backend (System Architecture):
+
+    Relational database for client and engagement records
+
+    Scoring engine calculating standardized KPIs
+
+    Business logic layer for gap analysis
+
+    AI-driven narrative summary generator
+
+    Report rendering engine (PDF/print-ready output)
+
+ 4   What specific action should the user be able to complete using this product?
+
+    Enter structured organizational data and generate a quantified AI Workforce Intelligence Report suitable for executive presentation and sales conversations.
+
+ 5   What input does the user provide to the system?
+
+    Industry classification
+
+    Company size
+
+    AI maturity level
+
+    Current onboarding timeline
+
+    Performance metrics
+
+    Learning investment levels
+
+    Internal mobility rates
+
+    Leadership capability ratings
+
+    Revenue-related metrics (optional but recommended)
+
+Frontend: Guided, validated forms to ensure structured inputs.
+
+Backend: Data normalization, storage, and scoring logic execution.
+
+ 6   What output does the system return to the user?
+
+    AI Workforce Readiness Score (0–100)
+
+    KPI gap analysis across five core development metrics
+
+		a. Time to Competency (TTC)
+
+		Definition:
+		Average number of days from employee start (or role change) to reaching defined productivity threshold.
+
+		Data Required:
+			•	Employee start date
+			•	Role start date
+			•	Date performance threshold met
+
+		Output:
+			•	Org average TTC
+			•	Department average TTC
+			•	Trend over time
+
+		b. Performance Delta Post-Training (PDPT)
+
+		Definition:
+		Percentage improvement in a defined performance metric after training.
+
+		Formula:
+		(Post Metric – Pre Metric) ÷ Pre Metric
+
+		Data Required:
+			•	Pre-training KPI value
+			•	Post-training KPI value
+			•	Training completion date
+
+		Output:
+			•	% improvement
+			•	Aggregate average by program
+			•	Program effectiveness ranking
+
+		c. Revenue per Learner (RPL)
+
+		Definition:
+		Revenue generated or influenced per trained employee.
+
+		Formula:
+		Revenue Attributed ÷ Number of Trained Employees
+
+		Data Required:
+			•	Revenue data (team or individual level)
+			•	Training participation list
+
+		Output:
+			•	Revenue per learner
+			•	Revenue uplift vs non-trained group
+
+		d. Behavioral Change Index (BCI)
+
+		Definition:
+		Manager-rated improvement score 30–90 days post training.
+
+		Input:
+		1–5 rating scale across defined competencies.
+
+		Output:
+			•	Average behavior improvement score
+			•	Improvement distribution
+			•	Correlation with performance delta
+
+		e. Internal Mobility Velocity (IMV)
+
+		Definition:
+		Percentage of roles filled internally within defined time period.
+
+		Formula:
+		Internal Promotions ÷ Total Roles Filled
+
+		Output:
+			•	Mobility rate
+			•	Succession readiness indicator
+			•	Year-over-year change
+
+
+
+
+
+
+
+    Risk exposure classification (Low / Moderate / High)
+
+    Estimated performance uplift range
+
+    Time-to-competency compression estimate
+
+    Recommended intervention tier
+
+    Executive narrative summary
+
+    Downloadable intelligence report
+
+Frontend: Visual dashboard with data visualizations and executive summary panels.
+
+Backend: Calculated metrics, rules-based interpretations, AI-generated analysis, formatted export engine.
+
+ 7   Does this product require any external integrations or data sources?
+
+    MVP: 
+	Workday API and BambooHR API)
+
+	Purpose:
+	Pull real workforce and role movement data automatically.
+
+	Data Pulled:
+		•	Employee ID
+		•	Hire date
+		•	Role start date
+		•	Promotion history
+		•	Termination date
+		•	Department
+
+	What It Enables:
+		•	Automatic Time to Competency calculation
+		•	Internal Mobility Velocity calculation
+		•	Headcount normalization
+		•	Workforce trend analysis
+
+
+Backend architecture should be modular to support future API connectors and data ingestion pipelines.
+
+ 8   Are there any payments, subscriptions, or transactions involved?
+
+    Yes.
+
+
+    Subscription model for consultants (recurring access).
+
+    Enterprise diagnostic licensing (per engagement or annual access).
+
+    Tiered enterprise intelligence subscriptions.
+
+System requirements include billing integration, subscription management, and role-based feature gating.
+
+9    What does success look like for this product in the first 30 days?
+
+    Functional dashboard and report generation workflow
+
+    Active consultant usage
+
+    Multiple client reports generated
+
+    Paid enterprise diagnostic engagements secured
+
+    Positive executive validation of intelligence quality
+
+10    Are there any constraints, limitations, or non-goals we must respect?
+
+    Constraints: Lean development cycle, phased build, and limited initial data aggregation.
+
+    Non-goals for MVP:
+
+    Real-time global economic intelligence system
+
+    Deep enterprise system integrations
+
+    Advanced predictive modeling beyond structured scoring
+
+    Complex multi-tenant enterprise customization
+
+The initial focus is delivering a reliable, executive-grade intelligence snapshot engine that generates measurable commercial value.
+

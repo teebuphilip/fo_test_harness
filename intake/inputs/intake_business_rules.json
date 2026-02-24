@@ -1,0 +1,98 @@
+{
+  "version": "v21.4",
+  "scope": "intake_phase",
+  "purpose": "Deterministic enforcement of intake behavior across Tier 1 (Proof Slice) and Tier 2 (MVP)",
+
+  "default_flow": {
+    "block_order": ["BLOCK_A", "BLOCK_B"],
+    "tier_escalation": "between_blocks_only",
+    "enforcement": "hard_fail"
+  },
+
+  "cross_block_identity_rules": {
+    "rule_id": "CBI-001",
+    "description": "Both blocks must derive from the same startup idea",
+    "enforcement": "hard_fail",
+    "logic": {
+      "assert": "simulation_output.startup_idea_id EXISTS",
+      "apply_to": ["BLOCK_A", "BLOCK_B"],
+      "comparison": "shared_root_identity_only"
+    }
+  },
+
+  "tier_1_proof_slice_rules": {
+    "constraints": {
+      "max_roles": 1,
+      "max_workflows": 1,
+      "max_happy_paths": 1,
+      "max_integrations": 0
+    },
+    "allowed_inputs": ["manual", "mocked", "static"],
+    "allowed_execution": ["on_demand"],
+    "explicit_exclusions": [
+      "automated_ingestion",
+      "forecasting_engines",
+      "reporting_dashboards",
+      "multi_role_permissions",
+      "production_hardening",
+      "pilot_programs"
+    ],
+    "enforcement": "hard_fail"
+  },
+
+  "tier_1_integration_guardrail": {
+    "rule_id": "T1-INTEGRATION-001",
+    "description": "Tier 1 Proof Slice must not include real external integrations",
+    "applies_to": {
+      "block": "BLOCK_A",
+      "tier": "T1"
+    },
+    "enforcement": "hard_fail",
+    "detection_logic": {
+      "integration_count_must_equal": 0,
+      "fields_to_scan": [
+        "pass2_output.hld_document",
+        "pass4_output.combined_task_list[].description"
+      ],
+      "prohibited_patterns": [
+        "oauth",
+        "api",
+        "integration",
+        "webhook",
+        "gmail",
+        "outlook",
+        "email provider",
+        "inbox",
+        "sync",
+        "connect"
+      ]
+    },
+    "allowed_exceptions": [
+      "manual file upload",
+      "pasted sample data",
+      "static datasets",
+      "mocked inputs"
+    ],
+    "failure_message": "Tier 1 requires an integration-free proof slice. Use manual or mocked inputs."
+  },
+
+  "tier_2_mvp_rules": {
+    "required_expansion": {
+      "must_exceed_tier_1_on_at_least_one_axis": [
+        "roles",
+        "workflows",
+        "integrations",
+        "automation"
+      ]
+    },
+    "allowed_capabilities": [
+      "scheduled_jobs",
+      "forecasting",
+      "reporting",
+      "integration_pipelines",
+      "qa_hardening"
+    ],
+    "enforcement": "hard_fail"
+  }
+}
+

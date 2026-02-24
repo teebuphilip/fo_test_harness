@@ -1,0 +1,682 @@
+{
+  "run_id": "ai_workforce_intelligence",
+  "startup_idea_id": "ai_workforce_intelligence",
+  "startup_name": "AI Workforce Intelligence",
+  "summary": "AI Workforce Intelligence - A centralized intelligence platform that connects AI adoption, workforce development, and measurable business performance by quantifying workforce readiness and forecasting business impact. The platform generates executive-ready reports that measure learning investments economically rather than operationally.",
+  "block_a": {
+    "startup_idea_id": "ai_workforce_intelligence",
+    "block_id": "A",
+    "pass_1": {
+      "bdr_summary": "Executive intelligence platform for AI workforce transformation consultants to generate client reports and dashboards measuring AI adoption impact on business performance",
+      "selected_archetype": "saas_tool",
+      "primary_value_loop": "converter",
+      "economics_snapshot": {
+        "target_customer": "AI Learning Consultants and fractional CLOs serving enterprise clients",
+        "acquisition_channel": "Direct consultant outreach and executive referrals",
+        "starter_price": "$2,500/month per consultant seat",
+        "audience_scale_guess": "500-1000 qualified consultants in North America",
+        "revenue_goal_12mo": "$300K ARR"
+      },
+      "derived_bucket": "saas",
+      "size": "medium",
+      "architecture_flags": {
+        "needs_auth": false,
+        "needs_payments": false,
+        "needs_automation": false,
+        "needs_reporting": false
+      },
+      "tier_enforcement_metrics": {
+        "role_count": 1,
+        "workflow_count": 1,
+        "happy_path_count": 1,
+        "integration_count": 0
+      },
+      "initial_constraints_check": {
+        "budget_vs_scope": "ok",
+        "archetype_vs_tier": "ok",
+        "value_loop_vs_goal": "ok",
+        "complexity_flag": "ok"
+      },
+      "questions_for_hero": [
+        "What specific KPI calculations should the scoring engine use?",
+        "Which report template format do executives prefer?",
+        "How many client data points are needed for meaningful analysis?"
+      ]
+    },
+    "pass_2": {
+      "approved_bdr": "Manual intelligence dashboard for workforce consultants to input client data and generate executive reports",
+      "confirm_pass1_classification": true,
+      "classification_disagreements": [],
+      "tech_stack_selection": "nocode",
+      "component_templates_selected": [
+        "form_builder",
+        "dashboard_template",
+        "report_generator"
+      ],
+      "hld_document": "Single consultant role accesses manual data entry forms to input client workforce metrics. Static scoring engine calculates predefined KPIs. Dashboard displays hardcoded visualizations. Report generator creates downloadable PDF using fixed templates with manual data insertion.",
+      "engineering_questions": [
+        "Which nocode platform supports PDF generation?",
+        "How to implement role-based form access?",
+        "What visualization components are available?"
+      ],
+      "secondary_constraints_report": {
+        "tech_vs_budget": "ok",
+        "scope_vs_schedule": "ok",
+        "template_fit": "ok"
+      }
+    },
+    "pass_3": {
+      "qa_hlt_document": "Test consultant login, manual data entry, KPI calculation accuracy, dashboard display, and PDF report generation with sample client data",
+      "test_vectors": [
+        {
+          "id": "TV001",
+          "description": "Consultant enters complete client dataset and generates executive report"
+        },
+        {
+          "id": "TV002",
+          "description": "Dashboard displays KPI scores and risk indicators correctly"
+        },
+        {
+          "id": "TV003",
+          "description": "PDF report downloads with proper formatting and data"
+        }
+      ],
+      "risk_register": [
+        {
+          "code": "R001",
+          "description": "Manual data entry errors affecting KPI accuracy"
+        },
+        {
+          "code": "R002",
+          "description": "PDF generation failure on nocode platform"
+        }
+      ],
+      "qa_questions_for_engineering": [
+        "How to validate KPI calculation logic?",
+        "What happens if PDF generation fails?",
+        "How to test dashboard responsiveness?"
+      ],
+      "qa_constraints_check": {
+        "edge_case_coverage": "ok",
+        "loop_validity": "ok",
+        "economics_logic": "ok"
+      }
+    },
+    "pass_4": {
+      "hero_touchpoint_policy": {
+        "cadence": "daily",
+        "required": true
+      },
+      "combined_task_list": [
+        {
+          "task_id": "T001",
+          "classification": "build",
+          "description": "Set up nocode platform and basic authentication",
+          "depends_on": []
+        },
+        {
+          "task_id": "T002",
+          "classification": "build",
+          "description": "Create manual data entry forms for client metrics",
+          "depends_on": [
+            "T001"
+          ]
+        },
+        {
+          "task_id": "T003",
+          "classification": "build",
+          "description": "Build static KPI scoring engine with hardcoded formulas",
+          "depends_on": [
+            "T002"
+          ]
+        },
+        {
+          "task_id": "T004",
+          "classification": "build",
+          "description": "Design dashboard with basic visualizations",
+          "depends_on": [
+            "T003"
+          ]
+        },
+        {
+          "task_id": "T005",
+          "classification": "build",
+          "description": "Create PDF report template and generation",
+          "depends_on": [
+            "T004"
+          ]
+        },
+        {
+          "task_id": "T006",
+          "classification": "qa",
+          "description": "Test complete workflow with sample data",
+          "depends_on": [
+            "T005"
+          ]
+        },
+        {
+          "task_id": "T007",
+          "classification": "validation",
+          "description": "Consultant validates report quality and usability",
+          "depends_on": [
+            "T006"
+          ]
+        },
+        {
+          "task_id": "HT001",
+          "classification": "hero_touchpoint",
+          "description": "Daily progress check on platform setup",
+          "depends_on": []
+        },
+        {
+          "task_id": "HT002",
+          "classification": "hero_touchpoint",
+          "description": "Daily review of form design and KPI logic",
+          "depends_on": []
+        }
+      ],
+      "day_by_day_schedule": [
+        {
+          "day_number": 1,
+          "task_ids": [
+            "T001",
+            "HT001"
+          ]
+        },
+        {
+          "day_number": 2,
+          "task_ids": [
+            "T002",
+            "HT002"
+          ]
+        },
+        {
+          "day_number": 3,
+          "task_ids": [
+            "T003",
+            "HT001"
+          ]
+        },
+        {
+          "day_number": 4,
+          "task_ids": [
+            "T004",
+            "HT002"
+          ]
+        },
+        {
+          "day_number": 5,
+          "task_ids": [
+            "T005",
+            "HT001"
+          ]
+        },
+        {
+          "day_number": 6,
+          "task_ids": [
+            "T006",
+            "HT002"
+          ]
+        },
+        {
+          "day_number": 7,
+          "task_ids": [
+            "T007",
+            "HT001"
+          ]
+        }
+      ],
+      "milestone_map_for_mark": [
+        {
+          "milestone": "Platform Ready",
+          "day": 1,
+          "related_task_ids": [
+            "T001"
+          ]
+        },
+        {
+          "milestone": "Data Entry Complete",
+          "day": 2,
+          "related_task_ids": [
+            "T002"
+          ]
+        },
+        {
+          "milestone": "Scoring Engine Built",
+          "day": 3,
+          "related_task_ids": [
+            "T003"
+          ]
+        },
+        {
+          "milestone": "Dashboard Functional",
+          "day": 4,
+          "related_task_ids": [
+            "T004"
+          ]
+        },
+        {
+          "milestone": "Reports Generated",
+          "day": 5,
+          "related_task_ids": [
+            "T005"
+          ]
+        },
+        {
+          "milestone": "QA Complete",
+          "day": 6,
+          "related_task_ids": [
+            "T006"
+          ]
+        },
+        {
+          "milestone": "Validation Done",
+          "day": 7,
+          "related_task_ids": [
+            "T007"
+          ]
+        }
+      ]
+    },
+    "pass_5": {
+      "final_milestone_map": [
+        {
+          "milestone": "Platform Ready",
+          "day": 1,
+          "related_task_ids": [
+            "T001"
+          ]
+        },
+        {
+          "milestone": "Data Entry Complete",
+          "day": 2,
+          "related_task_ids": [
+            "T002"
+          ]
+        },
+        {
+          "milestone": "Scoring Engine Built",
+          "day": 3,
+          "related_task_ids": [
+            "T003"
+          ]
+        },
+        {
+          "milestone": "Dashboard Functional",
+          "day": 4,
+          "related_task_ids": [
+            "T004"
+          ]
+        },
+        {
+          "milestone": "Reports Generated",
+          "day": 5,
+          "related_task_ids": [
+            "T005"
+          ]
+        },
+        {
+          "milestone": "QA Complete",
+          "day": 6,
+          "related_task_ids": [
+            "T006"
+          ]
+        },
+        {
+          "milestone": "Validation Done",
+          "day": 7,
+          "related_task_ids": [
+            "T007"
+          ]
+        }
+      ],
+      "approval_status": true,
+      "rejection_reasons": [],
+      "proposal_document_for_hero": "7-day manual intelligence dashboard build: consultant authentication, client data forms, static KPI scoring, basic visualizations, PDF report generation. Proof of concept for executive-grade workforce intelligence reports using nocode platform with manual data entry only."
+    },
+    "pass_6": {
+      "hero_decision": "buy_tier1_build",
+      "hero_questions": [
+        "Can we add one more KPI calculation to the scoring engine?",
+        "What format options are available for the PDF reports?",
+        "How quickly can we test this with a real consultant?"
+      ]
+    }
+  },
+  "block_b": {
+    "startup_idea_id": "ai_workforce_intelligence",
+    "block_id": "B",
+    "pass_1": {
+      "bdr_summary": "Executive intelligence platform connecting AI adoption metrics, workforce development KPIs, and business performance for consultants serving enterprise clients. Generates executive-ready reports with standardized scoring and risk indicators.",
+      "selected_archetype": "saas_tool",
+      "primary_value_loop": "converter",
+      "economics_snapshot": {
+        "target_customer": "AI Learning Consultants and fractional CLOs serving enterprise clients",
+        "acquisition_channel": "Direct consultant outreach and executive referrals",
+        "starter_price": "$2,500/month per consultant seat",
+        "audience_scale_guess": "500-1000 qualified consultants in workforce transformation space",
+        "revenue_goal_12mo": "$300K ARR"
+      },
+      "derived_bucket": "saas",
+      "size": "medium",
+      "architecture_flags": {
+        "needs_auth": true,
+        "needs_payments": true,
+        "needs_automation": true,
+        "needs_reporting": true
+      },
+      "tier_enforcement_metrics": {
+        "role_count": 3,
+        "workflow_count": 4,
+        "happy_path_count": 2,
+        "integration_count": 3
+      },
+      "initial_constraints_check": {
+        "budget_vs_scope": "ok",
+        "archetype_vs_tier": "ok",
+        "value_loop_vs_goal": "ok",
+        "complexity_flag": "ok"
+      },
+      "questions_for_hero": [
+        "What specific HRIS systems should we prioritize for integration?",
+        "How detailed should the AI narrative summary generator be?",
+        "What billing model works best for enterprise diagnostic engagements?"
+      ]
+    },
+    "pass_2": {
+      "approved_bdr": "Executive intelligence platform with role-based access, dashboard, structured data input, KPI scoring engine, and automated report generation for workforce transformation consultants.",
+      "confirm_pass1_classification": true,
+      "classification_disagreements": [],
+      "tech_stack_selection": "lowcode",
+      "component_templates_selected": [
+        "auth_rbac_template",
+        "dashboard_template",
+        "form_builder_template",
+        "report_generator_template",
+        "scoring_engine_template"
+      ],
+      "hld_document": "Three-tier architecture: (1) Authentication layer with role-based permissions for consultants and executives, (2) Data processing layer with HRIS integration, structured input forms, and KPI scoring engine, (3) Presentation layer with executive dashboard, visualization components, and PDF report generator. Core workflows: consultant data input, automated scoring calculation, dashboard updates, and executive report generation.",
+      "engineering_questions": [
+        "Which HRIS APIs should be implemented first?",
+        "How should we handle multi-client data isolation?",
+        "What format for downloadable executive reports?"
+      ],
+      "secondary_constraints_report": {
+        "tech_vs_budget": "ok",
+        "scope_vs_schedule": "ok",
+        "template_fit": "ok"
+      }
+    },
+    "pass_3": {
+      "qa_hlt_document": "Test scenarios: (1) Consultant login and client data entry, (2) HRIS data ingestion and validation, (3) KPI scoring calculation accuracy, (4) Dashboard visualization updates, (5) Executive report generation and download, (6) Role-based access enforcement, (7) Multi-client data isolation verification.",
+      "test_vectors": [
+        {
+          "id": "TV001",
+          "description": "Consultant creates new client assessment with HRIS data"
+        },
+        {
+          "id": "TV002",
+          "description": "Executive views dashboard and downloads report"
+        },
+        {
+          "id": "TV003",
+          "description": "Scoring engine processes workforce metrics and generates KPIs"
+        }
+      ],
+      "risk_register": [
+        {
+          "code": "R001",
+          "description": "HRIS integration failure causing incomplete data"
+        },
+        {
+          "code": "R002",
+          "description": "Scoring algorithm producing inaccurate KPIs"
+        },
+        {
+          "code": "R003",
+          "description": "Report generation timeout for large datasets"
+        }
+      ],
+      "qa_questions_for_engineering": [
+        "How do we validate HRIS data quality before scoring?",
+        "What fallback exists if report generation fails?",
+        "How do we test multi-tenant data isolation?"
+      ],
+      "qa_constraints_check": {
+        "edge_case_coverage": "ok",
+        "loop_validity": "ok",
+        "economics_logic": "ok"
+      }
+    },
+    "pass_4": {
+      "hero_touchpoint_policy": {
+        "cadence": "every_other_day",
+        "required": true
+      },
+      "combined_task_list": [
+        {
+          "task_id": "T001",
+          "classification": "build",
+          "description": "Setup authentication system with role-based access",
+          "depends_on": []
+        },
+        {
+          "task_id": "T002",
+          "classification": "build",
+          "description": "Build structured client data input forms",
+          "depends_on": [
+            "T001"
+          ]
+        },
+        {
+          "task_id": "T003",
+          "classification": "build",
+          "description": "Implement HRIS integration pipeline",
+          "depends_on": [
+            "T001"
+          ]
+        },
+        {
+          "task_id": "T004",
+          "classification": "build",
+          "description": "Develop KPI scoring engine",
+          "depends_on": [
+            "T002",
+            "T003"
+          ]
+        },
+        {
+          "task_id": "T005",
+          "classification": "build",
+          "description": "Create executive dashboard with visualizations",
+          "depends_on": [
+            "T004"
+          ]
+        },
+        {
+          "task_id": "T006",
+          "classification": "build",
+          "description": "Build report generator and PDF export",
+          "depends_on": [
+            "T005"
+          ]
+        },
+        {
+          "task_id": "T007",
+          "classification": "qa",
+          "description": "Test multi-client data isolation",
+          "depends_on": [
+            "T006"
+          ]
+        },
+        {
+          "task_id": "T008",
+          "classification": "validation",
+          "description": "Validate scoring accuracy with sample data",
+          "depends_on": [
+            "T007"
+          ]
+        },
+        {
+          "task_id": "HT001",
+          "classification": "hero_touchpoint",
+          "description": "Day 2 progress check",
+          "depends_on": []
+        },
+        {
+          "task_id": "HT002",
+          "classification": "hero_touchpoint",
+          "description": "Day 4 integration review",
+          "depends_on": []
+        },
+        {
+          "task_id": "HT003",
+          "classification": "hero_touchpoint",
+          "description": "Day 6 dashboard demo",
+          "depends_on": []
+        },
+        {
+          "task_id": "HT004",
+          "classification": "hero_touchpoint",
+          "description": "Day 8 final validation",
+          "depends_on": []
+        }
+      ],
+      "day_by_day_schedule": [
+        {
+          "day_number": 1,
+          "task_ids": [
+            "T001"
+          ]
+        },
+        {
+          "day_number": 2,
+          "task_ids": [
+            "T002",
+            "HT001"
+          ]
+        },
+        {
+          "day_number": 3,
+          "task_ids": [
+            "T003"
+          ]
+        },
+        {
+          "day_number": 4,
+          "task_ids": [
+            "T004",
+            "HT002"
+          ]
+        },
+        {
+          "day_number": 5,
+          "task_ids": [
+            "T005"
+          ]
+        },
+        {
+          "day_number": 6,
+          "task_ids": [
+            "T006",
+            "HT003"
+          ]
+        },
+        {
+          "day_number": 7,
+          "task_ids": [
+            "T007"
+          ]
+        },
+        {
+          "day_number": 8,
+          "task_ids": [
+            "T008",
+            "HT004"
+          ]
+        }
+      ],
+      "milestone_map_for_mark": [
+        {
+          "milestone": "Authentication Ready",
+          "day": 1,
+          "related_task_ids": [
+            "T001"
+          ]
+        },
+        {
+          "milestone": "Data Pipeline Complete",
+          "day": 4,
+          "related_task_ids": [
+            "T002",
+            "T003",
+            "T004"
+          ]
+        },
+        {
+          "milestone": "Dashboard Functional",
+          "day": 6,
+          "related_task_ids": [
+            "T005",
+            "T006"
+          ]
+        },
+        {
+          "milestone": "MVP Validated",
+          "day": 8,
+          "related_task_ids": [
+            "T007",
+            "T008"
+          ]
+        }
+      ]
+    },
+    "pass_5": {
+      "final_milestone_map": [
+        {
+          "milestone": "Authentication Ready",
+          "day": 1,
+          "related_task_ids": [
+            "T001"
+          ]
+        },
+        {
+          "milestone": "Data Pipeline Complete",
+          "day": 4,
+          "related_task_ids": [
+            "T002",
+            "T003",
+            "T004"
+          ]
+        },
+        {
+          "milestone": "Dashboard Functional",
+          "day": 6,
+          "related_task_ids": [
+            "T005",
+            "T006"
+          ]
+        },
+        {
+          "milestone": "MVP Validated",
+          "day": 8,
+          "related_task_ids": [
+            "T007",
+            "T008"
+          ]
+        }
+      ],
+      "approval_status": true,
+      "rejection_reasons": [],
+      "proposal_document_for_hero": "8-day MVP build delivering executive intelligence platform with role-based access, HRIS integration, KPI scoring engine, executive dashboard, and automated report generation. Enables consultants to generate executive-ready workforce intelligence reports with standardized scoring and risk indicators. Includes multi-client data isolation and PDF export functionality."
+    },
+    "pass_6": {
+      "hero_decision": "buy_tier2_build",
+      "hero_questions": [
+        "Can we add LMS integration in the first release?",
+        "What's the plan for scaling to 50+ consultants?",
+        "How do we handle custom KPI weighting per client?"
+      ]
+    }
+  }
+}

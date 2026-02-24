@@ -1,0 +1,15 @@
+date,time,startup,iterations,cost_claude,cost_chatgpt,total_cost,run_end_reason
+2026-02-17,08:55:27,adversarial_ai_validator,2,0.2188,0.0000,0.2188,CTRL_C
+2026-02-17,09:08:38,adversarial_ai_validator,3,0.5359,0.0000,0.5359,CTRL_C
+2026-02-17,09:24:05,adversarial_ai_validator,3,0.8017,0.0000,0.8017,CTRL_C
+2026-02-17,09:44:15,adversarial_ai_validator,3,0.6236,0.0000,0.6236,CTRL_C
+2026-02-17,10:07:02,adversarial_ai_validator,4,0.5496,0.0829,0.6325,CTRL_C
+2026-02-17,10:18:37,adversarial_ai_validator,2,0.6850,0.0547,0.7397,QA_ACCEPTED
+2026-02-17,10:52:45,wynwood_thoroughbreds,1,0.4057,0.0000,0.4057,BUILD_TRUNCATED
+2026-02-17,11:21:55,wynwood_thoroughbreds,3,0.8718,0.0535,0.9253,BUILD_TRUNCATED
+2026-02-17,12:25:20,wynwood_thoroughbreds,1,0.5223,0.0609,0.5831,QA_ACCEPTED
+2026-02-19,09:05:19,ai_workforce_intelligence,2,0.5529,0.0428,0.5956,QA_ACCEPTED
+2026-02-23,08:11:17,ai_workforce_intelligence,1,0.0366,0.0000,0.0366,BUILD_TRUNCATED
+2026-02-23,08:53:33,ai_workforce_intelligence,3,1.0603,0.1394,1.1997,QA_ACCEPTED
+2026-02-23,15:49:16,ai_workforce_intelligence,2,0.7809,0.0362,0.8171,QA_ACCEPTED
+2026-02-24,05:04:17,ai_workforce_intelligence,15,4.9256,0.4746,5.4001,NON_CONVERGING

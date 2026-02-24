@@ -1,0 +1,220 @@
+============================================================
+MCv6-SCHEMA v21.4 — DETERMINISTIC INTAKE SCHEMA
+============================================================
+
+GLOBAL ENUMS
+------------
+
+tier_enum = T1 | T2
+block_id_enum = BLOCK_A | BLOCK_B
+archetype_enum = marketplace | saas_tool | automation | content | community
+bucket_enum = marketplace | saas | automation | content | community
+size_enum = small | medium | large
+value_loop_type_enum = attractor | converter | retainer
+tech_stack_choice_enum = nocode | lowcode | fullcode
+constraint_flag_enum = ok | conflict | invalid | high
+task_classification_enum = build | qa | validation | hero_touchpoint
+hero_decision_enum =
+  buy_tier1_build |
+  buy_tier2_build |
+  buy_blueprint_only |
+  decline
+hero_touchpoint_cadence_enum = daily | every_other_day
+
+------------------------------------------------------------
+ROOT: simulation_output
+------------------------------------------------------------
+
+simulation_output {
+  startup_idea_id: string
+
+  block_a: block
+  block_b: block
+
+  cross_block_contract {
+    same_startup_idea_required: boolean
+    tier2_must_expand_tier1: boolean
+  }
+}
+
+------------------------------------------------------------
+TYPE: block
+------------------------------------------------------------
+
+block {
+  identity {
+    block_id: block_id_enum
+    tier: tier_enum
+  }
+
+  pass1_output: pass1_output
+  pass2_output: pass2_output
+  pass3_output: pass3_output
+  pass4_output: pass4_output
+  pass5_output: pass5_output
+  pass6_output: pass6_output
+}
+
+------------------------------------------------------------
+PASS 1 — INTAKE
+------------------------------------------------------------
+
+pass1_output {
+  bdr_summary: string
+  selected_archetype: archetype_enum
+  primary_value_loop: value_loop_type_enum
+
+  economics_snapshot {
+    target_customer: string
+    acquisition_channel: string
+    starter_price: string
+    audience_scale_guess: string
+    revenue_goal_12mo: string
+  }
+
+  derived_bucket: bucket_enum
+  size: size_enum
+
+  architecture_flags {
+    needs_auth: boolean
+    needs_payments: boolean
+    needs_automation: boolean
+    needs_reporting: boolean
+  }
+
+  tier_enforcement_metrics {
+    role_count: integer
+    workflow_count: integer
+    happy_path_count: integer
+    integration_count: integer
+  }
+
+  initial_constraints_check {
+    budget_vs_scope: constraint_flag_enum
+    archetype_vs_tier: constraint_flag_enum
+    value_loop_vs_goal: constraint_flag_enum
+    complexity_flag: constraint_flag_enum
+  }
+
+  questions_for_hero: string[]
+}
+
+------------------------------------------------------------
+PASS 2 — HLD
+------------------------------------------------------------
+
+pass2_output {
+  approved_bdr: string
+  confirm_pass1_classification: boolean
+  classification_disagreements: string[]
+
+  tech_stack_selection: tech_stack_choice_enum
+  component_templates_selected: string[]
+
+  hld_document: string
+
+  engineering_questions: string[]
+
+  secondary_constraints_report {
+    tech_vs_budget: constraint_flag_enum
+    scope_vs_schedule: constraint_flag_enum
+    template_fit: constraint_flag_enum
+  }
+}
+
+------------------------------------------------------------
+PASS 3 — QA
+------------------------------------------------------------
+
+pass3_output {
+  qa_hlt_document: string
+
+  test_vectors: [
+    {
+      id: string
+      description: string
+    }
+  ]
+
+  risk_register: [
+    {
+      code: string
+      description: string
+    }
+  ]
+
+  qa_questions_for_engineering: string[]
+
+  qa_constraints_check {
+    edge_case_coverage: constraint_flag_enum
+    loop_validity: constraint_flag_enum
+    economics_logic: constraint_flag_enum
+  }
+}
+
+------------------------------------------------------------
+PASS 4 — SCHEDULING
+------------------------------------------------------------
+
+pass4_output {
+  hero_touchpoint_policy {
+    cadence: hero_touchpoint_cadence_enum
+    required: boolean
+  }
+
+  combined_task_list: [
+    {
+      task_id: string
+      classification: task_classification_enum
+      description: string
+      depends_on: string[]
+    }
+  ]
+
+  day_by_day_schedule: [
+    {
+      day_number: integer
+      task_ids: string[]
+    }
+  ]
+
+  milestone_map_for_mark: [
+    {
+      milestone: string
+      day: integer
+      related_task_ids: string[]
+    }
+  ]
+}
+
+------------------------------------------------------------
+PASS 5 — APPROVAL
+------------------------------------------------------------
+
+pass5_output {
+  final_milestone_map: [
+    {
+      milestone: string
+      day: integer
+      related_task_ids: string[]
+    }
+  ]
+
+  approval_status: boolean
+  rejection_reasons: string[]
+  proposal_document_for_hero: string
+}
+
+------------------------------------------------------------
+PASS 6 — HERO DECISION
+------------------------------------------------------------
+
+pass6_output {
+  hero_decision: hero_decision_enum
+  hero_questions: string[]
+}
+
+============================================================
+END MCv6-SCHEMA v21.4
+============================================================
+

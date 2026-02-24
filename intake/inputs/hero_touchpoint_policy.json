@@ -1,0 +1,26 @@
+{
+  "version": "v21.4",
+  "purpose": "Define mandatory hero interaction cadence as schedule artifacts only",
+
+  "classification": "schedule_only",
+
+  "cadence_constraints": {
+    "tier_1": {
+      "max_interval_days": 1
+    },
+    "tier_2": {
+      "max_interval_days": 2
+    }
+  },
+
+  "existence_rules": {
+    "minimum_touchpoints_per_block": 1,
+    "enforcement": "hard_fail"
+  },
+
+  "execution": {
+    "handled_by": "cron_subsystem",
+    "not_business_logic": true
+  }
+}
+

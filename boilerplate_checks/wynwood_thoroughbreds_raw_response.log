@@ -1,0 +1,159 @@
+[2026-02-13T10:36:53.800091]
+{
+  "startup_id": "wynwood_thoroughbreds",
+  "startup_name": "Wynwood Thoroughbreds",
+  "analyzed_at": "2025-01-21T10:30:00Z",
+  "verdict": "YES",
+  "fit_score": 8,
+  "fit_summary": "Perfect fit for boilerplate - boutique horse ownership syndicate needs membership management, educational content, and simple e-commerce integration.",
+
+  "boilerplate_covers": [
+    "User authentication and membership access",
+    "Payment processing for ownership shares",
+    "Email automation for monthly updates",
+    "Basic website with branding",
+    "Contact forms and communication",
+    "Analytics tracking for engagement",
+    "Terms/privacy pages for compliance"
+  ],
+
+  "business_layer": {
+    "backend_routes": [
+      {
+        "filename": "horses.py",
+        "route_prefix": "/api/horses",
+        "purpose": "Manage horse roster and breeding opportunities",
+        "key_endpoints": ["GET /", "GET /{id}", "POST /", "PUT /{id}"],
+        "data_models": ["Horse: name (str), breed (str), age (int), status (str), shares_available (int), monthly_cost (float), description (text), images (list)"],
+        "external_deps": ["Equineline API", "TrueNicks API"],
+        "confidence": "HIGH",
+        "confidence_reason": "Core feature clearly defined in must-have features"
+      },
+      {
+        "filename": "memberships.py",
+        "route_prefix": "/api/memberships",
+        "purpose": "Handle ownership shares and member management",
+        "key_endpoints": ["GET /my-shares", "POST /purchase", "GET /members", "PUT /member/{id}"],
+        "data_models": ["Membership: user_id (str), horse_id (str), shares_owned (int), purchase_date (datetime), status (str)", "Share: horse_id (str), total_shares (int), available_shares (int), price_per_share (float)"],
+        "external_deps": [],
+        "confidence": "HIGH",
+        "confidence_reason": "Ownership membership access is primary must-have feature"
+      },
+      {
+        "filename": "updates.py",
+        "route_prefix": "/api/updates",
+        "purpose": "Monthly horse and breeding updates for members",
+        "key_endpoints": ["GET /", "POST /", "GET /horse/{id}/updates", "GET /breeding-updates"],
+        "data_models": ["Update: title (str), content (text), horse_id (str), update_type (str), published_date (datetime), images (list)", "BreedingUpdate: mare_id (str), stallion_id (str), status (str), expected_foal_date (datetime)"],
+        "external_deps": ["Racing entries and results feeds"],
+        "confidence": "HIGH",
+        "confidence_reason": "Monthly updates explicitly mentioned in must-have features"
+      },
+      {
+        "filename": "education.py",
+        "route_prefix": "/api/education",
+        "purpose": "Educational content and breeding strategy resources",
+        "key_endpoints": ["GET /content", "GET /content/{id}", "POST /content", "GET /breeding-strategies"],
+        "data_models": ["EducationalContent: title (str), content (text), category (str), member_only (bool), published_date (datetime)", "BreedingStrategy: title (str), description (text), horses_involved (list)"],
+        "external_deps": [],
+        "confidence": "HIGH",
+        "confidence_reason": "Educational content explicitly listed as must-have feature"
+      },
+      {
+        "filename": "racing_data.py",
+        "route_prefix": "/api/racing",
+        "purpose": "Racing entries, results, and performance tracking",
+        "key_endpoints": ["GET /entries", "GET /results", "GET /horse/{id}/performance"],
+        "data_models": ["RaceEntry: horse_id (str), race_name (str), track (str), date (datetime), jockey (str)", "RaceResult: horse_id (str), race_name (str), finish_position (int), earnings (float)"],
+        "external_deps": ["Racing entries and results feeds"],
+        "confidence": "MEDIUM",
+        "confidence_reason": "Racing data mentioned in data sources but implementation details unclear"
+      }
+    ],
+    "frontend_pages": [
+      {
+        "filename": "HorseRoster.jsx",
+        "route_path": "/dashboard/horse-roster",
+        "purpose": "Display available horses and ownership opportunities",
+        "key_components": ["Horse cards with images", "Share availability", "Purchase buttons", "Filtering by status/breed"],
+        "api_calls": ["/api/horses", "/api/memberships/my-shares"],
+        "confidence": "HIGH",
+        "confidence_reason": "Core functionality for displaying ownership opportunities"
+      },
+      {
+        "filename": "MembershipDashboard.jsx",
+        "route_path": "/dashboard/membership",
+        "purpose": "Member's personal dashboard showing owned shares and updates",
+        "key_components": ["Owned horses list", "Recent updates", "Payment history", "Upcoming events"],
+        "api_calls": ["/api/memberships/my-shares", "/api/updates", "/api/horses"],
+        "confidence": "HIGH",
+        "confidence_reason": "Membership access clearly defined as must-have feature"
+      },
+      {
+        "filename": "MonthlyUpdates.jsx",
+        "route_path": "/dashboard/monthly-updates",
+        "purpose": "Monthly horse and breeding updates for members",
+        "key_components": ["Update feed", "Horse-specific updates", "Breeding progress", "Photo galleries"],
+        "api_calls": ["/api/updates", "/api/updates/horse/{id}"],
+        "confidence": "HIGH",
+        "confidence_reason": "Monthly updates explicitly mentioned in must-have features"
+      },
+      {
+        "filename": "EducationCenter.jsx",
+        "route_path": "/dashboard/education-center",
+        "purpose": "Educational content and breeding strategy resources",
+        "key_components": ["Content library", "Category filtering", "Breeding strategy guides", "Member-only content"],
+        "api_calls": ["/api/education/content", "/api/education/breeding-strategies"],
+        "confidence": "HIGH",
+        "confidence_reason": "Educational content is must-have feature"
+      },
+      {
+        "filename": "RacingResults.jsx",
+        "route_path": "/dashboard/racing-results",
+        "purpose": "Track racing performance and entries for owned horses",
+        "key_components": ["Race calendar", "Results table", "Performance charts", "Earnings tracking"],
+        "api_calls": ["/api/racing/entries", "/api/racing/results", "/api/racing/horse/{id}/performance"],
+        "confidence": "MEDIUM",
+        "confidence_reason": "Racing data integration mentioned but UI requirements unclear"
+      }
+    ],
+    "config_updates": {
+      "business_name": "Wynwood Thoroughbreds",
+      "tagline": "Boutique horse ownership with transparency and personal touch",
+      "primary_color": "unknown",
+      "pricing_plans": ["Share-based pricing (varies by horse)", "Monthly maintenance fees"],
+      "notes": "Need Shopify integration for merchandise store, compliance pages for racing regulations"
+    }
+  },
+
+  "ambiguities": [
+    {
+      "feature": "Shopify merchandise store integration",
+      "missing": "Whether this should be embedded in the platform or just linked externally",
+      "impact": "MEDIUM",
+      "suggestion": "Do you want the merchandise store integrated into the member dashboard or as a separate Shopify storefront that members access via link?"
+    },
+    {
+      "feature": "Racing and syndicate compliance",
+      "missing": "Specific regulatory requirements and compliance workflows needed",
+      "impact": "HIGH",
+      "suggestion": "What specific racing and syndicate regulations do you need to comply with, and are there any required compliance workflows or reporting features?"
+    },
+    {
+      "feature": "Share pricing and purchase flow",
+      "missing": "How shares are priced, minimum investments, payment schedules",
+      "impact": "HIGH",
+      "suggestion": "How do you price ownership shares - fixed amounts, percentage-based, or variable by horse? Are there minimum investments or payment plans?"
+    },
+    {
+      "feature": "External data integration frequency",
+      "missing": "How often to sync with Equineline, TrueNicks, and racing feeds",
+      "impact": "MEDIUM",
+      "suggestion": "How frequently should the platform sync data from Equineline, TrueNicks, and racing feeds - real-time, daily, or weekly?"
+    }
+  ],
+
+  "blockers": [],
+
+  "recommendation": "This is an excellent fit for the boilerplate - start with membership management and monthly updates features first to validate the boutique positioning. The external API integrations (Equineline, TrueNicks, racing feeds) can be added incrementally after the core membership platform is working."
+}

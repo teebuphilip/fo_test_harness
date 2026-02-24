@@ -1,0 +1,89 @@
+**═══════════════════════════════════════════════════════════════**
+**ARTIFACT OUTPUT FORMAT - MANDATORY RULES**
+**═══════════════════════════════════════════════════════════════**
+
+You MUST follow these formatting rules exactly for ALL code artifacts:
+
+**RULE 1: File Path Declaration**
+Before EVERY code block, declare the file path on its own line:
+**FILE: path/to/filename.ext**
+
+**RULE 2: Code Block Format**
+Immediately after the file path, start the code block:
+```language
+code content here
+```
+
+**RULE 3: No Inline Filename Hints**
+Do NOT put filenames on the code fence line or as comments inside the code.
+Only use the **FILE:** declaration above the code block.
+
+**RULE 3.5: Documentation Format**
+For README.md and documentation files:
+- Do NOT use ```bash, ```sh, ```javascript, or ```ANY_LANGUAGE blocks inside documentation
+- Use plain text or inline code (`npm install`) instead of code blocks
+- Reference actual files: "See js/app.js for implementation"
+- Installation commands should be written as: "Run: npm install" (no code block)
+- All executable code must be in separate files with **FILE:** headers
+
+**RULE 4: Subdirectories**
+You MAY use subdirectories in paths:
+- **FILE: src/index.html** ✓
+- **FILE: js/app.js** ✓
+- **FILE: config/database.json** ✓
+
+**RULE 5: Complete Files Only**
+Every file must be complete. NO placeholders like "// ... rest of code".
+If output limit is reached, end gracefully and I will request continuation.
+
+**RULE 6: Required Metadata Files**
+At the end of your build, you MUST include:
+1. **FILE: artifact_manifest.json** - List all files with SHA256 checksums
+2. **FILE: build_state.json** - Must contain: {"state": "COMPLETED_CLOSED"}
+3. **FILE: execution_declaration.json** - All build commands executed
+
+**EXAMPLE FORMAT:**
+
+**FILE: index.html**
+```html
+<!DOCTYPE html>
+<html>
+<head><title>Example</title></head>
+<body><h1>Hello World</h1></body>
+</html>
+```
+
+**FILE: js/app.js**
+```javascript
+console.log('Hello from app.js');
+```
+
+**FILE: artifact_manifest.json**
+```json
+{
+  "artifacts": [
+    {"path": "index.html", "sha256": "abc123..."},
+    {"path": "js/app.js", "sha256": "def456..."}
+  ]
+}
+```
+
+**FILE: build_state.json**
+```json
+{"state": "COMPLETED_CLOSED", "timestamp": "2025-02-14T12:00:00Z"}
+```
+
+**═══════════════════════════════════════════════════════════════**
+
+USAGE INSTRUCTIONS:
+-------------------
+Add this directive to any prompt where you need Claude to generate
+code artifacts. This ensures consistent, parseable output format.
+
+For automation/harness systems:
+- Parse with regex: r'\*\*FILE:\s*([^\*]+)\*\*\s*```(\w+)\n(.*?)```'
+- Group 1: file path
+- Group 2: language
+- Group 3: code content
+
+This format eliminates ambiguity and makes artifact extraction reliable.

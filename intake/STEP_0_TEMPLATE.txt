@@ -1,0 +1,66 @@
+# Founder Questionnaire - Answer Template
+
+Please answer the following 10 questions about your startup idea in as much detail as possible.
+Be specific, honest, and thorough. These answers will be used to generate your intake evaluation.
+
+---
+
+1. What problem are we solving?
+
+[Your detailed answer here - explain the problem, who has it, and why it matters]
+
+
+2. Who is our primary customer?
+
+[Describe your target users/customers - be specific about segments, demographics, needs]
+
+
+3. What is the simplest version of our product that still delivers value?
+
+[Describe your MVP - what's the minimum you need to ship to solve the problem]
+
+
+4. What actions should our users be able to take?
+
+[List the key user actions - what should they be able to do with your product]
+
+
+5. What inputs do we need from the user?
+
+[What information/data do you need from users to deliver value]
+
+
+6. What outputs do we deliver back to them?
+
+[What value/outputs do users receive from your product]
+
+
+7. Do we need external integrations or data sources?
+
+[List any third-party services, APIs, data sources you'll need]
+
+
+8. Are payments or transactions involved?
+
+[Describe your revenue model - how will you make money]
+
+
+9. What does success look like in the first 30 days?
+
+[Be specific - what do you want to achieve in month 1]
+
+
+10. What constraints or non-goals must we respect?
+
+[What are your limits? What do you want to AVOID doing? What won't you compromise on?]
+
+
+---
+
+HOW TO USE THIS TEMPLATE:
+
+1. Save this file as: hero_text/your_startup_name_MM_DD_YYYY.txt
+2. Answer all 10 questions in detail
+3. Run: python convert_hero_answers.py hero_text/your_startup_name_MM_DD_YYYY.txt
+4. Review the generated JSON
+5. Continue with: ./generate_intake.sh your_startup_name.json

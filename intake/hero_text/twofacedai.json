@@ -1,0 +1,55 @@
+{
+  "startup_idea_id": "adversarial_ai_validator",
+  "startup_name": "TwoFaced",
+  "startup_description": "Adversarial AI-powered startup idea validation that forces ChatGPT and Claude into opposing roles — one building the strongest case for your idea, one destroying it — producing an honest structured verdict before you waste months building the wrong thing.",
+  "hero_answers": {
+    "Q1_problem_customer": "Solo founders use AI as a yes-machine. A single AI model is optimized to be helpful, which means it agrees. There is no honest adversarial pressure-testing happening before they commit time and money. Forcing two AIs into opposing roles produces a qualitatively different and more honest output than any single model can deliver.",
+    "Q2_target_user": [
+      "Technical solo founders aged 35-55 with a day job building something on the side",
+      "Non-technical solo founders with domain expertise but no co-founder to pressure-test with",
+      "Builders who already pay for ChatGPT and Claude and are familiar with the cut-paste validation pain"
+    ],
+    "Q3_success_metric": "Within 30 days: 25 paying users who each completed at least one paid analysis, at least 5 users who ran more than one analysis, and $500-1000 in revenue proving the transaction happens.",
+    "Q4_must_have_features": [
+      "Single text input for plain-language idea submission",
+      "Claude in advocate role — strongest possible case for the idea",
+      "ChatGPT in adversary role — every reason the idea will fail",
+      "Synthesized structured verdict with strengths, fatal flaws, conflicts, open questions, and recommendation",
+      "Pay-per-analysis Stripe checkout with no account required",
+      "60-second or less turnaround from submission to report"
+    ],
+    "Q5_non_goals": [
+      "Building a full business plan generator",
+      "Market research or competitor analysis tool",
+      "Team collaboration or multi-user workspace",
+      "Ongoing advisor or pivot tracker",
+      "Replacing the user's judgment — verdict is a recommendation not a guarantee"
+    ],
+    "Q6_constraints": {
+      "brand_positioning": "Honest, adversarial, no bullshit — the anti yes-machine",
+      "scope": "One idea in, one structured verdict out — nothing else in v1",
+      "economics": "API costs covered by user payments from day one, no subsidizing early users",
+      "build_time": "Completable by one person in nights and weekends in under 4 weeks",
+      "transparency": "Must be honest that output is two AI models in structured roles, not a magic oracle"
+    },
+    "Q7_data_sources": [
+      "OpenAI API — GPT-4o in adversary role",
+      "Anthropic API — Claude Sonnet in advocate role",
+      "No external market data sources required for MVP"
+    ],
+    "Q8_integrations": [
+      "Stripe — pay-per-analysis checkout, no subscription complexity in v1",
+      "OpenAI SDK — ChatGPT REST API integration",
+      "Anthropic SDK — Claude REST API integration",
+      "Simple Node.js or Python backend for orchestration and synthesis"
+    ],
+    "Q9_risks": [
+      "Adversarial output quality depends entirely on prompt engineering — requires iteration",
+      "API cost per analysis must stay under $0.40 to maintain viable margins at $5-10 price point",
+      "OpenAI or Anthropic building this natively into their own products closes the window",
+      "Bad analyses in low-training-data domains will damage trust early",
+      "Single person bandwidth — one production incident can kill momentum"
+    ],
+    "Q10_shipping_preference": "Start with a single-page app, no accounts, pay-per-analysis Stripe integration, and the two-model adversarial pipeline before adding any additional features, subscription logic, or user management."
+  }
+}

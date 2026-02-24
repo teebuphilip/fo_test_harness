@@ -1,0 +1,161 @@
+1. What problem are we solving?
+
+I want us to solve a very real gap in this industry: people want to be part of horse ownership, but they don’t trust the big syndicates. The markup fees, the bamboozlement. They feel like a number, not a partner. They don’t get transparency, they don’t get education, and they don’t get a personal connection to the horses. In most cases these partnerships buy horses to help and channel expensive horses to the small partner with high upfront costs. Deals made in the backroom that are deemed not to return a penny and leave partners living a dream that turns sour. 
+
+Wynwood Thoroughbreds exists to fix that.
+We’re offering a boutique, high‑touch ownership and breeding experience built on honesty, access, and real expertise.
+
+Our customers will know where good horses come from, the why, the where, the how, The Who, I want to put knowledge on display.  
+
+2. Who is our primary customer?
+
+We’re building this for three groups:
+• New or emerging owners who want to enter the sport without being overwhelmed or misled.
+• Passionate racing fans who want deeper involvement and behind‑the‑scenes access.
+• Professionals and small investors who appreciate data, breeding strategy, and long‑term value.
+
+
+These are people who want to feel connected, respected, and educated — not sold to. With the ability to participate in the annual KY derby local festivities organized by Wynwood Thoroughbreds. 
+
+3. What is the simplest version of our product that still delivers value?
+
+Our MVP is a Wynwood Thoroughbreds Ownership Membership.
+
+This includes:
+
+• Access to ownership opportunities
+• Monthly updates on horses and breeding plans
+• Educational content
+• Direct communication with me
+• A clean, trustworthy brand presence
+• Shopify store. With our branded products and race horses fan based build
+
+
+
+We don’t need an app or a massive platform to start. We need clarity, consistency, and credibility.
+
+4. What actions should our users be able to take?
+
+Our customers should be able to:
+
+• Join a partnership or ownership group
+• Learn about racing, breeding, and bloodstock strategy
+• Track their horse’s progress
+• Receive financial and performance updates
+• Communicate with us directly
+• Attend events, farm visits, and race days
+
+
+Everything we build should support these actions.
+
+5. What inputs do we need from the user?
+
+We need:
+
+• Basic profile information
+• Their investment level or ownership interest
+• Their preferences (racing, breeding, education, events)
+• Payment information when they join
+• Their questions and feedback
+
+
+This helps us tailor the experience and keep everything transparent.
+
+
+6. What outputs do we deliver back to them?
+
+We provide:
+
+• Ownership opportunities
+• Horse updates (training, vet, entries, results)
+• Breeding insights and reports
+• Financial summaries
+• Event invitations
+• Exclusive content and behind‑the‑scenes access
+
+
+Our output must always feel personal, professional, and valuable.
+
+7. Do we need external integrations or data sources?
+
+For the initial launch we can integrate:
+
+• Equineline
+• TrueNicks
+• Racing entries/results feeds
+• Payment processors
+• Email automation tools
+Past performances and our past winners 
+There are many other data services available that will fit here in this space. 
+
+
+But none of this is required to start delivering value.
+
+---
+
+8. Are payments or transactions involved?
+
+Yes — and this is where our revenue comes from.
+
+Primary revenue:
+
+•Ownership shares
+• Breeding partnerships
+• Stallion seasons and breeding rights
+• Farm Boarding (KY, NY, Florida and Virginia)
+•Training, Breaking horse racing Management
+• Sales prep and consignment fees.
+• Bloodstock agent services Breeding/Mating Advice.  
+
+Secondary revenue:
+
+• Membership subscriptions
+• Educational content
+• Merchandise
+• Event tickets
+
+
+We’re building a diversified, sustainable model.
+
+9. What does success look like in the first 30 days?
+
+Success for us is not scale — it’s clarity and traction.
+
+In the first 30 days, I want:
+
+• A clean, professional brand identity
+• A simple website with ownership opportunities, fan based funnel, separate friends from business partners and opportunities 
+• A clear value proposition against West Point Thoroughbreds & MyRacehorse
+• A small but engaged email list
+• 1–2 horses or breeding opportunities available
+• Our first paying members or partners
+• Consistent, high‑quality content
+
+
+If we hit these, we’re building momentum the right way.
+
+10. What constraints or non‑goals must we respect?
+
+We are a boutique operation — and that’s our strength.
+
+So we must respect:
+
+• Transparency at all times
+• Compliance with racing and syndicate regulations
+• Not overpromising returns
+• Not diluting our brand with too many horses
+
+
+And we must avoid:
+
+• Competing with MyRacehorse on scale
+• Becoming a mass‑market micro‑share platform
+• Trying to be a tech company
+• Losing our personal touch
+
+We are a 360 degree of guidance and historical knowledge that allows our customer to evolve with us, through the pain points and successful outcomes that provide the most exhilarating experience and the highest quality of gratification.  
+Our identity is quality, trust, guidance and expertise.
+
+
+
+

@@ -1,0 +1,118 @@
+{
+  "startup_idea_id": "ai_workforce_intelligence",
+  "proposal_summary": {
+    "tier_1": {
+      "bdr_summary": "Executive intelligence platform for AI workforce transformation consultants to generate client reports and dashboards measuring AI adoption impact on business performance",
+      "approved_scope": "Manual intelligence dashboard for workforce consultants to input client data and generate executive reports",
+      "milestone_map": [
+        {
+          "milestone": "Platform Ready",
+          "day": 1,
+          "related_task_ids": [
+            "T001"
+          ]
+        },
+        {
+          "milestone": "Data Entry Complete",
+          "day": 2,
+          "related_task_ids": [
+            "T002"
+          ]
+        },
+        {
+          "milestone": "Scoring Engine Built",
+          "day": 3,
+          "related_task_ids": [
+            "T003"
+          ]
+        },
+        {
+          "milestone": "Dashboard Functional",
+          "day": 4,
+          "related_task_ids": [
+            "T004"
+          ]
+        },
+        {
+          "milestone": "Reports Generated",
+          "day": 5,
+          "related_task_ids": [
+            "T005"
+          ]
+        },
+        {
+          "milestone": "QA Complete",
+          "day": 6,
+          "related_task_ids": [
+            "T006"
+          ]
+        },
+        {
+          "milestone": "Validation Done",
+          "day": 7,
+          "related_task_ids": [
+            "T007"
+          ]
+        }
+      ]
+    },
+    "tier_2": {
+      "bdr_summary": "Executive intelligence platform connecting AI adoption metrics, workforce development KPIs, and business performance for consultants serving enterprise clients. Generates executive-ready reports with standardized scoring and risk indicators.",
+      "approved_scope": "Executive intelligence platform with role-based access, dashboard, structured data input, KPI scoring engine, and automated report generation for workforce transformation consultants.",
+      "milestone_map": [
+        {
+          "milestone": "Authentication Ready",
+          "day": 1,
+          "related_task_ids": [
+            "T001"
+          ]
+        },
+        {
+          "milestone": "Data Pipeline Complete",
+          "day": 4,
+          "related_task_ids": [
+            "T002",
+            "T003",
+            "T004"
+          ]
+        },
+        {
+          "milestone": "Dashboard Functional",
+          "day": 6,
+          "related_task_ids": [
+            "T005",
+            "T006"
+          ]
+        },
+        {
+          "milestone": "MVP Validated",
+          "day": 8,
+          "related_task_ids": [
+            "T007",
+            "T008"
+          ]
+        }
+      ]
+    }
+  },
+  "economics": {
+    "tier_1": {
+      "target_customer": "AI Learning Consultants and fractional CLOs serving enterprise clients",
+      "acquisition_channel": "Direct consultant outreach and executive referrals",
+      "starter_price": "$2,500/month per consultant seat",
+      "audience_scale_guess": "500-1000 qualified consultants in North America",
+      "revenue_goal_12mo": "$300K ARR"
+    },
+    "tier_2": {
+      "target_customer": "AI Learning Consultants and fractional CLOs serving enterprise clients",
+      "acquisition_channel": "Direct consultant outreach and executive referrals",
+      "starter_price": "$2,500/month per consultant seat",
+      "audience_scale_guess": "500-1000 qualified consultants in workforce transformation space",
+      "revenue_goal_12mo": "$300K ARR"
+    }
+  },
+  "final_decision": {
+    "tier_1": "buy_tier1_build",
+    "tier_2": "buy_tier2_build"
+  }
+}

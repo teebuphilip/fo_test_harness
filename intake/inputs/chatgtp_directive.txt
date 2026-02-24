@@ -1,0 +1,167 @@
+============================================================
+CHATGPT — FOUNDEROPS BATCH SIM + EVALUATION DIRECTIVE
+============================================================
+
+IMPORTANT
+---------
+Assume NO prior context.
+Assume NO memory of previous sims.
+Treat this session as a clean execution environment.
+
+You must rely ONLY on the materials explicitly provided
+in this session.
+
+============================================================
+ROLE
+----
+You perform TWO ROLES in sequence, repeatedly:
+
+ROLE A — SIM RUNNER
+ROLE B — SIM JUDGE
+
+You MUST NOT mix roles.
+You MUST NOT be helpful.
+You MUST NOT fix failures.
+
+============================================================
+AUTHORITATIVE INPUTS (LOCKED)
+============================================================
+
+You will be provided with:
+
+1. MCv6-SCHEMA v21.4
+2. Intake Business Rules v21.4
+3. Scheduling Policy
+4. Hero Touchpoint Policy
+5. Permission to auto-generate startup ideas
+
+Only these documents are authoritative.
+
+============================================================
+GLOBAL EXECUTION GOAL
+============================================================
+
+You must execute UP TO 100 simulations.
+
+You MUST:
+• Stop immediately on FIRST FAIL
+• Otherwise stop after 100 PASS results
+
+============================================================
+ROLE A — SIM RUNNER (PER ITERATION)
+============================================================
+
+For EACH simulation iteration:
+
+If no startup idea is provided:
+• Generate EXACTLY ONE startup idea
+• Output it under "generated_startup_idea"
+• Freeze it for the entire simulation
+
+You MUST execute:
+
+BLOCK A — Tier 1 (Proof Slice)
+BLOCK B — Tier 2 (MVP Expansion)
+
+Rules:
+• EXACTLY two blocks
+• EXACTLY six passes per block
+• Tier 1:
+  - role_count == 1
+  - workflow_count == 1
+  - happy_path_count == 1
+  - integration_count == 0
+  - manual / mocked inputs only
+• Tier 2:
+  - must expand Tier 1 on ≥1 axis
+• No schema changes
+• No rule invention
+• No commentary
+
+ALL OUTPUT MUST BE IN VI-COPYABLE BLOCKS.
+
+After completing BLOCK B — PASS 6:
+• STOP ROLE A
+
+============================================================
+ROLE B — SIM JUDGE (PER ITERATION)
+============================================================
+
+Immediately after ROLE A, evaluate the sim you just produced.
+
+You must validate:
+
+• Structural completeness (all passes exist)
+• Schema compliance
+• Tier 1 proof slice integrity
+• Tier 2 expansion correctness
+• No Tier 1 integration leakage
+• Scheduling executability
+• Hero touchpoint feasibility
+
+============================================================
+JUDGMENT OUTPUT (ABSOLUTE)
+============================================================
+
+You MUST output EXACTLY ONE of the following:
+
+------------------------------------------------------------
+PASS — SIM OUTPUT VALID
+------------------------------------------------------------
+PASS
+
+Then list:
+• 2–4 concise bullet points explaining why it passes
+
+------------------------------------------------------------
+FAIL — SIM OUTPUT INVALID
+------------------------------------------------------------
+FAIL
+
+Then list:
+• Each violation
+• Which rule or tier failed
+• Why the output is unacceptable
+
+NO fixes.
+NO redesign.
+NO suggestions.
+
+============================================================
+LOOP CONTROL
+============================================================
+
+IF RESULT == PASS:
+• Increment iteration counter
+• Proceed to NEXT simulation
+
+IF RESULT == FAIL:
+• STOP ALL EXECUTION IMMEDIATELY
+• Output NOTHING further
+
+IF iteration counter reaches 100:
+• STOP ALL EXECUTION
+• Output NOTHING further
+
+============================================================
+STOP CONDITION (HARD)
+============================================================
+
+You MUST STOP when:
+• A FAIL occurs
+OR
+• 100 PASS simulations complete
+
+Do NOT:
+• Summarize the run
+• Provide statistics
+• Reflect on results
+• Continue chatting
+
+============================================================
+BEGIN
+============================================================
+
+Wait until ALL authoritative inputs are provided.
+Do NOT start early.
+

@@ -1,0 +1,99 @@
+{
+  "version": "1.0.0-local-override",
+  "description": "Tech stack implementation guide - LOCAL OVERRIDE for testing boilerplate integration",
+  "warning": "This is a LOCAL-ONLY override file. Not part of official governance.",
+
+  "tech_stack_definitions": {
+    "nocode": {
+      "description": "No custom code - configuration and content only",
+      "platforms": ["Webflow", "Airtable", "Carrd", "Notion"],
+      "deployment_target": "platform_hosting",
+      "build_instructions": "Provide configuration files, content templates, and setup documentation. No code files.",
+      "artifacts_expected": ["configuration_files", "content_templates", "setup_guide"]
+    },
+
+    "lowcode": {
+      "description": "Business logic only - extends existing boilerplate",
+      "boilerplate_source": "~/Downloads/teebu-saas-platform",
+      "boilerplate_provides": [
+        "authentication_system",
+        "payment_processing",
+        "database_orm",
+        "email_system",
+        "ui_framework",
+        "api_infrastructure",
+        "deployment_config"
+      ],
+      "build_instructions": "Build ONLY business-specific modules that extend the boilerplate. Do NOT rebuild infrastructure.",
+      "output_structure": {
+        "business/models/": "Domain entities (e.g., Horse.js, Race.js)",
+        "business/services/": "Business logic services (e.g., RacingDataService.js)",
+        "business/components/": "Business UI components (e.g., HorseProfile.jsx)",
+        "business/config/": "Business configuration (e.g., startup-config.js)",
+        "business/routes/": "Custom API routes (optional)",
+        "README-INTEGRATION.md": "How to integrate with boilerplate"
+      },
+      "explicitly_forbidden": [
+        "auth/",
+        "payments/",
+        "database/setup.sql",
+        "database/migrations/",
+        "server.js",
+        "middleware/",
+        "components/Layout.jsx",
+        "components/LoginForm.jsx",
+        "Dockerfile",
+        "docker-compose.yml",
+        "deployment scripts"
+      ],
+      "deployment_target": "vercel_with_supabase",
+      "artifacts_expected": ["business_logic", "integration_config", "integration_guide"]
+    },
+
+    "custom": {
+      "description": "Full custom implementation - build complete application",
+      "build_instructions": "Build complete application from scratch including all infrastructure.",
+      "deployment_target": "docker_compose",
+      "artifacts_expected": ["complete_application", "dockerfile", "deployment_scripts"]
+    }
+  },
+
+  "deployment_targets": {
+    "platform_hosting": {
+      "description": "Hosted on platform (Webflow, Airtable, etc.)",
+      "deployment_steps": "Provide platform configuration and content files"
+    },
+    "vercel_with_supabase": {
+      "description": "Vercel for frontend/API, Supabase for database",
+      "deployment_steps": "Provide vercel.json and supabase config",
+      "required_env_vars": ["SUPABASE_URL", "SUPABASE_ANON_KEY"]
+    },
+    "docker_compose": {
+      "description": "Self-hosted via Docker Compose",
+      "deployment_steps": "Provide Dockerfile and docker-compose.yml",
+      "required_files": ["Dockerfile", "docker-compose.yml", ".env.example"]
+    }
+  },
+
+  "integration_instructions": {
+    "lowcode_integration_pattern": {
+      "step_1": "Claude builds business logic in business/ directory",
+      "step_2": "Harness copies teebu-saas-platform boilerplate to output",
+      "step_3": "Final ZIP contains: boilerplate/ + business/",
+      "step_4": "User runs: npm install && npm run integrate:business && npm start",
+      "integration_config_example": {
+        "file": "business/config/startup-config.js",
+        "exports": {
+          "businessName": "startup name",
+          "membershipTiers": "array of tier objects",
+          "customRoutes": "array of route handlers",
+          "features": "business-specific feature flags"
+        }
+      }
+    }
+  },
+
+  "prompt_injection_template": {
+    "for_lowcode_stack": "**TECH STACK: LOWCODE - BOILERPLATE INTEGRATION MODE**\n\nYou are building BUSINESS LOGIC ONLY for {startup_name}.\n\nThe teebu-saas-boilerplate already provides:\n- Authentication (signup, login, sessions)\n- Payment processing (Stripe, subscriptions)\n- Database (PostgreSQL via Supabase)\n- Email system (transactional emails)\n- UI framework (React, Tailwind)\n- API infrastructure (Express, middleware)\n- Deployment config (Vercel)\n\nYour job: Build ONLY the business-specific code:\n- Domain models (e.g., Horse, Race, BreedingRecord)\n- Business services (e.g., RacingDataService)\n- Business UI components (e.g., HorseProfile)\n- Business config (membership tiers, features)\n\n**DO NOT BUILD:**\n- Auth system (boilerplate has it)\n- Payment system (boilerplate has it)\n- Database setup (boilerplate has it)\n- Generic UI components (boilerplate has it)\n- Server/API infrastructure (boilerplate has it)\n- Deployment scripts (boilerplate has it)\n\n**OUTPUT STRUCTURE:**\nbusiness/\n  models/       ← Domain entities\n  services/     ← Business logic\n  components/   ← Business UI\n  config/       ← Business config\n  README-INTEGRATION.md ← Integration guide"
+  }
+}

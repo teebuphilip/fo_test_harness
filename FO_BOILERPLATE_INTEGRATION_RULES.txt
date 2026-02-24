@@ -1,0 +1,188 @@
+**═══════════════════════════════════════════════════════════════**
+**BOILERPLATE INTEGRATION MODE - MANDATORY RULES**
+**═══════════════════════════════════════════════════════════════**
+
+**CRITICAL: You are building BUSINESS LOGIC ONLY, not a complete application.**
+
+**BOILERPLATE ASSUMPTION:**
+The teebu-saas-boilerplate already provides:
+- ✅ Authentication system (user signup, login, sessions)
+- ✅ Payment processing (Stripe integration, subscription management)
+- ✅ Database ORM (connection, migrations, base models)
+- ✅ Email system (transactional emails, templates)
+- ✅ UI framework (React/Vue components, CSS framework, layouts)
+- ✅ API infrastructure (Express routes, middleware, error handling)
+- ✅ Deployment scripts (Docker, environment config, CI/CD)
+
+**YOUR JOB:**
+Build ONLY the business-specific modules that extend the boilerplate:
+
+**RULE 1: Business Models Only**
+Create domain models that represent business entities:
+- ✅ DO: Create Horse.js, Race.js, BreedingRecord.js models
+- ❌ DON'T: Create User.js, Payment.js, Session.js models (boilerplate has these)
+
+**RULE 2: Business Services Only**
+Create services for domain-specific logic:
+- ✅ DO: RacingDataService.js, HorsePerformanceAnalyzer.js
+- ❌ DON'T: AuthService.js, PaymentService.js, EmailService.js (boilerplate has these)
+
+**RULE 3: Business UI Components Only**
+Create UI components specific to your domain:
+- ✅ DO: HorseProfileCard.jsx, RaceResultsTable.jsx
+- ❌ DON'T: LoginForm.jsx, PaymentForm.jsx, Navbar.jsx (boilerplate has these)
+
+**RULE 4: Configuration Over Infrastructure**
+Provide config files that tell the boilerplate how to behave:
+- ✅ DO: wynwood-config.js with membership tiers, pricing, features
+- ❌ DON'T: Rebuild Stripe integration, auth flows, or database setup
+
+**RULE 5: Integration Hooks**
+Your code should integrate with boilerplate hooks:
+- ✅ DO: Export functions that boilerplate can call
+- ✅ DO: Import from boilerplate base classes
+- ❌ DON'T: Create parallel systems that duplicate boilerplate features
+
+**EXAMPLE FILE STRUCTURE:**
+
+**DO BUILD (Business Logic):**
+```
+business/
+  ├── models/
+  │   ├── Horse.js               // Business entity
+  │   ├── Race.js                // Business entity
+  │   └── BreedingRecord.js      // Business entity
+  ├── services/
+  │   ├── RacingDataService.js   // External API integration
+  │   ├── HorseAnalytics.js      // Business logic
+  │   └── BreedingRecommender.js // Domain expertise
+  ├── components/
+  │   ├── HorseProfile.jsx       // Business UI
+  │   ├── RaceCalendar.jsx       // Business UI
+  │   └── BreedingReport.jsx     // Business UI
+  ├── config/
+  │   └── wynwood-config.js      // Business configuration
+  └── README-INTEGRATION.md      // How to integrate with boilerplate
+```
+
+**DON'T BUILD (Boilerplate Provides):**
+```
+❌ auth/                  // Already in boilerplate
+❌ payments/              // Already in boilerplate
+❌ database/setup.sql     // Already in boilerplate
+❌ server.js              // Already in boilerplate
+❌ routes/auth.js         // Already in boilerplate
+❌ components/Layout.jsx  // Already in boilerplate
+❌ Dockerfile             // Already in boilerplate
+```
+
+**INTEGRATION PATTERN:**
+
+**FILE: config/wynwood-config.js**
+```javascript
+// Configuration for boilerplate
+module.exports = {
+  businessName: 'Wynwood Thoroughbreds',
+
+  // Tell boilerplate what membership tiers to create
+  membershipTiers: [
+    { id: 'paddock', name: 'Paddock Pass', price: 500 },
+    { id: 'winners', name: "Winner's Circle", price: 1200 },
+    { id: 'elite', name: 'Elite Syndicate', price: 2000 }
+  ],
+
+  // Tell boilerplate what features each tier gets
+  tierFeatures: {
+    paddock: ['horse_updates', 'education_library'],
+    winners: ['horse_updates', 'education_library', 'founder_messages', 'events'],
+    elite: ['horse_updates', 'education_library', 'founder_messages', 'events', 'consultations']
+  },
+
+  // Custom routes to mount
+  customRoutes: [
+    { path: '/horses', handler: require('./routes/horses') },
+    { path: '/races', handler: require('./routes/races') }
+  ]
+};
+```
+
+**FILE: models/Horse.js**
+```javascript
+// Extend boilerplate's BaseModel
+const { BaseModel } = require('@teebu-saas/models');
+
+class Horse extends BaseModel {
+  static tableName = 'horses';
+
+  static schema = {
+    name: 'string',
+    breed: 'string',
+    age: 'integer',
+    performance_data: 'json'
+  };
+
+  // Business-specific method
+  async getPerformanceAnalysis() {
+    const RacingDataService = require('../services/RacingDataService');
+    return RacingDataService.analyzeHorse(this.id);
+  }
+}
+
+module.exports = Horse;
+```
+
+**FILE: services/RacingDataService.js**
+```javascript
+// Business logic service
+const { ApiClient } = require('@teebu-saas/integrations');
+
+class RacingDataService {
+  constructor() {
+    this.drfApi = new ApiClient({
+      baseUrl: 'https://api.dailyracingform.com',
+      apiKey: process.env.DRF_API_KEY
+    });
+  }
+
+  async fetchHorseData(horseId) {
+    // Business-specific external integration
+    return this.drfApi.get(`/horses/${horseId}`);
+  }
+
+  async analyzeHorse(horseId) {
+    // Business logic
+    const data = await this.fetchHorseData(horseId);
+    return this.calculatePerformanceScore(data);
+  }
+}
+
+module.exports = RacingDataService;
+```
+
+**FILE: README-INTEGRATION.md**
+```markdown
+# Wynwood Thoroughbreds - Integration Guide
+
+## Prerequisites
+- teebu-saas-boilerplate v2.x installed
+
+## Installation
+1. Copy this business/ folder into boilerplate root
+2. Update boilerplate config: `cp config/wynwood-config.js ../config/business.js`
+3. Run migrations: `npm run migrate:business`
+4. Register custom routes: `npm run register:routes`
+
+## Environment Variables
+DRF_API_KEY=your_daily_racing_form_api_key
+
+## Business Components
+- Horse management: /horses
+- Race tracking: /races
+- Member education: Uses boilerplate content system
+```
+
+**═══════════════════════════════════════════════════════════════**
+
+KEY TAKEAWAY:
+Build ONLY what makes Wynwood Thoroughbreds unique.
+Everything else (auth, payments, infrastructure) already exists in the boilerplate.

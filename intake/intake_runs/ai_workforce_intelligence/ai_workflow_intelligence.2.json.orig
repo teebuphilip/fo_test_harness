@@ -1,0 +1,175 @@
+{
+"startup_idea_id": "ai_workforce_intelligence",
+"startup_name": "AI Workforce Intelligence",
+"startup_description": "A structured workforce intelligence platform that generates executive-ready AI readiness reports using standardized KPI scoring and consultant-driven inputs.",
+
+"hero_answers": {
+
+```
+"Q1_problem_customer":
+  "Organizations lack a structured system to measure AI workforce readiness and training impact in economic terms. Consultants need a tool to generate quantified, executive-ready workforce intelligence reports.",
+
+"Q2_target_user": [
+  "AI learning consultants",
+  "Fractional CLOs",
+  "Workforce transformation advisors",
+  "CHROs",
+  "Executive teams"
+],
+
+"Q3_success_metric":
+  "Consultants can enter structured client data and generate a complete AI Workforce Intelligence Report within a single working session.",
+
+"Q4_must_have_features": [
+  "Secure authentication",
+  "Client profile management",
+  "Structured data input forms",
+  "KPI scoring engine",
+  "Executive dashboard",
+  "Narrative summary generator",
+  "Downloadable executive report"
+],
+
+"Q5_non_goals": [
+  "Real-time enterprise-wide data lake",
+  "Deep multi-system integrations at launch",
+  "Advanced predictive modeling",
+  "Highly customized enterprise deployments"
+],
+
+"Q6_constraints": {
+  "build_scope": "Single-tenant consultant MVP",
+  "data_model": "Structured scoring only",
+  "security": "Basic authentication and role separation",
+  "timeline": "Lean phased MVP",
+  "integration_strategy": "Manual input first, APIs second"
+},
+
+"Q7_data_sources": [
+  "Manual consultant input",
+  "Optional Workday API",
+  "Optional BambooHR API"
+],
+
+"Q8_integrations": [
+  "Billing system",
+  "Subscription management",
+  "Workday API (phase 2)",
+  "BambooHR API (phase 2)"
+],
+
+"Q9_risks": [
+  "Incomplete client data",
+  "External API instability",
+  "Overly complex KPI logic"
+],
+
+"Q10_shipping_preference":
+  "Deliver a working dashboard, scoring engine, and downloadable report before expanding integrations or predictive modeling."
+```
+
+},
+
+"kpi_definitions": [
+
+```
+{
+  "kpi_id": "TTC",
+  "kpi_name": "Time to Competency",
+  "type": "time_duration",
+  "definition": "Average number of days from role start to defined productivity threshold.",
+  "inputs_required": [
+    "role_start_date",
+    "performance_threshold_date"
+  ],
+  "calculation_logic": "performance_threshold_date - role_start_date",
+  "aggregation_methods": [
+    "organization_average",
+    "department_average",
+    "time_trend"
+  ],
+  "output_format": "days"
+},
+
+{
+  "kpi_id": "PDPT",
+  "kpi_name": "Performance Delta Post-Training",
+  "type": "percentage_change",
+  "definition": "Percentage improvement in performance metric after training.",
+  "inputs_required": [
+    "pre_training_metric",
+    "post_training_metric"
+  ],
+  "calculation_logic": "(post_training_metric - pre_training_metric) / pre_training_metric",
+  "aggregation_methods": [
+    "program_average",
+    "organization_average",
+    "program_ranking"
+  ],
+  "output_format": "percentage"
+},
+
+{
+  "kpi_id": "RPL",
+  "kpi_name": "Revenue per Learner",
+  "type": "monetary_ratio",
+  "definition": "Revenue generated or influenced per trained employee.",
+  "inputs_required": [
+    "revenue_attributed",
+    "trained_employee_count"
+  ],
+  "calculation_logic": "revenue_attributed / trained_employee_count",
+  "aggregation_methods": [
+    "organization_average",
+    "trained_vs_untrained_comparison"
+  ],
+  "output_format": "currency"
+},
+
+{
+  "kpi_id": "BCI",
+  "kpi_name": "Behavioral Change Index",
+  "type": "scored_index",
+  "definition": "Manager-rated improvement score 30–90 days post training.",
+  "inputs_required": [
+    "competency_rating_scores"
+  ],
+  "calculation_logic": "average(competency_rating_scores)",
+  "aggregation_methods": [
+    "organization_average",
+    "distribution_analysis",
+    "correlation_with_PDPT"
+  ],
+  "output_format": "1-5_scale"
+},
+
+{
+  "kpi_id": "IMV",
+  "kpi_name": "Internal Mobility Velocity",
+  "type": "percentage_ratio",
+  "definition": "Percentage of roles filled internally.",
+  "inputs_required": [
+    "internal_promotions",
+    "total_roles_filled"
+  ],
+  "calculation_logic": "internal_promotions / total_roles_filled",
+  "aggregation_methods": [
+    "organization_rate",
+    "year_over_year_change"
+  ],
+  "output_format": "percentage"
+}
+```
+
+],
+
+"normalization_rules": {
+"TTC": "lower_is_better",
+"PDPT": "higher_is_better",
+"RPL": "higher_is_better",
+"BCI": "higher_is_better",
+"IMV": "higher_is_better"
+}
+
+}
+

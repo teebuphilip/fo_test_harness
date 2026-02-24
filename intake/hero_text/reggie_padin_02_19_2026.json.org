@@ -1,0 +1,62 @@
+{
+  "startup_idea_id": "ai_workforce_intelligence",
+  "startup_name": "AI Workforce Intelligence",
+  "startup_description": "A centralized intelligence platform that connects AI adoption, workforce development, and measurable business performance by quantifying workforce readiness and forecasting business impact. The platform generates executive-ready reports that measure learning investments economically rather than operationally.",
+  "hero_answers": {
+    "Q1_problem_customer": "Organizations lack a centralized intelligence system that connects AI adoption, workforce development, and measurable business performance, with learning investments measured operationally rather than economically. Primary users are AI Learning Consultants, fractional CLOs, and workforce transformation advisors, with economic buyers being CHROs, CLOs, COOs, and executive teams.",
+    "Q2_target_user": [
+      "AI Learning Consultants",
+      "fractional CLOs",
+      "workforce transformation advisors",
+      "CHROs",
+      "CLOs",
+      "COOs",
+      "private equity operators",
+      "executive teams"
+    ],
+    "Q3_success_metric": "Functional dashboard and report generation workflow with active consultant usage, multiple client reports generated, paid enterprise diagnostic engagements secured, and positive executive validation of intelligence quality",
+    "Q4_must_have_features": [
+      "Secure authentication and role-based access",
+      "Executive-style dashboard",
+      "Structured client data input forms",
+      "KPI score visualizations",
+      "Risk exposure indicators",
+      "Downloadable executive-ready report",
+      "Scoring engine calculating standardized KPIs",
+      "AI-driven narrative summary generator",
+      "Time to Competency calculation",
+      "Performance Delta Post-Training measurement",
+      "Revenue per Learner tracking",
+      "Behavioral Change Index",
+      "Internal Mobility Velocity"
+    ],
+    "Q5_non_goals": [
+      "Real-time global economic intelligence system",
+      "Deep enterprise system integrations",
+      "Advanced predictive modeling beyond structured scoring",
+      "Complex multi-tenant enterprise customization"
+    ],
+    "Q6_constraints": {
+      "brand_positioning": "Executive-grade intelligence snapshot engine that generates measurable commercial value",
+      "compliance": "Role-based feature gating and secure authentication required",
+      "promise_limits": "Limited initial data aggregation and structured scoring only",
+      "scale_limits": "Lean development cycle with phased build approach"
+    },
+    "Q7_data_sources": [
+      "Workday API",
+      "BambooHR API"
+    ],
+    "Q8_integrations": [
+      "Billing integration",
+      "Subscription management",
+      "Workday API",
+      "BambooHR API"
+    ],
+    "Q9_risks": [
+      "Limited initial data aggregation",
+      "Lean development cycle constraints",
+      "Dependency on external API integrations"
+    ],
+    "Q10_shipping_preference": "Start with an AI Workforce Performance Snapshot platform with frontend dashboard and backend scoring engine, focusing on reliable intelligence snapshot delivery with phased build approach"
+  }
+}

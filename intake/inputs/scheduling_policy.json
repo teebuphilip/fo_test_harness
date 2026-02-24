@@ -1,0 +1,46 @@
+{
+  "version": "v21.4",
+  "scope": "scheduling",
+
+  "allowed_task_types": [
+    "build",
+    "validation",
+    "qa",
+    "hero_touchpoint"
+  ],
+
+  "tier_1_prohibited_task_rules": {
+    "rule_id": "T1-TASK-001",
+    "description": "Tier 1 schedules must not include production-grade activities",
+    "enforcement": "hard_fail",
+    "detection_strategy": {
+      "scope": "BLOCK_A",
+      "fields_to_scan": ["task.description"],
+      "prohibited_patterns": [
+        "production",
+        "rollout",
+        "monitoring",
+        "observability",
+        "pilot",
+        "full reporting",
+        "scale"
+      ]
+    }
+  },
+
+  "dependency_rules": {
+    "no_orphan_tasks": {
+      "enabled": true,
+      "enforcement": "hard_fail"
+    },
+    "no_dependency_cycles": {
+      "enabled": true,
+      "enforcement": "hard_fail"
+    },
+    "hero_touchpoints_not_dependencies": {
+      "enabled": true,
+      "enforcement": "hard_fail"
+    }
+  }
+}
+
