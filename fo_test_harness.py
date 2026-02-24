@@ -1270,6 +1270,17 @@ it will be considered DELETED. QA will flag it as missing and you'll loop foreve
 - REQUIRED: include `business/README-INTEGRATION.md`.
 - Every code block MUST have an explicit **FILE: path/to/file** header.
 - Do NOT emit unlabeled code fences.
+**HARD FAIL CONDITIONS:**
+- If you output ANY file outside `business/**`, the build FAILS.
+- If you omit the FILE header on any code block, the build FAILS.
+**VALID EXAMPLES:**
+**FILE: business/models/Client.js**
+**FILE: business/services/ReportService.js**
+**FILE: business/tests/report_service.test.js**
+**INVALID EXAMPLES (DO NOT OUTPUT):**
+**FILE: backend/tests/test_clients.py**
+**FILE: frontend/src/components/ClientList.jsx**
+**FILE: package.json**
 """
 
         # Inject external integration policy
