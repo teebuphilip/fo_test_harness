@@ -1620,6 +1620,15 @@ class FOHarness:
 
     def _write_run_metadata(self):
         """Write a run metadata file with CLI args and effective settings."""
+        def _coerce_jsonable(value):
+            if isinstance(value, Path):
+                return str(value)
+            if isinstance(value, dict):
+                return {k: _coerce_jsonable(v) for k, v in value.items()}
+            if isinstance(value, (list, tuple)):
+                return [_coerce_jsonable(v) for v in value]
+            return value
+
         metadata = {
             "timestamp": datetime.now().isoformat(),
             "intake_file": str(self.intake_file),
@@ -1632,7 +1641,7 @@ class FOHarness:
             "build_governance_zip": str(Config.BUILD_GOVERNANCE_ZIP),
             "deploy_governance_zip": str(Config.DEPLOY_GOVERNANCE_ZIP) if self.do_deploy else None,
             "platform_boilerplate_dir": str(Config.PLATFORM_BOILERPLATE_DIR),
-            "cli_args": vars(self.cli_args) if self.cli_args else None
+            "cli_args": _coerce_jsonable(vars(self.cli_args)) if self.cli_args else None
         }
 
         metadata_path = self.run_dir / 'run_metadata.json'
