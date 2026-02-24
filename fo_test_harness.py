@@ -121,6 +121,9 @@ class Config:
     BUILD_GOVERNANCE_ZIP  = None   # Path set by CLI arg
     DEPLOY_GOVERNANCE_ZIP = None   # Path set by CLI arg
 
+    # Default SaaS platform boilerplate (preferred for most builds)
+    PLATFORM_BOILERPLATE_DIR = Path('/Users/teebuphilip/Documents/work/teebu-saas-platform')
+
     # Local overrides (testing only)
     TECH_STACK_OVERRIDE_FILE = Path('./fo_tech_stack_override.json')
     EXTERNAL_INTEGRATION_OVERRIDE_FILE = Path('./fo_external_integration_override.json')
@@ -149,6 +152,23 @@ QUESTION_MARKERS = [
 ]
 
 BUILD_COMPLETE_MARKER = 'BUILD STATE: COMPLETED_CLOSED'
+
+def should_use_platform_boilerplate(intake_data: dict, block: str) -> bool:
+    """
+    Default to the platform boilerplate unless the intake explicitly
+    indicates a lowcode Zapier/Shopify build.
+    """
+    block_key = f'block_{block.lower()}'
+    block_data = intake_data.get(block_key, {})
+    tech_stack = block_data.get('pass_2', {}).get('tech_stack_selection', 'custom')
+
+    # Only skip boilerplate for explicit lowcode Zapier/Shopify cases
+    if tech_stack == 'lowcode':
+        intake_text = json.dumps(intake_data).lower()
+        if 'zapier' in intake_text or 'shopify' in intake_text:
+            return False
+
+    return True
 
 
 def detect_truncation(output: str) -> bool:
@@ -947,18 +967,18 @@ class ArtifactManager:
 # ZIP PACKAGER
 # ============================================================
 
-def package_output_zip(run_dir: Path, startup_id: str, block: str, tech_stack: str = 'custom') -> Path:
+def package_output_zip(run_dir: Path, startup_id: str, block: str, use_boilerplate: bool = False) -> Path:
     """
     Package the run directory into a ZIP at the base fo_harness_runs/ level.
 
-    For lowcode builds, also includes the teebu-saas-platform boilerplate.
+    For boilerplate builds, also includes the teebu-saas-platform boilerplate.
 
     ZIP contains:
       build/     — all Claude build outputs and code
       qa/        — all QA reports
       logs/      — all prompt logs
       artifact_manifest.json
-      boilerplate/  — (lowcode only) teebu-saas-platform
+      boilerplate/  — (boilerplate builds only) teebu-saas-platform
 
     ZIP name matches the run directory name for easy pairing.
     Returns the path to the created ZIP.
@@ -967,10 +987,10 @@ def package_output_zip(run_dir: Path, startup_id: str, block: str, tech_stack: s
 
     print_info(f"Packaging output ZIP: {zip_path.name}")
 
-    # For lowcode, prepare boilerplate source
+    # For boilerplate builds, prepare boilerplate source
     boilerplate_source = None
-    if tech_stack == 'lowcode':
-        boilerplate_source = Path.home() / 'Downloads' / 'teebu-saas-platform'
+    if use_boilerplate:
+        boilerplate_source = Config.PLATFORM_BOILERPLATE_DIR
         if boilerplate_source.exists():
             print_info(f"Including boilerplate: {boilerplate_source}")
         else:
@@ -984,7 +1004,7 @@ def package_output_zip(run_dir: Path, startup_id: str, block: str, tech_stack: s
                 arcname = file_path.relative_to(Config.OUTPUT_DIR)
                 zf.write(file_path, arcname)
 
-        # Add boilerplate if lowcode
+        # Add boilerplate if enabled
         if boilerplate_source and boilerplate_source.exists():
             print_info("Adding boilerplate to ZIP...")
             for file_path in boilerplate_source.rglob('*'):
@@ -1018,7 +1038,8 @@ class PromptTemplates:
         previous_defects: Optional[str] = None,
         tech_stack_override: dict = None,
         external_integration_override: dict = None,
-        startup_id: str = 'unknown'
+        startup_id: str = 'unknown',
+        force_tech_stack: Optional[str] = None
     ) -> Tuple[str, str]:
         """
         Generate BUILD prompt for Claude.
@@ -1039,7 +1060,7 @@ class PromptTemplates:
         block_data = intake_data.get(block_key, {})
 
         # Extract tech stack for override injection
-        tech_stack = block_data.get('pass_2', {}).get('tech_stack_selection', 'custom')
+        tech_stack = force_tech_stack or block_data.get('pass_2', {}).get('tech_stack_selection', 'custom')
 
         # ═══════════════════════════════════════════════════════════════
         # CACHEABLE SECTION - Static governance and rules
@@ -1545,6 +1566,8 @@ class FOHarness:
         block_key = f'block_{self.block.lower()}'
         block_data = self.intake_data.get(block_key, {})
         self.tech_stack = block_data.get('pass_2', {}).get('tech_stack_selection', 'custom')
+        self.use_boilerplate = should_use_platform_boilerplate(self.intake_data, self.block)
+        self.effective_tech_stack = 'lowcode' if self.use_boilerplate else 'custom'
 
         # Load governance ZIPs into memory (inline for prompts)
         print_info("Loading BUILD governance ZIP...")
@@ -1586,6 +1609,8 @@ class FOHarness:
         print_header("FO HARNESS INITIALIZED")
         print_info(f"Startup:       {self.startup_id}")
         print_info(f"Block:         BLOCK_{self.block}")
+        print_info(f"Tech stack:    {self.tech_stack} (effective: {self.effective_tech_stack})")
+        print_info(f"Boilerplate:   {'YES' if self.use_boilerplate else 'NO'}")
         print_info(f"Deploy:        {'YES' if self.do_deploy else 'NO — ZIP output only'}")
         print_info(f"Run directory: {self.run_dir}")
 
@@ -2623,7 +2648,8 @@ Generate 2-3 test files with **FILE:** headers."""
                     previous_defects,
                     self.tech_stack_override,
                     self.external_integration_override,
-                    self.startup_id
+                    self.startup_id,
+                    self.effective_tech_stack
                 )
 
                 # FIX #4: Dynamic max tokens based on iteration
@@ -2994,7 +3020,7 @@ Continue now with proper **FILE:** format:"""
                     build_output,
                     self.intake_data,
                     self.block,
-                    self.tech_stack,
+                    self.effective_tech_stack,
                     self.qa_override
                 )
 
@@ -3215,7 +3241,7 @@ Continue now with proper **FILE:** format:"""
 
         if not self.do_deploy:
             # Default path — package ZIP, done
-            zip_path = package_output_zip(self.run_dir, self.startup_id, self.block, self.tech_stack)
+            zip_path = package_output_zip(self.run_dir, self.startup_id, self.block, self.use_boilerplate)
             self.print_summary(True, time.time() - overall_start, zip_path=zip_path)
             return True
 

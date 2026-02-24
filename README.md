@@ -78,7 +78,9 @@ python fo_test_harness.py \
    unzip fobuilgov100.zip -d /tmp/fobuilgov100/
    ```
 
-4. **Boilerplate** (for lowcode): Place at `~/Downloads/teebu-saas-platform/`
+4. **Boilerplate** (default): Ensure the platform repo exists at
+   `/Users/teebuphilip/Documents/work/teebu-saas-platform`
+   (used by default unless the intake is an explicit lowcode Zapier/Shopify case).
 
 ## Workflow
 
@@ -195,7 +197,7 @@ Common causes:
 
 **Solution:** Check boilerplate location:
 ```bash
-ls ~/Downloads/teebu-saas-platform/
+ls /Users/teebuphilip/Documents/work/teebu-saas-platform
 ```
 
 Should contain:

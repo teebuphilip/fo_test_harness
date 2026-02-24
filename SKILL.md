@@ -16,7 +16,7 @@ artifact review, and boilerplate fit checks.
   - `ANTHROPIC_API_KEY`
   - `OPENAI_API_KEY`
 - Governance ZIPs available locally for `--build-gov` (and optional deploy).
-- Boilerplate available at `~/Downloads/teebu-saas-platform` if using `--tech-stack lowcode`.
+- Boilerplate available at `/Users/teebuphilip/Documents/work/teebu-saas-platform` (default for most builds).
 
 ## Inputs
 - Hero JSON: `intake/hero_text/<startup>.json`
