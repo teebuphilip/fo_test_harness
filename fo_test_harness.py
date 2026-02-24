@@ -1261,6 +1261,17 @@ it will be considered DELETED. QA will flag it as missing and you'll loop foreve
                 if prompt_template:
                     tech_stack_instructions = "\n\n" + prompt_template.replace('{startup_name}', startup_id) + "\n\n"
 
+        # Enforce boilerplate-only output paths when lowcode is active
+        boilerplate_path_instruction = ""
+        if tech_stack == 'lowcode':
+            boilerplate_path_instruction = """
+**CRITICAL FILE PATH RULES (BOILERPLATE MODE):**
+- Output files ONLY under `business/**`.
+- REQUIRED: include `business/README-INTEGRATION.md`.
+- Every code block MUST have an explicit **FILE: path/to/file** header.
+- Do NOT emit unlabeled code fences.
+"""
+
         # Inject external integration policy
         integration_instructions = ""
         if external_integration_override:
@@ -1271,7 +1282,7 @@ it will be considered DELETED. QA will flag it as missing and you'll loop foreve
         dynamic_section += f"""
 **INTAKE DATA ({block} — key: {block_key}):**
 {json.dumps(block_data, indent=2)}
-{tech_stack_instructions}{integration_instructions}
+{tech_stack_instructions}{integration_instructions}{boilerplate_path_instruction}
 **BEGIN BUILD EXECUTION NOW.**
 """
 
