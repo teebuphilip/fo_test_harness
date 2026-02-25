@@ -1024,7 +1024,7 @@ def package_output_zip(run_dir: Path, startup_id: str, block: str, use_boilerpla
       qa/        — all QA reports
       logs/      — all prompt logs
       artifact_manifest.json
-      boilerplate/  — (boilerplate builds only) teebu-saas-platform
+      boilerplate/  — (boilerplate builds only) teebu-saas-platform (legacy layout)
 
     ZIP name matches the run directory name for easy pairing.
     Returns the path to the created ZIP.
@@ -1043,25 +1043,45 @@ def package_output_zip(run_dir: Path, startup_id: str, block: str, use_boilerpla
             print_warning(f"Boilerplate not found at {boilerplate_source} - skipping")
 
     with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
-        # Add run directory contents
-        for file_path in run_dir.rglob('*'):
-            if file_path.is_file():
-                # Store relative to run_dir so ZIP opens cleanly
-                arcname = file_path.relative_to(Config.OUTPUT_DIR)
-                zf.write(file_path, arcname)
+        if use_boilerplate and boilerplate_source and boilerplate_source.exists():
+            # Assemble a single startup root folder with boilerplate + overlay
+            root = Path(startup_id)
 
-        # Add boilerplate if enabled
-        if boilerplate_source and boilerplate_source.exists():
-            print_info("Adding boilerplate to ZIP...")
+            # 1) Add boilerplate under startup root
             for file_path in boilerplate_source.rglob('*'):
                 if file_path.is_file():
-                    # Skip node_modules, .git, etc.
                     if any(exclude in file_path.parts for exclude in ['node_modules', '.git', '__pycache__', '.DS_Store']):
                         continue
-                    # Store under boilerplate/ in ZIP
                     rel_path = file_path.relative_to(boilerplate_source)
-                    arcname = Path(run_dir.name) / 'boilerplate' / rel_path
+                    arcname = root / rel_path
                     zf.write(file_path, arcname)
+
+            # 2) Overlay latest build artifacts into saas-boilerplate/business/**
+            build_dir = run_dir / 'build'
+            artifact_dirs = sorted(build_dir.glob('iteration_*_artifacts'))
+            latest_artifacts = artifact_dirs[-1] if artifact_dirs else None
+            if latest_artifacts:
+                for file_path in latest_artifacts.rglob('*'):
+                    if not file_path.is_file():
+                        continue
+                    rel_path = file_path.relative_to(latest_artifacts)
+                    if str(rel_path).startswith('business/'):
+                        arcname = root / 'saas-boilerplate' / rel_path
+                        zf.write(file_path, arcname)
+
+            # 3) Include harness outputs under startup root for traceability
+            for file_path in run_dir.rglob('*'):
+                if file_path.is_file():
+                    arcname = root / '_harness' / file_path.relative_to(run_dir)
+                    zf.write(file_path, arcname)
+        else:
+            # Default legacy packaging: add run directory contents
+            for file_path in run_dir.rglob('*'):
+                if file_path.is_file():
+                    arcname = file_path.relative_to(Config.OUTPUT_DIR)
+                    zf.write(file_path, arcname)
+
+        # Legacy boilerplate/ layout is superseded by startup-root assembly
 
     zip_size_mb = zip_path.stat().st_size / (1024 * 1024)
     print_success(f"ZIP created: {zip_path} ({zip_size_mb:.2f} MB)")
