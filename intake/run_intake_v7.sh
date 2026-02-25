@@ -423,8 +423,9 @@ generate_idea() {
     log_cost_estimate "$raw_response" "$provider"
 
     local text
-    if ! text=$(extract_text_or_fail "$raw_response" "$provider"); then
-      rc=$?
+    text=$(extract_text_or_fail "$raw_response" "$provider")
+    rc=$?
+    if [[ "$rc" -ne 0 ]]; then
       if [[ "$rc" -eq 2 ]]; then
         echo "❌ Fatal error — aborting run" >&2
         exit 1
@@ -640,8 +641,9 @@ ${mode_instruction}"
     check_token_usage "$raw_response" 4096
 
     local text
-    if ! text=$(extract_text_or_fail "$raw_response" "$provider"); then
-      rc=$?
+    text=$(extract_text_or_fail "$raw_response" "$provider")
+    rc=$?
+    if [[ "$rc" -ne 0 ]]; then
       if [[ "$rc" -eq 2 ]]; then
         echo "❌ Fatal error — aborting run" >&2
         exit 1
