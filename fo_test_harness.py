@@ -1050,7 +1050,7 @@ def package_output_zip(run_dir: Path, startup_id: str, block: str, use_boilerpla
             # 1) Add boilerplate under startup root
             for file_path in boilerplate_source.rglob('*'):
                 if file_path.is_file():
-                    if any(exclude in file_path.parts for exclude in ['node_modules', '.git', '.claude', '__pycache__', '.DS_Store']):
+                    if any(exclude in file_path.parts for exclude in ['node_modules', '.git', '.claude', 'scripts', '__pycache__', '.DS_Store']):
                         continue
                     rel_path = file_path.relative_to(boilerplate_source)
                     arcname = root / rel_path
@@ -1072,7 +1072,7 @@ def package_output_zip(run_dir: Path, startup_id: str, block: str, use_boilerpla
             # 3) Include harness outputs under startup root for traceability
             for file_path in run_dir.rglob('*'):
                 if file_path.is_file():
-                    if '.claude' in file_path.parts:
+                    if '.claude' in file_path.parts or 'scripts' in file_path.parts:
                         continue
                     arcname = root / '_harness' / file_path.relative_to(run_dir)
                     zf.write(file_path, arcname)
