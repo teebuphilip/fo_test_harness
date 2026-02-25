@@ -1255,6 +1255,11 @@ console.log('Hello from app.js');
 4. Produce COMPLETED_CLOSED state with all required artifacts
 5. You are on iteration {iteration} - Max 5 iterations per task
 
+**PHASED FEATURE RULE (NON-NEGOTIABLE):**
+- If a feature/integration is marked "optional", "phase 2", "phase 3", or "later",
+  you MUST NOT implement it now. Provide only a stub/interface and TODO notes.
+  Do NOT add real integration logic until it is explicitly in-scope for this phase.
+
 """
 
         if previous_defects:
