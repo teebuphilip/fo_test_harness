@@ -280,7 +280,7 @@ extract_text_or_fail() {
       fi
       echo "❌ FATAL API ERROR: $error_type - $error_msg" >&2
       echo "❌ Expected key: $expected_key" >&2
-      exit 1
+      return 2
     else
       echo "⚠️  API ERROR (retryable): $error_type - $error_msg" >&2
       return 1
@@ -368,6 +368,11 @@ generate_idea() {
 
     local text
     if ! text=$(extract_text_or_fail "$raw_response" "$provider"); then
+      rc=$?
+      if [[ "$rc" -eq 2 ]]; then
+        echo "❌ Fatal error — aborting run" >&2
+        exit 1
+      fi
       echo "  ⚠️  Attempt $attempt/3 failed for idea generation" >&2
       sleep 2
       continue
@@ -579,6 +584,11 @@ ${mode_instruction}"
 
     local text
     if ! text=$(extract_text_or_fail "$raw_response" "$provider"); then
+      rc=$?
+      if [[ "$rc" -eq 2 ]]; then
+        echo "❌ Fatal error — aborting run" >&2
+        exit 1
+      fi
       sleep 2
       continue
     fi
