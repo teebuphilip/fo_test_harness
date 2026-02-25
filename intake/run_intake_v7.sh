@@ -87,8 +87,10 @@ fi
 # API / GLOBAL CONFIG
 # ------------------------------------------------------------
 
-API_KEY="${ANTHROPIC_API_KEY:?ANTHROPIC_API_KEY not set}"
-MODEL="claude-sonnet-4-20250514"
+ANTHROPIC_KEY="${ANTHROPIC_API_KEY:-}"
+OPENAI_KEY="${OPENAI_API_KEY:-}"
+MODEL_CLAUDE="claude-sonnet-4-20250514"
+MODEL_CHATGPT="${OPENAI_MODEL:-gpt-4o-mini}"
 FAILURES_DIR="./failures"
 
 mkdir -p "$FAILURES_DIR"
@@ -156,9 +158,14 @@ call_claude() {
   local max_tokens="$2"
   local temperature="$3"
 
+  if [[ -z "$ANTHROPIC_KEY" ]]; then
+    echo "❌ ANTHROPIC_API_KEY not set" >&2
+    return 1
+  fi
+
   local payload
   payload=$(jq -n \
-    --arg model "$MODEL" \
+    --arg model "$MODEL_CLAUDE" \
     --argjson max_tokens "$max_tokens" \
     --argjson temperature "$temperature" \
     --arg content "$prompt" \
@@ -175,12 +182,76 @@ call_claude() {
     }')
 
   curl -s https://api.anthropic.com/v1/messages \
-    -H "x-api-key: $API_KEY" \
+    -H "x-api-key: $ANTHROPIC_KEY" \
     -H "anthropic-version: 2023-06-01" \
     -H "content-type: application/json" \
     -d "$payload"
 }
 
+# ============================================================
+# FUNCTION: call_chatgpt
+# Purpose: Make API call to OpenAI Chat Completions
+# Args:
+#   $1 - prompt text
+#   $2 - max_tokens
+#   $3 - temperature
+# Returns: raw API response via stdout
+# ============================================================
+call_chatgpt() {
+  local prompt="$1"
+  local max_tokens="$2"
+  local temperature="$3"
+
+  if [[ -z "$OPENAI_KEY" ]]; then
+    echo "❌ OPENAI_API_KEY not set" >&2
+    return 1
+  fi
+
+  local payload
+  payload=$(jq -n \
+    --arg model "$MODEL_CHATGPT" \
+    --argjson max_tokens "$max_tokens" \
+    --argjson temperature "$temperature" \
+    --arg content "$prompt" \
+    '{
+      model: $model,
+      max_tokens: $max_tokens,
+      temperature: $temperature,
+      messages: [
+        { role: "user", content: $content }
+      ]
+    }')
+
+  curl -s https://api.openai.com/v1/chat/completions \
+    -H "Authorization: Bearer '"$OPENAI_KEY"'" \
+    -H "Content-Type: application/json" \
+    -d "$payload"
+}
+
+# ============================================================
+# FUNCTION: select_provider
+# Purpose: Default to ChatGPT unless directive says Claude/Anthropic
+# Args:
+#   $1 - directive file path
+# Returns: "chatgpt" or "claude"
+# ============================================================
+select_provider() {
+  local directive_file="$1"
+  local content
+  content=$(tr '[:upper:]' '[:lower:]' < "$directive_file" 2>/dev/null || echo "")
+
+  if [[ "$content" == *"claude"* || "$content" == *"anthropic"* ]]; then
+    echo "claude"
+    return
+  fi
+
+  if [[ "$content" == *"chatgpt"* || "$content" == *"openai"* ]]; then
+    echo "chatgpt"
+    return
+  fi
+
+  echo "chatgpt"
+}
 # ============================================================
 # FUNCTION: extract_text_or_fail
 # Purpose: Extract text content from API response or fail loudly
@@ -212,8 +283,12 @@ extract_text_or_fail() {
   text=$(echo "$raw_response" | jq -r '.content[0].text // empty')
 
   if [[ -z "$text" ]]; then
-    echo "❌ API response missing .content[0].text" >&2
-    return 1
+    # Try OpenAI response format
+    text=$(echo "$raw_response" | jq -r '.choices[0].message.content // empty')
+    if [[ -z "$text" ]]; then
+      echo "❌ API response missing text content" >&2
+      return 1
+    fi
   fi
 
   echo "$text"
@@ -251,7 +326,7 @@ check_token_usage() {
   local max_tokens="$2"
 
   local output_tokens
-  output_tokens=$(echo "$response" | jq -r '.usage.output_tokens // 0')
+  output_tokens=$(echo "$response" | jq -r '.usage.output_tokens // .usage.completion_tokens // 0')
 
   echo "🔍 Token usage: $output_tokens / $max_tokens"
 
@@ -271,10 +346,17 @@ generate_idea() {
   local idea_prompt
   idea_prompt=$(cat "$IDEA_DIRECTIVE")
 
+  local provider
+  provider=$(select_provider "$IDEA_DIRECTIVE")
+
   local attempt
   for attempt in {1..3}; do
     local raw_response
-    raw_response=$(call_claude "$idea_prompt" 500 1)
+    if [[ "$provider" == "claude" ]]; then
+      raw_response=$(call_claude "$idea_prompt" 500 1)
+    else
+      raw_response=$(call_chatgpt "$idea_prompt" 500 1)
+    fi
 
     local text
     if ! text=$(extract_text_or_fail "$raw_response"); then
@@ -471,12 +553,19 @@ ${full_directive}
 
 ${mode_instruction}"
 
+  local provider
+  provider=$(select_provider "$PASS_DIRECTIVE")
+
   local attempt
   for attempt in {1..5}; do
     echo "  ▶ Attempt $attempt/5 for block $block_id"
 
     local raw_response
-    raw_response=$(call_claude "$prompt" 4096 0)
+    if [[ "$provider" == "claude" ]]; then
+      raw_response=$(call_claude "$prompt" 4096 0)
+    else
+      raw_response=$(call_chatgpt "$prompt" 4096 0)
+    fi
 
     check_token_usage "$raw_response" 4096
 
