@@ -97,6 +97,7 @@ CLAUDE_OUTPUT_PER_MTOK="${CLAUDE_OUTPUT_PER_MTOK:-15.00}"
 OPENAI_INPUT_PER_MTOK="${OPENAI_INPUT_PER_MTOK:-2.50}"
 OPENAI_OUTPUT_PER_MTOK="${OPENAI_OUTPUT_PER_MTOK:-10.00}"
 FAILURES_DIR="./failures"
+RUN_LOG="./intake_run_costs.csv"
 
 mkdir -p "$FAILURES_DIR"
 
@@ -106,6 +107,9 @@ INPUTS_DIR=$(pwd)/inputs
 # Counters
 SUCCESSFUL_RUNS=0
 FAILED_RUNS=0
+
+# Current startup id for logging
+CURRENT_STARTUP_ID="unknown"
 
 # ------------------------------------------------------------
 # STARTUP BANNER
@@ -359,6 +363,7 @@ check_token_usage() {
 log_cost_estimate() {
   local response="$1"
   local provider="$2"
+  local stage="${3:-unknown}"
 
   local in_tokens out_tokens
   if [[ "$provider" == "claude" ]]; then
@@ -396,6 +401,15 @@ PY
 )
     echo "💰 ChatGPT cost estimate: \$$total (in: $in_tokens, out: $out_tokens)"
   fi
+
+  # Append to CSV log
+  if [[ ! -f "$RUN_LOG" ]]; then
+    echo "date,time,startup,stage,provider,input_tokens,output_tokens,cost" > "$RUN_LOG"
+  fi
+  local now_date now_time
+  now_date=$(date +"%Y-%m-%d")
+  now_time=$(date +"%H:%M:%S")
+  echo "${now_date},${now_time},${CURRENT_STARTUP_ID},${stage},${provider},${in_tokens},${out_tokens},${total}" >> "$RUN_LOG"
 }
 
 # ============================================================
@@ -427,7 +441,7 @@ generate_idea() {
         echo "🔎 OPENAI_API_KEY: prefix=${OPENAI_KEY:0:7} len=${#OPENAI_KEY}" >&2
       fi
     fi
-    log_cost_estimate "$raw_response" "$provider"
+    log_cost_estimate "$raw_response" "$provider" "idea_generation"
 
     local text
     text=$(extract_text_or_fail "$raw_response" "$provider")
@@ -650,7 +664,7 @@ ${mode_instruction}"
         echo "🔎 OPENAI_API_KEY: prefix=${OPENAI_KEY:0:7} len=${#OPENAI_KEY}" >&2
       fi
     fi
-    log_cost_estimate "$raw_response" "$provider"
+    log_cost_estimate "$raw_response" "$provider" "block_${block_id}"
 
     check_token_usage "$raw_response" 4096
 
@@ -945,3 +959,4 @@ echo "  run_N/{startup_id}.json  → Both blocks merged"
 echo "============================================"
 
 exit 0
+  CURRENT_STARTUP_ID="$startup_id"
