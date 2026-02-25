@@ -91,6 +91,11 @@ ANTHROPIC_KEY="${ANTHROPIC_API_KEY:-}"
 OPENAI_KEY="${OPENAI_API_KEY:-}"
 MODEL_CLAUDE="claude-sonnet-4-20250514"
 MODEL_CHATGPT="${OPENAI_MODEL:-gpt-4o-mini}"
+# Cost rates (USD per 1M tokens). Override via env if needed.
+CLAUDE_INPUT_PER_MTOK="${CLAUDE_INPUT_PER_MTOK:-3.00}"
+CLAUDE_OUTPUT_PER_MTOK="${CLAUDE_OUTPUT_PER_MTOK:-15.00}"
+OPENAI_INPUT_PER_MTOK="${OPENAI_INPUT_PER_MTOK:-2.50}"
+OPENAI_OUTPUT_PER_MTOK="${OPENAI_OUTPUT_PER_MTOK:-10.00}"
 FAILURES_DIR="./failures"
 
 mkdir -p "$FAILURES_DIR"
@@ -344,6 +349,56 @@ check_token_usage() {
 }
 
 # ============================================================
+# FUNCTION: log_cost_estimate
+# Purpose: Print tokens + cost estimate for a response
+# Args:
+#   $1 - raw API response JSON
+#   $2 - provider ("claude" or "chatgpt")
+# Returns: nothing
+# ============================================================
+log_cost_estimate() {
+  local response="$1"
+  local provider="$2"
+
+  local in_tokens out_tokens
+  if [[ "$provider" == "claude" ]]; then
+    in_tokens=$(echo "$response" | jq -r '.usage.input_tokens // 0')
+    out_tokens=$(echo "$response" | jq -r '.usage.output_tokens // 0')
+    local in_cost out_cost total
+    in_cost=$(python - <<PY
+print(f"{float($in_tokens) * $CLAUDE_INPUT_PER_MTOK / 1_000_000:.4f}")
+PY
+)
+    out_cost=$(python - <<PY
+print(f"{float($out_tokens) * $CLAUDE_OUTPUT_PER_MTOK / 1_000_000:.4f}")
+PY
+)
+    total=$(python - <<PY
+print(f"{float($in_cost) + float($out_cost):.4f}")
+PY
+)
+    echo "💰 Claude cost estimate: \$$total (in: $in_tokens, out: $out_tokens)"
+  else
+    in_tokens=$(echo "$response" | jq -r '.usage.prompt_tokens // 0')
+    out_tokens=$(echo "$response" | jq -r '.usage.completion_tokens // 0')
+    local in_cost out_cost total
+    in_cost=$(python - <<PY
+print(f"{float($in_tokens) * $OPENAI_INPUT_PER_MTOK / 1_000_000:.4f}")
+PY
+)
+    out_cost=$(python - <<PY
+print(f"{float($out_tokens) * $OPENAI_OUTPUT_PER_MTOK / 1_000_000:.4f}")
+PY
+)
+    total=$(python - <<PY
+print(f"{float($in_cost) + float($out_cost):.4f}")
+PY
+)
+    echo "💰 ChatGPT cost estimate: \$$total (in: $in_tokens, out: $out_tokens)"
+  fi
+}
+
+# ============================================================
 # FUNCTION: generate_idea
 # Purpose: Generate a single startup idea using creative directive
 #          Only called in generate mode (temp=1 for creativity)
@@ -365,6 +420,7 @@ generate_idea() {
     else
       raw_response=$(call_chatgpt "$idea_prompt" 500 1)
     fi
+    log_cost_estimate "$raw_response" "$provider"
 
     local text
     if ! text=$(extract_text_or_fail "$raw_response" "$provider"); then
@@ -579,6 +635,7 @@ ${mode_instruction}"
     else
       raw_response=$(call_chatgpt "$prompt" 4096 0)
     fi
+    log_cost_estimate "$raw_response" "$provider"
 
     check_token_usage "$raw_response" 4096
 
