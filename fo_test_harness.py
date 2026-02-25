@@ -2276,10 +2276,11 @@ However, the following files were listed in your manifest but their content was 
         manifest_files = [artifact.get('path', '') for artifact in manifest.get('artifacts', [])]
 
         # Check what's missing
-        readme_found = any('README' in path.upper() for path in manifest_files)
+        readme_found = any(path.endswith('README.md') for path in manifest_files)
         env_example_found = any('.env.example' in path for path in manifest_files)
         test_files = [f for f in manifest_files if 'test' in f.lower() or 'spec' in f.lower()]
         has_minimal_tests = len(test_files) < 3  # Consider < 3 test files as "minimal"
+        docs_dir = artifacts_dir / 'business' / 'docs'
 
         polish_items = []
         if not readme_found:
@@ -2288,6 +2289,8 @@ However, the following files were listed in your manifest but their content was 
             polish_items.append(".env.example")
         if has_minimal_tests:
             polish_items.append(f"Tests (only {len(test_files)} found)")
+        # Always ensure docs folder exists and include HLD + QUICKSTART
+        polish_items.append("Docs (HLD + QUICKSTART)")
 
         if not polish_items:
             print_success("✓ All optional files present - no polish needed")
@@ -2297,8 +2300,17 @@ However, the following files were listed in your manifest but their content was 
         print_info("")
 
         # ============================================================
-        # 1. Generate README.md
+        # 1. Rename boilerplate README if present and generate README.md
         # ============================================================
+        # Rename boilerplate README to README-base.md if it exists
+        readme_path = artifacts_dir / 'README.md'
+        if readme_path.exists():
+            base_path = artifacts_dir / 'README-base.md'
+            if not base_path.exists():
+                readme_path.rename(base_path)
+                print_info("→ Renamed boilerplate README.md → README-base.md")
+            readme_found = False  # Force regeneration
+
         if not readme_found:
             print_info("→ README.md missing - generating...")
 
@@ -2608,6 +2620,60 @@ Generate 2-3 test files with **FILE:** headers."""
                     print_success(f"✓ Saved snippets to {out_path}")
             except Exception as e:
                 print_warning(f"Failed to save skipped snippets: {e}")
+
+        # ============================================================
+        # 5. Generate Docs (HLD + QUICKSTART)
+        # ============================================================
+        try:
+            docs_dir.mkdir(parents=True, exist_ok=True)
+            docs_prompt = f"""Generate two concise docs for this build.
+
+**BUILD ARTIFACTS (sample):**
+{chr(10).join(manifest_files[:25])}
+
+**BUILD OUTPUT SUMMARY:**
+{build_output[:2000]}
+
+**YOUR TASK:**
+1. Create a `HLD.md` (high-level design) covering: architecture, modules/services, data models, data flow, external integrations, and key assumptions.
+2. Create a `QUICKSTART.md` with setup steps, env vars, run commands, and where to put business files.
+
+**OUTPUT FORMAT:**
+**FILE: business/docs/HLD.md**
+```markdown
+...
+```
+**FILE: business/docs/QUICKSTART.md**
+```markdown
+...
+```
+"""
+            print_info("→ Calling Claude for docs generation...")
+            docs_response = self.claude.call(
+                docs_prompt,
+                max_tokens=4096,
+                cacheable_prefix=None,
+                timeout=120
+            )
+            docs_content = docs_response['content'][0]['text']
+            docs_matches = re.findall(r'\*\*FILE:\s*([^\*]+)\*\*\\s*```markdown\\n(.*?)```', docs_content, re.DOTALL)
+            docs_generated = 0
+            for file_path, md in docs_matches:
+                file_path = file_path.strip()
+                full_path = artifacts_dir / file_path
+                full_path.parent.mkdir(parents=True, exist_ok=True)
+                full_path.write_text(md, encoding='utf-8')
+                docs_generated += 1
+            if docs_generated:
+                print_success(f"✓ Generated {docs_generated} doc file(s)")
+
+            usage = docs_response.get('usage', {})
+            cost_stats['calls'] += 1
+            cost_stats['input_tokens'] += usage.get('input_tokens', 0)
+            cost_stats['output_tokens'] += usage.get('output_tokens', 0)
+            cost_stats['cache_read_tokens'] += usage.get('cache_read_input_tokens', 0)
+        except Exception as e:
+            print_warning(f"Failed to generate docs: {e}")
 
         # ============================================================
         # Summary
