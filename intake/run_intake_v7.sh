@@ -420,6 +420,13 @@ generate_idea() {
     else
       raw_response=$(call_chatgpt "$idea_prompt" 500 1)
     fi
+    if [[ "$provider" == "chatgpt" ]]; then
+      if [[ -z "${OPENAI_KEY:-}" ]]; then
+        echo "🔎 OPENAI_API_KEY: (empty)" >&2
+      else
+        echo "🔎 OPENAI_API_KEY: prefix=${OPENAI_KEY:0:7} len=${#OPENAI_KEY}" >&2
+      fi
+    fi
     log_cost_estimate "$raw_response" "$provider"
 
     local text
@@ -635,6 +642,13 @@ ${mode_instruction}"
       raw_response=$(call_claude "$prompt" 4096 0)
     else
       raw_response=$(call_chatgpt "$prompt" 4096 0)
+    fi
+    if [[ "$provider" == "chatgpt" ]]; then
+      if [[ -z "${OPENAI_KEY:-}" ]]; then
+        echo "🔎 OPENAI_API_KEY: (empty)" >&2
+      else
+        echo "🔎 OPENAI_API_KEY: prefix=${OPENAI_KEY:0:7} len=${#OPENAI_KEY}" >&2
+      fi
     fi
     log_cost_estimate "$raw_response" "$provider"
 
