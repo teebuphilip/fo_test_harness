@@ -262,6 +262,7 @@ select_provider() {
 # ============================================================
 extract_text_or_fail() {
   local raw_response="$1"
+  local provider="${2:-unknown}"
 
   local error_type
   error_type=$(echo "$raw_response" | jq -r '.error.type // empty')
@@ -271,7 +272,14 @@ extract_text_or_fail() {
     error_msg=$(echo "$raw_response" | jq -r '.error.message // "Unknown error"')
 
     if is_fatal_api_error "$error_type"; then
+      local expected_key="API key"
+      if [[ "$provider" == "chatgpt" ]]; then
+        expected_key="OPENAI_API_KEY"
+      elif [[ "$provider" == "claude" ]]; then
+        expected_key="ANTHROPIC_API_KEY"
+      fi
       echo "❌ FATAL API ERROR: $error_type - $error_msg" >&2
+      echo "❌ Expected key: $expected_key" >&2
       exit 1
     else
       echo "⚠️  API ERROR (retryable): $error_type - $error_msg" >&2
@@ -359,7 +367,7 @@ generate_idea() {
     fi
 
     local text
-    if ! text=$(extract_text_or_fail "$raw_response"); then
+    if ! text=$(extract_text_or_fail "$raw_response" "$provider"); then
       echo "  ⚠️  Attempt $attempt/3 failed for idea generation" >&2
       sleep 2
       continue
@@ -570,7 +578,7 @@ ${mode_instruction}"
     check_token_usage "$raw_response" 4096
 
     local text
-    if ! text=$(extract_text_or_fail "$raw_response"); then
+    if ! text=$(extract_text_or_fail "$raw_response" "$provider"); then
       sleep 2
       continue
     fi
