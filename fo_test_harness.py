@@ -638,6 +638,7 @@ class ArtifactManager:
         artifacts_dir.mkdir(exist_ok=True)
 
         count = 0
+        skipped_snippets = []
 
         # Track when we're in README context to skip documentation snippets
         last_readme_pos = -1
@@ -691,6 +692,11 @@ class ArtifactManager:
                     print_info(f"  → Skipped: doc snippet ({language}, {len(code_content)} chars) - context: {snippet_context[:50]}...")
 
             if is_doc_snippet:
+                skipped_snippets.append({
+                    "language": language,
+                    "context": snippet_context if 'snippet_context' in locals() else '',
+                    "content": code_content.strip()
+                })
                 continue
 
             filename = None
@@ -852,6 +858,13 @@ class ArtifactManager:
         else:
             print_warning(f"  → Generated: build_state.json (IN_PROGRESS — no completion marker found)")
 
+        # Persist skipped snippets for post-QA polish
+        if skipped_snippets:
+            snippets_path = artifacts_dir / 'skipped_snippets.json'
+            with open(snippets_path, 'w') as f:
+                json.dump(skipped_snippets, f, indent=2)
+            print_info(f"  → Saved: skipped_snippets.json ({len(skipped_snippets)} snippet(s))")
+
         self._write_artifact_manifest(artifacts_dir)
 
         return count
@@ -882,6 +895,12 @@ class ArtifactManager:
         with open(manifest_path, 'w') as f:
             json.dump(manifest, f, indent=2)
         print_info(f"  → Generated: artifact_manifest.json ({len(manifest_artifacts)} files)")
+
+    def refresh_manifest_for_iteration(self, iteration: int):
+        """Regenerate manifest for a given iteration after post-processing."""
+        artifacts_dir = self.build_dir / f'iteration_{iteration:02d}_artifacts'
+        if artifacts_dir.exists():
+            self._write_artifact_manifest(artifacts_dir)
 
     def prune_non_business_artifacts(self, iteration: int):
         """Remove non-business artifacts and regenerate manifest."""
@@ -2538,8 +2557,40 @@ Generate 2-3 test files with **FILE:** headers."""
                 print_info("")
 
         # ============================================================
+        # 4. Save skipped doc snippets (if any)
+        # ============================================================
+        snippets_path = artifacts_dir / 'skipped_snippets.json'
+        if snippets_path.exists():
+            try:
+                snippets = json.loads(snippets_path.read_text(encoding='utf-8'))
+                if snippets:
+                    print_info("→ Saving skipped doc snippets...")
+                    docs_dir = artifacts_dir / 'business' / 'docs'
+                    docs_dir.mkdir(parents=True, exist_ok=True)
+                    out_path = docs_dir / 'snippets.md'
+
+                    lines = ["# Snippets", "", "Captured documentation snippets from build output.", ""]
+                    for idx, snip in enumerate(snippets, 1):
+                        lang = snip.get('language') or ''
+                        context = snip.get('context') or ''
+                        content = snip.get('content') or ''
+                        lines.append(f"## Snippet {idx}")
+                        if context:
+                            lines.append(f"Context: {context}")
+                        lines.append(f"```{lang}".strip())
+                        lines.append(content)
+                        lines.append("```")
+                        lines.append("")
+
+                    out_path.write_text("\n".join(lines), encoding='utf-8')
+                    print_success(f"✓ Saved snippets to {out_path}")
+            except Exception as e:
+                print_warning(f"Failed to save skipped snippets: {e}")
+
+        # ============================================================
         # Summary
         # ============================================================
+        self.artifacts.refresh_manifest_for_iteration(iteration)
         total_polish_cost = (cost_stats['input_tokens'] / 1_000_000) * 3.00 + (cost_stats['output_tokens'] / 1_000_000) * 15.00
         print_success(f"✓ Post-QA polish complete")
         print_info(f"  → Generated {cost_stats['calls']} file(s)")
