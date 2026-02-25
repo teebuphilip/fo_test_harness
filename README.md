@@ -210,6 +210,16 @@ The harness tracks API costs for:
 - Claude BUILD calls (Anthropic)
 - ChatGPT QA calls (OpenAI)
 
+## Run Summaries
+
+Generate a run summary table from `fo_run_log.csv`:
+
+```bash
+./summarize_harness_runs.sh ./fo_run_log.csv
+```
+
+Each run also saves a timestamped summary file to `harness_summaries/`.
+
 Check costs in console output:
 ```
 TOTAL COST (Claude + ChatGPT): $2.34
