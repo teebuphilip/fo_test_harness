@@ -31,6 +31,8 @@ Use this file as the base operating guide for any agent working in this codebase
 - Avoid modifying `fo_harness_runs/` and `boilerplate_checks/` unless explicitly asked.
 - Preserve build artifacts and QA logs when changing the harness.
 - Directive: Do not write or modify code unless you receive an explicit “YES” from the user.
+- Always commit `fo_run_log.csv` when it changes.
+- Outside of actual builds, default to ChatGPT instead of Claude to control costs.
 
 ## Notes for Code Changes
 - Artifact extraction relies on `**FILE: path**` headers and code fences.
