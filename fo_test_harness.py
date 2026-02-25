@@ -2060,6 +2060,11 @@ class FOHarness:
         csv_path = Path(__file__).parent / 'fo_run_log.csv'
         file_exists = csv_path.exists()
 
+        # Safety prompt before modifying run log
+        if not self._confirm_sensitive_write(csv_path):
+            print_warning(f"Run log not written (confirmation declined): {csv_path}")
+            return
+
         now = datetime.now()
         row = {
             'date': now.strftime('%Y-%m-%d'),
@@ -2081,6 +2086,22 @@ class FOHarness:
             writer.writerow(row)
 
         print_info(f"Run logged to: {csv_path}")
+
+    def _confirm_sensitive_write(self, path: Path) -> bool:
+        """
+        Safety prompt before writing sensitive files.
+        Set FO_SAFETY_CONFIRM=YES to auto-approve.
+        """
+        if os.getenv("FO_SAFETY_CONFIRM", "").strip().upper() == "YES":
+            return True
+
+        try:
+            response = input(f"Confirm write to {path} (type YES to proceed): ").strip()
+        except EOFError:
+            print_warning("No TTY available; refusing to write without FO_SAFETY_CONFIRM=YES")
+            return False
+
+        return response == "YES"
 
     def _patch_missing_files(self, iteration: int, missing_files: list,
                               build_output: str, governance_section: str) -> Tuple[bool, dict]:

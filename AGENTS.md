@@ -33,6 +33,7 @@ Use this file as the base operating guide for any agent working in this codebase
 - Directive: Do not write or modify code unless you receive an explicit “YES” from the user.
 - Always commit `fo_run_log.csv` when it changes.
 - Outside of actual builds, default to ChatGPT instead of Claude to control costs.
+- Safety prompt required: Before modifying `fo_run_log.csv` or `fo_test_harness.py`, explicitly confirm with the user.
 
 ## Notes for Code Changes
 - Artifact extraction relies on `**FILE: path**` headers and code fences.
