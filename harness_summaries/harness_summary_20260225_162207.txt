@@ -1,0 +1,23 @@
+Title: Building 70 SaaS products to stress-test my AI build harness — 3 down, 67 to go
+Body:
+I spent 25 years in DevOps. I hate vibe-coded bullshit.
+I built a deterministic SaaS harness with 53 capabilities (auth, payments, fraud detection, GDPR compliance, the works). Now I need to know if it actually works at scale.
+So I'm building 70 different SaaS products through it. Real FastAPI + React + Stripe deployments. If the harness breaks, I fix it. If it holds, I know it's solid.
+Here's what the harness logged from builds 1-3:
+Product                      | Runs | Passes | Avg Cost | Main Failure Mode
+-----------------------------|------|--------|----------|-------------------
+Adversarial Ai Validator     |    6 |      1 |    $0.74 | CTRL_C
+Wynwood Thoroughbreds        |    4 |      1 |    $0.58 | BUILD_TRUNCATED
+Ai Workforce Intelligence    |   11 |      4 |    $1.00 | NON_CONVERGING (15 iters, $5.4001)
+
+Total: 21 runs, 6 clean builds (29% first-pass success)
+
+Total: 21 runs, 6 clean builds (29% first-pass success), $22.13 spent
+What I learned:
+- 29% first-pass success indicates significant scalability issues across all products.
+- Non-convergence in Ai Workforce Intelligence led to a $5.40 cost for 15 iterations.
+- CTRL_C failures were prevalent, suggesting instability in the Adversarial Ai Validator.
+- Wynwood Thoroughbreds had a 50% pass rate but frequent BUILD_TRUNCATED failures.
+- Average costs varied significantly; Ai Workforce Intelligence had the highest average at $1.00.
+
+Following this for the next 6 months. Will post failures and edge cases as I find them.

@@ -1,0 +1,637 @@
+{
+  "run_id": "wynwood_thoroughbreds",
+  "startup_idea_id": "wynwood_thoroughbreds",
+  "startup_name": "Wynwood Thoroughbreds",
+  "summary": "Wynwood Thoroughbreds - Boutique thoroughbred ownership and breeding experience focused on transparency, education, and personal connection to the horses.",
+  "block_a": {
+    "startup_idea_id": "wynwood_thoroughbreds",
+    "block_id": "A",
+    "pass_1": {
+      "bdr_summary": "Boutique horse ownership syndicate offering transparent, high-touch alternative to large platforms. Target emerging owners and racing fans seeking deeper involvement through direct founder communication and educational content.",
+      "selected_archetype": "community",
+      "primary_value_loop": "retainer",
+      "economics_snapshot": {
+        "target_customer": "Emerging horse owners and passionate racing fans",
+        "acquisition_channel": "Racing events and referrals",
+        "starter_price": "$500-2000 membership",
+        "audience_scale_guess": "50-200 members initially",
+        "revenue_goal_12mo": "$50k-100k"
+      },
+      "derived_bucket": "community",
+      "size": "small",
+      "architecture_flags": {
+        "needs_auth": false,
+        "needs_payments": false,
+        "needs_automation": false,
+        "needs_reporting": false
+      },
+      "tier_enforcement_metrics": {
+        "role_count": 1,
+        "workflow_count": 1,
+        "happy_path_count": 1,
+        "integration_count": 0
+      },
+      "initial_constraints_check": {
+        "budget_vs_scope": "ok",
+        "archetype_vs_tier": "ok",
+        "value_loop_vs_goal": "ok",
+        "complexity_flag": "ok"
+      },
+      "questions_for_hero": [
+        "What specific horse information will be in monthly updates?",
+        "How will members access educational content?",
+        "What merchandise will be offered initially?"
+      ]
+    },
+    "pass_2": {
+      "approved_bdr": "Boutique horse ownership syndicate with transparent, personal approach targeting emerging owners through direct communication and educational content",
+      "confirm_pass1_classification": true,
+      "classification_disagreements": [],
+      "tech_stack_selection": "nocode",
+      "component_templates_selected": [
+        "static_website",
+        "email_list",
+        "content_library"
+      ],
+      "hld_document": "Static website with founder bio, horse profiles, membership tiers. Manual email list for updates. Static content pages for education. Contact form for inquiries. No user accounts or payments.",
+      "engineering_questions": [
+        "What content management approach for horse updates?",
+        "How to organize educational content library?",
+        "What contact form fields are needed?"
+      ],
+      "secondary_constraints_report": {
+        "tech_vs_budget": "ok",
+        "scope_vs_schedule": "ok",
+        "template_fit": "ok"
+      }
+    },
+    "pass_3": {
+      "qa_hlt_document": "Test website loads correctly. Verify contact form submissions. Check email list signup. Validate content displays properly. Test mobile responsiveness.",
+      "test_vectors": [
+        {
+          "id": "TV001",
+          "description": "Visitor browses horse profiles and submits inquiry"
+        },
+        {
+          "id": "TV002",
+          "description": "Potential member signs up for email updates"
+        },
+        {
+          "id": "TV003",
+          "description": "Member accesses educational content library"
+        }
+      ],
+      "risk_register": [
+        {
+          "code": "R001",
+          "description": "Contact form spam or technical failures"
+        },
+        {
+          "code": "R002",
+          "description": "Email deliverability issues"
+        },
+        {
+          "code": "R003",
+          "description": "Content organization confusion"
+        }
+      ],
+      "qa_questions_for_engineering": [
+        "How to prevent contact form spam?",
+        "What email service for list management?",
+        "How to track visitor engagement?"
+      ],
+      "qa_constraints_check": {
+        "edge_case_coverage": "ok",
+        "loop_validity": "ok",
+        "economics_logic": "ok"
+      }
+    },
+    "pass_4": {
+      "hero_touchpoint_policy": {
+        "cadence": "daily",
+        "required": true
+      },
+      "combined_task_list": [
+        {
+          "task_id": "T001",
+          "classification": "build",
+          "description": "Create static website structure",
+          "depends_on": []
+        },
+        {
+          "task_id": "T002",
+          "classification": "build",
+          "description": "Write founder bio and horse profiles",
+          "depends_on": [
+            "T001"
+          ]
+        },
+        {
+          "task_id": "T003",
+          "classification": "build",
+          "description": "Set up email list signup",
+          "depends_on": [
+            "T001"
+          ]
+        },
+        {
+          "task_id": "T004",
+          "classification": "build",
+          "description": "Create educational content pages",
+          "depends_on": [
+            "T002"
+          ]
+        },
+        {
+          "task_id": "T005",
+          "classification": "qa",
+          "description": "Test website functionality",
+          "depends_on": [
+            "T002",
+            "T003",
+            "T004"
+          ]
+        },
+        {
+          "task_id": "T006",
+          "classification": "validation",
+          "description": "Review content accuracy",
+          "depends_on": [
+            "T005"
+          ]
+        },
+        {
+          "task_id": "H001",
+          "classification": "hero_touchpoint",
+          "description": "Day 1 progress check",
+          "depends_on": []
+        }
+      ],
+      "day_by_day_schedule": [
+        {
+          "day_number": 1,
+          "task_ids": [
+            "T001",
+            "H001"
+          ]
+        },
+        {
+          "day_number": 2,
+          "task_ids": [
+            "T002",
+            "T003"
+          ]
+        },
+        {
+          "day_number": 3,
+          "task_ids": [
+            "T004",
+            "T005"
+          ]
+        },
+        {
+          "day_number": 4,
+          "task_ids": [
+            "T006"
+          ]
+        }
+      ],
+      "milestone_map_for_mark": [
+        {
+          "milestone": "Website foundation ready",
+          "day": 1,
+          "related_task_ids": [
+            "T001"
+          ]
+        },
+        {
+          "milestone": "Content and signup complete",
+          "day": 2,
+          "related_task_ids": [
+            "T002",
+            "T003"
+          ]
+        },
+        {
+          "milestone": "Full site tested",
+          "day": 3,
+          "related_task_ids": [
+            "T004",
+            "T005"
+          ]
+        },
+        {
+          "milestone": "Launch ready",
+          "day": 4,
+          "related_task_ids": [
+            "T006"
+          ]
+        }
+      ]
+    },
+    "pass_5": {
+      "final_milestone_map": [
+        {
+          "milestone": "Website foundation ready",
+          "day": 1,
+          "related_task_ids": [
+            "T001"
+          ]
+        },
+        {
+          "milestone": "Content and signup complete",
+          "day": 2,
+          "related_task_ids": [
+            "T002",
+            "T003"
+          ]
+        },
+        {
+          "milestone": "Full site tested",
+          "day": 3,
+          "related_task_ids": [
+            "T004",
+            "T005"
+          ]
+        },
+        {
+          "milestone": "Launch ready",
+          "day": 4,
+          "related_task_ids": [
+            "T006"
+          ]
+        }
+      ],
+      "approval_status": true,
+      "rejection_reasons": [],
+      "proposal_document_for_hero": "4-day build of static website for Wynwood Thoroughbreds. Includes founder bio, horse profiles, email signup, educational content, and contact form. Manual processes only. No payments or user accounts. Validates boutique positioning and member interest."
+    },
+    "pass_6": {
+      "hero_decision": "buy_tier1_build",
+      "hero_questions": [
+        "Should we include specific breeding strategy content?",
+        "What horse performance metrics to highlight?",
+        "How detailed should membership tier descriptions be?"
+      ]
+    }
+  },
+  "block_b": {
+    "startup_idea_id": "wynwood_thoroughbreds",
+    "block_id": "B",
+    "pass_1": {
+      "bdr_summary": "Boutique horse ownership syndicate offering transparent, high-touch access to thoroughbred ownership and breeding for passionate racing fans and emerging owners seeking deeper involvement than mass-market platforms.",
+      "selected_archetype": "community",
+      "primary_value_loop": "retainer",
+      "economics_snapshot": {
+        "target_customer": "Racing fans and emerging owners seeking transparent horse ownership",
+        "acquisition_channel": "Racing events, referrals, content marketing",
+        "starter_price": "$500-2000 monthly membership",
+        "audience_scale_guess": "500-2000 passionate racing enthusiasts",
+        "revenue_goal_12mo": "$200K-500K recurring"
+      },
+      "derived_bucket": "community",
+      "size": "medium",
+      "architecture_flags": {
+        "needs_auth": true,
+        "needs_payments": true,
+        "needs_automation": true,
+        "needs_reporting": true
+      },
+      "tier_enforcement_metrics": {
+        "role_count": 3,
+        "workflow_count": 4,
+        "happy_path_count": 3,
+        "integration_count": 4
+      },
+      "initial_constraints_check": {
+        "budget_vs_scope": "ok",
+        "archetype_vs_tier": "ok",
+        "value_loop_vs_goal": "ok",
+        "complexity_flag": "ok"
+      },
+      "questions_for_hero": [
+        "What payment tiers will you offer?",
+        "How will you handle member onboarding?",
+        "What compliance tracking is required?"
+      ]
+    },
+    "pass_2": {
+      "approved_bdr": "Boutique horse ownership syndicate with transparent operations, member education, and direct founder communication for passionate racing enthusiasts.",
+      "confirm_pass1_classification": true,
+      "classification_disagreements": [],
+      "tech_stack_selection": "lowcode",
+      "component_templates_selected": [
+        "membership_portal",
+        "payment_processing",
+        "content_management",
+        "email_automation"
+      ],
+      "hld_document": "Member portal with payment processing, educational content library, monthly update system, merchandise integration, and compliance tracking. Automated email sequences for onboarding and updates. Integration with Equineline and TrueNicks for breeding data.",
+      "engineering_questions": [
+        "How will breeding data be displayed?",
+        "What member communication preferences?",
+        "How to handle payment failures?"
+      ],
+      "secondary_constraints_report": {
+        "tech_vs_budget": "ok",
+        "scope_vs_schedule": "ok",
+        "template_fit": "ok"
+      }
+    },
+    "pass_3": {
+      "qa_hlt_document": "Test member registration, payment processing, content access, email automation, merchandise orders, and breeding data display. Verify compliance tracking and member communication workflows.",
+      "test_vectors": [
+        {
+          "id": "TV001",
+          "description": "New member registration and payment setup"
+        },
+        {
+          "id": "TV002",
+          "description": "Monthly update delivery and content access"
+        },
+        {
+          "id": "TV003",
+          "description": "Merchandise order and fulfillment"
+        }
+      ],
+      "risk_register": [
+        {
+          "code": "R001",
+          "description": "Payment processing failures affecting member access"
+        },
+        {
+          "code": "R002",
+          "description": "Compliance data not properly tracked"
+        },
+        {
+          "code": "R003",
+          "description": "Email automation overwhelming members"
+        }
+      ],
+      "qa_questions_for_engineering": [
+        "How to handle partial payment failures?",
+        "What backup for email delivery issues?",
+        "How to test compliance workflows?"
+      ],
+      "qa_constraints_check": {
+        "edge_case_coverage": "ok",
+        "loop_validity": "ok",
+        "economics_logic": "ok"
+      }
+    },
+    "pass_4": {
+      "hero_touchpoint_policy": {
+        "cadence": "every_other_day",
+        "required": true
+      },
+      "combined_task_list": [
+        {
+          "task_id": "T001",
+          "classification": "build",
+          "description": "Setup member portal framework",
+          "depends_on": []
+        },
+        {
+          "task_id": "T002",
+          "classification": "build",
+          "description": "Configure payment processing",
+          "depends_on": [
+            "T001"
+          ]
+        },
+        {
+          "task_id": "T003",
+          "classification": "build",
+          "description": "Build content management system",
+          "depends_on": [
+            "T001"
+          ]
+        },
+        {
+          "task_id": "T004",
+          "classification": "build",
+          "description": "Setup email automation",
+          "depends_on": [
+            "T002"
+          ]
+        },
+        {
+          "task_id": "T005",
+          "classification": "build",
+          "description": "Integrate Shopify store",
+          "depends_on": [
+            "T001"
+          ]
+        },
+        {
+          "task_id": "T006",
+          "classification": "build",
+          "description": "Connect Equineline and TrueNicks",
+          "depends_on": [
+            "T003"
+          ]
+        },
+        {
+          "task_id": "T007",
+          "classification": "qa",
+          "description": "Test member workflows",
+          "depends_on": [
+            "T002",
+            "T003",
+            "T004"
+          ]
+        },
+        {
+          "task_id": "T008",
+          "classification": "qa",
+          "description": "Verify payment processing",
+          "depends_on": [
+            "T002"
+          ]
+        },
+        {
+          "task_id": "T009",
+          "classification": "validation",
+          "description": "Compliance review",
+          "depends_on": [
+            "T007"
+          ]
+        },
+        {
+          "task_id": "H001",
+          "classification": "hero_touchpoint",
+          "description": "Day 2 progress check",
+          "depends_on": []
+        },
+        {
+          "task_id": "H002",
+          "classification": "hero_touchpoint",
+          "description": "Day 4 payment setup review",
+          "depends_on": []
+        },
+        {
+          "task_id": "H003",
+          "classification": "hero_touchpoint",
+          "description": "Day 6 content review",
+          "depends_on": []
+        }
+      ],
+      "day_by_day_schedule": [
+        {
+          "day_number": 1,
+          "task_ids": [
+            "T001"
+          ]
+        },
+        {
+          "day_number": 2,
+          "task_ids": [
+            "T002",
+            "H001"
+          ]
+        },
+        {
+          "day_number": 3,
+          "task_ids": [
+            "T003"
+          ]
+        },
+        {
+          "day_number": 4,
+          "task_ids": [
+            "T004",
+            "T005",
+            "H002"
+          ]
+        },
+        {
+          "day_number": 5,
+          "task_ids": [
+            "T006"
+          ]
+        },
+        {
+          "day_number": 6,
+          "task_ids": [
+            "T007",
+            "H003"
+          ]
+        },
+        {
+          "day_number": 7,
+          "task_ids": [
+            "T008",
+            "T009"
+          ]
+        }
+      ],
+      "milestone_map_for_mark": [
+        {
+          "milestone": "Portal Framework Ready",
+          "day": 1,
+          "related_task_ids": [
+            "T001"
+          ]
+        },
+        {
+          "milestone": "Payment System Live",
+          "day": 2,
+          "related_task_ids": [
+            "T002"
+          ]
+        },
+        {
+          "milestone": "Content System Ready",
+          "day": 3,
+          "related_task_ids": [
+            "T003"
+          ]
+        },
+        {
+          "milestone": "Automation and Store Connected",
+          "day": 4,
+          "related_task_ids": [
+            "T004",
+            "T005"
+          ]
+        },
+        {
+          "milestone": "Data Integrations Complete",
+          "day": 5,
+          "related_task_ids": [
+            "T006"
+          ]
+        },
+        {
+          "milestone": "System Tested and Validated",
+          "day": 7,
+          "related_task_ids": [
+            "T007",
+            "T008",
+            "T009"
+          ]
+        }
+      ]
+    },
+    "pass_5": {
+      "final_milestone_map": [
+        {
+          "milestone": "Portal Framework Ready",
+          "day": 1,
+          "related_task_ids": [
+            "T001"
+          ]
+        },
+        {
+          "milestone": "Payment System Live",
+          "day": 2,
+          "related_task_ids": [
+            "T002"
+          ]
+        },
+        {
+          "milestone": "Content System Ready",
+          "day": 3,
+          "related_task_ids": [
+            "T003"
+          ]
+        },
+        {
+          "milestone": "Automation and Store Connected",
+          "day": 4,
+          "related_task_ids": [
+            "T004",
+            "T005"
+          ]
+        },
+        {
+          "milestone": "Data Integrations Complete",
+          "day": 5,
+          "related_task_ids": [
+            "T006"
+          ]
+        },
+        {
+          "milestone": "System Tested and Validated",
+          "day": 7,
+          "related_task_ids": [
+            "T007",
+            "T008",
+            "T009"
+          ]
+        }
+      ],
+      "approval_status": true,
+      "rejection_reasons": [],
+      "proposal_document_for_hero": "7-day MVP build for Wynwood Thoroughbreds member portal with payment processing, content management, email automation, Shopify integration, and breeding data connections. Includes compliance tracking and member communication workflows. Ready for first paying members."
+    },
+    "pass_6": {
+      "hero_decision": "buy_tier2_build",
+      "hero_questions": [
+        "Can we add member referral tracking?",
+        "How will we handle member tier upgrades?",
+        "What reporting will be available?"
+      ]
+    }
+  }
+}

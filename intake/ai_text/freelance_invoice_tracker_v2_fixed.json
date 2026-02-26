@@ -1,0 +1,77 @@
+{
+  "startup_idea_id": "freelance_invoice_tracker",
+  "startup_name": "InvoiceFlow",
+  "startup_description": "Simple invoice creation and payment tracking tool for freelancers. Creates professional PDFs, tracks payment status, sends automated reminders. No complicated accounting features - just fast invoicing.",
+  "hero_answers": {
+    "Q1_problem_customer": "Solo freelancers waste 3-5 hours per week manually creating invoices in Word, tracking payments in Excel spreadsheets, and remembering to follow up with late-paying clients. They lose $1000-2000 per month in payments they never chase down because manual follow-up is too time-consuming and they forget.",
+    "Q2_target_user": [
+      "Freelance creative professionals (designers, writers, photographers) billing 5-20 clients per month with invoices ranging $500-5000",
+      "Solo consultants with similar project-based billing patterns",
+      "Small service providers managing multiple small clients"
+    ],
+    "Q3_success_metric": "Within 60 days of launch: 100 user signups, 40 active users who created at least 3 invoices, 8 paying subscribers converting from free trial, 200+ invoices generated total, and $250 MRR proving subscription model works.",
+    "Q4_must_have_features": [
+      "User registration and login - Email/password authentication with email verification",
+      "Invoice generator - Simple form to create branded PDF invoices with logo and line items",
+      "Client database - Store client contact info and view invoice history per client",
+      "Payment tracker - Dashboard showing unpaid, overdue, and paid invoices with status filtering",
+      "Auto-reminders - System sends email reminders 7 days after invoice becomes overdue"
+    ],
+    "Q5_non_goals": [
+      "Stripe payment processing or Pay Now button for clients to pay online",
+      "Recurring invoices or subscription billing for clients",
+      "Multi-currency support",
+      "Team collaboration or multi-user workspaces",
+      "Full accounting suite with expense tracking or P&L reports",
+      "Time tracking integration",
+      "Native mobile apps",
+      "Client portal for disputes"
+    ],
+    "Q6_constraints": {
+      "brand_positioning": "Fastest way to create and track invoices - no bloat, no complexity",
+      "scope": "Invoice creation and payment tracking only - nothing else in v1",
+      "economics": "Monthly subscription $19-39/month with $1-2/user operational costs gives healthy margins",
+      "build_time": "90 days total - 60 days to build MVP, 30 days for user testing and bug fixes before public launch",
+      "tech_requirements": "Single-user accounts (NOT multi-tenant), email-based auth, PDF generation, scheduled reminder job"
+    },
+    "Q7_data_sources": [
+      "User manual input - All client data, invoice line items, business settings entered by user",
+      "System-generated - Invoice numbers (sequential), timestamps, payment status",
+      "No external data sources required for MVP"
+    ],
+    "Q8_integrations": [
+      "SendGrid or AWS SES - Transactional email for invoice delivery and automated payment reminders (required for MVP)",
+      "Stripe - Subscription billing for user accounts paying monthly subscription (required for MVP)",
+      "Phase 2: QuickBooks API for accounting sync",
+      "Phase 2: Stripe Checkout for client-facing Pay Invoice button"
+    ],
+    "Q9_risks": [
+      "Email deliverability issues if SPF/DKIM not configured properly - users will blame product if invoices don't arrive",
+      "PDF generation bugs with formatting or fonts - allocate extra testing time",
+      "Background job failures for reminders would break core value prop - need monitoring and alerts",
+      "Competition from free tools like Wave and FreshBooks free tier",
+      "Users expect mobile app but we're web-only in v1 - may lose some signups"
+    ],
+    "Q10_shipping_preference": "Start with core invoice generation, client management, and payment tracking with automated reminders. Build user auth and subscription billing first. No Stripe client payments or accounting integrations until v2 after validating core workflow works.",
+    "Q11_architecture": {
+      "authentication_required": true,
+      "role_based_access": false,
+      "multi_tenant": false,
+      "persistent_database": true,
+      "payments_required": true,
+      "subscription_billing": true,
+      "dashboard_reporting": true,
+      "pdf_generation": true,
+      "external_apis": [
+        "SendGrid (transactional email for invoice delivery and reminders)",
+        "Stripe (subscription billing for user monthly payments)"
+      ],
+      "background_jobs": true,
+      "admin_panel": false,
+      "expected_timeline_days": 90,
+      "minimum_tier": 3,
+      "tech_stack": "FastAPI + React + PostgreSQL",
+      "deployment": "Railway (backend) + Vercel (frontend)"
+    }
+  }
+}

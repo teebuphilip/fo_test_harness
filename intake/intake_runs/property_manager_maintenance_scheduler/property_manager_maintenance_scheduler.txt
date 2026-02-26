@@ -1,0 +1,1 @@
+PropertyPulse - Automated maintenance scheduling and tracking tool for property managers juggling 10-50 rental properties. Eliminates missed maintenance, reduces tenant complaints, and prevents costly emergency repairs through proactive scheduling.

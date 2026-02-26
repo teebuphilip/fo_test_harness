@@ -1,0 +1,201 @@
+{
+  "startup_idea_id": "freelance_invoice_tracker",
+  "block_id": "A",
+  "pass_1": {
+    "bdr_summary": "Solo freelancers waste 3-5 hours weekly on manual invoicing and lose $1000-2000 monthly in uncollected payments. InvoiceFlow provides simple invoice creation and payment tracking for 5-20 client freelancers.",
+    "selected_archetype": "saas_tool",
+    "primary_value_loop": "converter",
+    "economics_snapshot": {
+      "target_customer": "Freelance creatives and consultants billing 5-20 clients monthly",
+      "acquisition_channel": "Content marketing to freelancer communities",
+      "starter_price": "$19-39/month subscription",
+      "audience_scale_guess": "50K+ solo freelancers in target segments",
+      "revenue_goal_12mo": "$25K MRR"
+    },
+    "derived_bucket": "saas",
+    "size": "medium",
+    "architecture_flags": {
+      "needs_auth": true,
+      "needs_payments": true,
+      "needs_automation": false,
+      "needs_reporting": true
+    },
+    "tier_enforcement_metrics": {
+      "role_count": 1,
+      "workflow_count": 1,
+      "happy_path_count": 1,
+      "integration_count": 0
+    },
+    "initial_constraints_check": {
+      "budget_vs_scope": "ok",
+      "archetype_vs_tier": "ok",
+      "value_loop_vs_goal": "ok",
+      "complexity_flag": "ok"
+    },
+    "questions_for_hero": [
+      "For Tier 1 proof slice, should we focus on invoice creation with static client data or payment tracking with mock invoices?",
+      "Would you prefer manual PDF generation or hardcoded invoice templates for the proof slice?"
+    ]
+  },
+  "pass_2": {
+    "approved_bdr": "Solo freelancers waste 3-5 hours weekly on manual invoicing and lose $1000-2000 monthly in uncollected payments. InvoiceFlow provides simple invoice creation and payment tracking.",
+    "confirm_pass1_classification": true,
+    "classification_disagreements": [],
+    "tech_stack_selection": "lowcode",
+    "component_templates_selected": [
+      "basic_auth_form",
+      "crud_dashboard",
+      "pdf_generator_mock",
+      "status_tracker"
+    ],
+    "hld_document": "Tier 1 Proof Slice: Single freelancer role creates invoices using manual form input. Client data entered via static forms. Invoice generation uses predefined templates with hardcoded styling. Payment status tracked via manual dropdown updates. Dashboard shows invoice list with filter by status. No email sending, no automation, no external data sources. All data entry manual, all outputs static.",
+    "engineering_questions": [
+      "Should invoice numbering be sequential starting from 1 or allow manual entry?",
+      "What PDF library works best for static template generation?"
+    ],
+    "secondary_constraints_report": {
+      "tech_vs_budget": "ok",
+      "scope_vs_schedule": "ok",
+      "template_fit": "ok"
+    }
+  },
+  "pass_3": {
+    "qa_hlt_document": "Happy path: User logs in, navigates to Create Invoice, fills client details manually, adds line items, generates PDF using static template, marks as sent, updates payment status manually when paid. Validation: Required fields, positive amounts, PDF generation success.",
+    "test_vectors": [
+      {
+        "id": "TV001",
+        "description": "Create invoice with valid client data and single line item"
+      },
+      {
+        "id": "TV002", 
+        "description": "Generate PDF with hardcoded template formatting"
+      },
+      {
+        "id": "TV003",
+        "description": "Update payment status from unpaid to paid manually"
+      },
+      {
+        "id": "TV004",
+        "description": "Filter invoice dashboard by payment status"
+      }
+    ],
+    "risk_register": [
+      {
+        "code": "R001",
+        "description": "PDF generation fails with special characters in client names"
+      },
+      {
+        "code": "R002", 
+        "description": "Form validation allows negative invoice amounts"
+      },
+      {
+        "code": "R003",
+        "description": "Dashboard pagination breaks with large invoice lists"
+      }
+    ],
+    "qa_questions_for_engineering": [
+      "How should we handle PDF generation errors in the proof slice?",
+      "What's the maximum number of line items to support per invoice?"
+    ],
+    "qa_constraints_check": {
+      "edge_case_coverage": "ok",
+      "loop_validity": "ok", 
+      "economics_logic": "ok"
+    }
+  },
+  "pass_4": {
+    "hero_touchpoint_policy": {
+      "cadence": "daily",
+      "required": true
+    },
+    "combined_task_list": [
+      {
+        "task_id": "T001",
+        "classification": "build",
+        "description": "Setup basic auth system with login/register forms",
+        "depends_on": []
+      },
+      {
+        "task_id": "T002", 
+        "classification": "build",
+        "description": "Create client management CRUD interface",
+        "depends_on": ["T001"]
+      },
+      {
+        "task_id": "T003",
+        "classification": "build", 
+        "description": "Build invoice creation form with line items",
+        "depends_on": ["T002"]
+      },
+      {
+        "task_id": "T004",
+        "classification": "build",
+        "description": "Implement static PDF generation with hardcoded template",
+        "depends_on": ["T003"]
+      },
+      {
+        "task_id": "T005",
+        "classification": "build",
+        "description": "Create invoice dashboard with status filtering",
+        "depends_on": ["T004"]
+      },
+      {
+        "task_id": "T006",
+        "classification": "qa",
+        "description": "Test invoice creation and PDF generation workflow",
+        "depends_on": ["T005"]
+      },
+      {
+        "task_id": "T007",
+        "classification": "validation",
+        "description": "Validate complete user journey from login to invoice creation",
+        "depends_on": ["T006"]
+      },
+      {
+        "task_id": "H001",
+        "classification": "hero_touchpoint",
+        "description": "Daily check-in on proof slice progress",
+        "depends_on": []
+      }
+    ],
+    "day_by_day_schedule": [
+      {"day_number": 1, "task_ids": ["T001", "H001"]},
+      {"day_number": 2, "task_ids": ["T002", "H001"]}, 
+      {"day_number": 3, "task_ids": ["T003", "H001"]},
+      {"day_number": 4, "task_ids": ["T004", "H001"]},
+      {"day_number": 5, "task_ids": ["T005", "H001"]},
+      {"day_number": 6, "task_ids": ["T006", "H001"]},
+      {"day_number": 7, "task_ids": ["T007", "H001"]}
+    ],
+    "milestone_map_for_mark": [
+      {"milestone": "Auth System Complete", "day": 1, "related_task_ids": ["T001"]},
+      {"milestone": "Client Management Ready", "day": 2, "related_task_ids": ["T002"]},
+      {"milestone": "Invoice Creation Built", "day": 3, "related_task_ids": ["T003"]},
+      {"milestone": "PDF Generation Working", "day": 4, "related_task_ids": ["T004"]},
+      {"milestone": "Dashboard Complete", "day": 5, "related_task_ids": ["T005"]},
+      {"milestone": "QA Testing Done", "day": 6, "related_task_ids": ["T006"]},
+      {"milestone": "Proof Slice Validated", "day": 7, "related_task_ids": ["T007"]}
+    ]
+  },
+  "pass_5": {
+    "final_milestone_map": [
+      {"milestone": "Auth System Complete", "day": 1, "related_task_ids": ["T001"]},
+      {"milestone": "Client Management Ready", "day": 2, "related_task_ids": ["T002"]},
+      {"milestone": "Invoice Creation Built", "day": 3, "related_task_ids": ["T003"]},
+      {"milestone": "PDF Generation Working", "day": 4, "related_task_ids": ["T004"]},
+      {"milestone": "Dashboard Complete", "day": 5, "related_task_ids": ["T005"]},
+      {"milestone": "QA Testing Done", "day": 6, "related_task_ids": ["T006"]},
+      {"milestone": "Proof Slice Validated", "day": 7, "related_task_ids": ["T007"]}
+    ],
+    "approval_status": true,
+    "rejection_reasons": [],
+    "proposal_document_for_hero": "Tier 1 Proof Slice for InvoiceFlow: 7-day build demonstrating core invoice creation workflow. Single freelancer user can manually enter client data, create invoices with line items, generate static PDFs, and track payment status via dashboard. No automation, no external integrations, all manual input. Validates core value proposition of streamlined invoice management before building full automation in Tier 2."
+  },
+  "pass_6": {
+    "hero_decision": "buy_tier1_build",
+    "hero_questions": [
+      "After seeing the Tier 1 proof slice, should we add email invoice delivery to Tier 2?",
+      "Would you like automated payment reminders as the primary Tier 2 expansion feature?"
+    ]
+  }
+}

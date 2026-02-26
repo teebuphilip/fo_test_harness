@@ -1,0 +1,244 @@
+{
+  "startup_idea_id": "adversarial_ai_validator",
+  "block_id": "B",
+  "pass_1": {
+    "bdr_summary": "TwoFaced - Adversarial AI validation service where Claude advocates for startup ideas while ChatGPT attacks them, producing honest structured verdicts. Pay-per-analysis model targeting solo founders who need pressure-testing beyond single AI yes-machines.",
+    "selected_archetype": "saas_tool",
+    "primary_value_loop": "converter",
+    "economics_snapshot": {
+      "target_customer": "Solo founders 35-55 with day jobs building side projects",
+      "acquisition_channel": "Developer communities and founder forums",
+      "starter_price": "$5-10 per analysis",
+      "audience_scale_guess": "10K+ solo founders using AI for validation",
+      "revenue_goal_12mo": "$500-1000 in first 30 days, $5K+ by month 6"
+    },
+    "derived_bucket": "saas",
+    "size": "small",
+    "architecture_flags": {
+      "needs_auth": false,
+      "needs_payments": true,
+      "needs_automation": true,
+      "needs_reporting": true
+    },
+    "tier_enforcement_metrics": {
+      "role_count": 2,
+      "workflow_count": 3,
+      "happy_path_count": 2,
+      "integration_count": 3
+    },
+    "initial_constraints_check": {
+      "budget_vs_scope": "ok",
+      "archetype_vs_tier": "ok",
+      "value_loop_vs_goal": "ok",
+      "complexity_flag": "ok"
+    },
+    "questions_for_hero": [
+      "Confirm API cost targets under $0.40 per analysis",
+      "Validate 60-second turnaround requirement feasibility",
+      "Review structured verdict output format preferences"
+    ]
+  },
+  "pass_2": {
+    "approved_bdr": "TwoFaced - Adversarial AI validation service using Claude as advocate and ChatGPT as adversary to produce structured startup idea verdicts. Pay-per-analysis model with Stripe integration, targeting solo founders needing honest pressure-testing.",
+    "confirm_pass1_classification": true,
+    "classification_disagreements": [],
+    "tech_stack_selection": "lowcode",
+    "component_templates_selected": [
+      "payment_gateway_stripe",
+      "api_orchestration_node",
+      "dual_llm_integration",
+      "structured_output_synthesis"
+    ],
+    "hld_document": "Single-page web app with text input form. Backend orchestrates parallel API calls to OpenAI (adversary role) and Anthropic (advocate role). Synthesis engine combines responses into structured verdict with strengths, flaws, conflicts, questions, recommendation. Stripe checkout before analysis. No user accounts required. 60-second max processing time with progress indicators.",
+    "engineering_questions": [
+      "Prompt engineering strategy for consistent adversarial quality",
+      "Error handling for API failures or timeouts",
+      "Rate limiting and abuse prevention without accounts"
+    ],
+    "secondary_constraints_report": {
+      "tech_vs_budget": "ok",
+      "scope_vs_schedule": "ok",
+      "template_fit": "ok"
+    }
+  },
+  "pass_3": {
+    "qa_hlt_document": "Test dual-API orchestration with mock responses. Validate synthesis logic produces consistent structured output. Test Stripe payment flow end-to-end. Verify timeout handling and error states. Test with various idea complexity levels.",
+    "test_vectors": [
+      {
+        "id": "TV001",
+        "description": "Standard idea submission with successful dual API response"
+      },
+      {
+        "id": "TV002", 
+        "description": "OpenAI API failure with graceful degradation"
+      },
+      {
+        "id": "TV003",
+        "description": "Stripe payment failure handling"
+      },
+      {
+        "id": "TV004",
+        "description": "60-second timeout enforcement"
+      }
+    ],
+    "risk_register": [
+      {
+        "code": "R001",
+        "description": "API cost overrun due to prompt inefficiency"
+      },
+      {
+        "code": "R002", 
+        "description": "Inconsistent adversarial output quality"
+      },
+      {
+        "code": "R003",
+        "description": "Payment processing without user accounts"
+      }
+    ],
+    "qa_questions_for_engineering": [
+      "Fallback strategy if one API is down",
+      "Cost monitoring and circuit breaker implementation",
+      "Output quality validation before delivery"
+    ],
+    "qa_constraints_check": {
+      "edge_case_coverage": "ok",
+      "loop_validity": "ok", 
+      "economics_logic": "ok"
+    }
+  },
+  "pass_4": {
+    "hero_touchpoint_policy": {
+      "cadence": "every_other_day",
+      "required": true
+    },
+    "combined_task_list": [
+      {
+        "task_id": "T001",
+        "classification": "build",
+        "description": "Setup Node.js backend with Express framework",
+        "depends_on": []
+      },
+      {
+        "task_id": "T002", 
+        "classification": "build",
+        "description": "Integrate OpenAI SDK for adversary role prompts",
+        "depends_on": ["T001"]
+      },
+      {
+        "task_id": "T003",
+        "classification": "build", 
+        "description": "Integrate Anthropic SDK for advocate role prompts",
+        "depends_on": ["T001"]
+      },
+      {
+        "task_id": "T004",
+        "classification": "build",
+        "description": "Build synthesis engine for structured verdict output",
+        "depends_on": ["T002", "T003"]
+      },
+      {
+        "task_id": "T005",
+        "classification": "build",
+        "description": "Implement Stripe pay-per-analysis checkout",
+        "depends_on": ["T001"]
+      },
+      {
+        "task_id": "T006",
+        "classification": "build",
+        "description": "Create single-page frontend with input form",
+        "depends_on": []
+      },
+      {
+        "task_id": "T007",
+        "classification": "build",
+        "description": "Connect frontend to backend API endpoints",
+        "depends_on": ["T004", "T005", "T006"]
+      },
+      {
+        "task_id": "T008",
+        "classification": "qa",
+        "description": "Test dual-API orchestration with various inputs",
+        "depends_on": ["T007"]
+      },
+      {
+        "task_id": "T009",
+        "classification": "qa", 
+        "description": "Validate payment flow and error handling",
+        "depends_on": ["T007"]
+      },
+      {
+        "task_id": "T010",
+        "classification": "validation",
+        "description": "End-to-end testing with real startup ideas",
+        "depends_on": ["T008", "T009"]
+      },
+      {
+        "task_id": "HT001",
+        "classification": "hero_touchpoint",
+        "description": "Day 2 progress check",
+        "depends_on": []
+      },
+      {
+        "task_id": "HT002", 
+        "classification": "hero_touchpoint",
+        "description": "Day 4 integration review",
+        "depends_on": []
+      },
+      {
+        "task_id": "HT003",
+        "classification": "hero_touchpoint", 
+        "description": "Day 6 synthesis testing",
+        "depends_on": []
+      },
+      {
+        "task_id": "HT004",
+        "classification": "hero_touchpoint",
+        "description": "Day 8 payment flow validation",
+        "depends_on": []
+      },
+      {
+        "task_id": "HT005",
+        "classification": "hero_touchpoint",
+        "description": "Day 10 final testing review",
+        "depends_on": []
+      }
+    ],
+    "day_by_day_schedule": [
+      {"day_number": 1, "task_ids": ["T001", "T006"]},
+      {"day_number": 2, "task_ids": ["T002", "T003", "HT001"]},
+      {"day_number": 3, "task_ids": ["T005"]},
+      {"day_number": 4, "task_ids": ["T004", "HT002"]},
+      {"day_number": 5, "task_ids": ["T007"]},
+      {"day_number": 6, "task_ids": ["T008", "HT003"]},
+      {"day_number": 7, "task_ids": ["T009"]},
+      {"day_number": 8, "task_ids": ["HT004"]},
+      {"day_number": 9, "task_ids": ["T010"]},
+      {"day_number": 10, "task_ids": ["HT005"]}
+    ],
+    "milestone_map_for_mark": [
+      {"milestone": "Backend foundation ready", "day": 1, "related_task_ids": ["T001"]},
+      {"milestone": "Dual API integration complete", "day": 4, "related_task_ids": ["T002", "T003", "T004"]},
+      {"milestone": "Payment system operational", "day": 5, "related_task_ids": ["T005", "T007"]},
+      {"milestone": "Full system testing complete", "day": 9, "related_task_ids": ["T008", "T009", "T010"]}
+    ]
+  },
+  "pass_5": {
+    "final_milestone_map": [
+      {"milestone": "Backend foundation ready", "day": 1, "related_task_ids": ["T001"]},
+      {"milestone": "Dual API integration complete", "day": 4, "related_task_ids": ["T002", "T003", "T004"]}, 
+      {"milestone": "Payment system operational", "day": 5, "related_task_ids": ["T005", "T007"]},
+      {"milestone": "Full system testing complete", "day": 9, "related_task_ids": ["T008", "T009", "T010"]}
+    ],
+    "approval_status": true,
+    "rejection_reasons": [],
+    "proposal_document_for_hero": "TwoFaced MVP - 10-day build plan for adversarial AI validation service. Delivers pay-per-analysis platform using Claude advocate vs ChatGPT adversary model. Core features: single-page input, dual API orchestration, structured verdict synthesis, Stripe integration. Target: $5-10 per analysis, 60-second turnaround, API costs under $0.40. Ready for solo founder execution with clear technical milestones and hero touchpoints every 2 days."
+  },
+  "pass_6": {
+    "hero_decision": "buy_tier2_build",
+    "hero_questions": [
+      "Confirm API rate limits for expected volume",
+      "Review prompt templates for adversarial consistency", 
+      "Validate cost monitoring implementation approach"
+    ]
+  }
+}

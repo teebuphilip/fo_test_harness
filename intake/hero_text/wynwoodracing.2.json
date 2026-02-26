@@ -1,0 +1,51 @@
+{
+"startup_idea_id": "wynwood_thoroughbreds",
+"startup_name": "Wynwood Thoroughbreds",
+"startup_description": "Boutique thoroughbred ownership and breeding experience focused on transparency, education, and personal connection to the horses.",
+"hero_answers": {
+"Q1_problem_customer": "People want to be part of horse ownership but do not trust large syndicates due to high markups, lack of transparency, and impersonal experiences.",
+"Q2_target_user": [
+"New or emerging owners entering the sport",
+"Passionate racing fans seeking deeper involvement",
+"Professionals or small investors interested in breeding strategy and long-term value"
+],
+"Q3_success_metric": "Within 30 days: professional brand, simple website, small engaged email list, 1–2 ownership or breeding opportunities, and first paying members.",
+"Q4_must_have_features": [
+"Ownership membership access",
+"Monthly horse and breeding updates",
+"Educational content",
+"Direct communication with founder",
+"Simple brand website",
+"Shopify merchandise store"
+],
+"Q5_non_goals": [
+"Competing with large-scale micro-share platforms",
+"Becoming a mass-market syndicate",
+"Building a complex tech platform",
+"Losing boutique, personal-touch positioning"
+],
+"Q6_constraints": {
+"brand_positioning": "Boutique, high-touch, transparent",
+"compliance": "Must follow racing and syndicate regulations",
+"promise_limits": "No overpromising financial returns",
+"scale_limits": "Do not dilute brand with too many horses"
+},
+"Q7_data_sources": [
+],
+"Q8_integrations": [
+"Payment processor",
+"Email automation tools",
+"Shopify store",
+"Equineline",
+"TrueNicks"
+],
+"Q9_risks": [
+"Loss of transparency",
+"Brand dilution from too many horses",
+"Overpromising returns",
+"Regulatory compliance issues"
+],
+"Q10_shipping_preference": "Start with a simple website, brand identity, and first ownership opportunities before adding technical complexity."
+}
+}
+

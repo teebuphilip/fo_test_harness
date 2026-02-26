@@ -1,0 +1,208 @@
+{
+  "startup_idea_id": "property_manager_maintenance_scheduler",
+  "block_id": "A",
+  "pass_1": {
+    "bdr_summary": "PropertyPulse helps property managers with 10-50 units track recurring maintenance tasks. Current manual calendar systems fail at scale, causing missed inspections and 3x higher emergency repair costs. Solution provides maintenance task library, recurring schedules, and email reminders at $39-79/month.",
+    "selected_archetype": "saas_tool",
+    "primary_value_loop": "retainer",
+    "economics_snapshot": {
+      "target_customer": "Independent property managers with 10-50 rental units",
+      "acquisition_channel": "Property management forums and local real estate investor meetups",
+      "starter_price": "$39/month for up to 15 properties",
+      "audience_scale_guess": "50,000 independent property managers in target size range",
+      "revenue_goal_12mo": "$50,000 ARR with 100 paying subscribers"
+    },
+    "derived_bucket": "saas",
+    "size": "medium",
+    "architecture_flags": {
+      "needs_auth": true,
+      "needs_payments": true,
+      "needs_automation": false,
+      "needs_reporting": false
+    },
+    "tier_enforcement_metrics": {
+      "role_count": 1,
+      "workflow_count": 1,
+      "happy_path_count": 1,
+      "integration_count": 0
+    },
+    "initial_constraints_check": {
+      "budget_vs_scope": "ok",
+      "archetype_vs_tier": "ok",
+      "value_loop_vs_goal": "ok",
+      "complexity_flag": "ok"
+    },
+    "questions_for_hero": [
+      "For Tier 1 proof slice, should we focus on just the task creation and manual completion workflow?",
+      "Can we use static sample maintenance tasks instead of a full task library?",
+      "Should email reminders be mocked for the proof slice?"
+    ]
+  },
+  "pass_2": {
+    "approved_bdr": "PropertyPulse maintenance scheduler for property managers - Tier 1 proof slice focusing on core task creation and completion workflow with manual inputs only",
+    "confirm_pass1_classification": true,
+    "classification_disagreements": [],
+    "tech_stack_selection": "nocode",
+    "component_templates_selected": ["user_auth", "data_forms", "task_lists"],
+    "hld_document": "Tier 1 Proof Slice: Single property manager creates account, manually adds one property, selects from 5 predefined maintenance tasks (HVAC filter, fire extinguisher check, gutter cleaning, smoke detector test, annual inspection), sets basic recurrence (monthly/quarterly), views upcoming tasks in simple list, marks tasks complete with text notes. No email automation, no photo uploads, no billing. Uses Airtable as backend with Softr frontend for rapid prototyping.",
+    "engineering_questions": [
+      "Should recurrence logic handle just monthly/quarterly for proof slice?",
+      "Can we limit to 5 hardcoded maintenance task types?",
+      "Is manual task completion with text notes sufficient for validation?"
+    ],
+    "secondary_constraints_report": {
+      "tech_vs_budget": "ok",
+      "scope_vs_schedule": "ok",
+      "template_fit": "ok"
+    }
+  },
+  "pass_3": {
+    "qa_hlt_document": "Test user journey: Property manager signs up, adds property address and unit count, browses 5 maintenance task templates, creates recurring HVAC filter task for quarterly schedule, views task list showing next due date, marks task complete with notes, verifies task generates next instance. Validate recurrence math, task state transitions, and data persistence.",
+    "test_vectors": [
+      {
+        "id": "TV001",
+        "description": "User creates quarterly HVAC task, completes it, verifies next instance appears 90 days later"
+      },
+      {
+        "id": "TV002", 
+        "description": "User adds property with 4 units, creates monthly smoke detector task, verifies task applies to all units"
+      },
+      {
+        "id": "TV003",
+        "description": "User views task list filtered by overdue, current week, and next month"
+      }
+    ],
+    "risk_register": [
+      {
+        "code": "R001",
+        "description": "Recurrence calculation errors for quarterly tasks crossing year boundaries"
+      },
+      {
+        "code": "R002", 
+        "description": "Task completion state not persisting between browser sessions"
+      },
+      {
+        "code": "R003",
+        "description": "Multiple properties causing task assignment confusion"
+      }
+    ],
+    "qa_questions_for_engineering": [
+      "How do we handle leap years in quarterly recurrence?",
+      "Should completed tasks remain visible in task list?",
+      "What happens if user creates duplicate tasks for same property?"
+    ],
+    "qa_constraints_check": {
+      "edge_case_coverage": "ok",
+      "loop_validity": "ok", 
+      "economics_logic": "ok"
+    }
+  },
+  "pass_4": {
+    "hero_touchpoint_policy": {
+      "cadence": "daily",
+      "required": true
+    },
+    "combined_task_list": [
+      {
+        "task_id": "T001",
+        "classification": "build",
+        "description": "Set up Airtable base with properties and tasks tables",
+        "depends_on": []
+      },
+      {
+        "task_id": "T002", 
+        "classification": "build",
+        "description": "Configure Softr app with user auth and property forms",
+        "depends_on": ["T001"]
+      },
+      {
+        "task_id": "T003",
+        "classification": "build", 
+        "description": "Create maintenance task templates and selection interface",
+        "depends_on": ["T002"]
+      },
+      {
+        "task_id": "T004",
+        "classification": "build",
+        "description": "Build task creation form with recurrence options",
+        "depends_on": ["T003"]
+      },
+      {
+        "task_id": "T005",
+        "classification": "build",
+        "description": "Implement task list view with filtering",
+        "depends_on": ["T004"]
+      },
+      {
+        "task_id": "T006",
+        "classification": "build",
+        "description": "Add task completion workflow with notes",
+        "depends_on": ["T005"]
+      },
+      {
+        "task_id": "T007",
+        "classification": "qa",
+        "description": "Test recurrence logic for quarterly tasks",
+        "depends_on": ["T006"]
+      },
+      {
+        "task_id": "T008",
+        "classification": "validation",
+        "description": "User testing with 2 property managers",
+        "depends_on": ["T007"]
+      },
+      {
+        "task_id": "HT001",
+        "classification": "hero_touchpoint",
+        "description": "Daily check-in on progress and blockers",
+        "depends_on": []
+      }
+    ],
+    "day_by_day_schedule": [
+      {"day_number": 1, "task_ids": ["T001", "HT001"]},
+      {"day_number": 2, "task_ids": ["T002", "HT001"]},
+      {"day_number": 3, "task_ids": ["T002", "HT001"]},
+      {"day_number": 4, "task_ids": ["T003", "HT001"]},
+      {"day_number": 5, "task_ids": ["T003", "HT001"]},
+      {"day_number": 6, "task_ids": ["T004", "HT001"]},
+      {"day_number": 7, "task_ids": ["T004", "HT001"]},
+      {"day_number": 8, "task_ids": ["T005", "HT001"]},
+      {"day_number": 9, "task_ids": ["T005", "HT001"]},
+      {"day_number": 10, "task_ids": ["T006", "HT001"]},
+      {"day_number": 11, "task_ids": ["T006", "HT001"]},
+      {"day_number": 12, "task_ids": ["T007", "HT001"]},
+      {"day_number": 13, "task_ids": ["T007", "HT001"]},
+      {"day_number": 14, "task_ids": ["T008", "HT001"]},
+      {"day_number": 15, "task_ids": ["T008", "HT001"]}
+    ],
+    "milestone_map_for_mark": [
+      {"milestone": "Data foundation ready", "day": 1, "related_task_ids": ["T001"]},
+      {"milestone": "User auth working", "day": 3, "related_task_ids": ["T002"]},
+      {"milestone": "Task creation flow complete", "day": 7, "related_task_ids": ["T004"]},
+      {"milestone": "Core workflow functional", "day": 11, "related_task_ids": ["T006"]},
+      {"milestone": "QA validation complete", "day": 13, "related_task_ids": ["T007"]},
+      {"milestone": "User feedback collected", "day": 15, "related_task_ids": ["T008"]}
+    ]
+  },
+  "pass_5": {
+    "final_milestone_map": [
+      {"milestone": "Data foundation ready", "day": 1, "related_task_ids": ["T001"]},
+      {"milestone": "User auth working", "day": 3, "related_task_ids": ["T002"]},
+      {"milestone": "Task creation flow complete", "day": 7, "related_task_ids": ["T004"]},
+      {"milestone": "Core workflow functional", "day": 11, "related_task_ids": ["T006"]},
+      {"milestone": "QA validation complete", "day": 13, "related_task_ids": ["T007"]},
+      {"milestone": "User feedback collected", "day": 15, "related_task_ids": ["T008"]}
+    ],
+    "approval_status": true,
+    "rejection_reasons": [],
+    "proposal_document_for_hero": "PropertyPulse Tier 1 Proof Slice - 15-day validation of core maintenance scheduling workflow. Deliverable: Working prototype where property managers can add properties, create recurring maintenance tasks from templates, view task lists, and mark tasks complete. Built on Airtable + Softr for rapid iteration. Success metrics: 2 property managers complete full workflow, create 5+ tasks each, provide feedback on usability. Validates core value proposition before investing in custom development and email automation."
+  },
+  "pass_6": {
+    "hero_decision": "buy_tier1_build",
+    "hero_questions": [
+      "Should we add a simple calendar view alongside the task list?",
+      "Would you prefer to test with 3 property managers instead of 2?",
+      "Should we include basic task priority levels in the proof slice?"
+    ]
+  }
+}

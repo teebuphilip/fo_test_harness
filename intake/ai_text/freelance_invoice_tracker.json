@@ -1,0 +1,77 @@
+{
+  "startup_idea_id": "freelance_invoice_tracker",
+  "startup_name": "InvoiceFlow",
+  "startup_description": "Simple invoice creation and payment tracking tool for freelancers who waste hours on manual invoicing and lose money chasing late payments. Auto-generates professional PDFs, tracks payment status, and sends automated reminders.",
+  "hero_answers": {
+    "Q1_problem_customer": "Solo freelancers waste 3-5 hours per week manually creating invoices, tracking which clients have paid, and sending payment reminders. They lose track of overdue invoices and leave money on the table because follow-up is manual and inconsistent. This wastes 15-20 hours per month on admin work (worth $500-1000 of billable time) and loses $1000-2000 per month in late payments they never chase down.",
+    "Q2_target_user": [
+      "Freelance creative professionals (designers, writers, photographers) billing 5-20 clients per month",
+      "Solo consultants (business coaches, marketing consultants) with project-based billing",
+      "Small service providers (bookkeepers, virtual assistants) managing multiple small clients"
+    ],
+    "Q3_success_metric": "Within 30 days: 150 user signups, 50 active users who created at least 1 invoice, 12 paying subscribers, 250+ invoices generated, and $400 MRR proving the subscription model works.",
+    "Q4_must_have_features": [
+      "Invoice generator - Fill simple form, auto-generate branded PDF with logo and line items",
+      "Client database - Store client contact info and view complete invoice history",
+      "Payment tracker - Dashboard showing unpaid, overdue, and paid invoices with status",
+      "Auto-reminders - System sends payment reminder emails 3 days before and 7 days after due date",
+      "Quick actions - One-click Mark as Paid and Send Manual Reminder buttons"
+    ],
+    "Q5_non_goals": [
+      "Stripe payment processing or Pay Now button integration in v1",
+      "Recurring invoices or subscription billing features",
+      "Multi-currency support or international tax calculations",
+      "Team collaboration or multi-user accounts",
+      "Expense tracking or full accounting suite",
+      "Time tracking integration",
+      "Native mobile apps (web-responsive only)",
+      "Client portal for dispute management"
+    ],
+    "Q6_constraints": {
+      "brand_positioning": "Simple, fast invoicing for freelancers who hate admin work",
+      "scope": "Invoice creation and payment tracking only - no full accounting",
+      "economics": "Monthly subscription $15-49/month with healthy margins after $1-2/user operational costs",
+      "build_time": "45 days max from start to launch",
+      "tech_requirements": "Multi-tenant data isolation, PDF generation, background job scheduling for reminders"
+    },
+    "Q7_data_sources": [
+      "User manual input - All client data, invoice line items, business settings",
+      "System-generated - Invoice numbers, timestamps, payment status tracking",
+      "No external data sources required for MVP"
+    ],
+    "Q8_integrations": [
+      "SendGrid or AWS SES - Transactional email for invoice delivery and automated reminders",
+      "Stripe - Subscription billing and payment processing",
+      "Phase 2: QuickBooks and Xero APIs for accounting software sync",
+      "Phase 2: Stripe Checkout for client-facing Pay Now button"
+    ],
+    "Q9_risks": [
+      "Email deliverability depends on proper SPF/DKIM setup - critical for product success",
+      "PDF generation can be finicky with fonts and formatting - allocate buffer time for testing",
+      "Multi-tenant data isolation must be bulletproof - one security bug kills trust",
+      "Background job reliability for reminders is core feature - cannot fail silently",
+      "Competition from established players like FreshBooks and Wave (free tier)"
+    ],
+    "Q10_shipping_preference": "Start with core invoice generation, client management, and payment tracking with auto-reminders. No Stripe payment integration or accounting sync until v2. Focus on making the manual invoicing workflow 10x faster than Excel.",
+    "Q11_architecture": {
+      "authentication_required": true,
+      "role_based_access": false,
+      "multi_tenant": true,
+      "persistent_database": true,
+      "payments_required": true,
+      "subscription_billing": true,
+      "dashboard_reporting": true,
+      "pdf_generation": true,
+      "external_apis": [
+        "SendGrid (transactional email)",
+        "Stripe (subscription billing)"
+      ],
+      "background_jobs": true,
+      "admin_panel": false,
+      "expected_timeline_days": 45,
+      "minimum_tier": 3,
+      "tech_stack": "FastAPI + React + PostgreSQL",
+      "deployment": "Railway (backend) + Vercel (frontend)"
+    }
+  }
+}

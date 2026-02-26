@@ -1,0 +1,1 @@
+TwoFaced - Adversarial AI-powered startup idea validation that forces ChatGPT and Claude into opposing roles — one building the strongest case for your idea, one destroying it — producing an honest structured verdict before you waste months building the wrong thing.

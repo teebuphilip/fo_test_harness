@@ -1,0 +1,1 @@
+InvoiceFlow - Simple invoice creation and payment tracking tool for freelancers. Creates professional PDFs, tracks payment status, sends automated reminders. No complicated accounting features - just fast invoicing.

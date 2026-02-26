@@ -1,0 +1,24 @@
+Title: Building 70 SaaS products to stress-test my AI build harness — 3 down, 67 to go
+Body:
+I spent 25 years in DevOps. I hate vibe-coded bullshit.
+I built a deterministic SaaS harness with 53 capabilities (auth, payments, fraud detection, GDPR compliance, the works). Now I need to know if it actually works at scale.
+So I'm building 70 different SaaS products through it. Real FastAPI + React + Stripe deployments. If the harness breaks, I fix it. If it holds, I know it's solid.
+Here's what the harness logged from builds 1-3:
+Product                      | Runs | Passes | Avg Cost | Main Failure Mode
+-----------------------------|------|--------|----------|-------------------
+Adversarial Ai Validator     |    7 |      2 |    $0.60 | CTRL_C
+Wynwood Thoroughbreds        |    5 |      2 |    $0.63 | BUILD_TRUNCATED
+Ai Workforce Intelligence    |   11 |      4 |    $1.00 | NON_CONVERGING (15 iters, $5.4001)
+Freelance Invoice Tracker    |    2 |      1 |    $1.65 | CTRL_C
+Property Manager Maintenance |    1 |      1 |    $0.65 | None
+
+Total: 26 runs, 10 clean builds (38% first-pass success)
+
+Total: 26 runs, 10 clean builds (38% first-pass success), $29.56 spent
+What I learned:
+- (ChatGPT call failed: OPENAI_API_KEY not set)
+- Need convergence detection at iteration 7 (one build hit 15 iterations, $5.40 before I killed it)
+- Complex DB schemas break build truncation logic
+- Average $3 per accepted build is way cheaper than I expected
+
+Following this for the next 6 months. Will post failures and edge cases as I find them.

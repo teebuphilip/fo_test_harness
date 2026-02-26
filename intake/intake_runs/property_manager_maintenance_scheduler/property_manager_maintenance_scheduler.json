@@ -1,0 +1,816 @@
+{
+  "run_id": "property_manager_maintenance_scheduler",
+  "startup_idea_id": "property_manager_maintenance_scheduler",
+  "startup_name": "PropertyPulse",
+  "summary": "PropertyPulse - Automated maintenance scheduling and tracking tool for property managers juggling 10-50 rental properties. Eliminates missed maintenance, reduces tenant complaints, and prevents costly emergency repairs through proactive scheduling.",
+  "block_a": {
+    "startup_idea_id": "property_manager_maintenance_scheduler",
+    "block_id": "A",
+    "pass_1": {
+      "bdr_summary": "PropertyPulse helps property managers with 10-50 units track recurring maintenance tasks. Current manual calendar systems fail at scale, causing missed inspections and 3x higher emergency repair costs. Solution provides maintenance task library, recurring schedules, and email reminders at $39-79/month.",
+      "selected_archetype": "saas_tool",
+      "primary_value_loop": "retainer",
+      "economics_snapshot": {
+        "target_customer": "Independent property managers with 10-50 rental units",
+        "acquisition_channel": "Property management forums and local real estate investor meetups",
+        "starter_price": "$39/month for up to 15 properties",
+        "audience_scale_guess": "50,000 independent property managers in target size range",
+        "revenue_goal_12mo": "$50,000 ARR with 100 paying subscribers"
+      },
+      "derived_bucket": "saas",
+      "size": "medium",
+      "architecture_flags": {
+        "needs_auth": true,
+        "needs_payments": true,
+        "needs_automation": false,
+        "needs_reporting": false
+      },
+      "tier_enforcement_metrics": {
+        "role_count": 1,
+        "workflow_count": 1,
+        "happy_path_count": 1,
+        "integration_count": 0
+      },
+      "initial_constraints_check": {
+        "budget_vs_scope": "ok",
+        "archetype_vs_tier": "ok",
+        "value_loop_vs_goal": "ok",
+        "complexity_flag": "ok"
+      },
+      "questions_for_hero": [
+        "For Tier 1 proof slice, should we focus on just the task creation and manual completion workflow?",
+        "Can we use static sample maintenance tasks instead of a full task library?",
+        "Should email reminders be mocked for the proof slice?"
+      ]
+    },
+    "pass_2": {
+      "approved_bdr": "PropertyPulse maintenance scheduler for property managers - Tier 1 proof slice focusing on core task creation and completion workflow with manual inputs only",
+      "confirm_pass1_classification": true,
+      "classification_disagreements": [],
+      "tech_stack_selection": "nocode",
+      "component_templates_selected": [
+        "user_auth",
+        "data_forms",
+        "task_lists"
+      ],
+      "hld_document": "Tier 1 Proof Slice: Single property manager creates account, manually adds one property, selects from 5 predefined maintenance tasks (HVAC filter, fire extinguisher check, gutter cleaning, smoke detector test, annual inspection), sets basic recurrence (monthly/quarterly), views upcoming tasks in simple list, marks tasks complete with text notes. No email automation, no photo uploads, no billing. Uses Airtable as backend with Softr frontend for rapid prototyping.",
+      "engineering_questions": [
+        "Should recurrence logic handle just monthly/quarterly for proof slice?",
+        "Can we limit to 5 hardcoded maintenance task types?",
+        "Is manual task completion with text notes sufficient for validation?"
+      ],
+      "secondary_constraints_report": {
+        "tech_vs_budget": "ok",
+        "scope_vs_schedule": "ok",
+        "template_fit": "ok"
+      }
+    },
+    "pass_3": {
+      "qa_hlt_document": "Test user journey: Property manager signs up, adds property address and unit count, browses 5 maintenance task templates, creates recurring HVAC filter task for quarterly schedule, views task list showing next due date, marks task complete with notes, verifies task generates next instance. Validate recurrence math, task state transitions, and data persistence.",
+      "test_vectors": [
+        {
+          "id": "TV001",
+          "description": "User creates quarterly HVAC task, completes it, verifies next instance appears 90 days later"
+        },
+        {
+          "id": "TV002",
+          "description": "User adds property with 4 units, creates monthly smoke detector task, verifies task applies to all units"
+        },
+        {
+          "id": "TV003",
+          "description": "User views task list filtered by overdue, current week, and next month"
+        }
+      ],
+      "risk_register": [
+        {
+          "code": "R001",
+          "description": "Recurrence calculation errors for quarterly tasks crossing year boundaries"
+        },
+        {
+          "code": "R002",
+          "description": "Task completion state not persisting between browser sessions"
+        },
+        {
+          "code": "R003",
+          "description": "Multiple properties causing task assignment confusion"
+        }
+      ],
+      "qa_questions_for_engineering": [
+        "How do we handle leap years in quarterly recurrence?",
+        "Should completed tasks remain visible in task list?",
+        "What happens if user creates duplicate tasks for same property?"
+      ],
+      "qa_constraints_check": {
+        "edge_case_coverage": "ok",
+        "loop_validity": "ok",
+        "economics_logic": "ok"
+      }
+    },
+    "pass_4": {
+      "hero_touchpoint_policy": {
+        "cadence": "daily",
+        "required": true
+      },
+      "combined_task_list": [
+        {
+          "task_id": "T001",
+          "classification": "build",
+          "description": "Set up Airtable base with properties and tasks tables",
+          "depends_on": []
+        },
+        {
+          "task_id": "T002",
+          "classification": "build",
+          "description": "Configure Softr app with user auth and property forms",
+          "depends_on": [
+            "T001"
+          ]
+        },
+        {
+          "task_id": "T003",
+          "classification": "build",
+          "description": "Create maintenance task templates and selection interface",
+          "depends_on": [
+            "T002"
+          ]
+        },
+        {
+          "task_id": "T004",
+          "classification": "build",
+          "description": "Build task creation form with recurrence options",
+          "depends_on": [
+            "T003"
+          ]
+        },
+        {
+          "task_id": "T005",
+          "classification": "build",
+          "description": "Implement task list view with filtering",
+          "depends_on": [
+            "T004"
+          ]
+        },
+        {
+          "task_id": "T006",
+          "classification": "build",
+          "description": "Add task completion workflow with notes",
+          "depends_on": [
+            "T005"
+          ]
+        },
+        {
+          "task_id": "T007",
+          "classification": "qa",
+          "description": "Test recurrence logic for quarterly tasks",
+          "depends_on": [
+            "T006"
+          ]
+        },
+        {
+          "task_id": "T008",
+          "classification": "validation",
+          "description": "User testing with 2 property managers",
+          "depends_on": [
+            "T007"
+          ]
+        },
+        {
+          "task_id": "HT001",
+          "classification": "hero_touchpoint",
+          "description": "Daily check-in on progress and blockers",
+          "depends_on": []
+        }
+      ],
+      "day_by_day_schedule": [
+        {
+          "day_number": 1,
+          "task_ids": [
+            "T001",
+            "HT001"
+          ]
+        },
+        {
+          "day_number": 2,
+          "task_ids": [
+            "T002",
+            "HT001"
+          ]
+        },
+        {
+          "day_number": 3,
+          "task_ids": [
+            "T002",
+            "HT001"
+          ]
+        },
+        {
+          "day_number": 4,
+          "task_ids": [
+            "T003",
+            "HT001"
+          ]
+        },
+        {
+          "day_number": 5,
+          "task_ids": [
+            "T003",
+            "HT001"
+          ]
+        },
+        {
+          "day_number": 6,
+          "task_ids": [
+            "T004",
+            "HT001"
+          ]
+        },
+        {
+          "day_number": 7,
+          "task_ids": [
+            "T004",
+            "HT001"
+          ]
+        },
+        {
+          "day_number": 8,
+          "task_ids": [
+            "T005",
+            "HT001"
+          ]
+        },
+        {
+          "day_number": 9,
+          "task_ids": [
+            "T005",
+            "HT001"
+          ]
+        },
+        {
+          "day_number": 10,
+          "task_ids": [
+            "T006",
+            "HT001"
+          ]
+        },
+        {
+          "day_number": 11,
+          "task_ids": [
+            "T006",
+            "HT001"
+          ]
+        },
+        {
+          "day_number": 12,
+          "task_ids": [
+            "T007",
+            "HT001"
+          ]
+        },
+        {
+          "day_number": 13,
+          "task_ids": [
+            "T007",
+            "HT001"
+          ]
+        },
+        {
+          "day_number": 14,
+          "task_ids": [
+            "T008",
+            "HT001"
+          ]
+        },
+        {
+          "day_number": 15,
+          "task_ids": [
+            "T008",
+            "HT001"
+          ]
+        }
+      ],
+      "milestone_map_for_mark": [
+        {
+          "milestone": "Data foundation ready",
+          "day": 1,
+          "related_task_ids": [
+            "T001"
+          ]
+        },
+        {
+          "milestone": "User auth working",
+          "day": 3,
+          "related_task_ids": [
+            "T002"
+          ]
+        },
+        {
+          "milestone": "Task creation flow complete",
+          "day": 7,
+          "related_task_ids": [
+            "T004"
+          ]
+        },
+        {
+          "milestone": "Core workflow functional",
+          "day": 11,
+          "related_task_ids": [
+            "T006"
+          ]
+        },
+        {
+          "milestone": "QA validation complete",
+          "day": 13,
+          "related_task_ids": [
+            "T007"
+          ]
+        },
+        {
+          "milestone": "User feedback collected",
+          "day": 15,
+          "related_task_ids": [
+            "T008"
+          ]
+        }
+      ]
+    },
+    "pass_5": {
+      "final_milestone_map": [
+        {
+          "milestone": "Data foundation ready",
+          "day": 1,
+          "related_task_ids": [
+            "T001"
+          ]
+        },
+        {
+          "milestone": "User auth working",
+          "day": 3,
+          "related_task_ids": [
+            "T002"
+          ]
+        },
+        {
+          "milestone": "Task creation flow complete",
+          "day": 7,
+          "related_task_ids": [
+            "T004"
+          ]
+        },
+        {
+          "milestone": "Core workflow functional",
+          "day": 11,
+          "related_task_ids": [
+            "T006"
+          ]
+        },
+        {
+          "milestone": "QA validation complete",
+          "day": 13,
+          "related_task_ids": [
+            "T007"
+          ]
+        },
+        {
+          "milestone": "User feedback collected",
+          "day": 15,
+          "related_task_ids": [
+            "T008"
+          ]
+        }
+      ],
+      "approval_status": true,
+      "rejection_reasons": [],
+      "proposal_document_for_hero": "PropertyPulse Tier 1 Proof Slice - 15-day validation of core maintenance scheduling workflow. Deliverable: Working prototype where property managers can add properties, create recurring maintenance tasks from templates, view task lists, and mark tasks complete. Built on Airtable + Softr for rapid iteration. Success metrics: 2 property managers complete full workflow, create 5+ tasks each, provide feedback on usability. Validates core value proposition before investing in custom development and email automation."
+    },
+    "pass_6": {
+      "hero_decision": "buy_tier1_build",
+      "hero_questions": [
+        "Should we add a simple calendar view alongside the task list?",
+        "Would you prefer to test with 3 property managers instead of 2?",
+        "Should we include basic task priority levels in the proof slice?"
+      ]
+    }
+  },
+  "block_b": {
+    "startup_idea_id": "property_manager_maintenance_scheduler",
+    "block_id": "B",
+    "pass_1": {
+      "bdr_summary": "PropertyPulse helps property managers with 10-50 units track recurring maintenance tasks through automated scheduling and email reminders. Targets $39-79/month subscription model with pre-built task templates, photo completion tracking, and portfolio-wide maintenance calendar.",
+      "selected_archetype": "saas_tool",
+      "primary_value_loop": "retainer",
+      "economics_snapshot": {
+        "target_customer": "Independent property managers with 10-50 rental units",
+        "acquisition_channel": "Property management forums and local real estate investor meetups",
+        "starter_price": "$39/month for up to 15 properties",
+        "audience_scale_guess": "5,000 independent property managers in target market",
+        "revenue_goal_12mo": "$50,000 ARR with 100 paying subscribers"
+      },
+      "derived_bucket": "saas",
+      "size": "medium",
+      "architecture_flags": {
+        "needs_auth": true,
+        "needs_payments": true,
+        "needs_automation": true,
+        "needs_reporting": true
+      },
+      "tier_enforcement_metrics": {
+        "role_count": 1,
+        "workflow_count": 3,
+        "happy_path_count": 2,
+        "integration_count": 3
+      },
+      "initial_constraints_check": {
+        "budget_vs_scope": "ok",
+        "archetype_vs_tier": "ok",
+        "value_loop_vs_goal": "ok",
+        "complexity_flag": "ok"
+      },
+      "questions_for_hero": [
+        "Should task completion require photo uploads or allow text-only notes?",
+        "What's the maximum number of properties per subscription tier?",
+        "Do you want calendar export functionality for external calendar apps?"
+      ]
+    },
+    "pass_2": {
+      "approved_bdr": "PropertyPulse is a maintenance scheduling SaaS for property managers with 10-50 units. Core features include property portfolio management, recurring task templates, automated email reminders, and photo-enabled task completion tracking. Revenue model is $39-79/month subscriptions with Stripe billing.",
+      "confirm_pass1_classification": true,
+      "classification_disagreements": [],
+      "tech_stack_selection": "fullcode",
+      "component_templates_selected": [
+        "FastAPI backend with PostgreSQL",
+        "React frontend with responsive design",
+        "Stripe subscription billing",
+        "SendGrid email automation",
+        "S3 photo storage"
+      ],
+      "hld_document": "System Architecture: FastAPI backend handles user auth, property CRUD, task scheduling engine, and email job queue. PostgreSQL stores users, properties, task templates, scheduled instances, and completion records. React frontend provides property dashboard, task calendar view, and completion forms. Stripe webhook integration manages subscription lifecycle. SendGrid processes reminder emails via background jobs. S3 stores task completion photos with signed URL access. Key workflows: 1) Property manager adds properties and selects maintenance templates 2) System generates recurring task instances based on frequency rules 3) Email jobs send reminders at configured intervals 4) Manager marks tasks complete with notes and photos 5) Dashboard shows upcoming and overdue tasks across portfolio.",
+      "engineering_questions": [
+        "How should we handle timezone differences for properties in different locations?",
+        "What's the retry logic for failed email deliveries?",
+        "Should we implement soft deletes for properties and tasks?"
+      ],
+      "secondary_constraints_report": {
+        "tech_vs_budget": "ok",
+        "scope_vs_schedule": "ok",
+        "template_fit": "ok"
+      }
+    },
+    "pass_3": {
+      "qa_hlt_document": "QA Test Plan: 1) User Registration/Login - Test email validation, password requirements, session management 2) Property Management - Add/edit/delete properties, validate address formats, test property limits per subscription 3) Task Template System - Verify pre-loaded templates, custom task creation, frequency rule validation 4) Recurring Schedule Engine - Test monthly/quarterly/annual recurrence, edge cases like Feb 29, daylight savings transitions 5) Email Reminder System - Verify 7-day advance, due date, and 3-day overdue emails, test spam compliance 6) Task Completion - Photo upload limits, note character limits, completion timestamp accuracy 7) Subscription Billing - Stripe webhook handling, plan upgrades/downgrades, failed payment scenarios 8) Dashboard Performance - Load testing with 50 properties and 500+ scheduled tasks",
+      "test_vectors": [
+        {
+          "id": "TV001",
+          "description": "Property manager with 25 properties schedules quarterly HVAC maintenance across all units"
+        },
+        {
+          "id": "TV002",
+          "description": "Annual fire safety inspection due date falls on weekend, verify email timing"
+        },
+        {
+          "id": "TV003",
+          "description": "Task marked complete with 3 photos and notes, verify S3 storage and retrieval"
+        }
+      ],
+      "risk_register": [
+        {
+          "code": "R001",
+          "description": "Recurring task generation fails for leap year edge cases"
+        },
+        {
+          "code": "R002",
+          "description": "Email delivery rate drops below 95% due to spam filtering"
+        },
+        {
+          "code": "R003",
+          "description": "Photo storage costs exceed budget with high-volume users"
+        }
+      ],
+      "qa_questions_for_engineering": [
+        "What's the maximum photo file size and format restrictions?",
+        "How do we handle email bounces and unsubscribe requests?",
+        "Should overdue tasks have escalating reminder frequency?"
+      ],
+      "qa_constraints_check": {
+        "edge_case_coverage": "ok",
+        "loop_validity": "ok",
+        "economics_logic": "ok"
+      }
+    },
+    "pass_4": {
+      "hero_touchpoint_policy": {
+        "cadence": "every_other_day",
+        "required": true
+      },
+      "combined_task_list": [
+        {
+          "task_id": "T001",
+          "classification": "build",
+          "description": "Set up FastAPI project structure with PostgreSQL connection",
+          "depends_on": []
+        },
+        {
+          "task_id": "T002",
+          "classification": "build",
+          "description": "Implement user authentication and registration endpoints",
+          "depends_on": [
+            "T001"
+          ]
+        },
+        {
+          "task_id": "T003",
+          "classification": "build",
+          "description": "Build property CRUD operations and database models",
+          "depends_on": [
+            "T002"
+          ]
+        },
+        {
+          "task_id": "T004",
+          "classification": "build",
+          "description": "Create maintenance task template system and seeded data",
+          "depends_on": [
+            "T003"
+          ]
+        },
+        {
+          "task_id": "T005",
+          "classification": "build",
+          "description": "Implement recurring task scheduling engine",
+          "depends_on": [
+            "T004"
+          ]
+        },
+        {
+          "task_id": "T006",
+          "classification": "build",
+          "description": "Build email reminder system with SendGrid integration",
+          "depends_on": [
+            "T005"
+          ]
+        },
+        {
+          "task_id": "T007",
+          "classification": "build",
+          "description": "Implement task completion with photo upload to S3",
+          "depends_on": [
+            "T005"
+          ]
+        },
+        {
+          "task_id": "T008",
+          "classification": "build",
+          "description": "Set up Stripe subscription billing and webhooks",
+          "depends_on": [
+            "T002"
+          ]
+        },
+        {
+          "task_id": "T009",
+          "classification": "build",
+          "description": "Build React frontend property dashboard",
+          "depends_on": [
+            "T003"
+          ]
+        },
+        {
+          "task_id": "T010",
+          "classification": "build",
+          "description": "Create task calendar and completion interface",
+          "depends_on": [
+            "T007",
+            "T009"
+          ]
+        },
+        {
+          "task_id": "T011",
+          "classification": "qa",
+          "description": "Test recurring task edge cases and email delivery",
+          "depends_on": [
+            "T006",
+            "T010"
+          ]
+        },
+        {
+          "task_id": "T012",
+          "classification": "validation",
+          "description": "Beta testing with 3 property managers for 2 weeks",
+          "depends_on": [
+            "T011"
+          ]
+        },
+        {
+          "task_id": "HT001",
+          "classification": "hero_touchpoint",
+          "description": "Day 2 check-in on technical architecture decisions",
+          "depends_on": []
+        },
+        {
+          "task_id": "HT002",
+          "classification": "hero_touchpoint",
+          "description": "Day 15 review of property management workflow",
+          "depends_on": []
+        },
+        {
+          "task_id": "HT003",
+          "classification": "hero_touchpoint",
+          "description": "Day 30 demo of task scheduling engine",
+          "depends_on": []
+        },
+        {
+          "task_id": "HT004",
+          "classification": "hero_touchpoint",
+          "description": "Day 45 review of email system and billing integration",
+          "depends_on": []
+        },
+        {
+          "task_id": "HT005",
+          "classification": "hero_touchpoint",
+          "description": "Day 60 beta testing results and launch readiness",
+          "depends_on": []
+        }
+      ],
+      "day_by_day_schedule": [
+        {
+          "day_number": 1,
+          "task_ids": [
+            "T001"
+          ]
+        },
+        {
+          "day_number": 2,
+          "task_ids": [
+            "HT001"
+          ]
+        },
+        {
+          "day_number": 3,
+          "task_ids": [
+            "T002"
+          ]
+        },
+        {
+          "day_number": 8,
+          "task_ids": [
+            "T003"
+          ]
+        },
+        {
+          "day_number": 15,
+          "task_ids": [
+            "T004",
+            "HT002"
+          ]
+        },
+        {
+          "day_number": 22,
+          "task_ids": [
+            "T005"
+          ]
+        },
+        {
+          "day_number": 25,
+          "task_ids": [
+            "T008"
+          ]
+        },
+        {
+          "day_number": 30,
+          "task_ids": [
+            "T006",
+            "HT003"
+          ]
+        },
+        {
+          "day_number": 35,
+          "task_ids": [
+            "T007",
+            "T009"
+          ]
+        },
+        {
+          "day_number": 45,
+          "task_ids": [
+            "T010",
+            "HT004"
+          ]
+        },
+        {
+          "day_number": 52,
+          "task_ids": [
+            "T011"
+          ]
+        },
+        {
+          "day_number": 60,
+          "task_ids": [
+            "T012",
+            "HT005"
+          ]
+        },
+        {
+          "day_number": 75,
+          "task_ids": []
+        }
+      ],
+      "milestone_map_for_mark": [
+        {
+          "milestone": "Backend Foundation",
+          "day": 8,
+          "related_task_ids": [
+            "T001",
+            "T002",
+            "T003"
+          ]
+        },
+        {
+          "milestone": "Task Engine Complete",
+          "day": 30,
+          "related_task_ids": [
+            "T004",
+            "T005",
+            "T006"
+          ]
+        },
+        {
+          "milestone": "Full Stack Integration",
+          "day": 45,
+          "related_task_ids": [
+            "T007",
+            "T008",
+            "T009",
+            "T010"
+          ]
+        },
+        {
+          "milestone": "Beta Ready",
+          "day": 60,
+          "related_task_ids": [
+            "T011",
+            "T012"
+          ]
+        },
+        {
+          "milestone": "Launch Ready",
+          "day": 75,
+          "related_task_ids": []
+        }
+      ]
+    },
+    "pass_5": {
+      "final_milestone_map": [
+        {
+          "milestone": "Backend Foundation",
+          "day": 8,
+          "related_task_ids": [
+            "T001",
+            "T002",
+            "T003"
+          ]
+        },
+        {
+          "milestone": "Task Engine Complete",
+          "day": 30,
+          "related_task_ids": [
+            "T004",
+            "T005",
+            "T006"
+          ]
+        },
+        {
+          "milestone": "Full Stack Integration",
+          "day": 45,
+          "related_task_ids": [
+            "T007",
+            "T008",
+            "T009",
+            "T010"
+          ]
+        },
+        {
+          "milestone": "Beta Ready",
+          "day": 60,
+          "related_task_ids": [
+            "T011",
+            "T012"
+          ]
+        },
+        {
+          "milestone": "Launch Ready",
+          "day": 75,
+          "related_task_ids": []
+        }
+      ],
+      "approval_status": true,
+      "rejection_reasons": [],
+      "proposal_document_for_hero": "PropertyPulse Tier 2 MVP Proposal: 75-day build timeline for full-featured maintenance scheduling SaaS. Includes user authentication, property portfolio management, recurring task engine with 30+ pre-built templates, automated email reminders via SendGrid, photo-enabled task completion, and Stripe subscription billing. Target market: independent property managers with 10-50 units at $39-79/month pricing. Key differentiators: dead simple setup, maintenance-focused (not full property management), and affordable for small operators. Technical stack: FastAPI + React + PostgreSQL deployed on Railway/Vercel. Beta testing with 3 property managers in final 15 days. Revenue goal: $50K ARR within 12 months. This expands the Tier 1 proof-of-concept with real integrations, subscription billing, automated workflows, and production-ready architecture."
+    },
+    "pass_6": {
+      "hero_decision": "buy_tier2_build",
+      "hero_questions": [
+        "Can we add a mobile-responsive design optimization for property managers who work on-site?",
+        "Should we include a simple reporting dashboard showing maintenance completion rates by property?",
+        "What's the plan for handling customer support during the first 90 days post-launch?"
+      ]
+    }
+  }
+}
