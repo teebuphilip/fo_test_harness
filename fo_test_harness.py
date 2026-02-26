@@ -1649,6 +1649,7 @@ class FOHarness:
         self.block       = block.upper()   # 'A' or 'B'
         self.do_deploy   = do_deploy
         self.cli_args    = cli_args
+        self.confirm_run_log = (getattr(cli_args, "confirm_run_log", "NO").strip().upper() == "YES") if cli_args else False
 
         # Load intake JSON
         # Handles both pure JSON and marker-wrapped formats
@@ -2090,15 +2091,15 @@ class FOHarness:
     def _confirm_sensitive_write(self, path: Path) -> bool:
         """
         Safety prompt before writing sensitive files.
-        Set FO_SAFETY_CONFIRM=YES to auto-approve.
+        Set --confirm-run-log YES to require a prompt.
         """
-        if os.getenv("FO_SAFETY_CONFIRM", "").strip().upper() == "YES":
+        if not self.confirm_run_log:
             return True
 
         try:
             response = input(f"Confirm write to {path} (type YES to proceed): ").strip()
         except EOFError:
-            print_warning("No TTY available; refusing to write without FO_SAFETY_CONFIRM=YES")
+            print_warning("No TTY available; refusing to write without confirmation")
             return False
 
         return response == "YES"
@@ -3632,6 +3633,11 @@ Examples:
         action='store_true',
         default=False,
         help='Execute deployment after QA acceptance. Default is ZIP output only.'
+    )
+    parser.add_argument(
+        '--confirm-run-log',
+        default='NO',
+        help='Require confirmation before writing fo_run_log.csv (YES/NO). Default: NO'
     )
 
     args = parser.parse_args()
