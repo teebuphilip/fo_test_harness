@@ -20,3 +20,8 @@ date,time,startup,iterations,cost_claude,cost_chatgpt,total_cost,run_end_reason
 2026-02-25,05:37:46,ai_workforce_intelligence,1,0.0000,0.0000,0.0000,CTRL_C
 2026-02-25,05:55:24,ai_workforce_intelligence,4,1.2948,0.0927,1.3875,QA_ACCEPTED
 2026-02-25,09:03:42,wynwood_thoroughbreds,1,0.0922,0.0000,0.0922,QUESTIONS_DETECTED
+2026-02-26,05:18:57,wynwood_thoroughbreds,1,0.6044,0.0649,0.6693,QA_ACCEPTED
+2026-02-26,08:36:10,adversarial_ai_validator,1,0.4184,0.0446,0.4630,QA_ACCEPTED
+2026-02-26,09:47:04,freelance_invoice_tracker,12,3.6850,0.3055,3.9906,CTRL_C
+2026-02-26,11:21:08,freelance_invoice_tracker,4,1.4822,0.1674,1.6496,QA_ACCEPTED
+2026-02-26,12:13:26,property_manager_maintenance_scheduler,1,0.5871,0.0648,0.6519,QA_ACCEPTED
