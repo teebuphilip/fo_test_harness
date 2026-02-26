@@ -172,7 +172,43 @@ def generate_learned_via_chatgpt(table: str, csv_path: Path, model: str) -> str:
     )
     resp.raise_for_status()
     data = resp.json()
+    _log_chatgpt_cost(data)
     return data["choices"][0]["message"]["content"].strip()
+
+
+def _log_chatgpt_cost(response: dict):
+    """Append ChatGPT token usage + cost to a CSV log."""
+    usage = response.get("usage", {})
+    in_tokens = usage.get("prompt_tokens", 0) or 0
+    out_tokens = usage.get("completion_tokens", 0) or 0
+
+    in_rate = float(os.getenv("OPENAI_INPUT_PER_MTOK", "2.50"))
+    out_rate = float(os.getenv("OPENAI_OUTPUT_PER_MTOK", "10.00"))
+
+    in_cost = in_tokens * in_rate / 1_000_000
+    out_cost = out_tokens * out_rate / 1_000_000
+    total = in_cost + out_cost
+
+    log_path = Path("./harness_summary_costs.csv")
+    new_file = not log_path.exists()
+    now = datetime.now()
+
+    with log_path.open("a", newline="") as f:
+        writer = csv.writer(f)
+        if new_file:
+            writer.writerow([
+                "date", "time", "provider", "model",
+                "input_tokens", "output_tokens", "cost"
+            ])
+        writer.writerow([
+            now.strftime("%Y-%m-%d"),
+            now.strftime("%H:%M:%S"),
+            "chatgpt",
+            os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+            in_tokens,
+            out_tokens,
+            f"{total:.6f}"
+        ])
 
 
 def format_post(summaries, csv_path: Path, learned_section: str) -> str:

@@ -220,6 +220,13 @@ Generate a run summary table from `fo_run_log.csv`:
 
 Each run also saves a timestamped summary file to `harness_summaries/`.
 
+## Cost Logs
+
+Scripts that emit CSV cost logs:
+- `fo_test_harness.py` → `fo_run_log.csv` (build/QA costs per run)
+- `intake/run_intake_v7.sh` → `intake_run_costs.csv` (intake costs per call)
+- `summarize_harness_runs.py` → `harness_summary_costs.csv` (ChatGPT “What I learned” call)
+
 Check costs in console output:
 ```
 TOTAL COST (Claude + ChatGPT): $2.34
