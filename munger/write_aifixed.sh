@@ -13,7 +13,7 @@ dir="$(cd "$(dirname "$orig")" && pwd)"
 base="$(basename "$orig")"
 out="$dir/aifixed.$base"
 
-python - <<'PY'
+python - "$orig" "$fixer" "$out" <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -28,4 +28,4 @@ fx = json.loads(fixer.read_text())
 src["hero_answers"] = fx["updated_q1_q11"]
 out.write_text(json.dumps(src, indent=2))
 print(f"Wrote: {out}")
-PY "$orig" "$fixer" "$out"
+PY
