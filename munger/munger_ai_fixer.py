@@ -276,7 +276,8 @@ def run_fixer(input_data: dict, max_loops: int, provider: str,
         if status == "REJECTED":
             break
 
-        clarifications = munger_output.get("munger_report", {}).get("clarifications", [])
+        # Pull loop-2 clarifications to include MEDIUM issues
+        clarifications = munger.run_munger(input_data, None, 2).get("munger_report", {}).get("clarifications", [])
         if not clarifications:
             break
 
