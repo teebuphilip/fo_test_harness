@@ -17,6 +17,7 @@ CANDIDATES = [
     ("munger_ai_fixer", ROOT / "munger" / "munger_ai_costs.csv"),
     ("postintakeassist", ROOT / "postintakeassist" / "post_intake_ai_costs.csv"),
     ("summarize_harness_runs", ROOT / "harness_summary_costs.csv"),
+    ("intake", ROOT / "intake" / "intake_run_costs.csv"),
 ]
 
 
