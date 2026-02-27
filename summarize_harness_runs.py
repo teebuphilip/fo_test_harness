@@ -112,13 +112,7 @@ def total_spend(csv_path: Path) -> float:
 
 
 def load_ai_costs_daily() -> str:
-    path = Path("./ai_costs_daily.csv")
-    if not path.exists():
-        return ""
-    lines = [line.rstrip("\n") for line in path.read_text(encoding="utf-8").splitlines()]
-    if not lines:
-        return ""
-    return "\n".join(["AI Cost Daily Summary:", *lines])
+    return ""
 
 def generate_learned_via_chatgpt(table: str, csv_path: Path, model: str) -> str:
     api_key = os.getenv("OPENAI_API_KEY")
@@ -319,7 +313,6 @@ def format_post(summaries, csv_path: Path, learned_section: str) -> str:
     down = len(summaries)
     to_go = max(total_targets - down, 0)
 
-    ai_costs = load_ai_costs_daily()
     parts = [
         f"Title: Building {total_targets} SaaS products to stress-test my AI build harness — {down} down, {to_go} to go",
         "Body:",
@@ -333,8 +326,6 @@ def format_post(summaries, csv_path: Path, learned_section: str) -> str:
         "",
         "Following this for the next 6 months. Will post failures and edge cases as I find them."
     ]
-    if ai_costs:
-        parts.extend(["", ai_costs])
     return "\n".join(parts)
 
 def main():

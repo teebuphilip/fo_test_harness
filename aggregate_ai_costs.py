@@ -123,31 +123,23 @@ def main():
 
     print(f"Wrote: {OUTPUT}")
 
-    # Daily summary by AI provider
+    # Daily summary by AI provider (cost only)
     daily = {}
     for r in rows_out:
         date = r.get("date", "")
         ai = r.get("ai", "")
         key = (date, ai)
         if key not in daily:
-            daily[key] = {"cost": 0.0, "input": 0, "output": 0}
+            daily[key] = {"cost": 0.0}
         try:
             daily[key]["cost"] += float(r.get("cost") or 0)
-        except ValueError:
-            pass
-        try:
-            daily[key]["input"] += int(float(r.get("input tokens") or 0))
-        except ValueError:
-            pass
-        try:
-            daily[key]["output"] += int(float(r.get("output tokens") or 0))
         except ValueError:
             pass
 
     with DAILY_OUTPUT.open("w", newline="") as f:
         writer = csv.DictWriter(
             f,
-            fieldnames=["date", "ai", "cost", "input tokens", "output tokens"],
+            fieldnames=["date", "ai", "cost"],
         )
         writer.writeheader()
         for (date, ai), vals in sorted(daily.items()):
@@ -156,8 +148,6 @@ def main():
                 "date": date,
                 "ai": ai,
                 "cost": f"{cost_rounded:.2f}",
-                "input tokens": vals["input"],
-                "output tokens": vals["output"],
             })
 
     print(f"Wrote: {DAILY_OUTPUT}")
