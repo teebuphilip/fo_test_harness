@@ -12,6 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 OUTPUT = ROOT / "ai_costs_aggregated.csv"
+DAILY_OUTPUT = ROOT / "ai_costs_daily.csv"
 
 CANDIDATES = [
     ("munger_ai_fixer", ROOT / "munger" / "munger_ai_costs.csv"),
@@ -75,6 +76,44 @@ def main():
             writer.writerow(r)
 
     print(f"Wrote: {OUTPUT}")
+
+    # Daily summary by AI provider
+    daily = {}
+    for r in rows_out:
+        date = r.get("date", "")
+        ai = r.get("ai", "")
+        key = (date, ai)
+        if key not in daily:
+            daily[key] = {"cost": 0.0, "input": 0, "output": 0}
+        try:
+            daily[key]["cost"] += float(r.get("cost") or 0)
+        except ValueError:
+            pass
+        try:
+            daily[key]["input"] += int(float(r.get("input tokens") or 0))
+        except ValueError:
+            pass
+        try:
+            daily[key]["output"] += int(float(r.get("output tokens") or 0))
+        except ValueError:
+            pass
+
+    with DAILY_OUTPUT.open("w", newline="") as f:
+        writer = csv.DictWriter(
+            f,
+            fieldnames=["date", "ai", "cost", "input tokens", "output tokens"],
+        )
+        writer.writeheader()
+        for (date, ai), vals in sorted(daily.items()):
+            writer.writerow({
+                "date": date,
+                "ai": ai,
+                "cost": f"{vals['cost']:.6f}",
+                "input tokens": vals["input"],
+                "output tokens": vals["output"],
+            })
+
+    print(f"Wrote: {DAILY_OUTPUT}")
 
 
 if __name__ == "__main__":
