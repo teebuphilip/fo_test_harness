@@ -57,6 +57,13 @@ class SpecQualityScorer:
         business_intel, biz_details = self._score_business_intelligence(hero_answers)
         technical_depth, tech_details = self._score_technical_depth(hero_answers)
         
+        # Cap category scores at their max to prevent overflow
+        completeness = min(completeness, self.max_completeness)
+        consistency = min(consistency, self.max_consistency)
+        specificity = min(specificity, self.max_specificity)
+        business_intel = min(business_intel, self.max_business_intel)
+        technical_depth = min(technical_depth, self.max_technical_depth)
+        
         total = completeness + consistency + specificity + business_intel + technical_depth
         
         all_penalties = comp_details['penalties'] + cons_details['penalties'] + \

@@ -112,7 +112,7 @@ def _call_chatgpt(prompt: str, model: str) -> dict:
             {"role": "user", "content": prompt},
         ],
         "max_tokens": 900,
-        "temperature": 0.2,
+        "temperature": 0.0,
     }
     resp = requests.post(
         OPENAI_API,
