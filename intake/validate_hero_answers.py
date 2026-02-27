@@ -141,12 +141,7 @@ def validate(hero_answers: dict, mode: str, provider: str, openai_model: str, cl
     if provider == "claude":
         return _call_claude(prompt, claude_model)
 
-    # auto: ChatGPT first, Claude second
-    try:
-        return _call_chatgpt(prompt, openai_model)
-    except Exception as e:
-        last_err = e
-    return _call_claude(prompt, claude_model)
+    raise ValueError("Invalid provider")
 
 
 def _print_summary(report: dict):
@@ -168,7 +163,7 @@ def main():
     parser = argparse.ArgumentParser(description="Validate hero answers for consistency")
     parser.add_argument("hero_json", help="Path to hero.json")
     parser.add_argument("--mode", choices=["strict", "relaxed"], default="strict")
-    parser.add_argument("--provider", choices=["auto", "chatgpt", "claude"], default="auto")
+    parser.add_argument("--provider", choices=["chatgpt", "claude"], default="chatgpt")
     parser.add_argument("--openai-model", default=DEFAULT_OPENAI_MODEL)
     parser.add_argument("--claude-model", default=DEFAULT_CLAUDE_MODEL)
     parser.add_argument("--out", help="Write JSON report to file")
@@ -184,6 +179,13 @@ def main():
     if not isinstance(hero_answers, dict):
         print("Error: hero_answers not found or invalid in hero JSON")
         sys.exit(1)
+
+    if args.provider == "chatgpt" and not os.getenv("OPENAI_API_KEY"):
+        print("Error: OPENAI_API_KEY not set")
+        sys.exit(2)
+    if args.provider == "claude" and not os.getenv("ANTHROPIC_API_KEY"):
+        print("Error: ANTHROPIC_API_KEY not set")
+        sys.exit(3)
 
     report = validate(hero_answers, args.mode, args.provider, args.openai_model, args.claude_model)
 

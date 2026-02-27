@@ -338,10 +338,17 @@ def main():
     parser.add_argument("input_json", help="Hero input JSON (MUNGER_INPUT_SCHEMA)")
     parser.add_argument("--out", help="Write fixer output to path")
     parser.add_argument("--max-loops", type=int, default=2)
-    parser.add_argument("--provider", choices=["auto", "chatgpt", "claude"], default="auto")
+    parser.add_argument("--provider", choices=["chatgpt", "claude"], default="chatgpt")
     parser.add_argument("--openai-model", default=DEFAULT_OPENAI_MODEL)
     parser.add_argument("--claude-model", default=DEFAULT_CLAUDE_MODEL)
     args = parser.parse_args()
+
+    if args.provider == "chatgpt" and not os.getenv("OPENAI_API_KEY"):
+        print("Error: OPENAI_API_KEY not set")
+        sys.exit(2)
+    if args.provider == "claude" and not os.getenv("ANTHROPIC_API_KEY"):
+        print("Error: ANTHROPIC_API_KEY not set")
+        sys.exit(3)
 
     input_path = Path(args.input_json)
     if not input_path.exists():
