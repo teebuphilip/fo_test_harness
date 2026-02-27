@@ -17,7 +17,6 @@ CANDIDATES = [
     ("munger_ai_fixer", ROOT / "munger" / "munger_ai_costs.csv"),
     ("postintakeassist", ROOT / "postintakeassist" / "post_intake_ai_costs.csv"),
     ("summarize_harness_runs", ROOT / "harness_summary_costs.csv"),
-    ("intake", ROOT / "intake" / "intake_run_costs.csv"),
 ]
 
 
@@ -27,6 +26,17 @@ def _read_rows(path: Path):
     with path.open("r", newline="") as f:
         reader = csv.DictReader(f)
         return list(reader)
+
+
+def _read_intake_runs():
+    rows_out = []
+    intake_root = ROOT / "intake" / "intake_runs"
+    if not intake_root.exists():
+        return rows_out
+    for path in intake_root.rglob("intake_run_costs.csv"):
+        for r in _read_rows(path):
+            rows_out.append(r)
+    return rows_out
 
 
 def main():
@@ -43,6 +53,17 @@ def main():
                 "input tokens": r.get("input_tokens", ""),
                 "output tokens": r.get("output_tokens", ""),
             })
+
+    for r in _read_intake_runs():
+        rows_out.append({
+            "date": r.get("date", ""),
+            "time": r.get("time", ""),
+            "app": "intake",
+            "ai": r.get("provider", ""),
+            "cost": r.get("cost", ""),
+            "input tokens": r.get("input_tokens", ""),
+            "output tokens": r.get("output_tokens", ""),
+        })
 
     with OUTPUT.open("w", newline="") as f:
         writer = csv.DictWriter(
