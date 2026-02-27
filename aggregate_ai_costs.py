@@ -7,6 +7,7 @@ date,time,app,ai,cost,input tokens,output tokens
 """
 
 import csv
+import math
 from pathlib import Path
 
 
@@ -45,23 +46,27 @@ def main():
     for app, path in CANDIDATES:
         rows = _read_rows(path)
         for r in rows:
+            cost_val = float(r.get("cost") or 0)
+            cost_rounded = math.ceil(cost_val * 100) / 100
             rows_out.append({
                 "date": r.get("date", ""),
                 "time": r.get("time", ""),
                 "app": app,
                 "ai": r.get("provider", ""),
-                "cost": f"{float(r.get('cost') or 0):.2f}",
+                "cost": f"{cost_rounded:.2f}",
                 "input tokens": r.get("input_tokens", ""),
                 "output tokens": r.get("output_tokens", ""),
             })
 
     for r in _read_intake_runs():
+        cost_val = float(r.get("cost") or 0)
+        cost_rounded = math.ceil(cost_val * 100) / 100
         rows_out.append({
             "date": r.get("date", ""),
             "time": r.get("time", ""),
             "app": "intake",
             "ai": r.get("provider", ""),
-            "cost": f"{float(r.get('cost') or 0):.2f}",
+            "cost": f"{cost_rounded:.2f}",
             "input tokens": r.get("input_tokens", ""),
             "output tokens": r.get("output_tokens", ""),
         })
@@ -105,10 +110,11 @@ def main():
         )
         writer.writeheader()
         for (date, ai), vals in sorted(daily.items()):
+            cost_rounded = math.ceil(vals["cost"] * 100) / 100
             writer.writerow({
                 "date": date,
                 "ai": ai,
-                "cost": f"{vals['cost']:.2f}",
+                "cost": f"{cost_rounded:.2f}",
                 "input tokens": vals["input"],
                 "output tokens": vals["output"],
             })
