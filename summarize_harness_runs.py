@@ -110,6 +110,16 @@ def total_spend(csv_path: Path) -> float:
                 continue
     return total
 
+
+def load_ai_costs_daily() -> str:
+    path = Path("./ai_costs_daily.csv")
+    if not path.exists():
+        return ""
+    lines = [line.rstrip("\n") for line in path.read_text(encoding="utf-8").splitlines()]
+    if not lines:
+        return ""
+    return "\n".join(["AI Cost Daily Summary:", *lines])
+
 def generate_learned_via_chatgpt(table: str, csv_path: Path, model: str) -> str:
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
@@ -309,7 +319,8 @@ def format_post(summaries, csv_path: Path, learned_section: str) -> str:
     down = len(summaries)
     to_go = max(total_targets - down, 0)
 
-    return "\n".join([
+    ai_costs = load_ai_costs_daily()
+    parts = [
         f"Title: Building {total_targets} SaaS products to stress-test my AI build harness — {down} down, {to_go} to go",
         "Body:",
         "I built a deterministic SaaS harness with 53 capabilities (auth, payments, fraud detection, GDPR compliance, the works). Now I need to know if it actually works at scale.",
@@ -321,7 +332,10 @@ def format_post(summaries, csv_path: Path, learned_section: str) -> str:
         learned_section,
         "",
         "Following this for the next 6 months. Will post failures and edge cases as I find them."
-    ])
+    ]
+    if ai_costs:
+        parts.extend(["", ai_costs])
+    return "\n".join(parts)
 
 def main():
     parser = argparse.ArgumentParser(description="Summarize harness runs and draft a post")
