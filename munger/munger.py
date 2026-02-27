@@ -764,7 +764,7 @@ def _build_clarifications(issues: List[dict], templates: dict, loop: int) -> Lis
     if loop == 1:
         sev_allowed = {"CRITICAL"}
     else:
-        sev_allowed = {"CRITICAL", "HIGH"}
+        sev_allowed = {"CRITICAL", "HIGH", "MEDIUM"}
 
     clarifications = []
     for issue in issues:
