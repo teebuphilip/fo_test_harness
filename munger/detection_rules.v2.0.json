@@ -1,0 +1,502 @@
+{
+  "schema_version": "2.0",
+  "ruleset_id": "fo_munger_ruleset",
+  "ruleset_version": "2.0.0",
+  "kind": "detection_rules",
+  "last_updated": "2026-02-27",
+  "rules": [
+    {
+      "rule_id": "DR001_missing_problem_customer",
+      "category": "completeness",
+      "severity": "CRITICAL",
+      "mode": "missing_or_empty",
+      "target_paths": [
+        "hero.problem_customer"
+      ],
+      "clarification_template_id": "CT001_problem_customer"
+    },
+    {
+      "rule_id": "DR002_missing_target_user",
+      "category": "completeness",
+      "severity": "CRITICAL",
+      "mode": "missing_or_empty",
+      "target_paths": [
+        "hero.target_user"
+      ],
+      "clarification_template_id": "CT002_target_user"
+    },
+    {
+      "rule_id": "DR003_missing_must_have_features",
+      "category": "completeness",
+      "severity": "CRITICAL",
+      "mode": "missing_or_empty",
+      "target_paths": [
+        "hero.must_have_features"
+      ],
+      "clarification_template_id": "CT004_must_have_features"
+    },
+    {
+      "rule_id": "DR004_missing_architecture",
+      "category": "completeness",
+      "severity": "CRITICAL",
+      "mode": "missing_or_empty",
+      "target_paths": [
+        "hero.architecture"
+      ],
+      "clarification_template_id": "CT011_architecture"
+    },
+    {
+      "rule_id": "DR010_placeholder_text",
+      "category": "clarity",
+      "severity": "HIGH",
+      "mode": "regex",
+      "target_paths": [
+        "hero.problem_customer",
+        "hero.success_metric",
+        "hero.shipping_preference"
+      ],
+      "regex": "\\b(TBD|tbd|lorem ipsum|fixme|todo|TODO|FIXME)\\b",
+      "clarification_template_id": "CT010_clarity_cleanup"
+    },
+    {
+      "rule_id": "DR011_vague_terms",
+      "category": "clarity",
+      "severity": "MEDIUM",
+      "mode": "regex",
+      "target_paths": [
+        "hero.problem_customer",
+        "hero.success_metric"
+      ],
+      "regex": "\\b(some|various|many|stuff|things)\\b",
+      "clarification_template_id": "CT010_clarity_cleanup"
+    },
+    {
+      "rule_id": "DR020_payments_true_but_no_stripe",
+      "category": "consistency",
+      "severity": "HIGH",
+      "mode": "cross_field",
+      "primary_path": "hero.architecture.payments_required",
+      "check_path": "hero.integrations",
+      "predicate": {
+        "equals": true
+      },
+      "must_contain_any": [
+        "Stripe",
+        "stripe"
+      ],
+      "clarification_template_id": "CT020_payments_billing",
+      "target_paths": []
+    },
+    {
+      "rule_id": "DR021_background_jobs_true_but_no_email_provider",
+      "category": "consistency",
+      "severity": "MEDIUM",
+      "mode": "cross_field",
+      "primary_path": "hero.architecture.background_jobs",
+      "check_path": "hero.integrations",
+      "predicate": {
+        "equals": true
+      },
+      "must_contain_any": [
+        "SendGrid",
+        "SES",
+        "Mailgun",
+        "Postmark",
+        "email"
+      ],
+      "clarification_template_id": "CT021_background_jobs",
+      "target_paths": []
+    },
+    {
+      "rule_id": "DR022_reporting_true_but_no_reporting_words",
+      "category": "consistency",
+      "severity": "MEDIUM",
+      "mode": "cross_field",
+      "primary_path": "hero.architecture.dashboard_reporting",
+      "check_path": "hero.must_have_features",
+      "predicate": {
+        "equals": true
+      },
+      "must_contain_regex": "(dashboard|report|analytics|export|download)",
+      "clarification_template_id": "CT022_reporting",
+      "target_paths": []
+    },
+    {
+      "rule_id": "DR023_pdf_true_but_no_pdf_feature",
+      "category": "consistency",
+      "severity": "MEDIUM",
+      "mode": "cross_field",
+      "primary_path": "hero.architecture.pdf_generation",
+      "check_path": "hero.must_have_features",
+      "predicate": {
+        "equals": true
+      },
+      "must_contain_regex": "(pdf|invoice|document|generate)",
+      "clarification_template_id": "CT023_pdf_generation",
+      "target_paths": []
+    },
+    {
+      "rule_id": "DR060_q4_q5_contradiction",
+      "category": "consistency",
+      "severity": "CRITICAL",
+      "mode": "cross_field",
+      "description": "Feature appears in both must-haves and non-goals",
+      "primary_path": "hero.must_have_features",
+      "check_path": "hero.non_goals",
+      "comparison": "keyword_overlap",
+      "similarity_threshold": 0.7,
+      "clarification_template_id": "CT060_resolve_contradiction",
+      "target_paths": []
+    },
+    {
+      "rule_id": "DR061_multi_tenant_conflicts_with_single_user",
+      "category": "consistency",
+      "severity": "CRITICAL",
+      "mode": "cross_field",
+      "description": "Q11 multi_tenant=false but features mention workspace/organization",
+      "primary_path": "hero.architecture.multi_tenant",
+      "check_paths": [
+        "hero.must_have_features",
+        "hero.constraints"
+      ],
+      "predicate": {
+        "equals": false
+      },
+      "must_not_contain_regex": "(organization|workspace|tenant|team workspace|multi-user|company account)",
+      "clarification_template_id": "CT037_multi_tenant_contradiction",
+      "target_paths": []
+    },
+    {
+      "rule_id": "DR062_external_apis_not_in_integrations",
+      "category": "consistency",
+      "severity": "MEDIUM",
+      "mode": "cross_field",
+      "description": "Architecture external_apis must be subset of integrations",
+      "primary_path": "hero.architecture.external_apis",
+      "check_path": "hero.integrations",
+      "must_be_subset": true,
+      "clarification_template_id": "CT051_sync_api_lists",
+      "target_paths": []
+    },
+    {
+      "rule_id": "DR063_subscription_billing_without_payments",
+      "category": "consistency",
+      "severity": "HIGH",
+      "mode": "cross_field",
+      "description": "Subscription billing requires payments_required=true",
+      "primary_path": "hero.architecture.subscription_billing",
+      "check_path": "hero.architecture.payments_required",
+      "predicate": {
+        "equals": true
+      },
+      "must_equal": true,
+      "clarification_template_id": "CT020_payments_billing",
+      "target_paths": []
+    },
+    {
+      "rule_id": "DR064_tech_stack_incompatible_with_integration",
+      "category": "consistency",
+      "severity": "HIGH",
+      "mode": "compatibility_check",
+      "description": "Tech stack doesn't support listed integrations",
+      "incompatible_combinations": [
+        {
+          "tech_stack_pattern": "nocode",
+          "integration_pattern": "(custom API|webhook|SDK)",
+          "reason": "Nocode platforms can't handle custom API integrations"
+        }
+      ],
+      "clarification_template_id": "CT046_tech_compatibility",
+      "target_paths": []
+    },
+    {
+      "rule_id": "DR065_authentication_required_but_no_verification",
+      "category": "consistency",
+      "severity": "LOW",
+      "mode": "cross_field",
+      "description": "Auth required but no mention of email verification",
+      "primary_path": "hero.architecture.authentication_required",
+      "check_path": "hero.must_have_features",
+      "predicate": {
+        "equals": true
+      },
+      "should_contain_regex": "(email verification|verify email|confirm email|activation)",
+      "clarification_template_id": "CT054_email_verification",
+      "target_paths": []
+    },
+    {
+      "rule_id": "DR030_pricing_range_without_tiers",
+      "category": "pricing",
+      "severity": "CRITICAL",
+      "mode": "regex",
+      "description": "Pricing range ($X-Y) without explicit tier structure",
+      "target_paths": [
+        "hero.constraints.economics"
+      ],
+      "regex": "\\$\\d+-\\d+.*(?:based on|per|depending on|for)",
+      "clarification_template_id": "CT030_pricing_tiers",
+      "unless_regex": "(?!.*(?:tier|plan).*\\$\\d+.*(?:for|up to|max).*\\d+)"
+    },
+    {
+      "rule_id": "DR031_free_tier_without_conversion",
+      "category": "pricing",
+      "severity": "MEDIUM",
+      "mode": "regex",
+      "description": "Mentions free tier but no conversion mechanism",
+      "target_paths": [
+        "hero.constraints.economics"
+      ],
+      "regex": "(?:free tier|free plan|freemium)",
+      "clarification_template_id": "CT031_freemium_conversion",
+      "unless_regex": "(?!.*(?:convert|upgrade|paid|premium|subscription))"
+    },
+    {
+      "rule_id": "DR032_tier_limits_dont_cover_target_market",
+      "category": "pricing",
+      "severity": "HIGH",
+      "mode": "cross_field_numeric",
+      "description": "Top tier max < target market upper bound",
+      "extract_from_Q2": "(?:(\\d+)-)?(\\d+)\\s+(?:units|properties|users|clients)",
+      "extract_from_economics": "(?:up to|max|maximum)\\s+(\\d+)",
+      "validation": "tier_max >= Q2_max",
+      "clarification_template_id": "CT044_tier_limit_increase",
+      "target_paths": []
+    },
+    {
+      "rule_id": "DR033_subscription_without_billing_frequency",
+      "category": "pricing",
+      "severity": "MEDIUM",
+      "mode": "regex",
+      "description": "Mentions subscription but no monthly/annual specified",
+      "target_paths": [
+        "hero.constraints.economics"
+      ],
+      "regex": "subscription",
+      "clarification_template_id": "CT032_billing_frequency",
+      "unless_regex": "(?!.*(?:monthly|annual|yearly|month|year))"
+    },
+    {
+      "rule_id": "DR034_pay_per_use_without_cost_structure",
+      "category": "pricing",
+      "severity": "HIGH",
+      "mode": "regex",
+      "description": "Pay-per-X pricing but no cost per unit",
+      "target_paths": [
+        "hero.constraints.economics"
+      ],
+      "regex": "(?:pay-per|per-transaction|per-analysis|per-use|usage-based)",
+      "clarification_template_id": "CT033_per_unit_price",
+      "unless_regex": "(?!.*\\$\\d+\\s+per)"
+    },
+    {
+      "rule_id": "DR040_quantitative_range_without_bounds",
+      "category": "quantitative",
+      "severity": "HIGH",
+      "mode": "regex",
+      "description": "X-Y range for countable items without min/target/max",
+      "target_paths": [
+        "hero.data_sources",
+        "hero.must_have_features"
+      ],
+      "regex": "\\d+-\\d+\\s+(?:templates|tasks|items|features|users|properties|clients|invoices)",
+      "clarification_template_id": "CT040_quantitative_bounds",
+      "unless_regex": "(?!.*(?:minimum|minimum:|min:|target:|maximum|max:))"
+    },
+    {
+      "rule_id": "DR041_vague_approximations",
+      "category": "quantitative",
+      "severity": "MEDIUM",
+      "mode": "regex",
+      "description": "Vague quantifiers like approximately, around, roughly",
+      "target_paths": [
+        "hero.success_metric",
+        "hero.constraints"
+      ],
+      "regex": "(?:approximately|around|roughly|about|~)\\s+\\d+",
+      "clarification_template_id": "CT041_exact_number"
+    },
+    {
+      "rule_id": "DR042_percentage_without_baseline",
+      "category": "quantitative",
+      "severity": "MEDIUM",
+      "mode": "regex",
+      "description": "Percentage without baseline specified",
+      "target_paths": [
+        "hero.success_metric"
+      ],
+      "regex": "\\d+%",
+      "clarification_template_id": "CT042_percentage_baseline",
+      "unless_regex": "(?!.*(?:of|from)\\s+\\d+)"
+    },
+    {
+      "rule_id": "DR050_unresolved_either_or_choice",
+      "category": "decision",
+      "severity": "HIGH",
+      "mode": "regex",
+      "description": "Could be A or B without decision made",
+      "target_paths": [
+        "all"
+      ],
+      "regex": "(?:could be|might be|possibly|maybe|either|or perhaps)\\s+(?:\\w+\\s+){0,5}(?:or|vs)",
+      "clarification_template_id": "CT034_force_decision",
+      "unless_regex": "(?!.*(?:Phase 2|future|later|post-MVP))"
+    },
+    {
+      "rule_id": "DR051_phase_2_feature_in_mvp",
+      "category": "decision",
+      "severity": "HIGH",
+      "mode": "cross_field",
+      "description": "Q8 lists as Phase 2 but Q4 includes as must-have",
+      "primary_path": "hero.integrations",
+      "check_path": "hero.must_have_features",
+      "filter_primary": "Phase 2",
+      "comparison": "keyword_overlap",
+      "clarification_template_id": "CT035_mvp_vs_phase2",
+      "target_paths": []
+    },
+    {
+      "rule_id": "DR070_success_metrics_before_build_complete",
+      "category": "timeline",
+      "severity": "HIGH",
+      "mode": "temporal_check",
+      "description": "Q3 timeline < Q11 build timeline",
+      "extract_from_Q3": "Within (\\d+) days",
+      "extract_from_Q11": "expected_timeline_days: (\\d+)",
+      "validation": "Q3_days >= Q11_days",
+      "clarification_template_id": "CT043_timeline_adjustment",
+      "target_paths": []
+    },
+    {
+      "rule_id": "DR071_build_time_unrealistic_for_tier",
+      "category": "timeline",
+      "severity": "HIGH",
+      "mode": "business_logic_check",
+      "description": "Build timeline too short for tier complexity",
+      "rules": {
+        "tier_1": {
+          "min_days": 7,
+          "max_days": 30
+        },
+        "tier_2": {
+          "min_days": 30,
+          "max_days": 60
+        },
+        "tier_3": {
+          "min_days": 60,
+          "max_days": 120
+        },
+        "tier_4": {
+          "min_days": 120,
+          "max_days": 180
+        }
+      },
+      "validation": "days >= tier_rules[tier].min_days",
+      "clarification_template_id": "CT043_timeline_adjustment",
+      "target_paths": []
+    },
+    {
+      "rule_id": "DR080_constraint_in_risk_section",
+      "category": "constraint",
+      "severity": "HIGH",
+      "mode": "regex",
+      "description": "Enforceable constraint in Q9 risks instead of Q11",
+      "target_paths": [
+        "hero.risks"
+      ],
+      "regex": "(?:cap at|limit to|maximum|max|must not exceed|should be under)\\s+\\d+",
+      "clarification_template_id": "CT045_move_constraint_to_q11"
+    },
+    {
+      "rule_id": "DR081_soft_constraint_without_rationale",
+      "category": "constraint",
+      "severity": "LOW",
+      "mode": "regex",
+      "description": "Should/prefer without explaining why",
+      "target_paths": [
+        "hero.constraints",
+        "hero.shipping_preference"
+      ],
+      "regex": "(?:should|prefer|ideally|would like)",
+      "clarification_template_id": "CT054_constraint_rationale",
+      "unless_regex": "(?!.*(?:because|since|due to|to avoid))"
+    },
+    {
+      "rule_id": "DR082_q4_feature_missing_q11_flag",
+      "category": "constraint",
+      "severity": "MEDIUM",
+      "mode": "feature_to_flag_mapping",
+      "description": "Q4 must-have feature lacks Q11 architecture flag",
+      "mappings": {
+        "(user registration|login|auth|sign up)": "authentication_required",
+        "(role|permission|access control)": "role_based_access",
+        "(tenant|workspace|organization)": "multi_tenant",
+        "(payment|billing|subscription|stripe)": "payments_required",
+        "(pdf|document generation)": "pdf_generation",
+        "(dashboard|report|analytics)": "dashboard_reporting",
+        "(background job|scheduled task|cron|reminder)": "background_jobs"
+      },
+      "clarification_template_id": "CT051_add_architecture_flag",
+      "target_paths": []
+    },
+    {
+      "rule_id": "DR083_background_jobs_without_failure_risk",
+      "category": "constraint",
+      "severity": "MEDIUM",
+      "mode": "cross_field",
+      "description": "Background jobs enabled but no failure risk mentioned",
+      "primary_path": "hero.architecture.background_jobs",
+      "check_path": "hero.risks",
+      "predicate": {
+        "equals": true
+      },
+      "should_contain_regex": "(job failure|job|cron|scheduled task|background|queue)",
+      "clarification_template_id": "CT052_add_job_failure_risk",
+      "target_paths": []
+    },
+    {
+      "rule_id": "DR084_email_integration_without_deliverability_risk",
+      "category": "constraint",
+      "severity": "LOW",
+      "mode": "cross_field",
+      "description": "Email service but no deliverability risk",
+      "primary_path": "hero.integrations",
+      "check_path": "hero.risks",
+      "filter_primary": "(?:SendGrid|AWS SES|email|transactional email)",
+      "should_contain_regex": "(deliverability|spam|SPF|DKIM|email)",
+      "clarification_template_id": "CT053_add_email_risk",
+      "target_paths": []
+    },
+    {
+      "rule_id": "DR085_pdf_generation_without_library_choice",
+      "category": "constraint",
+      "severity": "LOW",
+      "mode": "cross_field",
+      "description": "PDF generation enabled but no library specified",
+      "primary_path": "hero.architecture.pdf_generation",
+      "check_paths": [
+        "hero.integrations",
+        "hero.shipping_preference"
+      ],
+      "predicate": {
+        "equals": true
+      },
+      "should_contain_regex": "(ReportLab|WeasyPrint|pdfkit|wkhtmltopdf|Puppeteer|PDF)",
+      "clarification_template_id": "CT036_pdf_library_choice",
+      "target_paths": []
+    },
+    {
+      "rule_id": "DR086_q11_external_apis_missing_from_q8",
+      "category": "constraint",
+      "severity": "MEDIUM",
+      "mode": "cross_field",
+      "description": "Q11 external_apis != Q8 MVP integrations",
+      "primary_path": "hero.integrations",
+      "check_path": "hero.architecture.external_apis",
+      "filter_primary": "required for MVP",
+      "must_match_array": true,
+      "clarification_template_id": "CT051_sync_api_lists",
+      "target_paths": []
+    }
+  ],
+  "total_rules": 35
+}

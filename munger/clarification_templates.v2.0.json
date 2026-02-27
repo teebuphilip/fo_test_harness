@@ -1,0 +1,1256 @@
+{
+  "schema_version": "2.0",
+  "ruleset_id": "fo_munger_ruleset",
+  "ruleset_version": "2.0.0",
+  "kind": "clarification_templates",
+  "last_updated": "2026-02-27",
+  "templates": [
+    {
+      "template_id": "CT001_problem_customer",
+      "title": "Define the customer problem precisely",
+      "question": "Rewrite the problem in 2\u20135 sentences. Include: who has the problem, what they do today, frequency, and measurable pain (time/$/risk).",
+      "response_schema": {
+        "type": "object",
+        "required": [
+          "problem_customer"
+        ],
+        "properties": {
+          "problem_customer": {
+            "type": "string",
+            "minLength": 50
+          }
+        },
+        "additionalProperties": false
+      },
+      "apply_patch": [
+        {
+          "op": "replace",
+          "path": "hero.problem_customer",
+          "from_answer": "problem_customer"
+        }
+      ]
+    },
+    {
+      "template_id": "CT002_target_user",
+      "title": "List the target user types",
+      "question": "Provide 1\u20135 bullet items describing the primary user(s). Each bullet should be a concrete segment (role + context).",
+      "response_schema": {
+        "type": "object",
+        "required": [
+          "target_user"
+        ],
+        "properties": {
+          "target_user": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 5
+            },
+            "minItems": 1,
+            "maxItems": 5
+          }
+        },
+        "additionalProperties": false
+      },
+      "apply_patch": [
+        {
+          "op": "replace",
+          "path": "hero.target_user",
+          "from_answer": "target_user"
+        }
+      ]
+    },
+    {
+      "template_id": "CT004_must_have_features",
+      "title": "Clarify must-have features",
+      "question": "List 3\u201312 must-have features for v1. Use short bullets (feature name + 5\u201312 words).",
+      "response_schema": {
+        "type": "object",
+        "required": [
+          "must_have_features"
+        ],
+        "properties": {
+          "must_have_features": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 5
+            },
+            "minItems": 3,
+            "maxItems": 12
+          }
+        },
+        "additionalProperties": false
+      },
+      "apply_patch": [
+        {
+          "op": "replace",
+          "path": "hero.must_have_features",
+          "from_answer": "must_have_features"
+        }
+      ]
+    },
+    {
+      "template_id": "CT010_clarity_cleanup",
+      "title": "Remove placeholders / vague wording",
+      "question": "Rewrite the flagged text(s) to remove placeholders and vague words. Keep meaning; add specifics where missing.",
+      "response_schema": {
+        "type": "object",
+        "required": [
+          "fields"
+        ],
+        "properties": {
+          "fields": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "path",
+                "value"
+              ],
+              "properties": {
+                "path": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string",
+                  "minLength": 10
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "apply_patch": [
+        {
+          "op": "replace_many",
+          "paths_from_array": "fields"
+        }
+      ]
+    },
+    {
+      "template_id": "CT011_architecture",
+      "title": "Fill the architecture flags deterministically",
+      "question": "Answer the architecture checklist. Provide booleans + numbers only (and list external APIs).",
+      "response_schema": {
+        "type": "object",
+        "required": [
+          "architecture"
+        ],
+        "properties": {
+          "architecture": {
+            "type": "object",
+            "required": [
+              "authentication_required",
+              "role_based_access",
+              "multi_tenant",
+              "persistent_database",
+              "payments_required",
+              "subscription_billing",
+              "dashboard_reporting",
+              "pdf_generation",
+              "external_apis",
+              "background_jobs",
+              "admin_panel",
+              "expected_timeline_days",
+              "minimum_tier"
+            ],
+            "properties": {
+              "authentication_required": {
+                "type": "boolean"
+              },
+              "role_based_access": {
+                "type": "boolean"
+              },
+              "multi_tenant": {
+                "type": "boolean"
+              },
+              "persistent_database": {
+                "type": "boolean"
+              },
+              "payments_required": {
+                "type": "boolean"
+              },
+              "subscription_billing": {
+                "type": "boolean"
+              },
+              "dashboard_reporting": {
+                "type": "boolean"
+              },
+              "pdf_generation": {
+                "type": "boolean"
+              },
+              "external_apis": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 0
+              },
+              "background_jobs": {
+                "type": "boolean"
+              },
+              "admin_panel": {
+                "type": "boolean"
+              },
+              "expected_timeline_days": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 365
+              },
+              "minimum_tier": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 4
+              },
+              "tech_stack": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "deployment": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "apply_patch": [
+        {
+          "op": "replace",
+          "path": "hero.architecture",
+          "from_answer": "architecture"
+        }
+      ]
+    },
+    {
+      "template_id": "CT030_pricing_tiers",
+      "title": "Provide explicit pricing tiers (no ranges)",
+      "question": "Convert the pricing into explicit tiers. Provide tier IDs T1..Tn, price in USD, billing frequency, and the unit limit (e.g., properties/clients/users).",
+      "response_schema": {
+        "type": "object",
+        "required": [
+          "pricing"
+        ],
+        "properties": {
+          "pricing": {
+            "type": "object",
+            "required": [
+              "pricing_model",
+              "billing_frequency",
+              "tiers"
+            ],
+            "properties": {
+              "pricing_model": {
+                "type": "string",
+                "enum": [
+                  "subscription",
+                  "one_time",
+                  "usage_based",
+                  "freemium",
+                  "unknown"
+                ]
+              },
+              "billing_frequency": {
+                "type": "string",
+                "enum": [
+                  "monthly",
+                  "annual",
+                  "one_time",
+                  "unknown"
+                ]
+              },
+              "tiers": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "tier_id",
+                    "price_usd",
+                    "unit_limit"
+                  ],
+                  "properties": {
+                    "tier_id": {
+                      "type": "string",
+                      "pattern": "^T\\d+$"
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "price_usd": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "unit_limit": {
+                      "type": "object",
+                      "required": [
+                        "unit",
+                        "max"
+                      ],
+                      "properties": {
+                        "unit": {
+                          "type": "string",
+                          "enum": [
+                            "properties",
+                            "clients",
+                            "users",
+                            "invoices",
+                            "tasks",
+                            "projects",
+                            "unknown"
+                          ]
+                        },
+                        "max": {
+                          "type": "integer",
+                          "minimum": 1
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "notes": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "freemium": {
+                "type": "object",
+                "properties": {
+                  "has_free": {
+                    "type": "boolean"
+                  },
+                  "conversion_mechanism": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "apply_patch": [
+        {
+          "op": "replace",
+          "path": "hero.constraints.economics",
+          "from_answer": "pricing",
+          "wrap": "{\"pricing\": <pricing>}"
+        }
+      ]
+    },
+    {
+      "template_id": "CT031_freemium_conversion",
+      "title": "Define freemium conversion mechanism",
+      "question": "If you offer a free tier, specify how users convert to paid (hard limit, feature gate, trial, watermark, etc).",
+      "response_schema": {
+        "type": "object",
+        "required": [
+          "freemium"
+        ],
+        "properties": {
+          "freemium": {
+            "type": "object",
+            "required": [
+              "has_free",
+              "conversion_mechanism"
+            ],
+            "properties": {
+              "has_free": {
+                "type": "boolean"
+              },
+              "conversion_mechanism": {
+                "type": "string",
+                "minLength": 10
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "apply_patch": [
+        {
+          "op": "merge",
+          "path": "hero.constraints.economics.pricing.freemium",
+          "from_answer": "freemium"
+        }
+      ]
+    },
+    {
+      "template_id": "CT032_billing_frequency",
+      "title": "Confirm billing frequency",
+      "question": "Confirm billing frequency for pricing (monthly, annual, one_time).",
+      "response_schema": {
+        "type": "object",
+        "required": [
+          "billing_frequency"
+        ],
+        "properties": {
+          "billing_frequency": {
+            "type": "string",
+            "enum": [
+              "monthly",
+              "annual",
+              "one_time",
+              "unknown"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "apply_patch": [
+        {
+          "op": "replace",
+          "path": "hero.constraints.economics.pricing.billing_frequency",
+          "from_answer": "billing_frequency"
+        }
+      ]
+    },
+    {
+      "template_id": "CT033_per_unit_price",
+      "title": "Specify per-unit pricing basis",
+      "question": "Specify what the price scales with (properties/clients/users/etc) and the max units for each tier.",
+      "response_schema": {
+        "type": "object",
+        "required": [
+          "tiers"
+        ],
+        "properties": {
+          "tiers": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "tier_id",
+                "price_usd",
+                "unit_limit"
+              ],
+              "properties": {
+                "tier_id": {
+                  "type": "string",
+                  "pattern": "^T\\d+$"
+                },
+                "name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "price_usd": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "unit_limit": {
+                  "type": "object",
+                  "required": [
+                    "unit",
+                    "max"
+                  ],
+                  "properties": {
+                    "unit": {
+                      "type": "string",
+                      "enum": [
+                        "properties",
+                        "clients",
+                        "users",
+                        "invoices",
+                        "tasks",
+                        "projects",
+                        "unknown"
+                      ]
+                    },
+                    "max": {
+                      "type": "integer",
+                      "minimum": 1
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "notes": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "apply_patch": [
+        {
+          "op": "replace",
+          "path": "hero.constraints.economics.pricing.tiers",
+          "from_answer": "tiers"
+        }
+      ]
+    },
+    {
+      "template_id": "CT034_force_decision",
+      "title": "Force a single decision (remove OR/AND ambiguity)",
+      "question": "Pick exactly one option and restate it plainly (no OR/AND). Return the updated text for the provided path.",
+      "response_schema": {
+        "type": "object",
+        "required": [
+          "path",
+          "value"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string",
+            "minLength": 5
+          }
+        },
+        "additionalProperties": false
+      },
+      "apply_patch": [
+        {
+          "op": "replace_dynamic",
+          "path_from_answer": "path",
+          "value_from_answer": "value"
+        }
+      ]
+    },
+    {
+      "template_id": "CT035_mvp_vs_phase2",
+      "title": "Separate MVP vs Phase 2",
+      "question": "Split the listed items into MVP (v1) and Phase 2. Provide two arrays.",
+      "response_schema": {
+        "type": "object",
+        "required": [
+          "mvp",
+          "phase2"
+        ],
+        "properties": {
+          "mvp": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 3
+            },
+            "minItems": 1
+          },
+          "phase2": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 3
+            },
+            "minItems": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "apply_patch": [
+        {
+          "op": "replace",
+          "path": "hero.must_have_features",
+          "from_answer": "mvp"
+        },
+        {
+          "op": "replace",
+          "path": "hero.integrations",
+          "from_answer": "phase2",
+          "note": "If these are integrations, move appropriate subset; otherwise ignore."
+        }
+      ]
+    },
+    {
+      "template_id": "CT040_quantitative_bounds",
+      "title": "Provide min/target/max bounds",
+      "question": "For each numeric range you stated, provide explicit min/target/max with units.",
+      "response_schema": {
+        "type": "object",
+        "required": [
+          "quantitative_bounds"
+        ],
+        "properties": {
+          "quantitative_bounds": {
+            "type": "object",
+            "required": [
+              "metrics"
+            ],
+            "properties": {
+              "metrics": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "name",
+                    "unit",
+                    "min",
+                    "target",
+                    "max"
+                  ],
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "minLength": 2
+                    },
+                    "unit": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "min": {
+                      "type": "number"
+                    },
+                    "target": {
+                      "type": "number"
+                    },
+                    "max": {
+                      "type": "number"
+                    },
+                    "baseline": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "apply_patch": [
+        {
+          "op": "replace",
+          "path": "hero.constraints.quantitative_bounds",
+          "from_answer": "quantitative_bounds"
+        }
+      ]
+    },
+    {
+      "template_id": "CT041_exact_number",
+      "title": "Replace approximate numbers with exact targets",
+      "question": "Replace approximate numbers with exact target values (and unit).",
+      "response_schema": {
+        "type": "object",
+        "required": [
+          "fields"
+        ],
+        "properties": {
+          "fields": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "path",
+                "value"
+              ],
+              "properties": {
+                "path": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string",
+                  "minLength": 3
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "apply_patch": [
+        {
+          "op": "replace_many",
+          "paths_from_array": "fields"
+        }
+      ]
+    },
+    {
+      "template_id": "CT042_percentage_baseline",
+      "title": "Add baseline for percentage metrics",
+      "question": "For each percentage, specify the baseline (e.g., '10% of 200 users' or 'reduce churn from 10% to 7%').",
+      "response_schema": {
+        "type": "object",
+        "required": [
+          "success_metric"
+        ],
+        "properties": {
+          "success_metric": {
+            "type": "string",
+            "minLength": 10
+          }
+        },
+        "additionalProperties": false
+      },
+      "apply_patch": [
+        {
+          "op": "replace",
+          "path": "hero.success_metric",
+          "from_answer": "success_metric"
+        }
+      ]
+    },
+    {
+      "template_id": "CT020_payments_billing",
+      "title": "Confirm billing integration",
+      "question": "Payments are required but Stripe is not listed. Update integrations to include your billing provider (Stripe recommended).",
+      "response_schema": {
+        "type": "object",
+        "required": [
+          "integrations"
+        ],
+        "properties": {
+          "integrations": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 2
+            },
+            "minItems": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "apply_patch": [
+        {
+          "op": "replace",
+          "path": "hero.integrations",
+          "from_answer": "integrations"
+        }
+      ]
+    },
+    {
+      "template_id": "CT021_background_jobs",
+      "title": "Confirm automation provider",
+      "question": "Background jobs are required but no email/notification provider is listed. Add provider(s) (SendGrid/SES/Mailgun/Postmark/etc).",
+      "response_schema": {
+        "type": "object",
+        "required": [
+          "integrations"
+        ],
+        "properties": {
+          "integrations": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 2
+            },
+            "minItems": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "apply_patch": [
+        {
+          "op": "replace",
+          "path": "hero.integrations",
+          "from_answer": "integrations"
+        }
+      ]
+    },
+    {
+      "template_id": "CT022_reporting",
+      "title": "Align reporting flag with features",
+      "question": "Reporting/dashboard is required. Add/confirm a must-have feature bullet that clearly states reporting/export/download.",
+      "response_schema": {
+        "type": "object",
+        "required": [
+          "must_have_features"
+        ],
+        "properties": {
+          "must_have_features": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 5
+            },
+            "minItems": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "apply_patch": [
+        {
+          "op": "replace",
+          "path": "hero.must_have_features",
+          "from_answer": "must_have_features"
+        }
+      ]
+    },
+    {
+      "template_id": "CT023_pdf_generation",
+      "title": "Align PDF flag with features",
+      "question": "PDF generation is required. Add/confirm a must-have feature bullet that clearly states PDF/document generation.",
+      "response_schema": {
+        "type": "object",
+        "required": [
+          "must_have_features"
+        ],
+        "properties": {
+          "must_have_features": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 5
+            },
+            "minItems": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "apply_patch": [
+        {
+          "op": "replace",
+          "path": "hero.must_have_features",
+          "from_answer": "must_have_features"
+        }
+      ]
+    },
+    {
+      "template_id": "CT036_pdf_library_choice",
+      "title": "Choose a PDF generation approach/library",
+      "question": "PDF generation is required. Choose ONE library/approach (ReportLab, WeasyPrint, wkhtmltopdf, server-side HTML-to-PDF, etc) and state why.",
+      "response_schema": {
+        "type": "object",
+        "required": [
+          "pdf_library_choice"
+        ],
+        "properties": {
+          "pdf_library_choice": {
+            "type": "string",
+            "minLength": 3
+          }
+        },
+        "additionalProperties": false
+      },
+      "apply_patch": [
+        {
+          "op": "add",
+          "path": "hero.constraints.tech_requirements.pdf_library_choice",
+          "from_answer": "pdf_library_choice"
+        }
+      ]
+    },
+    {
+      "template_id": "CT037_multi_tenant_contradiction",
+      "title": "Resolve multi-tenant contradiction",
+      "question": "You indicated multi-tenant but also described a single-user/single-tenant system. Pick ONE: multi-tenant=true OR multi-tenant=false and explain in 1 sentence.",
+      "response_schema": {
+        "type": "object",
+        "required": [
+          "multi_tenant",
+          "rationale"
+        ],
+        "properties": {
+          "multi_tenant": {
+            "type": "boolean"
+          },
+          "rationale": {
+            "type": "string",
+            "minLength": 10
+          }
+        },
+        "additionalProperties": false
+      },
+      "apply_patch": [
+        {
+          "op": "replace",
+          "path": "hero.architecture.multi_tenant",
+          "from_answer": "multi_tenant"
+        },
+        {
+          "op": "add",
+          "path": "hero.constraints.tech_requirements.multi_tenant_rationale",
+          "from_answer": "rationale"
+        }
+      ]
+    },
+    {
+      "template_id": "CT043_timeline_adjustment",
+      "title": "Adjust timeline to match scope",
+      "question": "Provide an updated expected timeline in days that matches the described scope (integer days).",
+      "response_schema": {
+        "type": "object",
+        "required": [
+          "expected_timeline_days"
+        ],
+        "properties": {
+          "expected_timeline_days": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 365
+          }
+        },
+        "additionalProperties": false
+      },
+      "apply_patch": [
+        {
+          "op": "replace",
+          "path": "hero.architecture.expected_timeline_days",
+          "from_answer": "expected_timeline_days"
+        }
+      ]
+    },
+    {
+      "template_id": "CT044_tier_limit_increase",
+      "title": "Increase top-tier limits to cover target market",
+      "question": "Update pricing tiers so the top tier unit_limit.max covers your stated target max (e.g., properties/users/clients). Return full tiers array.",
+      "response_schema": {
+        "type": "object",
+        "required": [
+          "tiers"
+        ],
+        "properties": {
+          "tiers": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "tier_id",
+                "price_usd",
+                "unit_limit"
+              ],
+              "properties": {
+                "tier_id": {
+                  "type": "string",
+                  "pattern": "^T\\d+$"
+                },
+                "name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "price_usd": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "unit_limit": {
+                  "type": "object",
+                  "required": [
+                    "unit",
+                    "max"
+                  ],
+                  "properties": {
+                    "unit": {
+                      "type": "string",
+                      "enum": [
+                        "properties",
+                        "clients",
+                        "users",
+                        "invoices",
+                        "tasks",
+                        "projects",
+                        "unknown"
+                      ]
+                    },
+                    "max": {
+                      "type": "integer",
+                      "minimum": 1
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "notes": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "apply_patch": [
+        {
+          "op": "replace",
+          "path": "hero.constraints.economics.pricing.tiers",
+          "from_answer": "tiers"
+        }
+      ]
+    },
+    {
+      "template_id": "CT045_move_constraint_to_q11",
+      "title": "Move constraint into architecture/tech requirements",
+      "question": "Rewrite the constraint as a concrete tech requirement (what must be true in the system).",
+      "response_schema": {
+        "type": "object",
+        "required": [
+          "tech_requirement"
+        ],
+        "properties": {
+          "tech_requirement": {
+            "type": "string",
+            "minLength": 10
+          }
+        },
+        "additionalProperties": false
+      },
+      "apply_patch": [
+        {
+          "op": "add",
+          "path": "hero.constraints.tech_requirements.additional_requirement",
+          "from_answer": "tech_requirement"
+        }
+      ]
+    },
+    {
+      "template_id": "CT046_tech_compatibility",
+      "title": "Resolve tech/integration compatibility",
+      "question": "A chosen tech stack conflicts with a required integration. Choose ONE: change the tech stack OR change the integration. Provide updated values.",
+      "response_schema": {
+        "type": "object",
+        "required": [
+          "tech_stack",
+          "integrations"
+        ],
+        "properties": {
+          "tech_stack": {
+            "type": "string",
+            "minLength": 2
+          },
+          "integrations": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 2
+            },
+            "minItems": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "apply_patch": [
+        {
+          "op": "replace",
+          "path": "hero.architecture.tech_stack",
+          "from_answer": "tech_stack"
+        },
+        {
+          "op": "replace",
+          "path": "hero.integrations",
+          "from_answer": "integrations"
+        }
+      ]
+    },
+    {
+      "template_id": "CT051_add_architecture_flag",
+      "title": "Add missing architecture flag for feature",
+      "question": "A must-have feature implies an architecture capability flag. Provide the corrected architecture object (or the single flag change).",
+      "response_schema": {
+        "type": "object",
+        "required": [
+          "architecture_patch"
+        ],
+        "properties": {
+          "architecture_patch": {
+            "type": "object",
+            "minProperties": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "apply_patch": [
+        {
+          "op": "merge",
+          "path": "hero.architecture",
+          "from_answer": "architecture_patch"
+        }
+      ]
+    },
+    {
+      "template_id": "CT051_sync_api_lists",
+      "title": "Sync external API list with integrations",
+      "question": "Ensure all external APIs listed under architecture.external_apis are also present in integrations. Provide updated integrations array.",
+      "response_schema": {
+        "type": "object",
+        "required": [
+          "integrations"
+        ],
+        "properties": {
+          "integrations": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 2
+            },
+            "minItems": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "apply_patch": [
+        {
+          "op": "replace",
+          "path": "hero.integrations",
+          "from_answer": "integrations"
+        }
+      ]
+    },
+    {
+      "template_id": "CT052_add_job_failure_risk",
+      "title": "Add background-job failure risk",
+      "question": "Background jobs are required. Add at least one explicit risk about job failure/missed runs/monitoring.",
+      "response_schema": {
+        "type": "object",
+        "required": [
+          "risks"
+        ],
+        "properties": {
+          "risks": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 10
+            },
+            "minItems": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "apply_patch": [
+        {
+          "op": "replace",
+          "path": "hero.risks",
+          "from_answer": "risks"
+        }
+      ]
+    },
+    {
+      "template_id": "CT053_add_email_risk",
+      "title": "Add email deliverability risk",
+      "question": "Email integration is required. Add at least one explicit risk about deliverability/bounces/spam.",
+      "response_schema": {
+        "type": "object",
+        "required": [
+          "risks"
+        ],
+        "properties": {
+          "risks": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 10
+            },
+            "minItems": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "apply_patch": [
+        {
+          "op": "replace",
+          "path": "hero.risks",
+          "from_answer": "risks"
+        }
+      ]
+    },
+    {
+      "template_id": "CT054_constraint_rationale",
+      "title": "Provide rationale for soft constraint",
+      "question": "You stated a soft constraint without rationale. Provide a one-sentence rationale.",
+      "response_schema": {
+        "type": "object",
+        "required": [
+          "rationale"
+        ],
+        "properties": {
+          "rationale": {
+            "type": "string",
+            "minLength": 10
+          }
+        },
+        "additionalProperties": false
+      },
+      "apply_patch": [
+        {
+          "op": "add",
+          "path": "hero.constraints.scope_rationale",
+          "from_answer": "rationale"
+        }
+      ]
+    },
+    {
+      "template_id": "CT054_email_verification",
+      "title": "Clarify email verification requirement",
+      "question": "Authentication is required. Confirm whether email verification is required (true/false).",
+      "response_schema": {
+        "type": "object",
+        "required": [
+          "email_verification_required"
+        ],
+        "properties": {
+          "email_verification_required": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "apply_patch": [
+        {
+          "op": "add",
+          "path": "hero.architecture.email_verification_required",
+          "from_answer": "email_verification_required"
+        }
+      ]
+    },
+    {
+      "template_id": "CT060_resolve_contradiction",
+      "title": "Resolve contradiction between sections",
+      "question": "Two answers contradict each other. Provide corrected values for the listed fields as a patch map: {path: value}.",
+      "response_schema": {
+        "type": "object",
+        "required": [
+          "patch_map"
+        ],
+        "properties": {
+          "patch_map": {
+            "type": "object",
+            "minProperties": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "apply_patch": [
+        {
+          "op": "replace_map",
+          "paths_from_object": "patch_map"
+        }
+      ]
+    }
+  ],
+  "total_templates": 31
+}

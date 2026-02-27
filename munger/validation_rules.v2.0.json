@@ -1,0 +1,147 @@
+{
+  "schema_version": "2.0",
+  "ruleset_id": "fo_munger_ruleset",
+  "ruleset_version": "2.0.0",
+  "kind": "validation_rules",
+  "last_updated": "2026-02-27",
+  "rules": [
+    {
+      "rule_id": "VR001_schema_valid",
+      "severity": "CRITICAL",
+      "mode": "json_schema",
+      "schema_ref": "HERO_CANONICAL_SCHEMA",
+      "target_path": "hero"
+    },
+    {
+      "rule_id": "VR010_pricing_tiers_sequential",
+      "severity": "CRITICAL",
+      "mode": "pricing_sequential",
+      "path": "hero.constraints.economics.pricing.tiers",
+      "error_message": "Pricing tiers must be sequential T1..Tn with no gaps."
+    },
+    {
+      "rule_id": "VR011_tier_prices_increasing",
+      "severity": "CRITICAL",
+      "mode": "pricing_prices_increasing",
+      "path": "hero.constraints.economics.pricing.tiers",
+      "error_message": "Tier prices must be non-decreasing from T1 to Tn."
+    },
+    {
+      "rule_id": "VR013_freemium_has_conversion",
+      "severity": "HIGH",
+      "mode": "freemium_requires_conversion",
+      "path": "hero.constraints.economics.pricing",
+      "error_message": "If a free tier exists (price_usd==0 or freemium.has_free), conversion_mechanism must be set."
+    },
+    {
+      "rule_id": "VR020_bounds_logical",
+      "severity": "HIGH",
+      "mode": "bounds_logical",
+      "path": "hero.constraints.quantitative_bounds.metrics",
+      "error_message": "For each metric: min <= target <= max."
+    },
+    {
+      "rule_id": "VR021_range_not_too_wide",
+      "severity": "MEDIUM",
+      "mode": "bounds_range_ratio",
+      "path": "hero.constraints.quantitative_bounds.metrics",
+      "max_ratio": 1.5,
+      "error_message": "For each metric: max must be <= min*1.5 (or justify and raise severity in issue)."
+    },
+    {
+      "rule_id": "VR030_build_time_matches_arch_timeline",
+      "severity": "MEDIUM",
+      "mode": "timeline_consistency",
+      "paths": {
+        "arch_days": "hero.architecture.expected_timeline_days",
+        "build_time": "hero.constraints.build_time"
+      },
+      "error_message": "expected_timeline_days should not contradict constraints.build_time."
+    },
+    {
+      "rule_id": "VR031_build_time_realistic_for_tier",
+      "severity": "MEDIUM",
+      "mode": "tier_time_sanity",
+      "paths": {
+        "tier": "hero.architecture.minimum_tier",
+        "arch_days": "hero.architecture.expected_timeline_days"
+      },
+      "rules": [
+        {
+          "tier": 1,
+          "max_days": 30
+        },
+        {
+          "tier": 2,
+          "max_days": 90
+        },
+        {
+          "tier": 3,
+          "max_days": 180
+        },
+        {
+          "tier": 4,
+          "max_days": 365
+        }
+      ],
+      "error_message": "expected_timeline_days seems unrealistic for minimum_tier."
+    },
+    {
+      "rule_id": "VR040_payments_requires_stripe",
+      "severity": "HIGH",
+      "mode": "consistency",
+      "checks": [
+        {
+          "if": {
+            "path": "hero.architecture.payments_required",
+            "equals": true
+          },
+          "then": {
+            "path": "hero.integrations",
+            "must_contain_any": [
+              "Stripe"
+            ]
+          }
+        }
+      ],
+      "error_message": "payments_required=true but integrations does not include Stripe"
+    },
+    {
+      "rule_id": "VR041_subscription_requires_payments",
+      "severity": "HIGH",
+      "mode": "consistency",
+      "checks": [
+        {
+          "if": {
+            "path": "hero.architecture.subscription_billing",
+            "equals": true
+          },
+          "then": {
+            "path": "hero.architecture.payments_required",
+            "equals": true
+          }
+        }
+      ],
+      "error_message": "subscription_billing=true requires payments_required=true"
+    },
+    {
+      "rule_id": "VR042_external_apis_subset",
+      "severity": "MEDIUM",
+      "mode": "consistency",
+      "checks": [
+        {
+          "if": {
+            "path": "hero.architecture.external_apis",
+            "exists": true
+          },
+          "then": {
+            "path": "hero.integrations",
+            "must_superset_of_path": "hero.architecture.external_apis"
+          }
+        }
+      ],
+      "error_message": "architecture.external_apis must be present in integrations list (or add them)"
+    }
+  ],
+  "total_rules": 11
+}

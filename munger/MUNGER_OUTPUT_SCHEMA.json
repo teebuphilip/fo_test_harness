@@ -1,0 +1,466 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "FO/AF Munger Output",
+  "type": "object",
+  "required": [
+    "startup_idea_id",
+    "startup_name",
+    "startup_description",
+    "clean_hero_answers",
+    "munger_report"
+  ],
+  "properties": {
+    "startup_idea_id": {
+      "type": "string"
+    },
+    "startup_name": {
+      "type": "string"
+    },
+    "startup_description": {
+      "type": "string"
+    },
+    "clean_hero_answers": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "Hero Answers (Canonical) v2",
+      "type": "object",
+      "required": [
+        "problem_customer",
+        "target_user",
+        "success_metric",
+        "must_have_features",
+        "non_goals",
+        "constraints",
+        "data_sources",
+        "integrations",
+        "risks",
+        "shipping_preference",
+        "architecture"
+      ],
+      "properties": {
+        "problem_customer": {
+          "type": "string",
+          "minLength": 20
+        },
+        "target_user": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 3
+          },
+          "minItems": 1
+        },
+        "success_metric": {
+          "type": "string",
+          "minLength": 10
+        },
+        "must_have_features": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 3
+          },
+          "minItems": 1
+        },
+        "non_goals": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 3
+          },
+          "minItems": 1
+        },
+        "constraints": {
+          "type": "object",
+          "required": [
+            "brand_positioning",
+            "scope",
+            "economics",
+            "build_time",
+            "tech_requirements"
+          ],
+          "properties": {
+            "brand_positioning": {
+              "type": "string",
+              "minLength": 3
+            },
+            "scope": {
+              "type": "string",
+              "minLength": 3
+            },
+            "economics": {
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "pricing"
+                  ],
+                  "properties": {
+                    "pricing": {
+                      "type": "object",
+                      "required": [
+                        "pricing_model",
+                        "billing_frequency",
+                        "tiers"
+                      ],
+                      "properties": {
+                        "pricing_model": {
+                          "type": "string",
+                          "enum": [
+                            "subscription",
+                            "one_time",
+                            "usage_based",
+                            "freemium",
+                            "unknown"
+                          ]
+                        },
+                        "billing_frequency": {
+                          "type": "string",
+                          "enum": [
+                            "monthly",
+                            "annual",
+                            "one_time",
+                            "unknown"
+                          ]
+                        },
+                        "tiers": {
+                          "type": "array",
+                          "minItems": 1,
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "tier_id",
+                              "price_usd",
+                              "unit_limit"
+                            ],
+                            "properties": {
+                              "tier_id": {
+                                "type": "string",
+                                "pattern": "^T\\d+$"
+                              },
+                              "name": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "price_usd": {
+                                "type": "number",
+                                "minimum": 0
+                              },
+                              "unit_limit": {
+                                "type": "object",
+                                "required": [
+                                  "unit",
+                                  "max"
+                                ],
+                                "properties": {
+                                  "unit": {
+                                    "type": "string",
+                                    "enum": [
+                                      "properties",
+                                      "clients",
+                                      "users",
+                                      "invoices",
+                                      "tasks",
+                                      "projects",
+                                      "unknown"
+                                    ]
+                                  },
+                                  "max": {
+                                    "type": "integer",
+                                    "minimum": 1
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "notes": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "additionalProperties": false
+                          }
+                        },
+                        "freemium": {
+                          "type": "object",
+                          "properties": {
+                            "has_free": {
+                              "type": "boolean"
+                            },
+                            "conversion_mechanism": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "additionalProperties": false
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": true
+                }
+              ]
+            },
+            "build_time": {
+              "type": [
+                "string",
+                "integer",
+                "object"
+              ]
+            },
+            "tech_requirements": {
+              "type": [
+                "string",
+                "object"
+              ]
+            },
+            "quantitative_bounds": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "object",
+                  "allOf": [
+                    {
+                      "type": "object",
+                      "required": [
+                        "metrics"
+                      ],
+                      "properties": {
+                        "metrics": {
+                          "type": "array",
+                          "minItems": 1,
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "name",
+                              "unit",
+                              "min",
+                              "target",
+                              "max"
+                            ],
+                            "properties": {
+                              "name": {
+                                "type": "string",
+                                "minLength": 2
+                              },
+                              "unit": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "min": {
+                                "type": "number"
+                              },
+                              "target": {
+                                "type": "number"
+                              },
+                              "max": {
+                                "type": "number"
+                              },
+                              "baseline": {
+                                "type": [
+                                  "number",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          "additionalProperties": true
+        },
+        "data_sources": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 3
+          },
+          "minItems": 1
+        },
+        "integrations": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 2
+          },
+          "minItems": 0
+        },
+        "risks": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 3
+          },
+          "minItems": 1
+        },
+        "shipping_preference": {
+          "type": "string",
+          "minLength": 3
+        },
+        "architecture": {
+          "type": "object",
+          "required": [
+            "authentication_required",
+            "role_based_access",
+            "multi_tenant",
+            "persistent_database",
+            "payments_required",
+            "subscription_billing",
+            "dashboard_reporting",
+            "pdf_generation",
+            "external_apis",
+            "background_jobs",
+            "admin_panel",
+            "expected_timeline_days",
+            "minimum_tier"
+          ],
+          "properties": {
+            "authentication_required": {
+              "type": "boolean"
+            },
+            "role_based_access": {
+              "type": "boolean"
+            },
+            "multi_tenant": {
+              "type": "boolean"
+            },
+            "persistent_database": {
+              "type": "boolean"
+            },
+            "payments_required": {
+              "type": "boolean"
+            },
+            "subscription_billing": {
+              "type": "boolean"
+            },
+            "dashboard_reporting": {
+              "type": "boolean"
+            },
+            "pdf_generation": {
+              "type": "boolean"
+            },
+            "external_apis": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "background_jobs": {
+              "type": "boolean"
+            },
+            "admin_panel": {
+              "type": "boolean"
+            },
+            "expected_timeline_days": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "minimum_tier": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4
+            },
+            "tech_stack": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "deployment": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "munger_report": {
+      "type": "object",
+      "required": [
+        "status",
+        "score",
+        "critical_issues",
+        "issues",
+        "applied_patches",
+        "versions"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "NEEDS_CLARIFICATION",
+            "REJECTED"
+          ]
+        },
+        "score": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "critical_issues": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "issues": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "applied_patches": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "versions": {
+          "type": "object",
+          "required": [
+            "munger_version",
+            "ruleset_version",
+            "input_schema_version",
+            "output_schema_version"
+          ],
+          "properties": {
+            "munger_version": {
+              "type": "string"
+            },
+            "ruleset_version": {
+              "type": "string"
+            },
+            "input_schema_version": {
+              "type": "string"
+            },
+            "output_schema_version": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

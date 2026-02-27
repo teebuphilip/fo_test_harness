@@ -1,0 +1,104 @@
+{
+  "schema_version": "2.0",
+  "ruleset_id": "fo_munger_ruleset",
+  "ruleset_version": "2.0.0",
+  "kind": "autopatch_rules",
+  "last_updated": "2026-02-27",
+  "rules": [
+    {
+      "rule_id": "AP001_trim_strings",
+      "severity": "LOW",
+      "mode": "transform",
+      "target_paths": [
+        "hero.*"
+      ],
+      "operation": {
+        "type": "trim"
+      },
+      "confidence": 1.0
+    },
+    {
+      "rule_id": "AP002_coerce_yes_no_booleans",
+      "severity": "MEDIUM",
+      "mode": "transform",
+      "target_paths": [
+        "hero.architecture.authentication_required",
+        "hero.architecture.role_based_access",
+        "hero.architecture.multi_tenant",
+        "hero.architecture.persistent_database",
+        "hero.architecture.payments_required",
+        "hero.architecture.subscription_billing",
+        "hero.architecture.dashboard_reporting",
+        "hero.architecture.pdf_generation",
+        "hero.architecture.background_jobs",
+        "hero.architecture.admin_panel"
+      ],
+      "operation": {
+        "type": "coerce_boolean",
+        "true_values": [
+          "y",
+          "yes",
+          "true",
+          "1"
+        ],
+        "false_values": [
+          "n",
+          "no",
+          "false",
+          "0"
+        ]
+      },
+      "confidence": 1.0
+    },
+    {
+      "rule_id": "AP003_split_bullets_to_arrays",
+      "severity": "MEDIUM",
+      "mode": "transform",
+      "target_paths": [
+        "hero.target_user",
+        "hero.must_have_features",
+        "hero.non_goals",
+        "hero.data_sources",
+        "hero.integrations",
+        "hero.risks",
+        "hero.architecture.external_apis"
+      ],
+      "operation": {
+        "type": "split_lines_to_array",
+        "min_items": 1
+      },
+      "confidence": 0.95
+    },
+    {
+      "rule_id": "AP004_dedupe_arrays",
+      "severity": "LOW",
+      "mode": "transform",
+      "target_paths": [
+        "hero.target_user",
+        "hero.must_have_features",
+        "hero.non_goals",
+        "hero.data_sources",
+        "hero.integrations",
+        "hero.risks",
+        "hero.architecture.external_apis"
+      ],
+      "operation": {
+        "type": "dedupe_array_casefold"
+      },
+      "confidence": 1.0
+    },
+    {
+      "rule_id": "AP005_normalize_integration_format",
+      "severity": "LOW",
+      "mode": "transform",
+      "target_paths": [
+        "hero.integrations",
+        "hero.architecture.external_apis"
+      ],
+      "operation": {
+        "type": "normalize_dash_parenthetical"
+      },
+      "confidence": 0.9
+    }
+  ]
+}

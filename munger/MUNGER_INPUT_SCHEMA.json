@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "FO/AF Munger Input",
+  "type": "object",
+  "required": [
+    "startup_idea_id",
+    "startup_name",
+    "startup_description",
+    "hero_answers"
+  ],
+  "properties": {
+    "run_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "startup_idea_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "startup_name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "startup_description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "hero_answers": {
+      "type": "object",
+      "minProperties": 1
+    },
+    "meta": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}
