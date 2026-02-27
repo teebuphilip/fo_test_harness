@@ -6,10 +6,14 @@ Deterministic validation + issue detection for Intake outputs (Block A + Block B
 
 import argparse
 import json
+import os
 import re
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Any, List, Tuple
+
+import requests
 
 
 ROOT = Path(__file__).resolve().parent
@@ -25,6 +29,114 @@ FILES = {
     "approval_schema": ROOT / "HERO_APPROVAL_TOKEN_SCHEMA.json",
     "output_schema": ROOT / "POST_INTAKE_ASSIST_OUTPUT_SCHEMA.json",
 }
+
+AI_COST_LOG = ROOT / "post_intake_ai_costs.csv"
+OPENAI_API = "https://api.openai.com/v1/chat/completions"
+CLAUDE_API = "https://api.anthropic.com/v1/messages"
+DEFAULT_OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+DEFAULT_CLAUDE_MODEL = "claude-sonnet-4-20250514"
+
+
+def _append_ai_cost(provider: str, model: str, input_tokens: int, output_tokens: int):
+    in_rate = float(os.getenv("OPENAI_INPUT_PER_MTOK", "2.50"))
+    out_rate = float(os.getenv("OPENAI_OUTPUT_PER_MTOK", "10.00"))
+    if provider == "claude":
+        in_rate = float(os.getenv("ANTHROPIC_INPUT_PER_MTOK", "3.00"))
+        out_rate = float(os.getenv("ANTHROPIC_OUTPUT_PER_MTOK", "15.00"))
+
+    in_cost = input_tokens * in_rate / 1_000_000
+    out_cost = output_tokens * out_rate / 1_000_000
+    total = in_cost + out_cost
+
+    new_file = not AI_COST_LOG.exists()
+    with AI_COST_LOG.open("a", newline="") as f:
+        if new_file:
+            f.write("date,time,provider,model,input_tokens,output_tokens,cost\n")
+        now = datetime.now()
+        f.write(",".join([
+            now.strftime("%Y-%m-%d"),
+            now.strftime("%H:%M:%S"),
+            provider,
+            model,
+            str(input_tokens),
+            str(output_tokens),
+            f"{total:.6f}",
+        ]) + "\n")
+
+
+def _extract_json(text: str) -> dict:
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+    match = re.search(r"\{.*\}", text, re.DOTALL)
+    if not match:
+        raise ValueError("No JSON object found in model response")
+    return json.loads(match.group(0))
+
+
+def _call_chatgpt(prompt: str, model: str) -> dict:
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise RuntimeError("OPENAI_API_KEY not set")
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": "Return only JSON. No extra text."},
+            {"role": "user", "content": prompt},
+        ],
+        "max_tokens": 900,
+        "temperature": 0.0,
+    }
+    resp = requests.post(
+        OPENAI_API,
+        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+        json=payload,
+        timeout=60,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    usage = data.get("usage", {})
+    _append_ai_cost(
+        "chatgpt",
+        model,
+        int(usage.get("prompt_tokens", 0) or 0),
+        int(usage.get("completion_tokens", 0) or 0),
+    )
+    text = data["choices"][0]["message"]["content"].strip()
+    return _extract_json(text)
+
+
+def _call_claude(prompt: str, model: str) -> dict:
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+    if not api_key:
+        raise RuntimeError("ANTHROPIC_API_KEY not set")
+    payload = {
+        "model": model,
+        "max_tokens": 900,
+        "messages": [{"role": "user", "content": prompt}],
+    }
+    resp = requests.post(
+        CLAUDE_API,
+        headers={
+            "x-api-key": api_key,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+        },
+        json=payload,
+        timeout=60,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    usage = data.get("usage", {})
+    _append_ai_cost(
+        "claude",
+        model,
+        int(usage.get("input_tokens", 0) or 0),
+        int(usage.get("output_tokens", 0) or 0),
+    )
+    text = data["content"][0]["text"].strip()
+    return _extract_json(text)
 
 
 def _load_json(path: Path) -> dict:
@@ -112,6 +224,29 @@ def _basic_schema_validate(target: Any, schema: dict, rule: dict) -> List[dict]:
         if k not in target:
             issues.append(_issue(rule, f"Missing required field: {k}"))
     return issues
+
+
+def _validate_response_schema(schema: dict, answers: dict) -> Tuple[bool, str]:
+    required = schema.get("required", [])
+    for key in required:
+        if key not in answers:
+            return False, f"Missing required key: {key}"
+    for key, spec in schema.get("properties", {}).items():
+        if key not in answers:
+            continue
+        val = answers[key]
+        t = spec.get("type")
+        if t == "string" and not isinstance(val, str):
+            return False, f"{key} must be string"
+        if t == "boolean" and not isinstance(val, bool):
+            return False, f"{key} must be boolean"
+        if t == "integer" and not isinstance(val, int):
+            return False, f"{key} must be integer"
+        if t == "array" and not isinstance(val, list):
+            return False, f"{key} must be array"
+        if t == "object" and not isinstance(val, dict):
+            return False, f"{key} must be object"
+    return True, "ok"
 
 
 def _detect_issues(data: dict, rules: dict, vocab: dict) -> List[dict]:
@@ -384,10 +519,34 @@ def _build_contract(data: dict) -> dict:
     }
 
 
-def run_post_intake_assist(input_data: dict) -> dict:
+def _build_revision_prompt(issue: dict, template: dict, context: dict) -> str:
+    return "\n".join([
+        "You are a deterministic post-intake revision assistant.",
+        "Return ONLY JSON matching the response_schema.",
+        "",
+        "ISSUE:",
+        json.dumps(issue, ensure_ascii=False, indent=2),
+        "",
+        "REVISION TEMPLATE:",
+        json.dumps(template, ensure_ascii=False, indent=2),
+        "",
+        "CONTEXT (Block A + Block B):",
+        json.dumps(context, ensure_ascii=False, indent=2),
+        "",
+        "OUTPUT FORMAT (JSON):",
+        "{",
+        '  "response": { /* must match response_schema */ },',
+        '  "reasoning": "brief rationale",',
+        '  "confidence": 0.0',
+        "}",
+    ])
+
+
+def run_post_intake_assist(input_data: dict, use_ai: bool, provider: str, openai_model: str, claude_model: str) -> dict:
     detection_rules = _load_json(FILES["detection"])
     validation_rules = _load_json(FILES["validation"])
     vocab = _load_json(FILES["vocabulary"]) if FILES["vocabulary"].exists() else {}
+    revision_templates = _load_json(FILES["revision_templates"])
 
     issues = _detect_issues(input_data, detection_rules, vocab)
     issues += _validate_rules(input_data, validation_rules)
@@ -413,6 +572,33 @@ def run_post_intake_assist(input_data: dict) -> dict:
             }
             for i in issues if i.get("revision_template_id")
         ][:5]
+        if use_ai:
+            template_map = {t.get("template_id"): t for t in revision_templates.get("templates", [])}
+            ai_responses = []
+            for req in report["revision_requests"]:
+                tid = req.get("template_id")
+                tmpl = template_map.get(tid)
+                if not tmpl:
+                    continue
+                prompt = _build_revision_prompt(req["issue"], tmpl, {
+                    "block_a_final": input_data.get("block_a_final", {}),
+                    "block_b_final": input_data.get("block_b_final", {}),
+                })
+                if provider == "chatgpt":
+                    raw = _call_chatgpt(prompt, openai_model)
+                else:
+                    raw = _call_claude(prompt, claude_model)
+                response = raw.get("response")
+                ok, msg = _validate_response_schema(tmpl.get("response_schema", {}), response or {})
+                ai_responses.append({
+                    "template_id": tid,
+                    "response": response,
+                    "valid": ok,
+                    "error": None if ok else msg,
+                    "confidence": raw.get("confidence", 0.0),
+                    "reasoning": raw.get("reasoning", ""),
+                })
+            report["ai_revision_responses"] = ai_responses
 
     return {
         "build_contract": _build_contract(input_data),
@@ -424,6 +610,10 @@ def main():
     parser = argparse.ArgumentParser(description="Post-Intake Assist v2.1")
     parser.add_argument("input_json", help="Input JSON containing block_a_final and block_b_final")
     parser.add_argument("--out", help="Write output JSON to path")
+    parser.add_argument("--use-ai", action="store_true", help="Generate AI revision responses")
+    parser.add_argument("--provider", choices=["chatgpt", "claude"], default="chatgpt")
+    parser.add_argument("--openai-model", default=DEFAULT_OPENAI_MODEL)
+    parser.add_argument("--claude-model", default=DEFAULT_CLAUDE_MODEL)
     args = parser.parse_args()
 
     path = Path(args.input_json)
@@ -431,8 +621,15 @@ def main():
         print(f"Error: {path} not found")
         sys.exit(1)
 
+    if args.use_ai and args.provider == "chatgpt" and not os.getenv("OPENAI_API_KEY"):
+        print("Error: OPENAI_API_KEY not set")
+        sys.exit(2)
+    if args.use_ai and args.provider == "claude" and not os.getenv("ANTHROPIC_API_KEY"):
+        print("Error: ANTHROPIC_API_KEY not set")
+        sys.exit(3)
+
     data = _load_json(path)
-    output = run_post_intake_assist(data)
+    output = run_post_intake_assist(data, args.use_ai, args.provider, args.openai_model, args.claude_model)
     output_json = json.dumps(output, indent=2)
 
     if args.out:
