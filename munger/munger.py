@@ -621,6 +621,30 @@ def _validate_response_schema(schema: dict, answers: dict) -> Tuple[bool, str]:
 
 def _apply_template_patch(hero: dict, template: dict, answers: dict, patches: List[dict], patch_idx_start: int) -> int:
     patch_idx = patch_idx_start
+    def _merge_array(existing, incoming):
+        if not isinstance(existing, list) or not isinstance(incoming, list):
+            return incoming
+        seen = set()
+        out = []
+        for item in existing + incoming:
+            key = item.casefold() if isinstance(item, str) else str(item)
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append(item)
+        return out
+
+    def _preserve_tech_requirements(path: str, before: Any, value: Any) -> Tuple[Any, Any]:
+        if not path.startswith("hero.constraints.tech_requirements"):
+            return before, value
+        if isinstance(before, str):
+            base = {"original_text": before}
+            if isinstance(value, dict):
+                base.update(value)
+                return base, base
+            return base, value
+        return before, value
+
     for ap in template.get("apply_patch", []):
         op = ap.get("op")
         if op == "replace":
@@ -631,6 +655,9 @@ def _apply_template_patch(hero: dict, template: dict, answers: dict, patches: Li
                 value = json.loads(wrapped)
             path = ap.get("path")
             before = _get_path({"hero": hero}, path)
+            before, value = _preserve_tech_requirements(path, before, value)
+            if path in ("hero.risks", "hero.must_have_features", "hero.integrations"):
+                value = _merge_array(before, value)
             _set_path({"hero": hero}, path, value)
             patches.append({
                 "patch_id": f"CP{patch_idx:03d}",
@@ -649,6 +676,7 @@ def _apply_template_patch(hero: dict, template: dict, answers: dict, patches: Li
             from_key = ap.get("from_answer")
             value = answers.get(from_key)
             before = _get_path({"hero": hero}, path)
+            before, value = _preserve_tech_requirements(path, before, value)
             _set_path({"hero": hero}, path, value)
             patches.append({
                 "patch_id": f"CP{patch_idx:03d}",
@@ -667,6 +695,7 @@ def _apply_template_patch(hero: dict, template: dict, answers: dict, patches: Li
             from_key = ap.get("from_answer")
             value = answers.get(from_key, {})
             before = _get_path({"hero": hero}, path) or {}
+            before, value = _preserve_tech_requirements(path, before, value)
             after = dict(before)
             if isinstance(value, dict):
                 after.update(value)
