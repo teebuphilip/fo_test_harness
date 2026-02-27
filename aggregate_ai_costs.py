@@ -50,7 +50,7 @@ def main():
                 "time": r.get("time", ""),
                 "app": app,
                 "ai": r.get("provider", ""),
-                "cost": r.get("cost", ""),
+                "cost": f"{float(r.get('cost') or 0):.2f}",
                 "input tokens": r.get("input_tokens", ""),
                 "output tokens": r.get("output_tokens", ""),
             })
@@ -61,7 +61,7 @@ def main():
             "time": r.get("time", ""),
             "app": "intake",
             "ai": r.get("provider", ""),
-            "cost": r.get("cost", ""),
+            "cost": f"{float(r.get('cost') or 0):.2f}",
             "input tokens": r.get("input_tokens", ""),
             "output tokens": r.get("output_tokens", ""),
         })
@@ -108,7 +108,7 @@ def main():
             writer.writerow({
                 "date": date,
                 "ai": ai,
-                "cost": f"{vals['cost']:.6f}",
+                "cost": f"{vals['cost']:.2f}",
                 "input tokens": vals["input"],
                 "output tokens": vals["output"],
             })
