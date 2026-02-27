@@ -41,6 +41,34 @@ def _read_intake_runs():
     return rows_out
 
 
+def _read_run_log():
+    path = ROOT / "fo_run_log.csv"
+    if not path.exists():
+        return []
+    rows = _read_rows(path)
+    out = []
+    for r in rows:
+        out.append({
+            "date": r.get("date", ""),
+            "time": r.get("time", ""),
+            "app": "harness_run",
+            "ai": "claude",
+            "cost": r.get("cost_claude", ""),
+            "input tokens": "",
+            "output tokens": "",
+        })
+        out.append({
+            "date": r.get("date", ""),
+            "time": r.get("time", ""),
+            "app": "harness_run",
+            "ai": "chatgpt",
+            "cost": r.get("cost_chatgpt", ""),
+            "input tokens": "",
+            "output tokens": "",
+        })
+    return out
+
+
 def main():
     rows_out = []
     for app, path in CANDIDATES:
@@ -69,6 +97,19 @@ def main():
             "cost": f"{cost_rounded:.2f}",
             "input tokens": r.get("input_tokens", ""),
             "output tokens": r.get("output_tokens", ""),
+        })
+
+    for r in _read_run_log():
+        cost_val = float(r.get("cost") or 0)
+        cost_rounded = math.ceil(cost_val * 100) / 100
+        rows_out.append({
+            "date": r.get("date", ""),
+            "time": r.get("time", ""),
+            "app": r.get("app", "harness_run"),
+            "ai": r.get("ai", ""),
+            "cost": f"{cost_rounded:.2f}",
+            "input tokens": r.get("input tokens", ""),
+            "output tokens": r.get("output tokens", ""),
         })
 
     with OUTPUT.open("w", newline="") as f:
