@@ -67,61 +67,35 @@ DEFAULT_CLAUDE_MODEL = "claude-sonnet-4-20250514"
 
 def load_config() -> dict:
     """
-    Load deploy_config.json.
-    Dies with a clear message if it's missing or malformed.
+    Load deployment tokens from environment variables.
     """
-    if not CONFIG_FILE.exists():
-        print(f"""
-[ERROR] deploy_config.json not found at:
-        {CONFIG_FILE}
+    railway_token = os.getenv("RAILWAY_TOKEN")
+    vercel_token = os.getenv("VERCEL_TOKEN")
+    vercel_team_id = os.getenv("VERCEL_TEAM_ID", "")
+    github_token = os.getenv("GITHUB_TOKEN")
+    github_username = os.getenv("GITHUB_USERNAME")
 
-Create it with this structure:
-{{
-  "railway": {{
-    "token": "YOUR_RAILWAY_TOKEN"
-  }},
-  "vercel": {{
-    "token": "YOUR_VERCEL_TOKEN",
-    "team_id": ""
-  }},
-  "github": {{
-    "token": "YOUR_GITHUB_PAT",
-    "username": "YOUR_GITHUB_USERNAME"
-  }}
-}}
-
-Get tokens:
-  Railway → dashboard → Account Settings → Tokens → Create Token
-  Vercel  → dashboard → Settings → Tokens → Create Token
-  GitHub  → Settings → Developer Settings → Personal Access Tokens → Generate
-""")
-        sys.exit(1)
-
-    with open(CONFIG_FILE) as f:
-        config = json.load(f)
-
-    # Validate required fields
     errors = []
-    if not config.get("railway", {}).get("token") or \
-       config["railway"]["token"] == "YOUR_RAILWAY_TOKEN_HERE":
-        errors.append("railway.token not set in deploy_config.json")
-    if not config.get("vercel", {}).get("token") or \
-       config["vercel"]["token"] == "YOUR_VERCEL_TOKEN_HERE":
-        errors.append("vercel.token not set in deploy_config.json")
-    if not config.get("github", {}).get("token") or \
-       config["github"]["token"] == "YOUR_GITHUB_PAT_HERE":
-        errors.append("github.token not set in deploy_config.json")
-    if not config.get("github", {}).get("username") or \
-       config["github"]["username"] == "YOUR_GITHUB_USERNAME":
-        errors.append("github.username not set in deploy_config.json")
+    if not railway_token:
+        errors.append("RAILWAY_TOKEN not set")
+    if not vercel_token:
+        errors.append("VERCEL_TOKEN not set")
+    if not github_token:
+        errors.append("GITHUB_TOKEN not set")
+    if not github_username:
+        errors.append("GITHUB_USERNAME not set")
 
     if errors:
-        print("[ERROR] deploy_config.json has unfilled values:")
+        print("[ERROR] Missing required environment variables:")
         for e in errors:
             print(f"  - {e}")
         sys.exit(1)
 
-    return config
+    return {
+        "railway": {"token": railway_token},
+        "vercel": {"token": vercel_token, "team_id": vercel_team_id},
+        "github": {"token": github_token, "username": github_username},
+    }
 
 
 def _append_ai_cost(provider: str, model: str, input_tokens: int, output_tokens: int):
@@ -569,7 +543,7 @@ def main():
         sys.exit(3)
 
     # ── Load credentials ─────────────────────────────────────
-    print(f"\nLoading credentials from: {CONFIG_FILE}")
+    print(f"\nLoading credentials from environment variables")
     config = load_config()
 
     railway_token  = config["railway"]["token"]

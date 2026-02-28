@@ -12,7 +12,6 @@ Usage:
 """
 
 import argparse
-import json
 import os
 import shutil
 import subprocess
@@ -22,29 +21,23 @@ import zipfile
 from pathlib import Path
 
 
-CONFIG_FILE = Path(__file__).parent / "deploy_config.json"
 WORK_ROOT = Path("~/Documents/work").expanduser()
 
 
 def load_config() -> dict:
-    if not CONFIG_FILE.exists():
-        print(f"[ERROR] deploy_config.json not found at {CONFIG_FILE}")
-        sys.exit(1)
-    with open(CONFIG_FILE) as f:
-        config = json.load(f)
+    github_token = os.getenv("GITHUB_TOKEN")
+    github_username = os.getenv("GITHUB_USERNAME")
     errors = []
-    if not config.get("github", {}).get("token") or \
-       config["github"]["token"] == "YOUR_GITHUB_PAT_HERE":
-        errors.append("github.token not set in deploy_config.json")
-    if not config.get("github", {}).get("username") or \
-       config["github"]["username"] == "YOUR_GITHUB_USERNAME":
-        errors.append("github.username not set in deploy_config.json")
+    if not github_token:
+        errors.append("GITHUB_TOKEN not set")
+    if not github_username:
+        errors.append("GITHUB_USERNAME not set")
     if errors:
-        print("[ERROR] deploy_config.json has unfilled values:")
+        print("[ERROR] Missing required environment variables:")
         for e in errors:
             print(f"  - {e}")
         sys.exit(1)
-    return config
+    return {"github": {"token": github_token, "username": github_username}}
 
 
 def _run(cmd: str, cwd: Path = None, capture: bool = False):
