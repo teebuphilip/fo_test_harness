@@ -98,6 +98,21 @@ def load_config() -> dict:
     }
 
 
+def _safe_project_name(value: str) -> str:
+    if not value:
+        return ""
+    cleaned = value.strip().lower().replace("_", "-").replace(" ", "-")
+    if cleaned in {"unnamed", "unknown", "none", "null"}:
+        return ""
+    return cleaned
+
+
+def _base_project_name(repo_path: Path, railway_cfg: dict) -> str:
+    repo_name = _safe_project_name(repo_path.name)
+    railway_name = _safe_project_name((railway_cfg or {}).get("project", ""))
+    return railway_name or repo_name
+
+
 def _append_ai_cost(provider: str, model: str, input_tokens: int, output_tokens: int):
     in_rate = float(os.getenv("OPENAI_INPUT_PER_MTOK", "2.50"))
     out_rate = float(os.getenv("OPENAI_OUTPUT_PER_MTOK", "10.00"))
@@ -616,11 +631,8 @@ def main():
     railway_cfg = {} if args.new_project else read_railway_config(repo_path)
     vercel_cfg  = {} if args.new_project else read_vercel_config(repo_path)
 
-    project_name = (
-        railway_cfg.get("project")
-        or vercel_cfg.get("project")
-        or repo_path.name.lower().replace("_", "-")
-    )
+    # Base project/repo name must map to the backend repo, not the Vercel frontend project.
+    project_name = _base_project_name(repo_path, railway_cfg)
 
     # ── Generate configs via AI before push ─────────────────
     railway_cfg_path = repo_path / "railway.json"
