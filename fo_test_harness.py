@@ -129,6 +129,7 @@ class Config:
     EXTERNAL_INTEGRATION_OVERRIDE_FILE = Path('./fo_external_integration_override.json')
     QA_OVERRIDE_FILE = Path('./fo_qa_override.json')
     QA_POLISH_2_DIRECTIVE_FILE = Path('./directives/qa_polish_2_doc_recovery.md')
+    PROMPT_DIRECTIVES_DIR = Path('./directives/prompts')
 
 
 # ============================================================
@@ -417,6 +418,29 @@ def load_text_file(path: Path) -> str:
     """Load a UTF-8 text file and return stripped content."""
     with open(path, 'r', encoding='utf-8') as f:
         return f.read().strip()
+
+
+class DirectiveTemplateLoader:
+    """Loads and renders external prompt templates from directives/prompts."""
+
+    _cache = {}
+
+    @classmethod
+    def load(cls, template_name: str) -> str:
+        path = Config.PROMPT_DIRECTIVES_DIR / template_name
+        if not path.exists():
+            raise FileNotFoundError(f"Prompt template not found: {path}")
+        cache_key = str(path.resolve())
+        if cache_key not in cls._cache:
+            cls._cache[cache_key] = load_text_file(path)
+        return cls._cache[cache_key]
+
+    @classmethod
+    def render(cls, template_name: str, **kwargs) -> str:
+        text = cls.load(template_name)
+        for key, value in kwargs.items():
+            text = text.replace(f"{{{{{key}}}}}", str(value))
+        return text
 
 
 # ============================================================
@@ -1137,6 +1161,61 @@ class PromptTemplates:
         # Extract tech stack for override injection
         tech_stack = force_tech_stack or block_data.get('pass_2', {}).get('tech_stack_selection', 'custom')
 
+        # Build dynamic injections (kept as data inputs; directive text is externalized)
+        tech_stack_instructions = ""
+        if tech_stack_override and tech_stack == 'lowcode':
+            lowcode_def = tech_stack_override.get('tech_stack_definitions', {}).get('lowcode', {})
+            if lowcode_def:
+                prompt_template = tech_stack_override.get('prompt_injection_template', {}).get('for_lowcode_stack', '')
+                if prompt_template:
+                    tech_stack_instructions = "\n\n" + prompt_template.replace('{startup_name}', startup_id) + "\n\n"
+
+        integration_instructions = ""
+        if external_integration_override:
+            prompt_injection = external_integration_override.get('prompt_injection', '')
+            if prompt_injection:
+                integration_instructions = "\n\n" + prompt_injection + "\n\n"
+
+        boilerplate_path_instruction = ""
+        if tech_stack == 'lowcode':
+            boilerplate_path_instruction = "\n\n" + DirectiveTemplateLoader.render(
+                'build_boilerplate_path_rules.md'
+            ) + "\n\n"
+
+        previous_defects_section = ""
+        if previous_defects:
+            previous_defects_section = "\n\n" + DirectiveTemplateLoader.render(
+                'build_previous_defects.md',
+                previous_defects=previous_defects
+            ) + "\n\n"
+
+        governance_section = DirectiveTemplateLoader.render(
+            'build_governance.md',
+            block=block,
+            build_governance=build_governance
+        )
+
+        dynamic_section = DirectiveTemplateLoader.render(
+            'build_dynamic_base.md',
+            iteration=iteration,
+            max_iterations=Config.MAX_QA_ITERATIONS,
+            block=block,
+            block_key=block_key,
+            block_data_json=json.dumps(block_data, indent=2),
+            previous_defects_section=previous_defects_section,
+            tech_stack_instructions=tech_stack_instructions,
+            integration_instructions=integration_instructions,
+            boilerplate_path_instruction=boilerplate_path_instruction
+        )
+
+        return (governance_section, dynamic_section)
+
+        # LEGACY INLINE PROMPT (INACTIVE, kept for reference only)
+        # Replaced by external templates:
+        # - directives/prompts/build_governance.md
+        # - directives/prompts/build_dynamic_base.md
+        # - directives/prompts/build_previous_defects.md
+        # - directives/prompts/build_boilerplate_path_rules.md
         # ═══════════════════════════════════════════════════════════════
         # CACHEABLE SECTION - Static governance and rules
         # WHY: This content never changes between iterations.
@@ -1526,6 +1605,19 @@ or is it a reasonable implementation detail to support an existing feature?"
         if qa_override and 'prompt_injection' in qa_override:
             qa_override_context = "\n\n" + qa_override['prompt_injection'] + "\n\n"
 
+        return DirectiveTemplateLoader.render(
+            'qa_prompt.md',
+            tech_stack_context=tech_stack_context,
+            qa_override_context=qa_override_context,
+            block=block,
+            block_key=block_key,
+            block_data_json=json.dumps(block_data, indent=2),
+            build_output=build_output
+        )
+
+        # LEGACY INLINE PROMPT (INACTIVE, kept for reference only)
+        # Replaced by external template:
+        # - directives/prompts/qa_prompt.md
         return f"""You are the FO QA OPERATOR (ChatGPT).
 
 **YOUR ROLE:**
@@ -1611,6 +1703,15 @@ If REJECTED: end with exactly: "QA STATUS: REJECTED - [X] defects require fixing
 
         FIX #5: deploy_governance (full ZIP contents) now injected inline.
         """
+        return DirectiveTemplateLoader.render(
+            'deploy_prompt.md',
+            build_output=build_output,
+            deploy_governance=deploy_governance
+        )
+
+        # LEGACY INLINE PROMPT (INACTIVE, kept for reference only)
+        # Replaced by external template:
+        # - directives/prompts/deploy_prompt.md
         return f"""You are the FO DEPLOY EXECUTOR.
 
 **YOUR ROLE:**
@@ -2164,24 +2265,13 @@ class FOHarness:
         existing_files = extract_file_paths_from_output(build_output)
 
         # Build targeted prompt
-        patch_prompt = f"""You previously built {self.startup_id} and output a manifest listing all files.
-However, the following files were listed in your manifest but their content was NOT included in your output.
-
-**MISSING FILES (output ONLY these):**
-{chr(10).join('- ' + f for f in missing_files)}
-
-**FILES ALREADY RECEIVED (DO NOT repeat these):**
-{chr(10).join('- ' + f for f in existing_files[:25])}
-
-**RULES:**
-1. Output ONLY the missing files listed above
-2. Use **FILE: path/to/file.ext** header before each code block
-3. Each file must be COMPLETE — no placeholders
-4. Do NOT repeat any file from the "already received" list
-5. Do NOT output artifact_manifest.json or build_state.json (already have them)
-6. After all missing files, output: PATCH COMPLETE
-
-**OUTPUT THE MISSING FILES NOW:**"""
+        # Prompt template source: directives/prompts/patch_prompt.md
+        patch_prompt = DirectiveTemplateLoader.render(
+            'patch_prompt.md',
+            startup_id=self.startup_id,
+            missing_files_bullets=chr(10).join('- ' + f for f in missing_files),
+            existing_files_bullets=chr(10).join('- ' + f for f in existing_files[:25])
+        )
 
         # Estimate tokens needed: ~200-400 tokens per file
         estimated_tokens = min(16384, max(4096, len(missing_files) * 2000))
@@ -2367,42 +2457,12 @@ However, the following files were listed in your manifest but their content was 
             print_info("→ README.md missing - generating...")
 
             # Create targeted prompt for README generation
-            readme_prompt = f"""Generate a README.md file for this project.
-
-**BUILD ARTIFACTS:**
-{chr(10).join(manifest_files[:20])}  # Show first 20 files
-
-**BUILD OUTPUT SUMMARY:**
-{build_output[:2000]}  # First 2000 chars for context
-
-**YOUR TASK:**
-Generate a complete README.md with:
-1. Project title and description
-2. Features overview
-3. Installation instructions (npm install, env setup)
-4. Usage instructions (how to run)
-5. API endpoints (if applicable)
-6. Configuration (env variables)
-7. Testing instructions (if tests exist)
-
-**OUTPUT FORMAT:**
-```markdown
-# Project Title
-
-Brief description...
-
-## Features
-- Feature 1
-- Feature 2
-
-## Installation
-...
-
-## Usage
-...
-```
-
-Generate ONLY the README.md content in a markdown code block."""
+            # Prompt template source: directives/prompts/polish_readme_prompt.md
+            readme_prompt = DirectiveTemplateLoader.render(
+                'polish_readme_prompt.md',
+                manifest_sample=chr(10).join(manifest_files[:20]),
+                build_output_sample=build_output[:2000]
+            )
 
             try:
                 print_info("→ Calling Claude for README generation...")
@@ -2473,36 +2533,12 @@ Generate ONLY the README.md content in a markdown code block."""
                     except:
                         pass
 
-            env_prompt = f"""Generate a .env.example file for this project by analyzing the source code.
-
-**SOURCE FILES (sample):**
-{chr(10).join(source_files[:5])}
-
-**BUILD ARTIFACTS:**
-{chr(10).join(manifest_files[:15])}
-
-**YOUR TASK:**
-1. Scan for process.env.VARIABLE_NAME references
-2. Create a complete .env.example template
-3. Include descriptive comments for each variable
-4. Group related variables together
-
-**OUTPUT FORMAT:**
-```bash
-# Database Configuration
-DATABASE_URL=postgresql://localhost:5432/dbname
-DATABASE_POOL_SIZE=10
-
-# API Keys
-OPENAI_API_KEY=your-openai-api-key-here
-ANTHROPIC_API_KEY=your-anthropic-api-key-here
-
-# Application
-PORT=3000
-NODE_ENV=development
-```
-
-Generate ONLY the .env.example content in a bash code block."""
+            # Prompt template source: directives/prompts/polish_env_prompt.md
+            env_prompt = DirectiveTemplateLoader.render(
+                'polish_env_prompt.md',
+                source_files_sample=chr(10).join(source_files[:5]),
+                manifest_sample=chr(10).join(manifest_files[:15])
+            )
 
             try:
                 print_info("→ Calling Claude for .env.example generation...")
@@ -2561,38 +2597,12 @@ Generate ONLY the .env.example content in a bash code block."""
                             if ('service' in f.lower() or 'model' in f.lower() or 'api' in f.lower())
                             and 'test' not in f.lower()]
 
-            tests_prompt = f"""Generate comprehensive test files for this project.
-
-**EXISTING TEST FILES:**
-{chr(10).join(test_files) if test_files else "None"}
-
-**TESTABLE FILES:**
-{chr(10).join(testable_files[:10])}
-
-**YOUR TASK:**
-Generate unit tests for the main services/models. Create 2-3 test files covering:
-1. Service layer tests (mocking external APIs)
-2. Model validation tests
-3. API endpoint integration tests (if applicable)
-
-Use Jest/Mocha style. Include:
-- Setup/teardown
-- Happy path tests
-- Error handling tests
-- Edge cases
-
-**OUTPUT FORMAT:**
-For each test file, use:
-**FILE: path/to/test.test.js**
-```javascript
-describe('ServiceName', () => {{
-  test('should handle...', () => {{
-    // test
-  }});
-}});
-```
-
-Generate 2-3 test files with **FILE:** headers."""
+            # Prompt template source: directives/prompts/polish_tests_prompt.md
+            tests_prompt = DirectiveTemplateLoader.render(
+                'polish_tests_prompt.md',
+                existing_test_files=(chr(10).join(test_files) if test_files else "None"),
+                testable_files=chr(10).join(testable_files[:10])
+            )
 
             try:
                 print_info("→ Calling Claude for test generation...")
@@ -2678,32 +2688,17 @@ Generate 2-3 test files with **FILE:** headers."""
         # ============================================================
         try:
             docs_dir.mkdir(parents=True, exist_ok=True)
-            docs_prompt = f"""Execute QA_POLISH_2_DOC_RECOVERY using the directive below.
-
-**DIRECTIVE (external file):**
-{self.qa_polish_2_directive}
-
-**CONTEXT:**
-- startup_id: {self.startup_id}
-- block: BLOCK_{self.block}
-- iteration: {iteration}
-- artifacts_dir: iteration_{iteration:02d}_artifacts
-
-**BUILD ARTIFACTS (sample):**
-{chr(10).join(manifest_files[:50])}
-
-**BUILD OUTPUT SUMMARY (truncated):**
-{build_output[:3000]}
-
-**HARD REQUIREMENTS:**
-1. Output only file blocks with this exact pattern:
-   **FILE: relative/path.ext**
-   ```markdown
-   ...
-   ```
-2. Use paths under `business/docs/` unless directive says otherwise.
-3. Do not include explanations outside file blocks.
-"""
+            # Prompt template source: directives/prompts/polish_docs_wrapper_prompt.md
+            docs_prompt = DirectiveTemplateLoader.render(
+                'polish_docs_wrapper_prompt.md',
+                qa_polish_2_directive=self.qa_polish_2_directive,
+                startup_id=self.startup_id,
+                block=self.block,
+                iteration=iteration,
+                iteration_padded=f"{iteration:02d}",
+                manifest_sample=chr(10).join(manifest_files[:50]),
+                build_output_sample=build_output[:3000]
+            )
             print_info("→ Calling Claude for docs generation...")
             docs_response = self.claude.call(
                 docs_prompt,
@@ -3033,23 +3028,15 @@ Generate 2-3 test files with **FILE:** headers."""
                             remaining = part_info['remaining_files']
                             remaining_str = ', '.join(remaining) if remaining else '(check your manifest)'
 
-                            part_prompt = f"""Continue with PART {next_part}/{total_parts} of the build for {self.startup_id}.
-
-**FILES ALREADY RECEIVED (DO NOT REPEAT THESE):**
-{chr(10).join('- ' + f for f in received_files)}
-
-**REMAINING FILES TO OUTPUT:**
-{remaining_str}
-
-**RULES:**
-- Start with: <!-- PART {next_part}/{total_parts} -->
-- Output ONLY complete files with **FILE:** headers
-- NEVER repeat files from previous parts
-- Do NOT output artifact_manifest.json or build_state.json (auto-generated by harness)
-- End last part with: BUILD STATE: COMPLETED_CLOSED
-- End non-last parts with: <!-- END PART {next_part}/{total_parts} --> and REMAINING FILES: list
-
-Continue with PART {next_part}/{total_parts}:"""
+                            # Prompt template source: directives/prompts/part_prompt.md
+                            part_prompt = DirectiveTemplateLoader.render(
+                                'part_prompt.md',
+                                next_part=next_part,
+                                total_parts=total_parts,
+                                startup_id=self.startup_id,
+                                received_files_bullets=chr(10).join('- ' + f for f in received_files),
+                                remaining_str=remaining_str
+                            )
 
                             print_info("───────────────────────────────────────────────────────────")
                             print_info(f"REQUESTING PART {next_part}/{total_parts} - Using cached governance")
@@ -3107,25 +3094,15 @@ Continue with PART {next_part}/{total_parts}:"""
                             continuation_count += 1
                             print_warning(f"Output truncated (no multi-part) - requesting continuation {continuation_count}/{max_continuations}...")
 
-                            continuation_prompt = f"""Your previous response was truncated mid-output. Continue from where you left off.
-
-**PROJECT CONTEXT - DO NOT FORGET:**
-- Startup: {self.startup_id}
-- Block: BLOCK_{self.block}
-- Iteration: {iteration}/{Config.MAX_QA_ITERATIONS}
-
-**LAST 1500 CHARACTERS OF YOUR PREVIOUS OUTPUT:**
-{build_output[-1500:]}
-
-**CRITICAL: You MUST continue using the **FILE:** format for ALL remaining artifacts.**
-
-**INSTRUCTIONS:**
-1. If a code block was incomplete, start with its **FILE:** declaration and complete it
-2. Include ALL remaining files needed to complete the build
-3. Each file MUST have a **FILE:** header before its code block
-4. End with: BUILD STATE: COMPLETED_CLOSED
-
-Continue now with proper **FILE:** format:"""
+                            # Prompt template source: directives/prompts/continuation_prompt.md
+                            continuation_prompt = DirectiveTemplateLoader.render(
+                                'continuation_prompt.md',
+                                startup_id=self.startup_id,
+                                block=self.block,
+                                iteration=iteration,
+                                max_iterations=Config.MAX_QA_ITERATIONS,
+                                last_output_tail=build_output[-1500:]
+                            )
 
                             print_info(f"CONTINUATION {continuation_count} - fallback mode")
                             cont_start = time.time()
