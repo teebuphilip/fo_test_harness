@@ -97,7 +97,7 @@ def ensure_git_repo(repo_path: Path):
         _run('git config user.name "Teebu Deploy"', cwd=repo_path)
 
 
-def commit_all(repo_path: Path, message: str = "deploy: initial commit"):
+def commit_all(repo_path: Path, message: str):
     _run("git add -A", cwd=repo_path)
     status = _run("git status --porcelain", cwd=repo_path, capture=True)
     if status:
@@ -129,10 +129,18 @@ def create_github_repo(token: str, repo: str) -> None:
 
 def push_to_github(repo_path: Path, token: str, owner: str, repo: str):
     remote_url = f"https://{token}@github.com/{owner}/{repo}.git"
-    _run("git remote remove origin", cwd=repo_path, capture=False)
+    # Remove existing origin if present
+    subprocess.run("git remote remove origin", shell=True, cwd=repo_path, capture_output=True, text=True)
     _run(f"git remote add origin {remote_url}", cwd=repo_path)
     _run("git branch -M main", cwd=repo_path)
     _run("git push -u origin main --force", cwd=repo_path)
+
+
+def _derive_repo_name(repo_path: Path) -> str:
+    name = _safe_name(repo_path.name)
+    if "-block-b" in name:
+        return name.split("-block-b", 1)[0]
+    return name
 
 
 def main():
@@ -153,9 +161,8 @@ def main():
     print(f"[INFO] Repo path: {repo_path}")
 
     ensure_git_repo(repo_path)
-    commit_all(repo_path)
-
-    repo_name = _safe_name(repo_path.name)
+    repo_name = _derive_repo_name(repo_path)
+    commit_all(repo_path, f"Initial {repo_name.replace('-', ' ').title()} integration from harness zip")
     exists = github_repo_exists(github_token, github_username, repo_name)
     if not exists:
         print(f"[INFO] Creating GitHub repo: {repo_name}")
