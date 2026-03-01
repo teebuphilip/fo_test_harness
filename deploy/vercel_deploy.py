@@ -191,6 +191,17 @@ class VercelAPI:
         resp.raise_for_status()
         return resp.json()
 
+    def get_deployment_events(self, deployment_id: str, limit: int = 50) -> list:
+        """Fetch deployment events/log chunks when available."""
+        resp = self.session.get(
+            f"{VERCEL_API}/v3/deployments/{deployment_id}/events",
+            params=self._params({"limit": limit})
+        )
+        if resp.status_code >= 400:
+            return []
+        data = resp.json()
+        return data if isinstance(data, list) else data.get("events", [])
+
     def get_latest_deployment(self, project_id: str) -> dict:
         """Get the most recent deployment for a project."""
         resp = self.session.get(
@@ -369,8 +380,28 @@ def deploy_frontend(
                 break
             elif state in ("ERROR", "CANCELED"):
                 print(f"\n  [Vercel] Deploy failed: {state}")
+                reason = (
+                    status.get("errorMessage")
+                    or status.get("readyStateReason")
+                    or status.get("errorCode")
+                )
+                if reason:
+                    print(f"  [Vercel] Reason: {reason}")
+                if deployment_id:
+                    events = api.get_deployment_events(deployment_id, limit=80)
+                    if events:
+                        print("  [Vercel] Last deployment events:")
+                        for ev in events[-8:]:
+                            text = ev.get("text") or ev.get("payload", {}).get("text") or ev.get("type")
+                            if text:
+                                print(f"    - {str(text)[:300]}")
                 print(f"  [Vercel] Check: https://vercel.com/dashboard")
-                return {"success": False, "status": state}
+                return {
+                    "success": False,
+                    "status": state,
+                    "deployment_id": deployment_id,
+                    "reason": reason,
+                }
         except Exception:
             pass
     print()

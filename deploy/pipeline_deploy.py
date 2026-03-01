@@ -25,8 +25,9 @@ CONFIG:
 
 REPO STRUCTURE EXPECTED:
     your-repo/
-    ├── railway.json          ← backend deploy config (created by AI post-build)
-    ├── vercel.json           ← frontend deploy config (created by AI post-build)
+    ├── railway.deploy.json   ← backend deploy state (project/service IDs)
+    ├── vercel.deploy.json    ← frontend deploy state (project ID)
+    ├── vercel.json           ← OPTIONAL Vercel runtime config (must follow Vercel schema)
     ├── .env                  ← backend env vars
     ├── saas-boilerplate/
     │   ├── backend/          ← Railway deploys this
@@ -42,6 +43,7 @@ import subprocess
 import time
 import requests
 import os
+import shutil
 from datetime import datetime
 from pathlib import Path
 
@@ -63,6 +65,10 @@ OPENAI_API = "https://api.openai.com/v1/chat/completions"
 CLAUDE_API = "https://api.anthropic.com/v1/messages"
 DEFAULT_OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 DEFAULT_CLAUDE_MODEL = "claude-sonnet-4-20250514"
+RAILWAY_STATE_FILE = "railway.deploy.json"
+VERCEL_STATE_FILE = "vercel.deploy.json"
+LEGACY_RAILWAY_FILE = "railway.json"
+LEGACY_VERCEL_FILE = "vercel.json"
 
 
 def load_config() -> dict:
@@ -109,8 +115,8 @@ def _safe_project_name(value: str) -> str:
 
 def _base_project_name(repo_path: Path, railway_cfg: dict) -> str:
     repo_name = _safe_project_name(repo_path.name)
-    railway_name = _safe_project_name((railway_cfg or {}).get("project", ""))
-    return railway_name or repo_name
+    # Always use repo name as the canonical project base name.
+    return repo_name
 
 
 def _append_ai_cost(provider: str, model: str, input_tokens: int, output_tokens: int):
@@ -235,7 +241,7 @@ def _repo_tree(repo_path: Path, max_files: int = 300) -> str:
 
 def generate_deploy_configs(repo_path: Path, project_name: str, provider: str, openai_model: str, claude_model: str) -> tuple:
     """
-    Use AI to generate railway.json + vercel.json based on repo structure.
+    Use AI to generate deploy state JSON for Railway + Vercel.
     """
     tree = _repo_tree(repo_path)
     prompt = "\n".join([
@@ -249,8 +255,8 @@ def generate_deploy_configs(repo_path: Path, project_name: str, provider: str, o
         tree,
         "",
         "Requirements:",
-        "- railway_config should be a railway.json structure with project name.",
-        "- vercel_config should be a vercel.json structure with project name.",
+        "- railway_config should include project name and optional IDs/placeholders.",
+        "- vercel_config should include project name and optional IDs/placeholders.",
         "- Assume backend is saas-boilerplate/backend and frontend is saas-boilerplate/frontend unless evidence suggests otherwise.",
         "- Keep fields minimal and safe.",
         "",
@@ -272,32 +278,42 @@ def generate_deploy_configs(repo_path: Path, project_name: str, provider: str, o
 
 
 # ============================================================
-# RAILWAY.JSON / VERCEL.JSON READER
-# WHY: AI post-build job writes these into the repo.
-#      We read them to know project names and IDs.
+# DEPLOY STATE READER
+# WHY: Deploy pipeline state is stored in dedicated files to avoid
+#      collisions with Vercel's runtime config schema in vercel.json.
 # ============================================================
 
 def read_railway_config(repo_path: Path) -> dict:
-    """Read railway.json from repo root. Returns {} if not found."""
-    cfg_path = repo_path / "railway.json"
+    """Read Railway deploy state. Prefer railway.deploy.json, fallback legacy railway.json."""
+    cfg_path = repo_path / RAILWAY_STATE_FILE
     if not cfg_path.exists():
-        print("  [pipeline] No railway.json found - will create new Railway project")
-        return {}
+        legacy_path = repo_path / LEGACY_RAILWAY_FILE
+        if legacy_path.exists():
+            cfg_path = legacy_path
+            print(f"  [pipeline] Using legacy {LEGACY_RAILWAY_FILE} (consider migrating to {RAILWAY_STATE_FILE})")
+        else:
+            print(f"  [pipeline] No {RAILWAY_STATE_FILE} found - will create new Railway project")
+            return {}
     with open(cfg_path) as f:
         cfg = json.load(f)
-    print(f"  [pipeline] railway.json: project={cfg.get('project', 'unnamed')}")
+    print(f"  [pipeline] {cfg_path.name}: project={cfg.get('project', 'unnamed')}")
     return cfg
 
 
 def read_vercel_config(repo_path: Path) -> dict:
-    """Read vercel.json from repo root. Returns {} if not found."""
-    cfg_path = repo_path / "vercel.json"
+    """Read Vercel deploy state. Prefer vercel.deploy.json, fallback legacy vercel.json."""
+    cfg_path = repo_path / VERCEL_STATE_FILE
     if not cfg_path.exists():
-        print("  [pipeline] No vercel.json found - will create new Vercel project")
-        return {}
+        legacy_path = repo_path / LEGACY_VERCEL_FILE
+        if legacy_path.exists():
+            cfg_path = legacy_path
+            print(f"  [pipeline] Using legacy {LEGACY_VERCEL_FILE} for deploy state")
+        else:
+            print(f"  [pipeline] No {VERCEL_STATE_FILE} found - will create new Vercel project")
+            return {}
     with open(cfg_path) as f:
         cfg = json.load(f)
-    print(f"  [pipeline] vercel.json: project={cfg.get('project', 'unnamed')}")
+    print(f"  [pipeline] {cfg_path.name}: project={cfg.get('project', 'unnamed')}")
     return cfg
 
 
@@ -310,6 +326,53 @@ def write_config_back(repo_path: Path, filename: str, config: dict):
     with open(cfg_path, "w") as f:
         json.dump(config, f, indent=2)
     print(f"  [pipeline] Updated {filename} with project IDs")
+
+
+def sanitize_vercel_runtime_config(repo_path: Path):
+    """
+    Ensure repo vercel.json is valid Vercel runtime config.
+    If legacy pipeline keys are present, back up and remove them.
+    """
+    vercel_path = repo_path / LEGACY_VERCEL_FILE
+    if not vercel_path.exists():
+        return
+    try:
+        with open(vercel_path) as f:
+            data = json.load(f)
+    except Exception:
+        return
+
+    if not isinstance(data, dict):
+        return
+
+    original_data = dict(data)
+
+    removed_fields = []
+    for key in ("project", "project_id", "service_id"):
+        if key in data:
+            data.pop(key, None)
+            removed_fields.append(key)
+
+    # Some legacy/generated vercel.json files contain invalid schema under `build`.
+    # Example failure:
+    #   Invalid request: `build` should NOT have additional property `outputDirectory`
+    build_cfg = data.get("build")
+    if isinstance(build_cfg, dict) and "outputDirectory" in build_cfg:
+        build_cfg.pop("outputDirectory", None)
+        removed_fields.append("build.outputDirectory")
+
+    if not removed_fields:
+        return
+
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    backup = repo_path / f"vercel.json.pipeline-backup.{ts}"
+    with open(backup, "w") as f:
+        json.dump(original_data, f, indent=2)
+
+    with open(vercel_path, "w") as f:
+        json.dump(data, f, indent=2)
+
+    print(f"  [pipeline] Sanitized vercel.json (removed {', '.join(removed_fields)}; backup: {backup.name})")
 
 
 # ============================================================
@@ -378,6 +441,7 @@ def push_to_github(
 
     # ── Ensure .gitignore has the right entries ──────────────
     _ensure_gitignore(repo_path)
+    _ensure_frontend_business_config(repo_path)
 
     # ── Commit and push ──────────────────────────────────────
     _git(repo_path, "add -A")
@@ -427,6 +491,31 @@ def _ensure_gitignore(repo_path: Path):
         print(f"  Updated .gitignore with {len(additions)} entries")
 
 
+def _ensure_frontend_business_config(repo_path: Path):
+    """
+    Ensure frontend business_config.json is present and staged for deploy.
+
+    Vercel build expects this file. It is often gitignored in frontend repos.
+    """
+    cfg_rel = Path("boilerplate/saas-boilerplate/frontend/src/config/business_config.json")
+    example_rel = Path("boilerplate/saas-boilerplate/frontend/src/config/business_config.example.json")
+    cfg_path = repo_path / cfg_rel
+    example_path = repo_path / example_rel
+
+    if not cfg_path.exists():
+        if example_path.exists():
+            cfg_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(example_path, cfg_path)
+            print("  [pipeline] Created frontend business_config.json from example")
+        else:
+            print("  [pipeline] WARNING: frontend business_config.json missing and no example found")
+            return
+
+    # Force-add in case frontend/.gitignore excludes it.
+    _git(repo_path, f"add -f -- {cfg_rel.as_posix()}", required=False)
+    print("  [pipeline] Ensured frontend business_config.json is staged for push")
+
+
 def _git(repo_path: Path, cmd: str, capture: bool = False, required: bool = True):
     """Run a git command in the repo directory."""
     import subprocess
@@ -444,6 +533,42 @@ def _git(repo_path: Path, cmd: str, capture: bool = False, required: bool = True
     if capture:
         return result.stdout.strip()
     return result.returncode == 0
+
+
+def persist_deploy_state_if_changed(repo_path: Path, branch: str):
+    """
+    Auto-commit deploy state files if they changed.
+    Runs only after successful deploy flow.
+    """
+    tracked = [RAILWAY_STATE_FILE, VERCEL_STATE_FILE, LEGACY_VERCEL_FILE]
+    status = _git(repo_path, "status --porcelain", capture=True, required=False) or ""
+    changed_paths = []
+    for line in status.splitlines():
+        if len(line) < 4:
+            continue
+        path = line[3:].strip()
+        # Handle rename lines like: "R  old -> new"
+        if " -> " in path:
+            path = path.split(" -> ", 1)[1].strip()
+        changed_paths.append(path)
+
+    to_commit = [p for p in tracked if p in changed_paths]
+    if not to_commit:
+        print("  [pipeline] No deploy state changes to commit")
+        return
+
+    print(f"  [pipeline] Persisting deploy state changes: {', '.join(to_commit)}")
+    for rel_path in to_commit:
+        _git(repo_path, f"add -- {rel_path}", required=False)
+
+    staged = _git(repo_path, "diff --cached --name-only", capture=True, required=False) or ""
+    if not staged.strip():
+        print("  [pipeline] No staged deploy state changes")
+        return
+
+    _git(repo_path, 'commit -m "deploy: persist deploy state"', required=False)
+    _git(repo_path, f"push origin {branch}", required=False)
+    print("  [pipeline] Deploy state committed and pushed")
 
 
 # ============================================================
@@ -554,7 +679,7 @@ def main():
     parser.add_argument(
         "--new-project",
         action="store_true",
-        help="Force create new Railway/Vercel projects (ignore existing IDs in railway.json/vercel.json)"
+        help="Force create new Railway/Vercel projects (ignore existing IDs in deploy state files)"
     )
     parser.add_argument(
         "--backend-only",
@@ -627,7 +752,10 @@ def main():
     github_token   = config["github"]["token"]
     github_username = config["github"]["username"]
 
-    # ── Read repo configs ────────────────────────────────────
+    # ── Sanitize runtime vercel.json if it contains legacy pipeline fields ──
+    sanitize_vercel_runtime_config(repo_path)
+
+    # ── Read deploy state configs ────────────────────────────
     railway_cfg = {} if args.new_project else read_railway_config(repo_path)
     vercel_cfg  = {} if args.new_project else read_vercel_config(repo_path)
 
@@ -635,25 +763,25 @@ def main():
     project_name = _base_project_name(repo_path, railway_cfg)
 
     # ── Generate configs via AI before push ─────────────────
-    railway_cfg_path = repo_path / "railway.json"
-    vercel_cfg_path = repo_path / "vercel.json"
+    railway_cfg_path = repo_path / RAILWAY_STATE_FILE
+    vercel_cfg_path = repo_path / VERCEL_STATE_FILE
     if railway_cfg_path.exists() and vercel_cfg_path.exists():
         print(f"\n{'='*60}")
-        print("STEP 0/3: Generate railway.json + vercel.json via AI")
+        print(f"STEP 0/3: Generate {RAILWAY_STATE_FILE} + {VERCEL_STATE_FILE} via AI")
         print(f"{'='*60}")
         print("  [pipeline] Existing config files found - skipping AI regeneration")
     else:
         print(f"\n{'='*60}")
-        print("STEP 0/3: Generate railway.json + vercel.json via AI")
+        print(f"STEP 0/3: Generate {RAILWAY_STATE_FILE} + {VERCEL_STATE_FILE} via AI")
         print(f"{'='*60}")
         try:
             railway_ai_cfg, vercel_ai_cfg = generate_deploy_configs(
                 repo_path, project_name, args.provider, args.openai_model, args.claude_model
             )
             if railway_ai_cfg:
-                write_config_back(repo_path, "railway.json", railway_ai_cfg)
+                write_config_back(repo_path, RAILWAY_STATE_FILE, railway_ai_cfg)
             if vercel_ai_cfg:
-                write_config_back(repo_path, "vercel.json", vercel_ai_cfg)
+                write_config_back(repo_path, VERCEL_STATE_FILE, vercel_ai_cfg)
         except Exception as e:
             print(f"[ERROR] Failed to generate deploy configs: {e}")
             sys.exit(1)
@@ -693,14 +821,14 @@ def main():
             if railway_result["success"]:
                 print(f"  [Railway] SUCCESS: {railway_result.get('url', 'no URL yet')}")
 
-                # Save project/service IDs back to railway.json for next deploy
+                # Save project/service IDs back to Railway deploy state for next deploy
                 railway_cfg.update({
                     "project": project_name,
                     "project_id": railway_result["project_id"],
                     "service_id": railway_result["service_id"],
                     "postgres_added": True,
                 })
-                write_config_back(repo_path, "railway.json", railway_cfg)
+                write_config_back(repo_path, RAILWAY_STATE_FILE, railway_cfg)
             else:
                 print("  [Railway] FAILED")
 
@@ -718,8 +846,16 @@ def main():
         print(f"{'='*60}")
 
         backend_url = railway_result.get("url") if railway_result else None
-        if args.frontend_only and not backend_url:
-            backend_url = get_existing_backend_url(railway_token, railway_cfg)
+        if not backend_url:
+            merged_for_backend = dict(railway_cfg or {})
+            if railway_result:
+                if railway_result.get("project_id"):
+                    merged_for_backend["project_id"] = railway_result.get("project_id")
+                if railway_result.get("service_id"):
+                    merged_for_backend["service_id"] = railway_result.get("service_id")
+            backend_url = get_existing_backend_url(railway_token, merged_for_backend)
+            if backend_url:
+                print(f"  [pipeline] Resolved backend URL for Vercel env injection: {backend_url}")
 
         try:
             vercel_result = deploy_frontend(
@@ -739,12 +875,12 @@ def main():
             if vercel_result["success"]:
                 print(f"  [Vercel] SUCCESS: {vercel_result.get('url', 'no URL yet')}")
 
-                # Save project ID back to vercel.json for next deploy
+                # Save project ID back to Vercel deploy state for next deploy
                 vercel_cfg.update({
                     "project": f"{project_name}-frontend",
                     "project_id": vercel_result["project_id"],
                 })
-                write_config_back(repo_path, "vercel.json", vercel_cfg)
+                write_config_back(repo_path, VERCEL_STATE_FILE, vercel_cfg)
             else:
                 print("  [Vercel] FAILED")
 
@@ -800,6 +936,13 @@ def main():
         backend_url=final_backend_url,
         frontend_url=final_frontend_url,
     )
+
+    # Persist state files only when deploy flow succeeds
+    railway_success = args.frontend_only or (railway_result and railway_result.get("success"))
+    vercel_success = args.backend_only or (vercel_result and vercel_result.get("success"))
+    overall_success = railway_success and vercel_success
+    if overall_success:
+        persist_deploy_state_if_changed(repo_path, args.branch)
 
     # Exit code: 0 = success, 1 = at least one failure
     if railway_result and not railway_result.get("success"):

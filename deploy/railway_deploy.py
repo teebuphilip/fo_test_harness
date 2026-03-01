@@ -179,40 +179,97 @@ class RailwayAPI:
         self._query(q, variables)
         return True
 
-    def trigger_deploy(self, service_id: str, environment_id: str = None) -> dict:
-        """Trigger a redeployment of a service."""
-        q = """
-        mutation ServiceInstanceRedeploy($serviceId: String!, $environmentId: String) {
-            serviceInstanceRedeploy(serviceId: $serviceId, environmentId: $environmentId)
-        }
+    def get_environment_id(self, project_id: str) -> str:
         """
-        variables = {
-            "serviceId": service_id,
-            "environmentId": environment_id,
-        }
-        self._query(q, variables)
-        return {"triggered": True}
-
-    def get_service_url(self, project_id: str, service_id: str) -> str:
-        """Get the public URL for a service."""
-        q = """
-        query GetService($id: String!) {
-            service(id: $id) {
-                id
-                name
-                domains {
-                    serviceDomains {
-                        domain
+        Resolve a deployable environment ID for a project.
+        Railway schema varies by account/workspace, so try a couple of shapes.
+        """
+        candidates = [
+            (
+                """
+                query GetProjectEnvironments($id: String!) {
+                    project(id: $id) {
+                        environments {
+                            edges { node { id name } }
+                        }
                     }
                 }
+                """,
+                lambda d: [
+                    e.get("node", {}) for e in
+                    d.get("project", {}).get("environments", {}).get("edges", [])
+                ],
+            ),
+            (
+                """
+                query GetProjectEnvironmentsAlt($id: String!) {
+                    project(id: $id) {
+                        environments {
+                            id
+                            name
+                        }
+                    }
+                }
+                """,
+                lambda d: d.get("project", {}).get("environments", []),
+            ),
+        ]
+
+        for query, extractor in candidates:
+            try:
+                data = self._query(query, {"id": project_id})
+                envs = extractor(data) or []
+                # Prefer Production, then first available.
+                for env in envs:
+                    if (env.get("name") or "").lower() == "production":
+                        return env.get("id")
+                if envs:
+                    return envs[0].get("id")
+            except Exception:
+                continue
+        return None
+
+    def trigger_deploy(self, service_id: str, environment_id: str = None, project_id: str = None) -> dict:
+        """
+        Trigger a redeployment of a service.
+        Uses environment-aware mutation and schema fallbacks.
+        """
+        env_id = environment_id
+        if not env_id and project_id:
+            env_id = self.get_environment_id(project_id)
+
+        # Attempt 1: explicit environment ID (most common in current schema)
+        if env_id:
+            q_env = """
+            mutation ServiceInstanceRedeploy($serviceId: String!, $environmentId: String!) {
+                serviceInstanceRedeploy(serviceId: $serviceId, environmentId: $environmentId)
             }
+            """
+            self._query(q_env, {"serviceId": service_id, "environmentId": env_id})
+            return {"triggered": True, "environment_id": env_id}
+
+        # Attempt 2: service-only fallback (older schema variants)
+        q_service_only = """
+        mutation ServiceInstanceRedeploy($serviceId: String!) {
+            serviceInstanceRedeploy(serviceId: $serviceId)
         }
         """
-        data = self._query(q, {"id": service_id})
-        service = data.get("service", {})
-        domains = service.get("domains", {}).get("serviceDomains", [])
-        if domains:
-            return domains[0]["domain"]
+        self._query(q_service_only, {"serviceId": service_id})
+        return {"triggered": True, "environment_id": None}
+
+    def get_service_url(self, project_id: str, service_id: str) -> str:
+        """
+        Get a reachable public URL for a service.
+
+        Railway GraphQL schema evolves; `service.domains` is not available in some
+        versions. Prefer recent deployment URLs, which are available from
+        `deployments` and already used elsewhere.
+        """
+        deployments = self.get_deployments(service_id)
+        for dep in deployments:
+            url = dep.get("url")
+            if url:
+                return url
         return None
 
     def get_deployments(self, service_id: str) -> list:
@@ -374,7 +431,9 @@ def deploy_backend(
     # ── Step 6: Trigger deploy ──────────────────────────────
     print("  [Railway] Triggering deploy...")
     try:
-        api.trigger_deploy(service_id)
+        redeploy = api.trigger_deploy(service_id, project_id=project_id)
+        if redeploy.get("environment_id"):
+            print(f"  [Railway] Deploy triggered in environment: {redeploy.get('environment_id')}")
     except Exception as e:
         # Some Railway accounts/workspaces reject explicit redeploy mutation
         # even when service creation/linking succeeds. Continue and poll URL.
