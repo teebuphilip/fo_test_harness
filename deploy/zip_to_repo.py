@@ -64,29 +64,44 @@ def _safe_name(name: str) -> str:
 
 
 def extract_zip(zip_path: Path, dest_root: Path) -> Path:
+    """
+    1) Create empty repo folder in ~/Documents/work
+    2) Copy ZIP there
+    3) Unzip inside repo folder
+    4) Copy build/iteration_04_artifacts/business -> ./business
+    """
     dest_root.mkdir(parents=True, exist_ok=True)
     top = _zip_top_level_dir(zip_path)
+    repo_name = _safe_name(top) if top else _safe_name(zip_path.stem)
+    repo_path = dest_root / repo_name
+
+    repo_path.mkdir(parents=True, exist_ok=True)
+    local_zip = repo_path / zip_path.name
+    if not local_zip.exists():
+        shutil.copy2(zip_path, local_zip)
+
+    # unzip inside repo folder
+    with zipfile.ZipFile(local_zip, "r") as z:
+        z.extractall(repo_path)
+
+    # copy final artifacts into repo root
     if top:
-        dest = dest_root / _safe_name(top)
+        run_root = repo_path / top
     else:
-        dest = dest_root / _safe_name(zip_path.stem)
+        # best-effort: find a single extracted folder
+        candidates = [p for p in repo_path.iterdir() if p.is_dir() and p.name != ".git"]
+        run_root = candidates[0] if len(candidates) == 1 else repo_path
 
-    if dest.exists():
-        print(f"[INFO] Destination exists: {dest}")
-        return dest
+    src = run_root / "build" / "iteration_04_artifacts" / "business"
+    dest = repo_path / "business"
+    if src.exists():
+        if dest.exists():
+            shutil.rmtree(dest)
+        shutil.copytree(src, dest)
+    else:
+        print(f"[WARN] Expected artifacts not found at: {src}")
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        with zipfile.ZipFile(zip_path, "r") as z:
-            z.extractall(tmpdir)
-        tmp = Path(tmpdir)
-        if top and (tmp / top).exists():
-            shutil.move(str(tmp / top), dest)
-        else:
-            dest.mkdir(parents=True, exist_ok=True)
-            for child in tmp.iterdir():
-                shutil.move(str(child), dest / child.name)
-
-    return dest
+    return repo_path
 
 
 def ensure_git_repo(repo_path: Path):
