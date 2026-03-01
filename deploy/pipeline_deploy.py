@@ -48,7 +48,7 @@ from pathlib import Path
 # ─── Import our API modules ───────────────────────────────────────────────────
 # These live in the same directory as this script
 sys.path.insert(0, str(Path(__file__).parent))
-from railway_deploy import deploy_backend, parse_env_file as railway_parse_env
+from railway_deploy import deploy_backend, RailwayAPI, parse_env_file as railway_parse_env
 from vercel_deploy import deploy_frontend
 
 
@@ -435,14 +435,16 @@ def _git(repo_path: Path, cmd: str, capture: bool = False, required: bool = True
 # DEPLOY SUMMARY PRINTER
 # ============================================================
 
-def print_summary(github_url, railway_result, vercel_result):
+def print_summary(github_url, railway_result, vercel_result, backend_skipped=False):
     print(f"\n{'='*60}")
     print("DEPLOY COMPLETE")
     print(f"{'='*60}")
 
     print(f"\n  GitHub:   {github_url}")
 
-    if railway_result and railway_result.get("success"):
+    if backend_skipped:
+        print(f"  Backend:  skipped (--frontend-only)")
+    elif railway_result and railway_result.get("success"):
         url = railway_result.get("url", "check Railway dashboard")
         print(f"  Backend:  {url}")
         print(f"  Health:   {url}/health" if url and url.startswith("http") else "")
@@ -461,6 +463,22 @@ def print_summary(github_url, railway_result, vercel_result):
     print(f"\n  Railway logs: railway logs (or dashboard)")
     print(f"  Vercel  logs: vercel.com/dashboard")
     print(f"{'='*60}\n")
+
+
+def get_existing_backend_url(railway_token: str, railway_cfg: dict) -> str:
+    project_id = (railway_cfg or {}).get("project_id")
+    service_id = (railway_cfg or {}).get("service_id")
+    if not project_id or not service_id:
+        return None
+    try:
+        api = RailwayAPI(railway_token)
+        domain = api.get_service_url(project_id, service_id)
+        if not domain:
+            return None
+        return domain if domain.startswith("http") else f"https://{domain}"
+    except Exception as e:
+        print(f"  [pipeline] Could not fetch backend URL from Railway IDs: {e}")
+        return None
 
 
 # ============================================================
@@ -563,20 +581,28 @@ def main():
     )
 
     # ── Generate configs via AI before push ─────────────────
-    print(f"\n{'='*60}")
-    print("STEP 0/3: Generate railway.json + vercel.json via AI")
-    print(f"{'='*60}")
-    try:
-        railway_ai_cfg, vercel_ai_cfg = generate_deploy_configs(
-            repo_path, project_name, args.provider, args.openai_model, args.claude_model
-        )
-        if railway_ai_cfg:
-            write_config_back(repo_path, "railway.json", railway_ai_cfg)
-        if vercel_ai_cfg:
-            write_config_back(repo_path, "vercel.json", vercel_ai_cfg)
-    except Exception as e:
-        print(f"[ERROR] Failed to generate deploy configs: {e}")
-        sys.exit(1)
+    railway_cfg_path = repo_path / "railway.json"
+    vercel_cfg_path = repo_path / "vercel.json"
+    if railway_cfg_path.exists() and vercel_cfg_path.exists():
+        print(f"\n{'='*60}")
+        print("STEP 0/3: Generate railway.json + vercel.json via AI")
+        print(f"{'='*60}")
+        print("  [pipeline] Existing config files found - skipping AI regeneration")
+    else:
+        print(f"\n{'='*60}")
+        print("STEP 0/3: Generate railway.json + vercel.json via AI")
+        print(f"{'='*60}")
+        try:
+            railway_ai_cfg, vercel_ai_cfg = generate_deploy_configs(
+                repo_path, project_name, args.provider, args.openai_model, args.claude_model
+            )
+            if railway_ai_cfg:
+                write_config_back(repo_path, "railway.json", railway_ai_cfg)
+            if vercel_ai_cfg:
+                write_config_back(repo_path, "vercel.json", vercel_ai_cfg)
+        except Exception as e:
+            print(f"[ERROR] Failed to generate deploy configs: {e}")
+            sys.exit(1)
 
     # ── STEP 1: Push to GitHub ───────────────────────────────
     github_url, github_repo = push_to_github(
@@ -638,6 +664,8 @@ def main():
         print(f"{'='*60}")
 
         backend_url = railway_result.get("url") if railway_result else None
+        if args.frontend_only and not backend_url:
+            backend_url = get_existing_backend_url(railway_token, railway_cfg)
 
         try:
             vercel_result = deploy_frontend(
@@ -675,7 +703,7 @@ def main():
         print(f"  Fix Railway first, then run with --frontend-only")
 
     # ── Print summary ────────────────────────────────────────
-    print_summary(github_url, railway_result, vercel_result)
+    print_summary(github_url, railway_result, vercel_result, backend_skipped=args.frontend_only)
 
     # Exit code: 0 = success, 1 = at least one failure
     if railway_result and not railway_result.get("success"):
