@@ -84,7 +84,7 @@ def extract_zip(zip_path: Path, dest_root: Path) -> Path:
     with zipfile.ZipFile(local_zip, "r") as z:
         z.extractall(repo_path)
 
-    # copy final artifacts into boilerplate business directory
+    # copy boilerplate into repo root
     if top:
         run_root = repo_path / top
     else:
@@ -92,6 +92,16 @@ def extract_zip(zip_path: Path, dest_root: Path) -> Path:
         candidates = [p for p in repo_path.iterdir() if p.is_dir() and p.name != ".git"]
         run_root = candidates[0] if len(candidates) == 1 else repo_path
 
+    boilerplate_src = run_root / "boilerplate"
+    boilerplate_dest = repo_path / "boilerplate"
+    if boilerplate_src.exists():
+        if boilerplate_dest.exists():
+            shutil.rmtree(boilerplate_dest)
+        shutil.copytree(boilerplate_src, boilerplate_dest)
+    else:
+        print(f"[WARN] Boilerplate not found at: {boilerplate_src}")
+
+    # copy final artifacts into boilerplate business directory
     src = run_root / "build" / "iteration_04_artifacts" / "business"
     dest = repo_path / "boilerplate" / "saas-boilerplate" / "business"
     if src.exists():
