@@ -128,6 +128,7 @@ class Config:
     TECH_STACK_OVERRIDE_FILE = Path('./fo_tech_stack_override.json')
     EXTERNAL_INTEGRATION_OVERRIDE_FILE = Path('./fo_external_integration_override.json')
     QA_OVERRIDE_FILE = Path('./fo_qa_override.json')
+    QA_POLISH_2_DIRECTIVE_FILE = Path('./directives/qa_polish_2_doc_recovery.md')
 
 
 # ============================================================
@@ -410,6 +411,12 @@ def load_qa_override() -> dict:
     except Exception as e:
         print_warning(f"Could not load QA override: {e}")
         return {}
+
+
+def load_text_file(path: Path) -> str:
+    """Load a UTF-8 text file and return stripped content."""
+    with open(path, 'r', encoding='utf-8') as f:
+        return f.read().strip()
 
 
 # ============================================================
@@ -1694,6 +1701,11 @@ class FOHarness:
         if self.qa_override:
             print_info("QA override loaded (tightened evaluation criteria)")
 
+        # Resolve QA_POLISH_2 directive path (CLI override takes precedence)
+        self.qa_polish_2_directive_path = self._resolve_qa_polish_2_directive_path()
+        self.qa_polish_2_directive = load_text_file(self.qa_polish_2_directive_path)
+        print_info(f"QA_POLISH_2 directive: {self.qa_polish_2_directive_path}")
+
         # Only load deploy governance if --deploy was passed
         self.deploy_governance = None
         if self.do_deploy:
@@ -1745,12 +1757,30 @@ class FOHarness:
             "build_governance_zip": str(Config.BUILD_GOVERNANCE_ZIP),
             "deploy_governance_zip": str(Config.DEPLOY_GOVERNANCE_ZIP) if self.do_deploy else None,
             "platform_boilerplate_dir": str(Config.PLATFORM_BOILERPLATE_DIR),
+            "qa_polish_2_directive_path": str(self.qa_polish_2_directive_path),
             "cli_args": _coerce_jsonable(vars(self.cli_args)) if self.cli_args else None
         }
 
         metadata_path = self.run_dir / 'run_metadata.json'
         with open(metadata_path, 'w') as f:
             json.dump(metadata, f, indent=2)
+
+    def _resolve_qa_polish_2_directive_path(self) -> Path:
+        """
+        Resolve QA_POLISH_2 directive path with precedence:
+        1) CLI override (--qa-polish-2-directive)
+        2) Config default (Config.QA_POLISH_2_DIRECTIVE_FILE)
+        3) Fail fast if resolved path does not exist
+        """
+        cli_path = getattr(self.cli_args, 'qa_polish_2_directive', None) if self.cli_args else None
+        resolved = Path(cli_path) if cli_path else Path(Config.QA_POLISH_2_DIRECTIVE_FILE)
+        if not resolved.exists():
+            raise FileNotFoundError(
+                "QA_POLISH_2 directive not found. "
+                f"Looked for: {resolved}. "
+                "Provide --qa-polish-2-directive <path> or create the default file."
+            )
+        return resolved
 
     def _log_claude_usage(self, response: dict, iteration: int, is_continuation: bool = False, continuation_num: int = 0) -> dict:
         """
@@ -2648,27 +2678,31 @@ Generate 2-3 test files with **FILE:** headers."""
         # ============================================================
         try:
             docs_dir.mkdir(parents=True, exist_ok=True)
-            docs_prompt = f"""Generate two concise docs for this build.
+            docs_prompt = f"""Execute QA_POLISH_2_DOC_RECOVERY using the directive below.
+
+**DIRECTIVE (external file):**
+{self.qa_polish_2_directive}
+
+**CONTEXT:**
+- startup_id: {self.startup_id}
+- block: BLOCK_{self.block}
+- iteration: {iteration}
+- artifacts_dir: iteration_{iteration:02d}_artifacts
 
 **BUILD ARTIFACTS (sample):**
-{chr(10).join(manifest_files[:25])}
+{chr(10).join(manifest_files[:50])}
 
-**BUILD OUTPUT SUMMARY:**
-{build_output[:2000]}
+**BUILD OUTPUT SUMMARY (truncated):**
+{build_output[:3000]}
 
-**YOUR TASK:**
-1. Create a `HLD.md` (high-level design) covering: architecture, modules/services, data models, data flow, external integrations, and key assumptions.
-2. Create a `QUICKSTART.md` with setup steps, env vars, run commands, and where to put business files.
-
-**OUTPUT FORMAT:**
-**FILE: business/docs/HLD.md**
-```markdown
-...
-```
-**FILE: business/docs/QUICKSTART.md**
-```markdown
-...
-```
+**HARD REQUIREMENTS:**
+1. Output only file blocks with this exact pattern:
+   **FILE: relative/path.ext**
+   ```markdown
+   ...
+   ```
+2. Use paths under `business/docs/` unless directive says otherwise.
+3. Do not include explanations outside file blocks.
 """
             print_info("→ Calling Claude for docs generation...")
             docs_response = self.claude.call(
@@ -3638,6 +3672,13 @@ Examples:
         '--confirm-run-log',
         default='NO',
         help='Require confirmation before writing fo_run_log.csv (YES/NO). Default: NO'
+    )
+    parser.add_argument(
+        '--qa-polish-2-directive',
+        type=Path,
+        default=None,
+        help='Path to external QA_POLISH_2_DOC_RECOVERY directive file. '
+             'Precedence: CLI path -> Config default path.'
     )
 
     args = parser.parse_args()
