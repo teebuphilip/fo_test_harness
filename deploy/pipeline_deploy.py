@@ -49,7 +49,7 @@ from pathlib import Path
 # These live in the same directory as this script
 sys.path.insert(0, str(Path(__file__).parent))
 from railway_deploy import deploy_backend, RailwayAPI, parse_env_file as railway_parse_env
-from vercel_deploy import deploy_frontend
+from vercel_deploy import deploy_frontend, VercelAPI
 
 
 # ============================================================
@@ -435,30 +435,54 @@ def _git(repo_path: Path, cmd: str, capture: bool = False, required: bool = True
 # DEPLOY SUMMARY PRINTER
 # ============================================================
 
-def print_summary(github_url, railway_result, vercel_result, backend_skipped=False):
+def print_summary(
+    github_url,
+    railway_result,
+    vercel_result,
+    backend_skipped=False,
+    railway_cfg=None,
+    vercel_cfg=None,
+    backend_url=None,
+    frontend_url=None,
+):
     print(f"\n{'='*60}")
     print("DEPLOY COMPLETE")
     print(f"{'='*60}")
 
     print(f"\n  GitHub:   {github_url}")
 
-    if backend_skipped:
+    resolved_backend_url = backend_url or (railway_result or {}).get("url")
+    resolved_frontend_url = frontend_url or (vercel_result or {}).get("url")
+
+    if backend_skipped and not resolved_backend_url:
         print(f"  Backend:  skipped (--frontend-only)")
-    elif railway_result and railway_result.get("success"):
-        url = railway_result.get("url", "check Railway dashboard")
-        print(f"  Backend:  {url}")
-        print(f"  Health:   {url}/health" if url and url.startswith("http") else "")
-        print(f"  API Docs: {url}/docs" if url and url.startswith("http") else "")
+    elif railway_result and railway_result.get("success") or resolved_backend_url:
+        show_backend = resolved_backend_url or "check Railway dashboard"
+        print(f"  Backend:  {show_backend}")
+        print(f"  Health:   {show_backend}/health" if show_backend and str(show_backend).startswith("http") else "")
+        print(f"  API Docs: {show_backend}/docs" if show_backend and str(show_backend).startswith("http") else "")
     else:
         print(f"  Backend:  FAILED - check Railway dashboard")
 
-    if vercel_result and vercel_result.get("success"):
-        url = vercel_result.get("url", "check Vercel dashboard")
-        print(f"  Frontend: {url}")
+    if vercel_result and vercel_result.get("success") or resolved_frontend_url:
+        show_frontend = resolved_frontend_url or "check Vercel dashboard"
+        print(f"  Frontend: {show_frontend}")
     elif vercel_result is None:
         print(f"  Frontend: skipped (--backend-only)")
     else:
         print(f"  Frontend: FAILED - check Vercel dashboard")
+
+    railway_project_id = (railway_result or {}).get("project_id") or (railway_cfg or {}).get("project_id")
+    if railway_project_id:
+        print(f"  Railway:  https://railway.app/project/{railway_project_id}")
+    else:
+        print(f"  Railway:  https://railway.app/dashboard")
+
+    vercel_project = (vercel_cfg or {}).get("project")
+    if vercel_project:
+        print(f"  Vercel:   https://vercel.com/dashboard/projects/{vercel_project}")
+    else:
+        print(f"  Vercel:   https://vercel.com/dashboard")
 
     print(f"\n  Railway logs: railway logs (or dashboard)")
     print(f"  Vercel  logs: vercel.com/dashboard")
@@ -478,6 +502,24 @@ def get_existing_backend_url(railway_token: str, railway_cfg: dict) -> str:
         return domain if domain.startswith("http") else f"https://{domain}"
     except Exception as e:
         print(f"  [pipeline] Could not fetch backend URL from Railway IDs: {e}")
+        return None
+
+
+def get_existing_frontend_url(vercel_token: str, vercel_cfg: dict, team_id: str = None) -> str:
+    project_id = (vercel_cfg or {}).get("project_id")
+    if not project_id:
+        return None
+    try:
+        api = VercelAPI(vercel_token, team_id=team_id or None)
+        latest = api.get_latest_deployment(project_id)
+        if not latest:
+            return None
+        url = latest.get("url")
+        if not url:
+            return None
+        return url if url.startswith("http") else f"https://{url}"
+    except Exception as e:
+        print(f"  [pipeline] Could not fetch frontend URL from Vercel project ID: {e}")
         return None
 
 
@@ -702,8 +744,50 @@ def main():
         print(f"\n[SKIPPED] Vercel deploy skipped because Railway failed.")
         print(f"  Fix Railway first, then run with --frontend-only")
 
+    if args.frontend_only and (not railway_result or not railway_result.get("url")):
+        existing_backend_url = get_existing_backend_url(railway_token, railway_cfg)
+        if existing_backend_url:
+            railway_result = railway_result or {"success": True}
+            railway_result["url"] = existing_backend_url
+
+    if (vercel_result is None or not vercel_result.get("url")) and not args.backend_only:
+        existing_frontend_url = get_existing_frontend_url(vercel_token, vercel_cfg, team_id=vercel_team_id or None)
+        if existing_frontend_url:
+            vercel_result = vercel_result or {"success": True}
+            vercel_result["url"] = existing_frontend_url
+
+    final_backend_url = None
+    if railway_result and railway_result.get("url"):
+        final_backend_url = railway_result.get("url")
+    if not final_backend_url:
+        merged_railway_cfg = dict(railway_cfg or {})
+        if railway_result:
+            if railway_result.get("project_id"):
+                merged_railway_cfg["project_id"] = railway_result.get("project_id")
+            if railway_result.get("service_id"):
+                merged_railway_cfg["service_id"] = railway_result.get("service_id")
+        final_backend_url = get_existing_backend_url(railway_token, merged_railway_cfg)
+
+    final_frontend_url = None
+    if vercel_result and vercel_result.get("url"):
+        final_frontend_url = vercel_result.get("url")
+    if not final_frontend_url:
+        merged_vercel_cfg = dict(vercel_cfg or {})
+        if vercel_result and vercel_result.get("project_id"):
+            merged_vercel_cfg["project_id"] = vercel_result.get("project_id")
+        final_frontend_url = get_existing_frontend_url(vercel_token, merged_vercel_cfg, team_id=vercel_team_id or None)
+
     # ── Print summary ────────────────────────────────────────
-    print_summary(github_url, railway_result, vercel_result, backend_skipped=args.frontend_only)
+    print_summary(
+        github_url,
+        railway_result,
+        vercel_result,
+        backend_skipped=args.frontend_only,
+        railway_cfg=railway_cfg,
+        vercel_cfg=vercel_cfg,
+        backend_url=final_backend_url,
+        frontend_url=final_frontend_url,
+    )
 
     # Exit code: 0 = success, 1 = at least one failure
     if railway_result and not railway_result.get("success"):
