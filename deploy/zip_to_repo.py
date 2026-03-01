@@ -73,6 +73,8 @@ def extract_zip(zip_path: Path, dest_root: Path) -> Path:
     dest_root.mkdir(parents=True, exist_ok=True)
     top = _zip_top_level_dir(zip_path)
     repo_name = _safe_name(top) if top else _safe_name(zip_path.stem)
+    if "-block-b" in repo_name:
+        repo_name = repo_name.split("-block-b", 1)[0]
     repo_path = dest_root / repo_name
 
     repo_path.mkdir(parents=True, exist_ok=True)
@@ -110,6 +112,10 @@ def extract_zip(zip_path: Path, dest_root: Path) -> Path:
         shutil.copytree(src, dest)
     else:
         print(f"[WARN] Expected artifacts not found at: {src}")
+
+    # cleanup extracted run folder (leave boilerplate + zip)
+    if run_root != repo_path and run_root.exists():
+        shutil.rmtree(run_root)
 
     return repo_path
 
