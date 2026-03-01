@@ -54,7 +54,9 @@ class RailwayAPI:
             payload["variables"] = variables
 
         resp = self.session.post(RAILWAY_API, json=payload, timeout=30)
-        resp.raise_for_status()
+        if resp.status_code >= 400:
+            # Include body for faster diagnosis of GraphQL shape/auth issues.
+            raise Exception(f"Railway HTTP {resp.status_code}: {resp.text}")
         data = resp.json()
 
         if "errors" in data:
@@ -371,7 +373,13 @@ def deploy_backend(
 
     # ── Step 6: Trigger deploy ──────────────────────────────
     print("  [Railway] Triggering deploy...")
-    api.trigger_deploy(service_id)
+    try:
+        api.trigger_deploy(service_id)
+    except Exception as e:
+        # Some Railway accounts/workspaces reject explicit redeploy mutation
+        # even when service creation/linking succeeds. Continue and poll URL.
+        print(f"  [Railway] trigger_deploy skipped: {e}")
+        print("  [Railway] Continuing to poll service URL...")
 
     # ── Step 7: Poll for URL ────────────────────────────────
     print("  [Railway] Waiting for deploy to come up", end="", flush=True)
