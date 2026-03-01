@@ -84,7 +84,7 @@ def extract_zip(zip_path: Path, dest_root: Path) -> Path:
     with zipfile.ZipFile(local_zip, "r") as z:
         z.extractall(repo_path)
 
-    # copy final artifacts into repo root
+    # copy final artifacts into boilerplate business directory
     if top:
         run_root = repo_path / top
     else:
@@ -93,7 +93,7 @@ def extract_zip(zip_path: Path, dest_root: Path) -> Path:
         run_root = candidates[0] if len(candidates) == 1 else repo_path
 
     src = run_root / "build" / "iteration_04_artifacts" / "business"
-    dest = repo_path / "business"
+    dest = repo_path / "boilerplate" / "saas-boilerplate" / "business"
     if src.exists():
         if dest.exists():
             shutil.rmtree(dest)
