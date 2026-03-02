@@ -1,0 +1,248 @@
+{
+  "schema_version": "2.1",
+  "ruleset_id": "post_intake_assist_ruleset",
+  "ruleset_version": "2.1.0",
+  "kind": "validation_rules",
+  "last_updated": "2026-02-27",
+  "rules": [
+    {
+      "rule_id": "PVR001_block_a_schema_valid",
+      "severity": "CRITICAL",
+      "mode": "json_schema",
+      "schema_ref": "BLOCK_A_SCHEMA",
+      "target_path": "block_a_final"
+    },
+    {
+      "rule_id": "PVR002_block_b_schema_valid",
+      "severity": "CRITICAL",
+      "mode": "json_schema",
+      "schema_ref": "BLOCK_B_SCHEMA",
+      "target_path": "block_b_final"
+    },
+    {
+      "rule_id": "PVR003_build_contract_schema_valid",
+      "severity": "CRITICAL",
+      "mode": "json_schema",
+      "schema_ref": "BUILD_CONTRACT_SCHEMA",
+      "target_path": "build_contract"
+    },
+    {
+      "rule_id": "PVR010_pricing_tiers_sequential",
+      "severity": "CRITICAL",
+      "mode": "pricing_sequential",
+      "path": "block_a_final.pricing.tiers"
+    },
+    {
+      "rule_id": "PVR011_tier_prices_non_decreasing",
+      "severity": "CRITICAL",
+      "mode": "pricing_prices_increasing",
+      "path": "block_a_final.pricing.tiers"
+    },
+    {
+      "rule_id": "PVR012_unit_limits_positive",
+      "severity": "CRITICAL",
+      "mode": "pricing_limits_invalid",
+      "path": "block_a_final.pricing.tiers"
+    },
+    {
+      "rule_id": "PVR013_payments_stripe_present",
+      "severity": "HIGH",
+      "mode": "consistency",
+      "checks": [
+        {
+          "if": {
+            "path": "block_a_final.architecture.payments_required",
+            "equals": true
+          },
+          "then": {
+            "path": "block_a_final.integrations",
+            "must_contain_any": [
+              "Stripe"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "rule_id": "PVR014_freemium_conversion_required",
+      "severity": "HIGH",
+      "mode": "freemium_requires_conversion",
+      "path": "block_a_final.pricing"
+    },
+    {
+      "rule_id": "PVR020_non_goal_absent",
+      "severity": "CRITICAL",
+      "mode": "keyword_absent",
+      "target_paths": [
+        "block_b_final.deliverables[*].name",
+        "block_b_final.tasks[*].title"
+      ],
+      "keywords_ref": "non_goal_vocabulary"
+    },
+    {
+      "rule_id": "PVR021_feature_mappings_present",
+      "severity": "HIGH",
+      "mode": "all_items_have_field",
+      "paths": [
+        {
+          "path": "block_b_final.deliverables",
+          "field": "maps_to_feature_ids"
+        },
+        {
+          "path": "block_b_final.tasks",
+          "field": "maps_to_feature_ids"
+        }
+      ]
+    },
+    {
+      "rule_id": "PVR030_subscription_requires_payments",
+      "severity": "HIGH",
+      "mode": "consistency",
+      "checks": [
+        {
+          "if": {
+            "path": "block_a_final.architecture.subscription_billing",
+            "equals": true
+          },
+          "then": {
+            "path": "block_a_final.architecture.payments_required",
+            "equals": true
+          }
+        }
+      ]
+    },
+    {
+      "rule_id": "PVR031_external_apis_subset_integrations",
+      "severity": "HIGH",
+      "mode": "set_subset",
+      "paths": {
+        "subset": "block_a_final.architecture.external_apis",
+        "superset": "block_a_final.integrations"
+      }
+    },
+    {
+      "rule_id": "PVR032_auth_required_has_provider",
+      "severity": "MEDIUM",
+      "mode": "auth_provider_presence",
+      "paths": {
+        "flag": "block_a_final.architecture.authentication_required",
+        "integrations": "block_a_final.integrations"
+      },
+      "acceptable": [
+        "Auth0",
+        "Clerk",
+        "Cognito"
+      ]
+    },
+    {
+      "rule_id": "PVR033_background_jobs_has_provider",
+      "severity": "MEDIUM",
+      "mode": "background_provider_presence",
+      "paths": {
+        "flag": "block_a_final.architecture.background_jobs",
+        "integrations": "block_a_final.integrations"
+      },
+      "acceptable": [
+        "SendGrid",
+        "SES",
+        "Mailgun",
+        "Postmark",
+        "Resend",
+        "MailerLite"
+      ]
+    },
+    {
+      "rule_id": "PVR034_pdf_flag_has_plan",
+      "severity": "MEDIUM",
+      "mode": "flag_requires_feature_keyword",
+      "paths": {
+        "flag": "block_a_final.architecture.pdf_generation",
+        "features": "block_b_final.deliverables[*].name"
+      },
+      "keywords": [
+        "pdf",
+        "document",
+        "invoice",
+        "report"
+      ]
+    },
+    {
+      "rule_id": "PVR040_task_hours_within_timeline",
+      "severity": "MEDIUM",
+      "mode": "timeline_vs_hours",
+      "paths": {
+        "timeline_days": "block_a_final.architecture.expected_timeline_days",
+        "tasks": "block_b_final.tasks"
+      },
+      "hours_per_day": 6
+    },
+    {
+      "rule_id": "PVR041_tier_time_sanity",
+      "severity": "LOW",
+      "mode": "tier_time_sanity",
+      "paths": {
+        "tier": "block_a_final.architecture.minimum_tier",
+        "timeline_days": "block_a_final.architecture.expected_timeline_days"
+      },
+      "rules": [
+        {
+          "tier": 1,
+          "max_days": 30
+        },
+        {
+          "tier": 2,
+          "max_days": 90
+        },
+        {
+          "tier": 3,
+          "max_days": 180
+        },
+        {
+          "tier": 4,
+          "max_days": 365
+        }
+      ]
+    },
+    {
+      "rule_id": "PVR050_acceptance_criteria_mapped",
+      "severity": "MEDIUM",
+      "mode": "acceptance_mapping_complete",
+      "paths": {
+        "criteria": "block_a_final.acceptance_criteria",
+        "deliverables": "block_b_final.deliverables"
+      }
+    },
+    {
+      "rule_id": "PVR060_dashboard_flag_has_plan",
+      "severity": "LOW",
+      "mode": "flag_requires_feature_keyword",
+      "paths": {
+        "flag": "block_a_final.architecture.dashboard_reporting",
+        "features": "block_b_final.deliverables[*].name"
+      },
+      "keywords": [
+        "report",
+        "dashboard",
+        "export",
+        "download",
+        "analytics"
+      ]
+    },
+    {
+      "rule_id": "PVR061_admin_panel_flag_has_plan",
+      "severity": "LOW",
+      "mode": "flag_requires_feature_keyword",
+      "paths": {
+        "flag": "block_a_final.architecture.admin_panel",
+        "features": "block_b_final.deliverables[*].name"
+      },
+      "keywords": [
+        "admin",
+        "moderation",
+        "manage users",
+        "backoffice"
+      ]
+    }
+  ],
+  "total_rules": 20
+}

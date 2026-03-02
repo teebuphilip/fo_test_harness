@@ -1,0 +1,374 @@
+{
+  "schema_version": "2.1",
+  "ruleset_id": "post_intake_assist_ruleset",
+  "ruleset_version": "2.1.0",
+  "kind": "detection_rules",
+  "last_updated": "2026-02-27",
+  "rules": [
+    {
+      "rule_id": "PDR001_pricing_changed_from_baseline",
+      "severity": "CRITICAL",
+      "mode": "pricing_drift",
+      "paths": {
+        "baseline": "block_a_history[0].pricing",
+        "current": "block_a_final.pricing"
+      },
+      "revision_template_id": "PRT001_pricing_revert_or_approve"
+    },
+    {
+      "rule_id": "PDR002_pricing_tiers_missing",
+      "severity": "CRITICAL",
+      "mode": "path_missing",
+      "target_path": "block_a_final.pricing.tiers",
+      "revision_template_id": "PRT001_pricing_revert_or_approve"
+    },
+    {
+      "rule_id": "PDR003_pricing_tier_gap",
+      "severity": "CRITICAL",
+      "mode": "pricing_tier_gap",
+      "path": "block_a_final.pricing.tiers",
+      "revision_template_id": "PRT001_pricing_revert_or_approve"
+    },
+    {
+      "rule_id": "PDR004_pricing_limits_invalid",
+      "severity": "HIGH",
+      "mode": "pricing_limits_invalid",
+      "path": "block_a_final.pricing.tiers",
+      "revision_template_id": "PRT001_pricing_revert_or_approve"
+    },
+    {
+      "rule_id": "PDR005_freemium_missing_conversion",
+      "severity": "HIGH",
+      "mode": "freemium_requires_conversion",
+      "path": "block_a_final.pricing",
+      "revision_template_id": "PRT001_pricing_revert_or_approve"
+    },
+    {
+      "rule_id": "PDR006_pricing_range_text_found",
+      "severity": "HIGH",
+      "mode": "regex",
+      "target_paths": [
+        "block_a_final.pricing_raw_text",
+        "block_b_final.pricing_raw_text"
+      ],
+      "regex": "\\$\\d+\\s*-\\s*\\$\\d+",
+      "revision_template_id": "PRT001_pricing_revert_or_approve"
+    },
+    {
+      "rule_id": "PDR007_billing_frequency_unknown",
+      "severity": "MEDIUM",
+      "mode": "equals",
+      "path": "block_a_final.pricing.billing_frequency",
+      "equals": "unknown",
+      "revision_template_id": "PRT001_pricing_revert_or_approve"
+    },
+    {
+      "rule_id": "PDR008_unit_type_unknown",
+      "severity": "MEDIUM",
+      "mode": "pricing_unit_unknown",
+      "path": "block_a_final.pricing.tiers",
+      "revision_template_id": "PRT001_pricing_revert_or_approve"
+    },
+    {
+      "rule_id": "PDR010_quant_range_without_bounds",
+      "severity": "HIGH",
+      "mode": "regex",
+      "target_paths": [
+        "block_b_final.tasks[*].title",
+        "block_a_final.acceptance_criteria[*].text"
+      ],
+      "regex": "\\d+\\s*-\\s*\\d+\\s+(users|properties|clients|invoices|tasks|projects|templates)",
+      "revision_template_id": "PRT002_add_bounds"
+    },
+    {
+      "rule_id": "PDR011_metrics_referenced_bounds_missing",
+      "severity": "HIGH",
+      "mode": "bounds_missing_when_referenced",
+      "paths": {
+        "bounds": "block_a_final.quantitative_bounds",
+        "texts": [
+          "block_b_final.tasks[*].title",
+          "block_a_final.acceptance_criteria[*].text"
+        ]
+      },
+      "revision_template_id": "PRT002_add_bounds"
+    },
+    {
+      "rule_id": "PDR012_bounds_inconsistent",
+      "severity": "MEDIUM",
+      "mode": "bounds_logical",
+      "path": "block_a_final.quantitative_bounds.metrics",
+      "revision_template_id": "PRT002_add_bounds"
+    },
+    {
+      "rule_id": "PDR013_percentage_without_baseline",
+      "severity": "MEDIUM",
+      "mode": "regex",
+      "target_paths": [
+        "block_a_final.acceptance_criteria[*].text"
+      ],
+      "regex": "\\b\\d{1,3}%\\b",
+      "revision_template_id": "PRT002_add_bounds"
+    },
+    {
+      "rule_id": "PDR014_missing_metric_units",
+      "severity": "MEDIUM",
+      "mode": "bounds_missing_units",
+      "path": "block_a_final.quantitative_bounds.metrics",
+      "revision_template_id": "PRT002_add_bounds"
+    },
+    {
+      "rule_id": "PDR015_bounds_range_too_wide",
+      "severity": "LOW",
+      "mode": "bounds_range_ratio",
+      "path": "block_a_final.quantitative_bounds.metrics",
+      "max_ratio": 2.0,
+      "revision_template_id": "PRT002_add_bounds"
+    },
+    {
+      "rule_id": "PDR020_non_goal_keyword_detected",
+      "severity": "CRITICAL",
+      "mode": "keyword",
+      "target_paths": [
+        "block_b_final.deliverables[*].name",
+        "block_b_final.tasks[*].title"
+      ],
+      "keywords_ref": "non_goal_vocabulary",
+      "revision_template_id": "PRT003_remove_non_goals"
+    },
+    {
+      "rule_id": "PDR021_scope_creep_keywords",
+      "severity": "HIGH",
+      "mode": "keyword",
+      "target_paths": [
+        "block_b_final.deliverables[*].name",
+        "block_b_final.tasks[*].title"
+      ],
+      "keywords_ref": "scope_creep_vocabulary",
+      "revision_template_id": "PRT003_remove_non_goals"
+    },
+    {
+      "rule_id": "PDR022_deliverable_missing_feature_mapping",
+      "severity": "HIGH",
+      "mode": "array_items_missing_field",
+      "path": "block_b_final.deliverables",
+      "field": "maps_to_feature_ids",
+      "revision_template_id": "PRT003_remove_non_goals"
+    },
+    {
+      "rule_id": "PDR023_task_missing_feature_mapping",
+      "severity": "HIGH",
+      "mode": "array_items_missing_field",
+      "path": "block_b_final.tasks",
+      "field": "maps_to_feature_ids",
+      "revision_template_id": "PRT003_remove_non_goals"
+    },
+    {
+      "rule_id": "PDR024_deliverable_count_exceeds_tier",
+      "severity": "MEDIUM",
+      "mode": "feature_count_vs_tier",
+      "paths": {
+        "tier": "block_a_final.architecture.minimum_tier",
+        "deliverables": "block_b_final.deliverables"
+      },
+      "thresholds": [
+        {
+          "tier": 1,
+          "max_deliverables": 8
+        },
+        {
+          "tier": 2,
+          "max_deliverables": 20
+        },
+        {
+          "tier": 3,
+          "max_deliverables": 40
+        },
+        {
+          "tier": 4,
+          "max_deliverables": 80
+        }
+      ],
+      "revision_template_id": "PRT003_remove_non_goals"
+    },
+    {
+      "rule_id": "PDR025_unlabeled_phase_items",
+      "severity": "LOW",
+      "mode": "phase_label_missing",
+      "path": "block_b_final.tasks",
+      "revision_template_id": "PRT003_remove_non_goals"
+    },
+    {
+      "rule_id": "PDR030_payments_requires_stripe",
+      "severity": "HIGH",
+      "mode": "consistency",
+      "checks": [
+        {
+          "if": {
+            "path": "block_a_final.architecture.payments_required",
+            "equals": true
+          },
+          "then": {
+            "path": "block_a_final.integrations",
+            "must_contain_any": [
+              "Stripe"
+            ]
+          }
+        }
+      ],
+      "revision_template_id": "PRT004_sync_integrations"
+    },
+    {
+      "rule_id": "PDR031_subscription_requires_payments",
+      "severity": "HIGH",
+      "mode": "consistency",
+      "checks": [
+        {
+          "if": {
+            "path": "block_a_final.architecture.subscription_billing",
+            "equals": true
+          },
+          "then": {
+            "path": "block_a_final.architecture.payments_required",
+            "equals": true
+          }
+        }
+      ],
+      "revision_template_id": "PRT004_sync_integrations"
+    },
+    {
+      "rule_id": "PDR032_auth_required_missing_provider",
+      "severity": "MEDIUM",
+      "mode": "auth_provider_presence",
+      "paths": {
+        "flag": "block_a_final.architecture.authentication_required",
+        "integrations": "block_a_final.integrations"
+      },
+      "acceptable": [
+        "Auth0",
+        "Clerk",
+        "Cognito"
+      ],
+      "revision_template_id": "PRT004_sync_integrations"
+    },
+    {
+      "rule_id": "PDR033_background_jobs_missing_provider",
+      "severity": "MEDIUM",
+      "mode": "background_provider_presence",
+      "paths": {
+        "flag": "block_a_final.architecture.background_jobs",
+        "integrations": "block_a_final.integrations"
+      },
+      "acceptable": [
+        "SendGrid",
+        "SES",
+        "Mailgun",
+        "Postmark",
+        "Resend",
+        "MailerLite"
+      ],
+      "revision_template_id": "PRT004_sync_integrations"
+    },
+    {
+      "rule_id": "PDR034_external_apis_not_in_integrations",
+      "severity": "HIGH",
+      "mode": "set_subset",
+      "paths": {
+        "subset": "block_a_final.architecture.external_apis",
+        "superset": "block_a_final.integrations"
+      },
+      "revision_template_id": "PRT005_sync_external_apis"
+    },
+    {
+      "rule_id": "PDR035_reporting_flag_missing_deliverable",
+      "severity": "LOW",
+      "mode": "flag_requires_feature_keyword",
+      "paths": {
+        "flag": "block_a_final.architecture.dashboard_reporting",
+        "features": "block_b_final.deliverables[*].name"
+      },
+      "keywords": [
+        "report",
+        "dashboard",
+        "export",
+        "download",
+        "analytics"
+      ],
+      "revision_template_id": "PRT003_remove_non_goals"
+    },
+    {
+      "rule_id": "PDR036_pdf_flag_missing_deliverable",
+      "severity": "LOW",
+      "mode": "flag_requires_feature_keyword",
+      "paths": {
+        "flag": "block_a_final.architecture.pdf_generation",
+        "features": "block_b_final.deliverables[*].name"
+      },
+      "keywords": [
+        "pdf",
+        "document",
+        "invoice",
+        "report"
+      ],
+      "revision_template_id": "PRT003_remove_non_goals"
+    },
+    {
+      "rule_id": "PDR040_task_hours_exceed_timeline",
+      "severity": "MEDIUM",
+      "mode": "timeline_vs_hours",
+      "paths": {
+        "timeline_days": "block_a_final.architecture.expected_timeline_days",
+        "tasks": "block_b_final.tasks"
+      },
+      "hours_per_day": 6,
+      "revision_template_id": "PRT007_fix_timeline"
+    },
+    {
+      "rule_id": "PDR041_missing_estimates",
+      "severity": "MEDIUM",
+      "mode": "array_items_missing_field",
+      "path": "block_b_final.tasks",
+      "field": "estimated_hours",
+      "revision_template_id": "PRT007_fix_timeline"
+    },
+    {
+      "rule_id": "PDR042_unrealistic_timeline_for_tier",
+      "severity": "LOW",
+      "mode": "tier_time_sanity",
+      "paths": {
+        "tier": "block_a_final.architecture.minimum_tier",
+        "timeline_days": "block_a_final.architecture.expected_timeline_days"
+      },
+      "rules": [
+        {
+          "tier": 1,
+          "max_days": 30
+        },
+        {
+          "tier": 2,
+          "max_days": 90
+        },
+        {
+          "tier": 3,
+          "max_days": 180
+        },
+        {
+          "tier": 4,
+          "max_days": 365
+        }
+      ],
+      "revision_template_id": "PRT007_fix_timeline"
+    },
+    {
+      "rule_id": "PDR050_acceptance_criteria_unmapped",
+      "severity": "MEDIUM",
+      "mode": "acceptance_mapping",
+      "paths": {
+        "criteria": "block_a_final.acceptance_criteria",
+        "deliverables": "block_b_final.deliverables"
+      },
+      "revision_template_id": "PRT006_map_acceptance"
+    }
+  ],
+  "total_rules": 31
+}

@@ -1,0 +1,546 @@
+{
+  "schema_version": "2.1",
+  "ruleset_id": "post_intake_assist_ruleset",
+  "ruleset_version": "2.1.0",
+  "kind": "revision_templates",
+  "last_updated": "2026-02-27",
+  "templates": [
+    {
+      "template_id": "PRT001_pricing_revert_or_approve",
+      "title": "Pricing drift: revert or approval token",
+      "instruction": "Either revert pricing to baseline OR provide approval token allowing pricing changes AND provide updated structured pricing.",
+      "response_schema": {
+        "type": "object",
+        "required": [
+          "action"
+        ],
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "revert",
+              "approve_with_token"
+            ]
+          },
+          "hero_approval_token": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "title": "Hero Approval Token",
+                "type": "object",
+                "required": [
+                  "token_id",
+                  "signer",
+                  "issued_at",
+                  "expires_at",
+                  "allowed_changes"
+                ],
+                "properties": {
+                  "token_id": {
+                    "type": "string",
+                    "minLength": 6
+                  },
+                  "signer": {
+                    "type": "string",
+                    "minLength": 2
+                  },
+                  "issued_at": {
+                    "type": "string",
+                    "minLength": 8
+                  },
+                  "expires_at": {
+                    "type": "string",
+                    "minLength": 8
+                  },
+                  "allowed_changes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "pricing",
+                        "tech_stack",
+                        "timeline",
+                        "scope",
+                        "integrations"
+                      ]
+                    },
+                    "minItems": 1
+                  },
+                  "notes": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              }
+            ]
+          },
+          "pricing": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "pricing_model",
+                  "billing_frequency",
+                  "tiers"
+                ],
+                "properties": {
+                  "pricing_model": {
+                    "type": "string",
+                    "enum": [
+                      "subscription",
+                      "one_time",
+                      "usage_based",
+                      "freemium",
+                      "unknown"
+                    ]
+                  },
+                  "billing_frequency": {
+                    "type": "string",
+                    "enum": [
+                      "monthly",
+                      "annual",
+                      "one_time",
+                      "unknown"
+                    ]
+                  },
+                  "tiers": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "tier_id",
+                        "price_usd",
+                        "unit_limit"
+                      ],
+                      "properties": {
+                        "tier_id": {
+                          "type": "string",
+                          "pattern": "^T\\d+$"
+                        },
+                        "name": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "price_usd": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "unit_limit": {
+                          "type": "object",
+                          "required": [
+                            "unit",
+                            "max"
+                          ],
+                          "properties": {
+                            "unit": {
+                              "type": "string",
+                              "enum": [
+                                "properties",
+                                "clients",
+                                "users",
+                                "invoices",
+                                "tasks",
+                                "projects",
+                                "unknown"
+                              ]
+                            },
+                            "max": {
+                              "type": "integer",
+                              "minimum": 1
+                            }
+                          },
+                          "additionalProperties": false
+                        },
+                        "notes": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "freemium": {
+                    "type": "object",
+                    "properties": {
+                      "has_free": {
+                        "type": "boolean"
+                      },
+                      "conversion_mechanism": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "template_id": "PRT002_add_bounds",
+      "title": "Add quantitative bounds",
+      "instruction": "Provide quantitative_bounds.metrics with min/target/max for each referenced metric.",
+      "response_schema": {
+        "type": "object",
+        "required": [
+          "quantitative_bounds"
+        ],
+        "properties": {
+          "quantitative_bounds": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "metrics"
+                ],
+                "properties": {
+                  "metrics": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "name",
+                        "unit",
+                        "min",
+                        "target",
+                        "max"
+                      ],
+                      "properties": {
+                        "name": {
+                          "type": "string"
+                        },
+                        "unit": {
+                          "type": "string"
+                        },
+                        "min": {
+                          "type": "number"
+                        },
+                        "target": {
+                          "type": "number"
+                        },
+                        "max": {
+                          "type": "number"
+                        },
+                        "baseline": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "template_id": "PRT003_remove_non_goals",
+      "title": "Remove non-goal scope",
+      "instruction": "Remove or defer deliverables/tasks that match non-goals. Return updated deliverables and tasks arrays.",
+      "response_schema": {
+        "type": "object",
+        "required": [
+          "deliverables",
+          "tasks"
+        ],
+        "properties": {
+          "deliverables": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "deliverable_id",
+                "name",
+                "maps_to_feature_ids"
+              ],
+              "properties": {
+                "deliverable_id": {
+                  "type": "string",
+                  "minLength": 3
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 3
+                },
+                "maps_to_feature_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 3
+                  },
+                  "minItems": 1
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "tasks": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "task_id",
+                "title",
+                "maps_to_feature_ids",
+                "estimated_hours"
+              ],
+              "properties": {
+                "task_id": {
+                  "type": "string",
+                  "minLength": 3
+                },
+                "title": {
+                  "type": "string",
+                  "minLength": 3
+                },
+                "maps_to_feature_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 3
+                  },
+                  "minItems": 1
+                },
+                "estimated_hours": {
+                  "type": "number",
+                  "minimum": 0.5
+                },
+                "parallel_group_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "dependencies": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "phase": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "template_id": "PRT004_sync_integrations",
+      "title": "Sync integrations",
+      "instruction": "Ensure required integrations exist (payments->Stripe, auth provider, email provider if jobs). Provide updated integrations list.",
+      "response_schema": {
+        "type": "object",
+        "required": [
+          "integrations"
+        ],
+        "properties": {
+          "integrations": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 2
+            },
+            "minItems": 0
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "template_id": "PRT005_sync_external_apis",
+      "title": "Sync external API list",
+      "instruction": "Ensure every architecture.external_api is present in integrations (or remove from external_apis). Provide updated lists.",
+      "response_schema": {
+        "type": "object",
+        "required": [
+          "external_apis",
+          "integrations"
+        ],
+        "properties": {
+          "external_apis": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 0
+          },
+          "integrations": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 2
+            },
+            "minItems": 0
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "template_id": "PRT006_map_acceptance",
+      "title": "Map acceptance criteria to deliverables",
+      "instruction": "Provide criteria_map array of {criteria_id, deliverable_id}.",
+      "response_schema": {
+        "type": "object",
+        "required": [
+          "criteria_map"
+        ],
+        "properties": {
+          "criteria_map": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "criteria_id",
+                "deliverable_id"
+              ],
+              "properties": {
+                "criteria_id": {
+                  "type": "string"
+                },
+                "deliverable_id": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "template_id": "PRT007_fix_timeline",
+      "title": "Fix timeline vs hours mismatch",
+      "instruction": "Either update expected_timeline_days OR reduce/update task estimates. Provide chosen action + data.",
+      "response_schema": {
+        "type": "object",
+        "required": [
+          "action"
+        ],
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "update_timeline_days",
+              "update_tasks"
+            ]
+          },
+          "expected_timeline_days": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 365
+          },
+          "tasks": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "task_id",
+                    "title",
+                    "maps_to_feature_ids",
+                    "estimated_hours"
+                  ],
+                  "properties": {
+                    "task_id": {
+                      "type": "string",
+                      "minLength": 3
+                    },
+                    "title": {
+                      "type": "string",
+                      "minLength": 3
+                    },
+                    "maps_to_feature_ids": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 3
+                      },
+                      "minItems": 1
+                    },
+                    "estimated_hours": {
+                      "type": "number",
+                      "minimum": 0.5
+                    },
+                    "parallel_group_id": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "dependencies": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "phase": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  ],
+  "total_templates": 7
+}

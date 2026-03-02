@@ -1,0 +1,85 @@
+{
+  "startup_idea_id": "property_manager_maintenance_scheduler",
+  "startup_name": "PropertyPulse",
+  "startup_description": "Automated maintenance scheduling and tracking tool for property managers juggling 10-50 rental properties. Eliminates missed maintenance, reduces tenant complaints, and prevents costly emergency repairs through proactive scheduling.",
+  "hero_answers": {
+    "Q1_problem_customer": "Property managers with 10-50 rental units struggle to track recurring maintenance tasks across all properties. They miss HVAC filter changes, annual inspections, seasonal maintenance, and lease renewal deadlines. This leads to tenant complaints, emergency repair costs 3x higher than preventive maintenance, and liability issues when safety inspections lapse. Current solution is manual calendar reminders that don't scale past 10 properties.",
+    "Q2_target_user": [
+      "Independent property managers managing 10-50 residential rental units across multiple properties",
+      "Small property management companies (2-5 employees) without enterprise software budgets",
+      "Real estate investors self-managing their own rental portfolio"
+    ],
+    "Q3_success_metric": "Within 90 days of launch: 50 property manager signups, 20 active users who added at least 5 properties and scheduled 10+ maintenance tasks, 6 paying subscribers at $39-79/month tier, 300+ maintenance tasks scheduled in system proving core workflow works.",
+    "Q4_must_have_features": [
+      "User registration and login - Email/password auth for property managers",
+      "Property portfolio - Add properties with address, unit count, key dates (purchase date, last major maintenance)",
+      "Maintenance task library - Pre-built templates for common tasks (HVAC filter change every 90 days, annual fire extinguisher inspection, seasonal gutter cleaning)",
+      "Recurring schedule builder - Set task frequency (monthly, quarterly, annually, custom) and auto-generate future instances",
+      "Task assignment - Assign tasks to properties/units with due dates and mark complete with notes and photos",
+      "Email reminders - Automated emails 7 days before task due, day of due date, and 3 days after overdue",
+      "Reporting dashboard - View and export scheduled and completed maintenance tasks, including filters for date ranges and property selection"
+    ],
+    "Q5_non_goals": [
+      "Contractor marketplace or vendor management system",
+      "Tenant communication portal or maintenance requests from tenants",
+      "Accounting integration or invoice tracking for maintenance costs",
+      "Work order dispatch system for maintenance crews",
+      "IoT device integration for smart home monitoring",
+      "Lease management or rent collection features",
+      "Multi-user team collaboration with role permissions",
+      "Mobile app (web-responsive only for MVP)"
+    ],
+    "Q6_constraints": {
+      "brand_positioning": "Dead simple maintenance calendar that scales with your portfolio",
+      "scope": "Maintenance scheduling and tracking only - not a full property management suite",
+      "economics": "Monthly subscription $39-79/month based on property count, target 40% gross margin after $15-25/user operational costs",
+      "build_time": "75 days total - 60 days build, 15 days user testing with 3-5 beta property managers",
+      "tech_requirements": {
+        "additional_requirement": "Implement a robust email delivery system with proper domain reputation management to prevent reminders from being marked as spam."
+      }
+    },
+    "Q7_data_sources": [
+      "User manual input - Property addresses, unit counts, custom maintenance tasks, completion notes",
+      "Task library seed data - Pre-populate 20-30 common property maintenance tasks with recommended frequencies",
+      "System-generated - Task instance scheduling based on recurrence rules, reminder schedules"
+    ],
+    "Q8_integrations": [
+      "SendGrid or AWS SES - Transactional email for task reminders and overdue notifications (required for MVP)",
+      "Stripe - Subscription billing for property managers (required for MVP)",
+      "Twilio (Phase 2) - SMS reminders for time-sensitive tasks",
+      "Google Calendar API (Phase 2) - Sync tasks to user's personal calendar",
+      "Vendor APIs (Phase 2) - Integration with contractor scheduling tools",
+      "S3 or Cloudinary (photo storage for task completion)"
+    ],
+    "Q9_risks": [
+      "Property managers are late adopters of technology - may prefer pen and paper or simple spreadsheets",
+      "Email reminders getting marked as spam if sending volume is high - need proper email domain reputation",
+      "Photo upload for task completion could have storage cost implications at scale - cap at 5 photos per task, 2MB each",
+      "Recurring task logic bugs (especially around edge cases like Feb 29, daylight savings) could break trust",
+      "Competition from full property management suites like Buildium, AppFolio (but they're $200-400/month, we're targeting the underserved $39-79 market)",
+      "Background jobs may fail to execute due to server downtime or resource limitations, leading to missed task reminders and impacting user trust."
+    ],
+    "Q10_shipping_preference": "Start with property management, task library, recurring schedule builder, and email reminders. Focus on nailing the recurring task logic and making task completion workflow fast (under 30 seconds to mark complete and add notes). Skip contractor management, tenant portals, and accounting until v2.",
+    "Q11_architecture": {
+      "authentication_required": true,
+      "role_based_access": false,
+      "multi_tenant": false,
+      "persistent_database": true,
+      "payments_required": true,
+      "subscription_billing": true,
+      "dashboard_reporting": true,
+      "pdf_generation": false,
+      "external_apis": [
+        "SendGrid or AWS SES (email reminders)",
+        "Stripe (subscription billing)",
+        "S3 or Cloudinary (photo storage for task completion)"
+      ],
+      "background_jobs": true,
+      "admin_panel": false,
+      "expected_timeline_days": 75,
+      "minimum_tier": 3,
+      "tech_stack": "FastAPI + React + PostgreSQL",
+      "deployment": "Railway (backend) + Vercel (frontend) + S3 (photo storage)"
+    }
+  }
+}

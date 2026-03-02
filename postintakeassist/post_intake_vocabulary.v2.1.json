@@ -1,0 +1,80 @@
+{
+  "schema_version": "2.1",
+  "ruleset_id": "post_intake_assist_ruleset",
+  "ruleset_version": "2.1.0",
+  "kind": "vocabulary",
+  "last_updated": "2026-02-27",
+  "non_goal_vocabulary": [
+    {
+      "token": "native mobile app",
+      "synonyms": [
+        "ios app",
+        "android app",
+        "react native"
+      ]
+    },
+    {
+      "token": "blockchain",
+      "synonyms": [
+        "web3",
+        "nft",
+        "crypto"
+      ]
+    },
+    {
+      "token": "hardware integration",
+      "synonyms": [
+        "iot",
+        "raspberry pi",
+        "arduino"
+      ]
+    },
+    {
+      "token": "multi-language localization",
+      "synonyms": [
+        "i18n",
+        "l10n",
+        "translations"
+      ]
+    },
+    {
+      "token": "real-time video",
+      "synonyms": [
+        "webrtc",
+        "live streaming"
+      ]
+    },
+    {
+      "token": "payments marketplace",
+      "synonyms": [
+        "escrow",
+        "split payments",
+        "payouts"
+      ]
+    }
+  ],
+  "scope_creep_vocabulary": [
+    {
+      "token": "marketplace",
+      "synonyms": [
+        "take rate",
+        "commission",
+        "vendor"
+      ]
+    },
+    {
+      "token": "real-time chat",
+      "synonyms": [
+        "messaging",
+        "in-app chat"
+      ]
+    },
+    {
+      "token": "ai agent",
+      "synonyms": [
+        "autonomous agent",
+        "copilot"
+      ]
+    }
+  ]
+}

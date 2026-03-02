@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Hero Approval Token",
+  "type": "object",
+  "required": [
+    "token_id",
+    "signer",
+    "issued_at",
+    "expires_at",
+    "allowed_changes"
+  ],
+  "properties": {
+    "token_id": {
+      "type": "string",
+      "minLength": 6
+    },
+    "signer": {
+      "type": "string",
+      "minLength": 2
+    },
+    "issued_at": {
+      "type": "string",
+      "minLength": 8
+    },
+    "expires_at": {
+      "type": "string",
+      "minLength": 8
+    },
+    "allowed_changes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "pricing",
+          "tech_stack",
+          "timeline",
+          "scope",
+          "integrations"
+        ]
+      },
+      "minItems": 1
+    },
+    "notes": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "additionalProperties": false
+}

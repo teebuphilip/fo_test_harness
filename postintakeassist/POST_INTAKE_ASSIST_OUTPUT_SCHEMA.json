@@ -1,0 +1,435 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Post-Intake Assist Output",
+  "type": "object",
+  "required": [
+    "status",
+    "score",
+    "critical_issues",
+    "issues",
+    "applied_patches",
+    "versions",
+    "build_contract"
+  ],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "PASS",
+        "NEEDS_REVISION",
+        "REJECTED"
+      ]
+    },
+    "score": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "critical_issues": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "issues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "rule_id",
+          "severity",
+          "message",
+          "evidence_paths",
+          "expected",
+          "actual",
+          "revision_template_id"
+        ],
+        "properties": {
+          "rule_id": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "CRITICAL",
+              "HIGH",
+              "MEDIUM",
+              "LOW"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "evidence_paths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "expected": {},
+          "actual": {},
+          "revision_template_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "patch_suggestion": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "applied_patches": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "versions": {
+      "type": "object",
+      "required": [
+        "post_intake_assist_version",
+        "ruleset_version",
+        "block_a_schema_version",
+        "block_b_schema_version",
+        "build_contract_schema_version"
+      ],
+      "properties": {
+        "post_intake_assist_version": {
+          "type": "string"
+        },
+        "ruleset_version": {
+          "type": "string"
+        },
+        "block_a_schema_version": {
+          "type": "string"
+        },
+        "block_b_schema_version": {
+          "type": "string"
+        },
+        "build_contract_schema_version": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "build_contract": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "Build Contract (Authoritative for Build)",
+      "type": "object",
+      "required": [
+        "contract_version",
+        "pricing",
+        "architecture",
+        "integrations",
+        "deliverables",
+        "acceptance_criteria"
+      ],
+      "properties": {
+        "contract_version": {
+          "type": "string"
+        },
+        "pricing": {
+          "type": "object",
+          "required": [
+            "pricing_model",
+            "billing_frequency",
+            "tiers"
+          ],
+          "properties": {
+            "pricing_model": {
+              "type": "string",
+              "enum": [
+                "subscription",
+                "one_time",
+                "usage_based",
+                "freemium",
+                "unknown"
+              ]
+            },
+            "billing_frequency": {
+              "type": "string",
+              "enum": [
+                "monthly",
+                "annual",
+                "one_time",
+                "unknown"
+              ]
+            },
+            "tiers": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "required": [
+                  "tier_id",
+                  "price_usd",
+                  "unit_limit"
+                ],
+                "properties": {
+                  "tier_id": {
+                    "type": "string",
+                    "pattern": "^T\\d+$"
+                  },
+                  "name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "price_usd": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "unit_limit": {
+                    "type": "object",
+                    "required": [
+                      "unit",
+                      "max"
+                    ],
+                    "properties": {
+                      "unit": {
+                        "type": "string",
+                        "enum": [
+                          "properties",
+                          "clients",
+                          "users",
+                          "invoices",
+                          "tasks",
+                          "projects",
+                          "unknown"
+                        ]
+                      },
+                      "max": {
+                        "type": "integer",
+                        "minimum": 1
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "notes": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "freemium": {
+              "type": "object",
+              "properties": {
+                "has_free": {
+                  "type": "boolean"
+                },
+                "conversion_mechanism": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        "architecture": {
+          "type": "object",
+          "required": [
+            "minimum_tier",
+            "expected_timeline_days",
+            "authentication_required",
+            "payments_required",
+            "subscription_billing",
+            "dashboard_reporting",
+            "pdf_generation",
+            "external_apis",
+            "background_jobs",
+            "admin_panel"
+          ],
+          "properties": {
+            "minimum_tier": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4
+            },
+            "expected_timeline_days": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 365
+            },
+            "authentication_required": {
+              "type": "boolean"
+            },
+            "payments_required": {
+              "type": "boolean"
+            },
+            "subscription_billing": {
+              "type": "boolean"
+            },
+            "dashboard_reporting": {
+              "type": "boolean"
+            },
+            "pdf_generation": {
+              "type": "boolean"
+            },
+            "external_apis": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 0
+            },
+            "background_jobs": {
+              "type": "boolean"
+            },
+            "admin_panel": {
+              "type": "boolean"
+            },
+            "tech_stack": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "deployment": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": true
+        },
+        "integrations": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 2
+          },
+          "minItems": 0
+        },
+        "deliverables": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "deliverable_id",
+              "name",
+              "maps_to_feature_ids"
+            ],
+            "properties": {
+              "deliverable_id": {
+                "type": "string",
+                "minLength": 3
+              },
+              "name": {
+                "type": "string",
+                "minLength": 3
+              },
+              "maps_to_feature_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 3
+                },
+                "minItems": 1
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "acceptance_criteria": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "criteria_id",
+              "text"
+            ],
+            "properties": {
+              "criteria_id": {
+                "type": "string",
+                "minLength": 3
+              },
+              "text": {
+                "type": "string",
+                "minLength": 10
+              },
+              "metric": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "quantitative_bounds": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "required": [
+                "metrics"
+              ],
+              "properties": {
+                "metrics": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "name",
+                      "unit",
+                      "min",
+                      "target",
+                      "max"
+                    ],
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "unit": {
+                        "type": "string"
+                      },
+                      "min": {
+                        "type": "number"
+                      },
+                      "target": {
+                        "type": "number"
+                      },
+                      "max": {
+                        "type": "number"
+                      },
+                      "baseline": {
+                        "type": [
+                          "number",
+                          "null"
+                        ]
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

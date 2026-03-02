@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Post-Intake Block B (Build Plan)",
+  "type": "object",
+  "required": [
+    "block_b_version",
+    "deliverables",
+    "tasks"
+  ],
+  "properties": {
+    "block_b_version": {
+      "type": "string"
+    },
+    "deliverables": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "deliverable_id",
+          "name",
+          "maps_to_feature_ids"
+        ],
+        "properties": {
+          "deliverable_id": {
+            "type": "string",
+            "minLength": 3
+          },
+          "name": {
+            "type": "string",
+            "minLength": 3
+          },
+          "maps_to_feature_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 3
+            },
+            "minItems": 1
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "tasks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "task_id",
+          "title",
+          "maps_to_feature_ids",
+          "estimated_hours"
+        ],
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "minLength": 3
+          },
+          "title": {
+            "type": "string",
+            "minLength": 3
+          },
+          "maps_to_feature_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 3
+            },
+            "minItems": 1
+          },
+          "estimated_hours": {
+            "type": "number",
+            "minimum": 0.5
+          },
+          "parallel_group_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "dependencies": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "phase": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": true
+}
