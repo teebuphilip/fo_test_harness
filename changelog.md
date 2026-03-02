@@ -1,5 +1,25 @@
 # Changelog
 
+## 2026-03-02 (Fix A — Boilerplate DB Reference Injection)
+
+### Root Cause Identified
+- Build runs for `ai_workforce_intelligence` were NON_CONVERGING (15 iterations, $5+) because
+  Claude was generating **Flask** routes (`Blueprint`, `request`, `jsonify`) while the boilerplate
+  backend is **FastAPI** (`APIRouter`, `Depends(get_db)`).
+- The DB layer prompt only said "use the boilerplate's database ORM/service" with no import paths
+  or patterns. Claude couldn't write correct code, so it fell back to in-memory storage every time.
+- A "write a TODO comment if unsure" fallback instruction was actively giving Claude permission
+  to defer DB implementation, guaranteed to fail QA.
+
+### Fix: Inject Exact Boilerplate DB Patterns
+- Updated `directives/prompts/build_boilerplate_path_rules.md`:
+  - Added full FastAPI + SQLAlchemy reference (imports, model, CRUD routes)
+  - Added explicit prohibition: `NEVER use Flask (Blueprint, request, jsonify). Use APIRouter.`
+  - Removed the "write a TODO comment if unsure" fallback
+- Updated `directives/prompts/build_previous_defects.md`:
+  - Same DB reference added to the defect-fix context
+  - Same Flask prohibition added
+
 ## 2026-03-02 (QA Convergence Fix)
 
 ### QA Defect Specificity

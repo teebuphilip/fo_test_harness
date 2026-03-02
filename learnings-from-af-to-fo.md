@@ -37,6 +37,14 @@
 - Defect enrichment at injection time is more reliable than expecting QA to always produce perfect Fix: fields.
   Harness-side detection of known bad patterns (dict storage, sequential IDs, hardcoded data) allows
   prepending targeted architectural guidance before Claude sees the defect list.
+- **Framework mismatch is the deepest root cause of in-memory storage persistence.**
+  Claude defaults to Flask (Blueprint, request, jsonify) for Python backend routes. The boilerplate is
+  FastAPI (APIRouter, Depends). Flask has no `Depends(get_db)` — so Claude cannot use the boilerplate
+  DB layer at all and falls back to in-memory storage regardless of how many times the prohibition is stated.
+  Fix: inject the exact FastAPI+SQLAlchemy import paths and CRUD pattern so Claude has a concrete template.
+  The prompt must say "NEVER use Flask" explicitly — prohibition + reference pattern together.
+- A "write a TODO comment if unsure" fallback is counterproductive. It gives Claude permission to defer
+  DB implementation, which QA then flags every iteration. Remove fallback; provide the reference instead.
 
 ## Bottom Line
 - Reliability came from harness-side deterministic controls, not expecting model session continuity.

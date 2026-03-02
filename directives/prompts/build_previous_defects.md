@@ -14,8 +14,45 @@ If any defect mentions "in-memory", "mock data", "hardcoded", "dict storage", or
 - NEVER use Python dicts as storage (`reports_db = {}`, `clients_db = {}`, `data = []` etc.)
 - NEVER return hardcoded/static data from route handlers
 - NEVER use `len(db) + 1` for ID generation — use `import uuid; str(uuid.uuid4())`
-- For persistence: use the boilerplate's database ORM/service (import from the boilerplate db module)
+- NEVER use Flask (Blueprint, request, jsonify). Backend is FastAPI. Use APIRouter.
 - For frontend: ALL data must come from `/api/` fetch calls — no hardcoded arrays or objects
+
+**EXACT FIX PATTERN FOR DB DEFECTS — replace in-memory storage with this:**
+```python
+from fastapi import APIRouter, HTTPException, Depends
+from sqlalchemy import Column, String, DateTime
+from sqlalchemy.orm import Session
+from datetime import datetime
+from core.database import Base, get_db
+import uuid
+
+class MyModel(Base):
+    __tablename__ = "my_models"
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+router = APIRouter()  # MUST be named 'router', not 'bp' or 'blueprint'
+
+@router.get("/items")
+def list_items(db: Session = Depends(get_db)):
+    return db.query(MyModel).all()
+
+@router.post("/items", status_code=201)
+def create_item(data: dict, db: Session = Depends(get_db)):
+    item = MyModel(**data)
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return item
+
+@router.get("/items/{item_id}")
+def get_item(item_id: str, db: Session = Depends(get_db)):
+    item = db.query(MyModel).filter(MyModel.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Not found")
+    return item
+```
 
 **DEFECTS TO FIX:**
 {{previous_defects}}

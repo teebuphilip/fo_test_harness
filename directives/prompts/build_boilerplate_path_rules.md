@@ -26,8 +26,84 @@
 - NEVER use in-memory state between requests. If the process restarts, all data must survive.
 - ALWAYS use the boilerplate's database ORM/service for any read or write operation.
 - ALWAYS fetch dynamic data from the backend in frontend components — no hardcoded arrays.
-If you are unsure how to use the boilerplate database service, write a TODO comment with the exact
-operation needed (e.g., `# TODO: query DB for clients`) rather than substituting a mock.
+- NEVER use Flask (Blueprint, request, jsonify). The boilerplate backend is FastAPI. Use APIRouter.
+
+**BOILERPLATE DATABASE REFERENCE — USE THESE EXACT PATTERNS:**
+
+Backend routes use FastAPI + SQLAlchemy. Here are the exact imports and patterns:
+
+```python
+# FILE: business/backend/routes/clients.py
+from fastapi import APIRouter, HTTPException, Depends
+from sqlalchemy import Column, String, DateTime, ForeignKey
+from sqlalchemy.orm import Session, relationship
+from datetime import datetime
+from core.database import Base, get_db
+import uuid
+
+# 1. Define your model (inherits from Base)
+class Client(Base):
+    __tablename__ = "clients"
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    name = Column(String, nullable=False)
+    industry = Column(String)
+    employee_count = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+# 2. Define your router
+router = APIRouter()
+
+# 3. CRUD routes using db: Session = Depends(get_db)
+@router.get("/clients")
+def list_clients(db: Session = Depends(get_db)):
+    return db.query(Client).all()
+
+@router.post("/clients", status_code=201)
+def create_client(data: dict, db: Session = Depends(get_db)):
+    client = Client(**data)
+    db.add(client)
+    db.commit()
+    db.refresh(client)
+    return client
+
+@router.get("/clients/{client_id}")
+def get_client(client_id: str, db: Session = Depends(get_db)):
+    client = db.query(Client).filter(Client.id == client_id).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    return client
+
+@router.put("/clients/{client_id}")
+def update_client(client_id: str, data: dict, db: Session = Depends(get_db)):
+    client = db.query(Client).filter(Client.id == client_id).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    for key, value in data.items():
+        setattr(client, key, value)
+    client.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(client)
+    return client
+
+@router.delete("/clients/{client_id}")
+def delete_client(client_id: str, db: Session = Depends(get_db)):
+    client = db.query(Client).filter(Client.id == client_id).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    db.delete(client)
+    db.commit()
+    return {"deleted": True}
+```
+
+**RULES FROM THE ABOVE REFERENCE:**
+- Import: `from core.database import Base, get_db` — always this exact path
+- Session injection: `db: Session = Depends(get_db)` — always this pattern in every route
+- Query: `db.query(Model).filter(Model.id == id).first()` — not `.get()`, not a dict lookup
+- Create: `db.add(obj)` → `db.commit()` → `db.refresh(obj)` — always all three
+- Primary key: `Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))` — UUID string, never Integer autoincrement
+- Timestamps: `Column(DateTime, default=datetime.utcnow)` — always on created_at/updated_at
+- Router variable MUST be named `router` (not `bp`, not `blueprint`) — the auto-loader expects `router`
 
 **VALID EXAMPLES:**
 **FILE: business/frontend/pages/ClientDashboard.jsx**
