@@ -87,7 +87,7 @@ class Config:
         )
 
     # Iteration Limits
-    MAX_QA_ITERATIONS = 5
+    MAX_QA_ITERATIONS = 5  # Default aligns with locked governance; CLI can override.
 
     # API call settings
     # FIX #6: Increased timeout for large builds with prompt caching.
@@ -1136,6 +1136,7 @@ class PromptTemplates:
         intake_data: dict,
         build_governance: str,
         iteration: int = 1,
+        max_iterations: int = Config.MAX_QA_ITERATIONS,
         previous_defects: Optional[str] = None,
         tech_stack_override: dict = None,
         external_integration_override: dict = None,
@@ -1215,7 +1216,7 @@ class PromptTemplates:
         dynamic_section = DirectiveTemplateLoader.render(
             'build_dynamic_base.md',
             iteration=iteration,
-            max_iterations=Config.MAX_QA_ITERATIONS,
+            max_iterations=max_iterations,
             block=block,
             block_key=block_key,
             block_data_json=json.dumps(block_data, indent=2),
@@ -1775,6 +1776,7 @@ class FOHarness:
         self.do_deploy   = do_deploy
         self.cli_args    = cli_args
         self.confirm_run_log = (getattr(cli_args, "confirm_run_log", "NO").strip().upper() == "YES") if cli_args else False
+        self.max_qa_iterations = int(getattr(cli_args, "max_iterations", Config.MAX_QA_ITERATIONS)) if cli_args else Config.MAX_QA_ITERATIONS
         self.max_build_parts = int(getattr(cli_args, "max_parts", Config.MAX_BUILD_PARTS_DEFAULT)) if cli_args else Config.MAX_BUILD_PARTS_DEFAULT
         self.max_build_continuations = int(getattr(cli_args, "max_continuations", Config.MAX_BUILD_CONTINUATIONS_DEFAULT)) if cli_args else Config.MAX_BUILD_CONTINUATIONS_DEFAULT
 
@@ -1851,6 +1853,7 @@ class FOHarness:
         print_info(f"Block:         BLOCK_{self.block}")
         print_info(f"Tech stack:    {self.tech_stack} (effective: {self.effective_tech_stack})")
         print_info(f"Boilerplate:   {'YES' if self.use_boilerplate else 'NO'}")
+        print_info(f"Max iterations:{self.max_qa_iterations}")
         print_info(f"Build caps:    max_parts={self.max_build_parts}, max_continuations={self.max_build_continuations}")
         print_info(f"Deploy:        {'YES' if self.do_deploy else 'NO — ZIP output only'}")
         print_info(f"Run directory: {self.run_dir}")
@@ -3060,8 +3063,8 @@ class FOHarness:
         consecutive_validation_failures = 0
 
         try:
-            while iteration <= Config.MAX_QA_ITERATIONS:
-                print_header(f"ITERATION {iteration}/{Config.MAX_QA_ITERATIONS}")
+            while iteration <= self.max_qa_iterations:
+                print_header(f"ITERATION {iteration}/{self.max_qa_iterations}")
 
                 # ================================================
                 # STEP 1: BUILD (Claude)
@@ -3076,6 +3079,7 @@ class FOHarness:
                     self.intake_data,
                     self.build_governance,
                     iteration,
+                    self.max_qa_iterations,
                     previous_defects,
                     self.tech_stack_override,
                     self.external_integration_override,
@@ -3247,7 +3251,7 @@ class FOHarness:
                                 startup_id=self.startup_id,
                                 block=self.block,
                                 iteration=iteration,
-                                max_iterations=Config.MAX_QA_ITERATIONS,
+                                max_iterations=self.max_qa_iterations,
                                 last_output_tail=build_output[-1500:]
                             )
 
@@ -3578,8 +3582,8 @@ class FOHarness:
                     previous_defects = qa_report
                     iteration       += 1
 
-                    if iteration > Config.MAX_QA_ITERATIONS:
-                        print_error(f"Max iterations ({Config.MAX_QA_ITERATIONS}) reached — loop failed to converge")
+                    if iteration > self.max_qa_iterations:
+                        print_error(f"Max iterations ({self.max_qa_iterations}) reached — loop failed to converge")
 
                         # FIX #1: Print cost summary even on failure
                         self._print_cost_summary(
@@ -3833,12 +3837,20 @@ Examples:
         default=Config.MAX_BUILD_CONTINUATIONS_DEFAULT,
         help='Max fallback continuation calls when output is truncated. Default: 9'
     )
+    parser.add_argument(
+        '--max-iterations',
+        type=int,
+        default=Config.MAX_QA_ITERATIONS,
+        help='Max BUILD→QA iterations for this run. Default: 5'
+    )
 
     args = parser.parse_args()
     if args.max_parts < 1:
         parser.error("--max-parts must be >= 1")
     if args.max_continuations < 0:
         parser.error("--max-continuations must be >= 0")
+    if args.max_iterations < 1:
+        parser.error("--max-iterations must be >= 1")
 
     # Resolve block from flag
     block = 'A' if args.block_a else 'B'
