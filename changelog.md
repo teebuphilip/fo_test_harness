@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-03-02 (QA Convergence Fix)
+
+### QA Defect Specificity
+- Added `Fix:` field to QA defect output format in `directives/prompts/qa_prompt.md`.
+  QA now provides the exact code change required per defect, not just the problem description.
+
+### Defect Injection Enrichment
+- Added `_enrich_defects_with_fix_context()` to `FOHarness` in `fo_test_harness.py`.
+  For boilerplate builds, detects mock-storage and frontend-hardcode defect patterns and
+  prepends an architectural fix guide before injecting QA report into next iteration prompt.
+- Wired enrichment at the `previous_defects = qa_report` assignment in `execute_build_qa_loop`.
+- Added `BOILERPLATE DATA LAYER — MANDATORY FIX PATTERNS` block to `directives/prompts/build_previous_defects.md`.
+  Explicit dict/mock prohibition + UUID/ORM pattern requirement injected on every defect iteration.
+
+### Boilerplate Data Layer Prohibitions
+- Added `DATA LAYER PROHIBITIONS` section to `directives/prompts/build_boilerplate_path_rules.md`.
+  Hard-prohibits dict storage, sequential IDs, hardcoded data, and in-memory state for all boilerplate builds
+  (iteration 1 and every subsequent iteration). Falls back to TODO comment if ORM import unknown.
+
 ## 2026-03-02
 
 ### Build/QA Stability

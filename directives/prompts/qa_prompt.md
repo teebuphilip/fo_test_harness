@@ -43,6 +43,7 @@ DEFECT-[ID]: [classification]
   - Location: [file/line]
   - Problem: [what's wrong]
   - Expected: [what should be]
+  - Fix: [exact change required — name the specific function, import, pattern, or line to change; do not write "use proper X", write "replace Y with Z"]
   - Severity: HIGH | MEDIUM | LOW
 
 ### VERDICT

@@ -19,6 +19,16 @@
 - If you place frontend pages outside `business/frontend/pages/`, the build FAILS.
 - If you place backend routes outside `business/backend/routes/`, the build FAILS.
 
+**DATA LAYER PROHIBITIONS (HARD — NO EXCEPTIONS):**
+- NEVER use Python dicts as storage: `x_db = {}`, `data = []`, `store = {}` — all forbidden.
+- NEVER use `len(collection) + 1` for ID generation. Use `import uuid; str(uuid.uuid4())`.
+- NEVER return hardcoded or static data from route handlers (no mock payloads, no example dicts).
+- NEVER use in-memory state between requests. If the process restarts, all data must survive.
+- ALWAYS use the boilerplate's database ORM/service for any read or write operation.
+- ALWAYS fetch dynamic data from the backend in frontend components — no hardcoded arrays.
+If you are unsure how to use the boilerplate database service, write a TODO comment with the exact
+operation needed (e.g., `# TODO: query DB for clients`) rather than substituting a mock.
+
 **VALID EXAMPLES:**
 **FILE: business/frontend/pages/ClientDashboard.jsx**
 **FILE: business/backend/routes/assessments.py**

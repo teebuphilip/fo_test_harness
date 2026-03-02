@@ -3029,6 +3029,60 @@ class FOHarness:
         matches = re.findall(r'(business/[A-Za-z0-9_./-]+\.[A-Za-z0-9_]+)', defects_text)
         return sorted(set(matches))
 
+    def _enrich_defects_with_fix_context(self, qa_report: str) -> str:
+        """
+        For boilerplate builds: prepend architectural fix context before injecting
+        defects into the next iteration's prompt.
+
+        QA correctly identifies problems but doesn't tell Claude HOW to fix them
+        in the boilerplate context. This enrichment bridges that gap for the most
+        common recurring failure patterns.
+        """
+        if not self.use_boilerplate:
+            return qa_report
+
+        report_lower = qa_report.lower()
+        has_mock_storage = any(kw in report_lower for kw in [
+            'in-memory', 'in memory', 'mock data', 'hardcoded', 'hard-coded',
+            'mock id', 'reports_db', 'clients_db', 'dict storage', 'local dict',
+            'sequential id', 'len(', 'in-memory storage', 'demo storage'
+        ])
+        has_db_note = any(kw in report_lower for kw in [
+            'database', 'orm', 'boilerplate', 'persistent', 'persistence'
+        ])
+        has_frontend_hardcode = any(kw in report_lower for kw in [
+            'hardcoded client', 'hardcoded data', 'static data', 'hardcoded array'
+        ])
+
+        fixes = []
+
+        if has_mock_storage or has_db_note:
+            fixes.append(
+                "**ARCHITECTURAL FIX REQUIRED — DATA LAYER:**\n"
+                "One or more defects require replacing mock/in-memory storage with real persistence.\n"
+                "- Remove ALL `x_db = {}` and `data = []` module-level dicts/lists used as storage.\n"
+                "- Remove ALL `len(collection) + 1` ID generation — replace with `str(uuid.uuid4())`.\n"
+                "- For every read/write: use the boilerplate database ORM/service. "
+                "If you are unsure of the exact import, write `# TODO: use boilerplate DB service` "
+                "rather than substituting a dict.\n"
+                "- Do NOT add a comment saying 'replace with DB later' and keep the dict — remove the dict."
+            )
+
+        if has_frontend_hardcode:
+            fixes.append(
+                "**ARCHITECTURAL FIX REQUIRED — FRONTEND DATA FETCHING:**\n"
+                "One or more defects require replacing hardcoded frontend data with API calls.\n"
+                "- Remove ALL hardcoded arrays/objects used as data sources in components.\n"
+                "- Replace with `fetch('/api/<resource>')` or equivalent async call in useEffect.\n"
+                "- Handle loading and error states explicitly."
+            )
+
+        if not fixes:
+            return qa_report
+
+        header = "**BOILERPLATE FIX CONTEXT (READ BEFORE APPLYING DEFECT FIXES):**\n" + "\n\n".join(fixes)
+        return header + "\n\n" + "=" * 60 + "\n\n" + qa_report
+
     def execute_build_qa_loop(self) -> Tuple[bool, str]:
         """
         Execute BUILD → QA loop until QA accepts or max iterations hit.
@@ -3579,7 +3633,7 @@ class FOHarness:
                         total_gpt_calls, total_gpt_input_tokens, total_gpt_output_tokens
                     )
 
-                    previous_defects = qa_report
+                    previous_defects = self._enrich_defects_with_fix_context(qa_report)
                     iteration       += 1
 
                     if iteration > self.max_qa_iterations:

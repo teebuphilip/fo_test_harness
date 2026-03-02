@@ -26,5 +26,19 @@
 - Keep safety defaults aligned to governance, with explicit runtime overrides when needed.
 - Always refresh manifest after any out-of-band file mutation (e.g., patch writes).
 
+## QA Convergence Learnings
+- QA correctly identifies defects but defect descriptions alone are insufficient for convergence.
+  "Use database-backed storage" is accurate but does not tell Claude which ORM, import, or pattern to use.
+  Defects must include a `Fix:` field with the exact change — not just the expected outcome.
+- Claude reads defects and acts on them literally. If the defect says "use DB", Claude adds a comment
+  saying "replace with DB later" and keeps the dict. The fix instruction must say "remove the dict, period".
+- Mock/in-memory storage is Claude's default fallback when uncertain about the boilerplate DB interface.
+  Prohibiting it explicitly (not just prescribing the alternative) breaks this pattern.
+- Defect enrichment at injection time is more reliable than expecting QA to always produce perfect Fix: fields.
+  Harness-side detection of known bad patterns (dict storage, sequential IDs, hardcoded data) allows
+  prepending targeted architectural guidance before Claude sees the defect list.
+
 ## Bottom Line
 - Reliability came from harness-side deterministic controls, not expecting model session continuity.
+- QA convergence requires both: specific defect descriptions (Fix: field) AND upfront prohibitions
+  that prevent the failure pattern from appearing in the first place.
