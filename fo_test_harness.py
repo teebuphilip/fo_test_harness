@@ -2878,6 +2878,17 @@ class FOHarness:
         errors = []
         artifacts_dir = self.artifacts.build_dir / f'iteration_{iteration:02d}_artifacts'
 
+        # Normalization: promote business/frontend/package.json -> business/package.json
+        # when canonical business/package.json is missing. This avoids unnecessary
+        # patch loops for common path drift under truncation/recovery.
+        canonical_pkg = artifacts_dir / 'business' / 'package.json'
+        frontend_pkg = artifacts_dir / 'business' / 'frontend' / 'package.json'
+        if not canonical_pkg.exists() and frontend_pkg.exists():
+            canonical_pkg.parent.mkdir(parents=True, exist_ok=True)
+            canonical_pkg.write_text(frontend_pkg.read_text(encoding='utf-8'), encoding='utf-8')
+            print_warning("  → Normalized business/frontend/package.json -> business/package.json")
+            self.artifacts.refresh_manifest_for_iteration(iteration)
+
         # Check 1: artifact_manifest.json exists
         manifest_path = artifacts_dir / 'artifact_manifest.json'
         if not manifest_path.exists():
