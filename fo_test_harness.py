@@ -1140,7 +1140,9 @@ class PromptTemplates:
         tech_stack_override: dict = None,
         external_integration_override: dict = None,
         startup_id: str = 'unknown',
-        force_tech_stack: Optional[str] = None
+        force_tech_stack: Optional[str] = None,
+        required_file_inventory: Optional[list] = None,
+        defect_target_files: Optional[list] = None
     ) -> Tuple[str, str]:
         """
         Generate BUILD prompt for Claude.
@@ -1186,9 +1188,22 @@ class PromptTemplates:
 
         previous_defects_section = ""
         if previous_defects:
+            required_inventory_bullets = "\n".join(f"- {p}" for p in (required_file_inventory or []))
+            if not required_inventory_bullets:
+                required_inventory_bullets = "- (no prior manifest inventory available)"
+
+            defect_target_bullets = "\n".join(f"- {p}" for p in (defect_target_files or []))
+            if not defect_target_bullets:
+                defect_target_bullets = "- (no explicit file paths found in defects; infer minimal targets)"
+
             previous_defects_section = "\n\n" + DirectiveTemplateLoader.render(
                 'build_previous_defects.md',
                 previous_defects=previous_defects
+            ) + "\n\n"
+            previous_defects_section += "\n\n" + DirectiveTemplateLoader.render(
+                'build_patch_first_file_lock.md',
+                required_file_inventory_bullets=required_inventory_bullets,
+                defect_target_files_bullets=defect_target_bullets
             ) + "\n\n"
 
         governance_section = DirectiveTemplateLoader.render(
@@ -2960,6 +2975,41 @@ class FOHarness:
 
         return len(errors) == 0, errors, missing_files
 
+    def _get_previous_iteration_inventory(self, iteration: int) -> list:
+        """
+        Load required file inventory from prior iteration manifest.
+        Returns business/** file paths only.
+        """
+        if iteration <= 1:
+            return []
+
+        prev_manifest = self.artifacts.build_dir / f'iteration_{iteration-1:02d}_artifacts' / 'artifact_manifest.json'
+        if not prev_manifest.exists():
+            return []
+
+        try:
+            with open(prev_manifest) as f:
+                manifest = json.load(f)
+        except Exception:
+            return []
+
+        files = []
+        for artifact in manifest.get('artifacts', []):
+            path = artifact.get('path', '')
+            if path and path.startswith('business/'):
+                files.append(path)
+        return sorted(set(files))
+
+    def _extract_defect_target_files(self, defects_text: Optional[str]) -> list:
+        """
+        Extract explicit business file paths mentioned in defect text.
+        """
+        if not defects_text:
+            return []
+
+        matches = re.findall(r'(business/[A-Za-z0-9_./-]+\.[A-Za-z0-9_]+)', defects_text)
+        return sorted(set(matches))
+
     def execute_build_qa_loop(self) -> Tuple[bool, str]:
         """
         Execute BUILD → QA loop until QA accepts or max iterations hit.
@@ -3001,6 +3051,9 @@ class FOHarness:
                 # STEP 1: BUILD (Claude)
                 # ================================================
 
+                required_file_inventory = self._get_previous_iteration_inventory(iteration) if previous_defects else []
+                defect_target_files = self._extract_defect_target_files(previous_defects) if previous_defects else []
+
                 # FIX #1 & #4: Get prompt sections and dynamic token limit
                 governance_section, dynamic_section = PromptTemplates.build_prompt(
                     self.block,
@@ -3011,7 +3064,9 @@ class FOHarness:
                     self.tech_stack_override,
                     self.external_integration_override,
                     self.startup_id,
-                    self.effective_tech_stack
+                    self.effective_tech_stack,
+                    required_file_inventory,
+                    defect_target_files
                 )
 
                 # FIX #4: Dynamic max tokens based on iteration
