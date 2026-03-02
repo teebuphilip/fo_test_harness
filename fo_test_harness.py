@@ -105,6 +105,8 @@ class Config:
 
     MAX_RETRIES     = 3      # retries on transient errors (rate limit, 529)
     RETRY_SLEEP     = 5      # seconds between retries
+    MAX_BUILD_PARTS_DEFAULT = 10            # default multipart ceiling
+    MAX_BUILD_CONTINUATIONS_DEFAULT = 9     # default fallback continuation ceiling
 
     @classmethod
     def get_request_timeout(cls, iteration: int) -> int:
@@ -1758,6 +1760,8 @@ class FOHarness:
         self.do_deploy   = do_deploy
         self.cli_args    = cli_args
         self.confirm_run_log = (getattr(cli_args, "confirm_run_log", "NO").strip().upper() == "YES") if cli_args else False
+        self.max_build_parts = int(getattr(cli_args, "max_parts", Config.MAX_BUILD_PARTS_DEFAULT)) if cli_args else Config.MAX_BUILD_PARTS_DEFAULT
+        self.max_build_continuations = int(getattr(cli_args, "max_continuations", Config.MAX_BUILD_CONTINUATIONS_DEFAULT)) if cli_args else Config.MAX_BUILD_CONTINUATIONS_DEFAULT
 
         # Load intake JSON
         # Handles both pure JSON and marker-wrapped formats
@@ -1832,6 +1836,7 @@ class FOHarness:
         print_info(f"Block:         BLOCK_{self.block}")
         print_info(f"Tech stack:    {self.tech_stack} (effective: {self.effective_tech_stack})")
         print_info(f"Boilerplate:   {'YES' if self.use_boilerplate else 'NO'}")
+        print_info(f"Build caps:    max_parts={self.max_build_parts}, max_continuations={self.max_build_continuations}")
         print_info(f"Deploy:        {'YES' if self.do_deploy else 'NO — ZIP output only'}")
         print_info(f"Run directory: {self.run_dir}")
 
@@ -3010,10 +3015,14 @@ class FOHarness:
                     # ── TCP-STYLE MULTI-PART ASSEMBLY ──
                     # Check if Claude split the output into numbered parts
                     part_info = detect_multipart(build_output)
-                    max_parts = 6  # Safety cap
-                    max_continuations = 3  # For fallback mode
+                    max_parts = self.max_build_parts
+                    max_continuations = self.max_build_continuations
 
                     if part_info['is_multipart'] and not part_info['is_final']:
+                        print_warning(
+                            f"BIG BUILD DETECTED: multipart assembly active "
+                            f"(max parts={max_parts}, current declared parts={part_info.get('total_parts', '?')})"
+                        )
                         received_files = extract_file_paths_from_output(build_output)
                         print_info(f"Multi-part build detected: PART {part_info['current_part']}/{part_info['total_parts']}")
                         print_info(f"  → Files received so far: {len(received_files)}")
@@ -3088,7 +3097,10 @@ class FOHarness:
                     # If Claude didn't use multi-part, fall back to continuation
                     elif not part_info['is_multipart'] and detect_truncation(build_output):
                         continuation_count = 0
-                        max_continuations = 3
+                        print_warning(
+                            f"BIG BUILD DETECTED: fallback continuation mode active "
+                            f"(max continuations={max_continuations})"
+                        )
 
                         while detect_truncation(build_output) and continuation_count < max_continuations:
                             continuation_count += 1
@@ -3664,8 +3676,24 @@ Examples:
         help='Path to teebu-saas-platform boilerplate root. '
              'Default: /Users/teebuphilip/Documents/work/teebu-saas-platform'
     )
+    parser.add_argument(
+        '--max-parts',
+        type=int,
+        default=Config.MAX_BUILD_PARTS_DEFAULT,
+        help='Max multipart chunks to assemble from Claude in one iteration. Default: 10'
+    )
+    parser.add_argument(
+        '--max-continuations',
+        type=int,
+        default=Config.MAX_BUILD_CONTINUATIONS_DEFAULT,
+        help='Max fallback continuation calls when output is truncated. Default: 9'
+    )
 
     args = parser.parse_args()
+    if args.max_parts < 1:
+        parser.error("--max-parts must be >= 1")
+    if args.max_continuations < 0:
+        parser.error("--max-continuations must be >= 0")
 
     # Resolve block from flag
     block = 'A' if args.block_a else 'B'
