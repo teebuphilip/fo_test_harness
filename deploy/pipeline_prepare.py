@@ -74,6 +74,11 @@ def main():
         action="store_true",
         help="Force AI regeneration even if deploy state files already exist.",
     )
+    parser.add_argument(
+        "--configs-only",
+        action="store_true",
+        help="Only generate/update railway.deploy.json and vercel.deploy.json; skip Git push.",
+    )
     args = parser.parse_args()
 
     repo_path = Path(args.repo).expanduser().resolve()
@@ -89,10 +94,13 @@ def main():
         print("[ERROR] ANTHROPIC_API_KEY not set")
         sys.exit(1)
 
-    print("\nLoading credentials from environment variables")
-    config = load_config()
-    github_token = config["github"]["token"]
-    github_username = config["github"]["username"]
+    github_token = ""
+    github_username = ""
+    if not args.configs_only:
+        print("\nLoading credentials from environment variables")
+        config = load_config()
+        github_token = config["github"]["token"]
+        github_username = config["github"]["username"]
 
     # Keep runtime vercel.json schema-safe
     sanitize_vercel_runtime_config(repo_path)
@@ -139,27 +147,33 @@ def main():
         write_config_back(repo_path, RAILWAY_STATE_FILE, railway_cfg)
         write_config_back(repo_path, VERCEL_STATE_FILE, vercel_cfg)
 
-    # STEP 1: Git push
-    github_repo_name = args.repo_name or project_base_name
-    github_url, github_repo = push_to_github(
-        repo_path=repo_path,
-        github_token=github_token,
-        github_username=github_username,
-        repo_name=github_repo_name,
-        branch=args.branch,
-        new_repo=args.new_project,
-    )
+    github_url = ""
+    github_repo = ""
+    if not args.configs_only:
+        # STEP 1: Git push
+        github_repo_name = args.repo_name or project_base_name
+        github_url, github_repo = push_to_github(
+            repo_path=repo_path,
+            github_token=github_token,
+            github_username=github_username,
+            repo_name=github_repo_name,
+            branch=args.branch,
+            new_repo=args.new_project,
+        )
 
     print(f"\n{'='*60}")
     print("PREP COMPLETE (NO DEPLOY)")
     print(f"{'='*60}")
     print(f"  Repo path: {repo_path}")
-    print(f"  GitHub:    {github_url}")
-    print(f"  Repo:      {github_repo}")
-    print(f"  Next:      python deploy/pipeline_deploy.py --repo {repo_path}")
+    if args.configs_only:
+        print(f"  Configs:   {RAILWAY_STATE_FILE}, {VERCEL_STATE_FILE} updated")
+        print("  Git push:  skipped (--configs-only)")
+    else:
+        print(f"  GitHub:    {github_url}")
+        print(f"  Repo:      {github_repo}")
+        print(f"  Next:      python deploy/pipeline_deploy.py --repo {repo_path}")
     print(f"{'='*60}\n")
 
 
 if __name__ == "__main__":
     main()
-
