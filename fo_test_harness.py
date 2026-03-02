@@ -2377,6 +2377,11 @@ class FOHarness:
                 if not (artifacts_dir / f).exists():
                     still_missing.append(f)
 
+            # Keep manifest in sync with patched artifacts so re-validation
+            # sees newly recovered files in artifact_manifest.json.
+            if patched_count > 0:
+                self.artifacts.refresh_manifest_for_iteration(iteration)
+
             print_info("")
             print_info(f"Patch results: {patched_count} files recovered, {len(still_missing)} still missing")
             if still_missing:
