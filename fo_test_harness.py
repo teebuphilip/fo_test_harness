@@ -3657,6 +3657,13 @@ Examples:
         help='Path to external QA_POLISH_2_DOC_RECOVERY directive file. '
              'Precedence: CLI path -> Config default path.'
     )
+    parser.add_argument(
+        '--platform-boilerplate-dir',
+        type=Path,
+        default=Config.PLATFORM_BOILERPLATE_DIR,
+        help='Path to teebu-saas-platform boilerplate root. '
+             'Default: /Users/teebuphilip/Documents/work/teebu-saas-platform'
+    )
 
     args = parser.parse_args()
 
@@ -3691,6 +3698,7 @@ Examples:
     # Inject CLI paths into Config
     Config.BUILD_GOVERNANCE_ZIP  = args.build_governance_zip
     Config.DEPLOY_GOVERNANCE_ZIP = args.deploy_governance_zip
+    Config.PLATFORM_BOILERPLATE_DIR = args.platform_boilerplate_dir
 
     # Create base output directory
     Config.OUTPUT_DIR.mkdir(exist_ok=True)

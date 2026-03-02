@@ -24,14 +24,15 @@
         "api_infrastructure",
         "deployment_config"
       ],
-      "build_instructions": "Build ONLY business-specific modules that extend the boilerplate. Do NOT rebuild infrastructure.",
+      "build_instructions": "Build ONLY business-specific modules that extend the boilerplate auto-loader architecture. Do NOT rebuild infrastructure.",
       "output_structure": {
-        "business/models/": "Domain entities (e.g., Horse.js, Race.js)",
-        "business/services/": "Business logic services (e.g., RacingDataService.js)",
-        "business/components/": "Business UI components (e.g., HorseProfile.jsx)",
-        "business/config/": "Business configuration (e.g., startup-config.js)",
-        "business/routes/": "Custom API routes (optional)",
-        "README-INTEGRATION.md": "How to integrate with boilerplate"
+        "business/frontend/pages/": "Business frontend pages auto-loaded by boilerplate (e.g., ClientDashboard.jsx)",
+        "business/backend/routes/": "Business API routes auto-mounted by boilerplate (e.g., assessments.py)",
+        "business/models/": "Domain entities and schemas",
+        "business/services/": "Business logic services",
+        "business/config/": "Business configuration",
+        "business/tests/": "Business tests",
+        "business/README-INTEGRATION.md": "How to integrate with boilerplate"
       },
       "explicitly_forbidden": [
         "auth/",
@@ -40,8 +41,8 @@
         "database/migrations/",
         "server.js",
         "middleware/",
-        "components/Layout.jsx",
-        "components/LoginForm.jsx",
+        "frontend/src/App.js route edits",
+        "backend/main.py router registration",
         "Dockerfile",
         "docker-compose.yml",
         "deployment scripts"
@@ -79,8 +80,8 @@
     "lowcode_integration_pattern": {
       "step_1": "Claude builds business logic in business/ directory",
       "step_2": "Harness copies teebu-saas-platform boilerplate to output",
-      "step_3": "Final ZIP contains: boilerplate/ + business/",
-      "step_4": "User runs: npm install && npm run integrate:business && npm start",
+      "step_3": "Final ZIP contains startup root with saas-boilerplate/ and overlaid business/ artifacts",
+      "step_4": "User configures env files and deploys backend/frontend",
       "integration_config_example": {
         "file": "business/config/startup-config.js",
         "exports": {
@@ -94,6 +95,6 @@
   },
 
   "prompt_injection_template": {
-    "for_lowcode_stack": "**TECH STACK: LOWCODE - BOILERPLATE INTEGRATION MODE**\n\nYou are building BUSINESS LOGIC ONLY for {startup_name}.\n\nThe teebu-saas-boilerplate already provides:\n- Authentication (signup, login, sessions)\n- Payment processing (Stripe, subscriptions)\n- Database (PostgreSQL via Supabase)\n- Email system (transactional emails)\n- UI framework (React, Tailwind)\n- API infrastructure (Express, middleware)\n- Deployment config (Vercel)\n\nYour job: Build ONLY the business-specific code:\n- Domain models (e.g., Horse, Race, BreedingRecord)\n- Business services (e.g., RacingDataService)\n- Business UI components (e.g., HorseProfile)\n- Business config (membership tiers, features)\n\n**DO NOT BUILD:**\n- Auth system (boilerplate has it)\n- Payment system (boilerplate has it)\n- Database setup (boilerplate has it)\n- Generic UI components (boilerplate has it)\n- Server/API infrastructure (boilerplate has it)\n- Deployment scripts (boilerplate has it)\n\n**OUTPUT STRUCTURE:**\nbusiness/\n  models/       ← Domain entities\n  services/     ← Business logic\n  components/   ← Business UI\n  config/       ← Business config\n  README-INTEGRATION.md ← Integration guide"
+    "for_lowcode_stack": "**TECH STACK: LOWCODE - BOILERPLATE AUTO-LOADER MODE**\n\nYou are building BUSINESS LOGIC ONLY for {startup_name}.\n\nThe teebu-saas-boilerplate already provides:\n- Authentication (signup, login, sessions)\n- Payment processing (Stripe, subscriptions)\n- Database (PostgreSQL via Supabase)\n- Email system (transactional emails)\n- UI framework (React, Tailwind)\n- API infrastructure (Express/FastAPI middleware and core app)\n- Deployment config (Railway/Vercel)\n\nYour job: Build ONLY business-specific code under `business/**`:\n- Frontend pages in `business/frontend/pages/*.jsx`\n- Backend routes in `business/backend/routes/*.py`\n- Domain models in `business/models/`\n- Business services in `business/services/`\n- Business config in `business/config/`\n- Integration notes in `business/README-INTEGRATION.md`\n\n**AUTO-LOADER RULES (NON-NEGOTIABLE):**\n- Frontend pages auto-route to `/dashboard/<kebab-case>` by filename.\n- Backend route files auto-mount at `/api/<filename>`.\n- Do NOT edit `frontend/src/App.js` to register routes.\n- Do NOT edit backend `main.py` to register routers.\n\n**DO NOT BUILD:**\n- Auth system (boilerplate has it)\n- Payment system (boilerplate has it)\n- Database/platform setup (boilerplate has it)\n- Boilerplate route registration code\n- Deployment scripts (boilerplate has it)\n\n**OUTPUT STRUCTURE:**\nbusiness/\n  frontend/pages/   <- Auto-loaded dashboard pages\n  backend/routes/   <- Auto-mounted API routes\n  models/           <- Domain entities\n  services/         <- Business logic\n  config/           <- Business configuration\n  tests/            <- Business tests\n  README-INTEGRATION.md <- Integration guide"
   }
 }
