@@ -2425,6 +2425,7 @@ class FOHarness:
         # Check what's missing
         readme_found = any(path.endswith('README.md') for path in manifest_files)
         env_example_found = any('.env.example' in path for path in manifest_files)
+        integration_readme_found = any(path == 'business/README-INTEGRATION.md' for path in manifest_files)
         test_files = [f for f in manifest_files if 'test' in f.lower() or 'spec' in f.lower()]
         has_minimal_tests = len(test_files) < 3  # Consider < 3 test files as "minimal"
         docs_dir = artifacts_dir / 'business' / 'docs'
@@ -2434,6 +2435,8 @@ class FOHarness:
             polish_items.append("README.md")
         if not env_example_found:
             polish_items.append(".env.example")
+        if getattr(self, 'use_boilerplate', False) and not integration_readme_found:
+            polish_items.append("business/README-INTEGRATION.md")
         if has_minimal_tests:
             polish_items.append(f"Tests (only {len(test_files)} found)")
         # Always ensure docs folder exists and include HLD + QUICKSTART
@@ -2592,7 +2595,63 @@ class FOHarness:
                 print_info("")
 
         # ============================================================
-        # 3. Generate additional tests (if minimal)
+        # 3. Generate business/README-INTEGRATION.md (boilerplate runs)
+        # ============================================================
+        if getattr(self, 'use_boilerplate', False) and not integration_readme_found:
+            print_info("→ business/README-INTEGRATION.md missing - generating...")
+            integration_prompt = DirectiveTemplateLoader.render(
+                'polish_integration_readme_prompt.md',
+                startup_id=self.startup_id,
+                block=self.block,
+                manifest_sample=chr(10).join(manifest_files[:40]),
+                build_output_sample=build_output[:3000]
+            )
+
+            try:
+                print_info("→ Calling Claude for integration README generation...")
+                start_time = time.time()
+
+                integration_response = self.claude.call(
+                    integration_prompt,
+                    max_tokens=3072,
+                    cacheable_prefix=None,
+                    timeout=120
+                )
+
+                integration_content = integration_response['content'][0]['text']
+                elapsed = time.time() - start_time
+
+                md_match = re.search(r'```markdown\n(.*?)\n```', integration_content, re.DOTALL)
+                if md_match:
+                    integration_text = md_match.group(1)
+                else:
+                    md_match = re.search(r'```\n(.*?)\n```', integration_content, re.DOTALL)
+                    integration_text = md_match.group(1) if md_match else integration_content
+
+                integration_path = artifacts_dir / 'business' / 'README-INTEGRATION.md'
+                integration_path.parent.mkdir(parents=True, exist_ok=True)
+                integration_path.write_text(integration_text, encoding='utf-8')
+
+                print_success(f"✓ Generated business/README-INTEGRATION.md ({len(integration_text)} chars) in {elapsed:.1f}s")
+                print_info(f"  → Saved to: iteration_{iteration:02d}_artifacts/business/README-INTEGRATION.md")
+
+                usage = integration_response.get('usage', {})
+                cost_stats['calls'] += 1
+                cost_stats['input_tokens'] += usage.get('input_tokens', 0)
+                cost_stats['output_tokens'] += usage.get('output_tokens', 0)
+                cost_stats['cache_read_tokens'] += usage.get('cache_read_input_tokens', 0)
+
+                input_cost = (usage.get('input_tokens', 0) / 1_000_000) * 3.00
+                output_cost = (usage.get('output_tokens', 0) / 1_000_000) * 15.00
+                integration_cost = input_cost + output_cost
+                print_info(f"  → Cost: ${integration_cost:.4f}")
+                print_info("")
+            except Exception as e:
+                print_warning(f"Failed to generate business/README-INTEGRATION.md: {e}")
+                print_info("")
+
+        # ============================================================
+        # 4. Generate additional tests (if minimal)
         # ============================================================
         if has_minimal_tests:
             print_info(f"→ Only {len(test_files)} test file(s) found - generating additional tests...")
@@ -2658,7 +2717,7 @@ class FOHarness:
                 print_info("")
 
         # ============================================================
-        # 4. Save skipped doc snippets (if any)
+        # 5. Save skipped doc snippets (if any)
         # ============================================================
         snippets_path = artifacts_dir / 'skipped_snippets.json'
         if snippets_path.exists():
@@ -2689,7 +2748,7 @@ class FOHarness:
                 print_warning(f"Failed to save skipped snippets: {e}")
 
         # ============================================================
-        # 5. Generate Docs (HLD + QUICKSTART)
+        # 6. Generate Docs (HLD + QUICKSTART)
         # ============================================================
         try:
             docs_dir.mkdir(parents=True, exist_ok=True)
@@ -2895,10 +2954,9 @@ class FOHarness:
                 errors.append(f"Boilerplate build contains non-business paths: {sample}")
                 if len(non_business_paths) > 5:
                     errors.append(f"  ... and {len(non_business_paths) - 5} more")
-
             has_integration_readme = any(p == 'business/README-INTEGRATION.md' for p in manifest_files)
             if not has_integration_readme:
-                errors.append("Missing required boilerplate integration doc: business/README-INTEGRATION.md")
+                print_warning("  → business/README-INTEGRATION.md not in manifest (deferred to post-QA polish)")
 
         return len(errors) == 0, errors, missing_files
 
@@ -3093,18 +3151,24 @@ class FOHarness:
 
                             next_part += 1
 
-                    # ── FALLBACK: Old-style truncation detection ──
-                    # If Claude didn't use multi-part, fall back to continuation
-                    elif not part_info['is_multipart'] and detect_truncation(build_output):
+                    # ── FALLBACK: Truncation recovery ──
+                    # If output is still truncated after multipart handling (or without multipart),
+                    # run continuation recovery. This closes the gap where Claude incorrectly
+                    # labels output as PART 1/1 but still truncates before completion.
+                    if detect_truncation(build_output):
                         continuation_count = 0
+                        recovery_mode = "multipart fallback" if part_info['is_multipart'] else "standard fallback"
                         print_warning(
-                            f"BIG BUILD DETECTED: fallback continuation mode active "
+                            f"BIG BUILD DETECTED: {recovery_mode} continuation mode active "
                             f"(max continuations={max_continuations})"
                         )
 
                         while detect_truncation(build_output) and continuation_count < max_continuations:
                             continuation_count += 1
-                            print_warning(f"Output truncated (no multi-part) - requesting continuation {continuation_count}/{max_continuations}...")
+                            print_warning(
+                                f"Output still truncated - requesting continuation "
+                                f"{continuation_count}/{max_continuations}..."
+                            )
 
                             # Prompt template source: directives/prompts/continuation_prompt.md
                             continuation_prompt = DirectiveTemplateLoader.render(
@@ -3236,12 +3300,22 @@ class FOHarness:
                     for error in validation_errors:
                         print_error(f"  → {error}")
 
-                    # FIX #11: If we have missing files AND a manifest, try a patch call first
-                    if missing_files_list and len(missing_files_list) > 0:
+                    # FIX #11: Try patch recovery for both:
+                    # 1) files listed in manifest but not extracted
+                    # 2) required files missing from manifest entirely
+                    required_missing = []
+                    for err in validation_errors:
+                        m = re.search(r"Required file '([^']+)' not listed in artifact_manifest\.json", err)
+                        if m:
+                            required_missing.append(m.group(1))
+
+                    patch_targets = sorted(set((missing_files_list or []) + required_missing))
+
+                    if patch_targets:
                         print_info("")
-                        print_info(f"Attempting patch call for {len(missing_files_list)} missing file(s)...")
+                        print_info(f"Attempting patch call for {len(patch_targets)} missing file(s)...")
                         patch_success, patch_costs = self._patch_missing_files(
-                            iteration, missing_files_list, build_output, governance_section
+                            iteration, patch_targets, build_output, governance_section
                         )
 
                         # Accumulate patch costs
