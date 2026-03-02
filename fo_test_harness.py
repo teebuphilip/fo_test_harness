@@ -87,7 +87,7 @@ class Config:
         )
 
     # Iteration Limits
-    MAX_QA_ITERATIONS = 20
+    MAX_QA_ITERATIONS = 5
 
     # API call settings
     # FIX #6: Increased timeout for large builds with prompt caching.
