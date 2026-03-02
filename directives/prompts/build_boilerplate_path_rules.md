@@ -1,6 +1,7 @@
 **CRITICAL FILE PATH RULES (BOILERPLATE MODE):**
 - Output files ONLY under `business/**`.
 - REQUIRED: include `business/README-INTEGRATION.md`.
+- REQUIRED: include `business/package.json`.
 - Frontend pages MUST be in `business/frontend/pages/*.jsx`.
 - Backend API routes MUST be in `business/backend/routes/*.py`.
 - Every code block MUST have an explicit **FILE: path/to/file** header.
@@ -24,6 +25,7 @@
 **FILE: business/models/Client.js**
 **FILE: business/services/ReportService.js**
 **FILE: business/README-INTEGRATION.md**
+**FILE: business/package.json**
 
 **INVALID EXAMPLES (DO NOT OUTPUT):**
 **FILE: business/components/ClientDashboard.jsx**
@@ -37,5 +39,6 @@
 - Frontend pages are in `business/frontend/pages/`.
 - Backend routes are in `business/backend/routes/`.
 - `business/README-INTEGRATION.md` is included.
+- `business/package.json` is included.
 - Every code block has a **FILE:** header.
 - No unlabeled code fences.
