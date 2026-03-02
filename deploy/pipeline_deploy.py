@@ -44,6 +44,7 @@ import time
 import requests
 import os
 import shutil
+import re
 from datetime import datetime
 from pathlib import Path
 
@@ -535,6 +536,66 @@ def _git(repo_path: Path, cmd: str, capture: bool = False, required: bool = True
     return result.returncode == 0
 
 
+def _import_target_exists(importer_file: Path, import_spec: str) -> bool:
+    """Resolve a relative import and check if a matching file/directory exists."""
+    base = (importer_file.parent / import_spec).resolve()
+    exts = [".js", ".jsx", ".ts", ".tsx", ".json"]
+    candidates = []
+
+    if base.suffix:
+        candidates.append(base)
+    else:
+        candidates.append(base)
+        for ext in exts:
+            candidates.append(Path(str(base) + ext))
+        for ext in exts:
+            candidates.append(base / f"index{ext}")
+
+    return any(p.exists() for p in candidates)
+
+
+def preflight_frontend_business_imports(repo_path: Path) -> list:
+    """
+    Validate frontend relative imports that reference business frontend modules.
+    Returns a list of unresolved import diagnostics.
+    """
+    frontend_src = repo_path / "boilerplate" / "saas-boilerplate" / "frontend" / "src"
+    if not frontend_src.exists():
+        return []
+
+    issues = []
+    pattern = re.compile(r"""(?:from\s+['"]([^'"]+)['"]|require\(\s*['"]([^'"]+)['"]\s*\)|import\(\s*['"]([^'"]+)['"]\s*\))""")
+
+    for file_path in frontend_src.rglob("*"):
+        if file_path.suffix not in {".js", ".jsx", ".ts", ".tsx"}:
+            continue
+        try:
+            content = file_path.read_text(encoding="utf-8", errors="ignore")
+        except Exception:
+            continue
+
+        for match in pattern.findall(content):
+            import_spec = next((g for g in match if g), "")
+            if not import_spec.startswith("."):
+                continue
+            if "business/frontend" not in import_spec:
+                continue
+            if _import_target_exists(file_path, import_spec):
+                continue
+
+            suggestion = ""
+            if import_spec.startswith("../../../../business/frontend/"):
+                suggestion = import_spec.replace("../../../../", "../../../", 1)
+
+            rel_file = file_path.relative_to(repo_path)
+            msg = f"{rel_file}: unresolved import '{import_spec}'"
+            if suggestion:
+                msg += f" (try '{suggestion}')"
+            issues.append(msg)
+
+    return issues
+
+
 def persist_deploy_state_if_changed(repo_path: Path, branch: str):
     """
     Auto-commit deploy state files if they changed.
@@ -845,48 +906,69 @@ def main():
         print(f"STEP 3/3: Deploy Frontend → Vercel")
         print(f"{'='*60}")
 
-        backend_url = railway_result.get("url") if railway_result else None
-        if not backend_url:
-            merged_for_backend = dict(railway_cfg or {})
-            if railway_result:
-                if railway_result.get("project_id"):
-                    merged_for_backend["project_id"] = railway_result.get("project_id")
-                if railway_result.get("service_id"):
-                    merged_for_backend["service_id"] = railway_result.get("service_id")
-            backend_url = get_existing_backend_url(railway_token, merged_for_backend)
-            if backend_url:
-                print(f"  [pipeline] Resolved backend URL for Vercel env injection: {backend_url}")
+        # Give Railway additional time to publish service URL after a trigger.
+        # This improves chances of injecting backend URL into Vercel env vars.
+        if not args.frontend_only:
+            print("  [pipeline] Waiting 60s for Railway URL readiness before Vercel deploy...")
+            time.sleep(60)
 
-        try:
-            vercel_result = deploy_frontend(
-                token=vercel_token,
-                repo_path=repo_path,
-                github_repo=github_repo,
-                project_name=f"{project_name}-frontend",
-                framework=args.framework,
-                root_directory=args.frontend_dir,
-                output_directory=args.output_dir,
-                branch=args.branch,
-                vercel_config=vercel_cfg,
-                team_id=vercel_team_id or None,
-                backend_url=backend_url,
-            )
+        import_issues = preflight_frontend_business_imports(repo_path)
+        if import_issues:
+            print("  [pipeline] Frontend preflight failed: unresolved business imports")
+            for issue in import_issues[:20]:
+                print(f"    - {issue}")
+            if len(import_issues) > 20:
+                print(f"    - ... and {len(import_issues) - 20} more")
+            vercel_result = {
+                "success": False,
+                "status": "ERROR",
+                "error": "FRONTEND_PREFLIGHT_FAILED",
+                "reason": "Unresolved frontend imports into business modules",
+            }
+            print("  [Vercel] FAILED (preflight)")
+        else:
+            backend_url = railway_result.get("url") if railway_result else None
+            if not backend_url:
+                merged_for_backend = dict(railway_cfg or {})
+                if railway_result:
+                    if railway_result.get("project_id"):
+                        merged_for_backend["project_id"] = railway_result.get("project_id")
+                    if railway_result.get("service_id"):
+                        merged_for_backend["service_id"] = railway_result.get("service_id")
+                backend_url = get_existing_backend_url(railway_token, merged_for_backend)
+                if backend_url:
+                    print(f"  [pipeline] Resolved backend URL for Vercel env injection: {backend_url}")
 
-            if vercel_result["success"]:
-                print(f"  [Vercel] SUCCESS: {vercel_result.get('url', 'no URL yet')}")
+            try:
+                vercel_result = deploy_frontend(
+                    token=vercel_token,
+                    repo_path=repo_path,
+                    github_repo=github_repo,
+                    project_name=f"{project_name}-frontend",
+                    framework=args.framework,
+                    root_directory=args.frontend_dir,
+                    output_directory=args.output_dir,
+                    branch=args.branch,
+                    vercel_config=vercel_cfg,
+                    team_id=vercel_team_id or None,
+                    backend_url=backend_url,
+                )
 
-                # Save project ID back to Vercel deploy state for next deploy
-                vercel_cfg.update({
-                    "project": f"{project_name}-frontend",
-                    "project_id": vercel_result["project_id"],
-                })
-                write_config_back(repo_path, VERCEL_STATE_FILE, vercel_cfg)
-            else:
-                print("  [Vercel] FAILED")
+                if vercel_result["success"]:
+                    print(f"  [Vercel] SUCCESS: {vercel_result.get('url', 'no URL yet')}")
 
-        except Exception as e:
-            print(f"  [Vercel] ERROR: {e}")
-            vercel_result = {"success": False, "error": str(e)}
+                    # Save project ID back to Vercel deploy state for next deploy
+                    vercel_cfg.update({
+                        "project": f"{project_name}-frontend",
+                        "project_id": vercel_result["project_id"],
+                    })
+                    write_config_back(repo_path, VERCEL_STATE_FILE, vercel_cfg)
+                else:
+                    print("  [Vercel] FAILED")
+
+            except Exception as e:
+                print(f"  [Vercel] ERROR: {e}")
+                vercel_result = {"success": False, "error": str(e)}
 
     elif not args.backend_only and not railway_ok:
         print(f"\n[SKIPPED] Vercel deploy skipped because Railway failed.")
