@@ -26,6 +26,11 @@ For EVERY defect you write, you MUST complete this checklist FIRST:
 
 **The test**: Before submitting each defect, ask yourself: "Can I paste the exact wrong line from the build output into this defect report?" If the answer is no — delete the defect.
 
+**ABSOLUTE RULES — violation = invalid QA report:**
+- NEVER use the word "hypothetical" in any defect. If you write "hypothetical", that defect is fabricated — delete it.
+- NEVER use the phrase "for reference" or "based on guidelines" in a location field. Location must be a real file path from the build output.
+- NEVER write a defect for a file you have not read in the build output above. No exceptions.
+
 - DO NOT reference file paths not present as `**FILE:**` headers in the build output
 - DO NOT flag `.tsx` files unless you see a `**FILE: path/file.tsx**` header in the output above
 - DO NOT flag missing files unless there is no `**FILE:**` header for that file path anywhere in the build output
@@ -83,7 +88,8 @@ BEFORE writing this defect you MUST complete this verification:
 
 ### DEFECTS
 DEFECT-[ID]: [classification]
-  - Location: [file/line]
+  - Location: [file/line — must be a real **FILE:** path from the build output, never "hypothetical"]
+  - Evidence: [paste the exact wrong line(s) verbatim from the build output — if you cannot paste it, delete this defect]
   - Problem: [what's wrong]
   - Expected: [what should be]
   - Fix: [exact change required — name the specific function, import, pattern, or line to change; do not write "use proper X", write "replace Y with Z"]
