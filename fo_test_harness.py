@@ -630,6 +630,19 @@ class ChatGPTClient:
 # FILE MANAGEMENT
 # ============================================================
 
+# Valid boilerplate business/** paths — anything outside this is pruned.
+# Pattern syntax is fnmatch (shell-style wildcards).
+BOILERPLATE_VALID_PATHS = [
+    'business/frontend/pages/*.jsx',
+    'business/backend/routes/*.py',
+    'business/models/*.py',
+    'business/services/*.py',
+    'business/frontend/lib/*.js',
+    'business/frontend/lib/*.jsx',
+    'business/README-INTEGRATION.md',
+    'business/package.json',
+]
+
 class ArtifactManager:
     """Manages saving artifacts, QA reports, build outputs, and logs"""
 
@@ -935,22 +948,44 @@ class ArtifactManager:
         if artifacts_dir.exists():
             self._write_artifact_manifest(artifacts_dir)
 
+    @staticmethod
+    def _is_valid_business_path(rel_path: str) -> bool:
+        """Return True if rel_path matches the boilerplate whitelist."""
+        import fnmatch
+        for pattern in BOILERPLATE_VALID_PATHS:
+            if fnmatch.fnmatch(rel_path, pattern):
+                return True
+        return False
+
     def prune_non_business_artifacts(self, iteration: int):
-        """Remove non-business artifacts and regenerate manifest."""
+        """Remove non-business artifacts and regenerate manifest.
+
+        Pass 1: remove files not under business/
+        Pass 2: remove business/** files not on the valid-path whitelist
+                (e.g. business/tests/, business/backend/services/,
+                 business/app/, business/backend/__init__.py, .tsx files)
+        """
         artifacts_dir = self.build_dir / f'iteration_{iteration:02d}_artifacts'
         if not artifacts_dir.exists():
             return
 
+        SKIP = {'artifact_manifest.json', 'build_state.json', 'execution_declaration.json'}
+
         removed = 0
+        invalid_business = 0
         for file_path in sorted(artifacts_dir.rglob('*')):
             if not file_path.is_file():
                 continue
             rel_path = str(file_path.relative_to(artifacts_dir))
-            if rel_path in ('artifact_manifest.json', 'build_state.json', 'execution_declaration.json'):
+            if rel_path in SKIP:
                 continue
             if not rel_path.startswith('business/'):
                 file_path.unlink()
                 removed += 1
+            elif not self._is_valid_business_path(rel_path):
+                file_path.unlink()
+                print_warning(f"  → Pruned invalid business path: {rel_path}")
+                invalid_business += 1
 
         # Remove empty directories
         for dir_path in sorted(artifacts_dir.rglob('*'), reverse=True):
@@ -959,6 +994,7 @@ class ArtifactManager:
 
         if removed:
             print_warning(f"  → Pruned {removed} non-business artifact(s)")
+        if removed or invalid_business:
             self._write_artifact_manifest(artifacts_dir)
 
     def merge_forward_from_previous_iteration(self, iteration: int, claude_output_paths: list):
@@ -983,8 +1019,8 @@ class ArtifactManager:
             rel_path = str(file_path.relative_to(prev_dir))
             if rel_path in ('artifact_manifest.json', 'build_state.json', 'execution_declaration.json'):
                 continue
-            if not rel_path.startswith('business/'):
-                continue
+            if not self._is_valid_business_path(rel_path):
+                continue  # Never carry forward invalid paths
             if rel_path in output_set:
                 continue  # Claude already output this file — keep Claude's version
             dest = curr_dir / rel_path

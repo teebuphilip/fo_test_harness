@@ -40,6 +40,19 @@
 ## Governance Alignment
 - Keep default iteration cap aligned to locked policy (`5`) but allow CLI override for controlled exception runs.
 
+14. Whitelist-based business path pruning ✅ DONE (2026-03-03)
+    - Junk files under business/ (tests/, backend/services/, backend/__init__.py, backend/app.py, app/)
+      survived pruning because they started with business/. Merge_forward then froze them in permanently.
+      Duplicate ScoringService in both business/services/ and business/backend/services/ caused ongoing confusion.
+    - Fix: added BOILERPLATE_VALID_PATHS whitelist to harness. Second pass in prune_non_business_artifacts
+      removes any business/** file not matching the whitelist. merge_forward_from_previous_iteration
+      updated to also use whitelist — never carries forward invalid paths.
+    - Valid paths: business/frontend/pages/*.jsx, business/backend/routes/*.py, business/models/*.py,
+      business/services/*.py, business/frontend/lib/*.js|jsx, business/README-INTEGRATION.md, business/package.json
+    - Build prompt: added forbidden paths (business/tests/, business/backend/services/, business/backend/__init__.py,
+      business/backend/app.py, business/app/).
+    - QA: added DO NOT FLAG for business/frontend/pages/*.jsx, business/models/*.py, business/services/*.py.
+
 13. Forbid business/frontend/app/ and .tsx extensions ✅ DONE (2026-03-03)
     - Claude switched from root-level app/ (blocked) to business/frontend/app/ with .tsx files.
     - Boilerplate uses pages router — business/frontend/pages/*.jsx only.

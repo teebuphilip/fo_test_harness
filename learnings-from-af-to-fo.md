@@ -93,6 +93,14 @@
   Fix: add a REQUIRED STRUCTURE block to qa_prompt.md with explicit path patterns and severity levels.
   Also instruct QA to ignore files outside business/ entirely — not evaluate, not reference in defects.
 
+- **Pruning only non-business files leaves junk accumulating inside business/.**
+  business/tests/, business/backend/services/, business/backend/__init__.py, business/backend/app.py,
+  business/app/routers.py all start with business/ so the prune step ignored them. Merge_forward then
+  carried them into every subsequent iteration. Duplicate ScoringService in two locations persisted for
+  12 iterations. Fix: whitelist-based second-pass pruning — only keep files matching the boilerplate
+  contract (pages/*.jsx, routes/*.py, models/*.py, services/*.py, README-INTEGRATION.md, package.json).
+  Both pruning and merge_forward must use the same whitelist for consistency.
+
 - **Blocking one wrong path causes Claude to invent another wrong path.**
   Prohibiting root-level `app/` caused Claude to generate `business/frontend/app/` (Next.js app router)
   with `.tsx` extensions instead of `.jsx`. Each prohibition must include all known variants.

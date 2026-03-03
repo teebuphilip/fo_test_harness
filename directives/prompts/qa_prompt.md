@@ -34,6 +34,8 @@ Validate the build output from Claude against the intake requirements and FO Bui
 - `from core.database import Base, get_db` — this IS the correct boilerplate import path, do NOT flag it as incorrect
 - `from core.rbac import get_current_user` — this IS the correct boilerplate auth import, do NOT flag it as missing auth
 - `Depends(get_current_user)` in route signatures — this IS correct auth, do NOT flag as missing authentication
+- Files in `business/frontend/pages/*.jsx` — these ARE the correct frontend pages, do NOT flag as "frontend logic mixing" or misplaced
+- Files in `business/models/*.py` and `business/services/*.py` — these ARE correct locations, do NOT flag as misplaced
 
 **DEFECT CLASSIFICATION:**
 - IMPLEMENTATION_BUG
