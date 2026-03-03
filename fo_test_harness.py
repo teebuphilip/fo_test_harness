@@ -2048,13 +2048,18 @@ class FOHarness:
             self.deploy_governance = load_governance_zip(Path(Config.DEPLOY_GOVERNANCE_ZIP))
             print_success("DEPLOY governance loaded")
 
-        # Create run directory with timestamp
-        timestamp    = datetime.now().strftime('%Y%m%d_%H%M%S')
-        self.run_dir = Config.OUTPUT_DIR / f'{self.startup_id}_BLOCK_{self.block}_{timestamp}'
-        self.run_dir.mkdir(parents=True, exist_ok=True)
-
-        # Persist run metadata for traceability
-        self._write_run_metadata()
+        # Warm-start: reuse an existing run directory if --resume-run was given
+        resume_run = Path(getattr(cli_args, 'resume_run', None) or '')
+        if resume_run.is_dir():
+            self.run_dir = resume_run
+            print_info(f"Warm-start: reusing run directory {self.run_dir}")
+        else:
+            # Create run directory with timestamp
+            timestamp    = datetime.now().strftime('%Y%m%d_%H%M%S')
+            self.run_dir = Config.OUTPUT_DIR / f'{self.startup_id}_BLOCK_{self.block}_{timestamp}'
+            self.run_dir.mkdir(parents=True, exist_ok=True)
+            # Persist run metadata for traceability
+            self._write_run_metadata()
 
         # Initialize components
         self.claude    = ClaudeClient()
@@ -3329,252 +3334,291 @@ class FOHarness:
         # FIX #9: Track consecutive validation failures
         consecutive_validation_failures = 0
 
+        # ── Warm-start setup ──────────────────────────────────────────
+        _ws_run_dir   = Path(getattr(self.cli_args, 'resume_run', None) or '')
+        _ws_iteration = int(getattr(self.cli_args, 'resume_iteration', 1))
+        _ws_mode      = (getattr(self.cli_args, 'resume_mode', None) or '').lower()
+
+        if _ws_run_dir.is_dir() and _ws_mode == 'fix':
+            # Load the existing QA report as defects and jump straight to the fix iteration
+            _qa_report_path = _ws_run_dir / 'qa' / f'iteration_{_ws_iteration:02d}_qa_report.txt'
+            if not _qa_report_path.exists():
+                print_error(f"Warm-start (fix): QA report not found: {_qa_report_path}")
+                return False, "RESUME_MISSING_QA_REPORT"
+            previous_defects = _qa_report_path.read_text()
+            iteration        = _ws_iteration + 1
+            print_success(f"Warm-start (fix): loaded QA report from iter {_ws_iteration} — resuming at iter {iteration}")
+
         try:
             while iteration <= self.max_qa_iterations:
                 print_header(f"ITERATION {iteration}/{self.max_qa_iterations}")
+
+                # Warm-start QA mode: skip Claude BUILD for this specific iteration,
+                # load existing artifacts from the resume run directory.
+                _warm_skip_build = (
+                    _ws_run_dir.is_dir()
+                    and _ws_mode == 'qa'
+                    and iteration == _ws_iteration
+                )
 
                 # ================================================
                 # STEP 1: BUILD (Claude)
                 # ================================================
 
-                required_file_inventory = self._get_previous_iteration_inventory(iteration) if previous_defects else []
-                defect_target_files = self._extract_defect_target_files(previous_defects) if previous_defects else []
-
-                # FIX #1 & #4: Get prompt sections and dynamic token limit
-                governance_section, dynamic_section = PromptTemplates.build_prompt(
-                    self.block,
-                    self.intake_data,
-                    self.build_governance,
-                    iteration,
-                    self.max_qa_iterations,
-                    previous_defects,
-                    self.tech_stack_override,
-                    self.external_integration_override,
-                    self.startup_id,
-                    self.effective_tech_stack,
-                    required_file_inventory,
-                    defect_target_files
-                )
-
-                # FIX #4: Dynamic max tokens based on iteration
-                max_tokens = Config.get_max_tokens(iteration)
-
-                # FIX #6: Dynamic timeout based on iteration (first call needs more time)
-                request_timeout = Config.get_request_timeout(iteration)
-
-                # Log the full prompt (combine sections for log)
-                full_prompt_for_log = governance_section + "\n\n" + dynamic_section
-                self.artifacts.save_log(f'iteration_{iteration:02d}_build_prompt', full_prompt_for_log)
-
-                # FIX #1 & #4 & #6: Detailed logging before Claude call
-                print_info("═══════════════════════════════════════════════════════════")
-                print_info(f"ITERATION {iteration} - CLAUDE BUILD CALL")
-                print_info("═══════════════════════════════════════════════════════════")
-                print_info("Prompt structure:")
-                print_info(f"  → Cacheable section: {len(governance_section):,} chars (governance ZIP)")
-                print_info(f"  → Dynamic section: {len(dynamic_section):,} chars (intake + defects)")
-                print_info(f"  → Total prompt size: {len(governance_section) + len(dynamic_section):,} chars")
-                print_info(f"Token limit: {max_tokens:,} tokens (iteration {iteration})")
-                print_info(f"Request timeout: {request_timeout}s ({request_timeout//60} minutes)")
-                print_info("Cache enabled: YES" if iteration == 1 else "Cache enabled: YES (expecting hit)")
-                print_info("───────────────────────────────────────────────────────────")
-                print_info("Calling Claude API...")
-
-                start_time = time.time()
-                still_truncated = False  # Track if output remains truncated after continuations
-                try:
-                    # FIX #1: Use cacheable_prefix for prompt caching
-                    # FIX #4: Use dynamic max_tokens
-                    # FIX #6: Use dynamic timeout based on iteration
-                    build_response = self.claude.call(
-                        dynamic_section,
-                        max_tokens=max_tokens,
-                        cacheable_prefix=governance_section,
-                        timeout=request_timeout
+                if _warm_skip_build:
+                    # Build governance_section (needed for patch calls later) without calling Claude
+                    governance_section, _ = PromptTemplates.build_prompt(
+                        self.block, self.intake_data, self.build_governance,
+                        iteration, self.max_qa_iterations, None,
+                        self.tech_stack_override, self.external_integration_override,
+                        self.startup_id, self.effective_tech_stack, [], []
                     )
-                    build_output   = build_response['content'][0]['text']
-                    build_time     = time.time() - start_time
+                    _build_path = self.artifacts.build_dir / f'iteration_{iteration:02d}_build.txt'
+                    if not _build_path.exists():
+                        print_error(f"Warm-start (qa): build output not found: {_build_path}")
+                        return False, "RESUME_MISSING_BUILD"
+                    build_output   = _build_path.read_text()
+                    still_truncated = False
+                    print_success(f"Warm-start QA: loaded iter {iteration} artifacts — skipping Claude BUILD call")
+                if not _warm_skip_build:
+                    required_file_inventory = self._get_previous_iteration_inventory(iteration) if previous_defects else []
+                    defect_target_files = self._extract_defect_target_files(previous_defects) if previous_defects else []
 
-                    # FIX #1: Detailed logging of cache performance
-                    print_success(f"Claude responded in {build_time:.1f}s")
-                    usage_stats = self._log_claude_usage(build_response, iteration, is_continuation=False)
+                    # FIX #1 & #4: Get prompt sections and dynamic token limit
+                    governance_section, dynamic_section = PromptTemplates.build_prompt(
+                        self.block,
+                        self.intake_data,
+                        self.build_governance,
+                        iteration,
+                        self.max_qa_iterations,
+                        previous_defects,
+                        self.tech_stack_override,
+                        self.external_integration_override,
+                        self.startup_id,
+                        self.effective_tech_stack,
+                        required_file_inventory,
+                        defect_target_files
+                    )
 
-                    # Accumulate usage stats
-                    total_calls += 1
-                    if usage_stats['cache_creation_tokens'] > 0:
-                        total_cache_writes += 1
-                        total_cache_write_tokens += usage_stats['cache_creation_tokens']
-                    if usage_stats['cache_read_tokens'] > 0:
-                        total_cache_hits += 1
-                        total_cache_read_tokens += usage_stats['cache_read_tokens']
-                    total_input_tokens += usage_stats['input_tokens']
-                    total_output_tokens += usage_stats['output_tokens']
+                    # FIX #4: Dynamic max tokens based on iteration
+                    max_tokens = Config.get_max_tokens(iteration)
 
-                    print_success(f"BUILD completed in {build_time:.1f}s")
+                    # FIX #6: Dynamic timeout based on iteration (first call needs more time)
+                    request_timeout = Config.get_request_timeout(iteration)
 
-                    # ── TCP-STYLE MULTI-PART ASSEMBLY ──
-                    # Check if Claude split the output into numbered parts
-                    part_info = detect_multipart(build_output)
-                    max_parts = self.max_build_parts
-                    max_continuations = self.max_build_continuations
+                    # Log the full prompt (combine sections for log)
+                    full_prompt_for_log = governance_section + "\n\n" + dynamic_section
+                    self.artifacts.save_log(f'iteration_{iteration:02d}_build_prompt', full_prompt_for_log)
 
-                    if part_info['is_multipart'] and not part_info['is_final']:
-                        print_warning(
-                            f"BIG BUILD DETECTED: multipart assembly active "
-                            f"(max parts={max_parts}, current declared parts={part_info.get('total_parts', '?')})"
+                    # FIX #1 & #4 & #6: Detailed logging before Claude call
+                    print_info("═══════════════════════════════════════════════════════════")
+                    print_info(f"ITERATION {iteration} - CLAUDE BUILD CALL")
+                    print_info("═══════════════════════════════════════════════════════════")
+                    print_info("Prompt structure:")
+                    print_info(f"  → Cacheable section: {len(governance_section):,} chars (governance ZIP)")
+                    print_info(f"  → Dynamic section: {len(dynamic_section):,} chars (intake + defects)")
+                    print_info(f"  → Total prompt size: {len(governance_section) + len(dynamic_section):,} chars")
+                    print_info(f"Token limit: {max_tokens:,} tokens (iteration {iteration})")
+                    print_info(f"Request timeout: {request_timeout}s ({request_timeout//60} minutes)")
+                    print_info("Cache enabled: YES" if iteration == 1 else "Cache enabled: YES (expecting hit)")
+                    print_info("───────────────────────────────────────────────────────────")
+                    print_info("Calling Claude API...")
+
+                    start_time = time.time()
+                    still_truncated = False  # Track if output remains truncated after continuations
+                    try:
+                        # FIX #1: Use cacheable_prefix for prompt caching
+                        # FIX #4: Use dynamic max_tokens
+                        # FIX #6: Use dynamic timeout based on iteration
+                        build_response = self.claude.call(
+                            dynamic_section,
+                            max_tokens=max_tokens,
+                            cacheable_prefix=governance_section,
+                            timeout=request_timeout
                         )
-                        received_files = extract_file_paths_from_output(build_output)
-                        print_info(f"Multi-part build detected: PART {part_info['current_part']}/{part_info['total_parts']}")
-                        print_info(f"  → Files received so far: {len(received_files)}")
-                        if part_info['remaining_files']:
-                            print_info(f"  → Remaining files: {', '.join(part_info['remaining_files'][:10])}")
-
-                        next_part = part_info['current_part'] + 1
-                        total_parts = part_info['total_parts']
-
-                        while next_part <= total_parts and next_part <= max_parts:
-                            received_files = extract_file_paths_from_output(build_output)
-                            remaining = part_info['remaining_files']
-                            remaining_str = ', '.join(remaining) if remaining else '(check your manifest)'
-
-                            # Prompt template source: directives/prompts/part_prompt.md
-                            part_prompt = DirectiveTemplateLoader.render(
-                                'part_prompt.md',
-                                next_part=next_part,
-                                total_parts=total_parts,
-                                startup_id=self.startup_id,
-                                received_files_bullets=chr(10).join('- ' + f for f in received_files),
-                                remaining_str=remaining_str
-                            )
-
-                            print_info("───────────────────────────────────────────────────────────")
-                            print_info(f"REQUESTING PART {next_part}/{total_parts} - Using cached governance")
-                            print_info(f"  → Part prompt: {len(part_prompt):,} chars")
-                            print_info(f"  → Token limit: {max_tokens:,} tokens")
-                            print_info(f"  → Request timeout: {request_timeout}s")
-                            print_info("───────────────────────────────────────────────────────────")
-
-                            cont_start = time.time()
-                            cont_response = self.claude.call(
-                                part_prompt,
-                                max_tokens=max_tokens,
-                                cacheable_prefix=governance_section,
-                                timeout=request_timeout
-                            )
-                            part_output = cont_response['content'][0]['text']
-                            cont_time = time.time() - cont_start
-
-                            print_success(f"PART {next_part}/{total_parts} received in {cont_time:.1f}s")
-
-                            # Log and accumulate usage
-                            cont_usage_stats = self._log_claude_usage(cont_response, iteration, is_continuation=True, continuation_num=next_part)
-                            total_calls += 1
-                            if cont_usage_stats['cache_creation_tokens'] > 0:
-                                total_cache_writes += 1
-                                total_cache_write_tokens += cont_usage_stats['cache_creation_tokens']
-                            if cont_usage_stats['cache_read_tokens'] > 0:
-                                total_cache_hits += 1
-                                total_cache_read_tokens += cont_usage_stats['cache_read_tokens']
-                            total_input_tokens += cont_usage_stats['input_tokens']
-                            total_output_tokens += cont_usage_stats['output_tokens']
-
-                            # Append part to build output
-                            build_output += "\n\n" + part_output
-
-                            new_files = extract_file_paths_from_output(part_output)
-                            print_info(f"  → New files in part {next_part}: {len(new_files)}")
-
-                            # Check if this was the final part
-                            part_info = detect_multipart(part_output)
-                            if part_info['is_final'] or BUILD_COMPLETE_MARKER in part_output:
-                                all_files = extract_file_paths_from_output(build_output)
-                                print_success(f"All {total_parts} parts assembled — {len(all_files)} total files")
-                                break
-
-                            next_part += 1
-
-                    # ── FALLBACK: Truncation recovery ──
-                    # If output is still truncated after multipart handling (or without multipart),
-                    # run continuation recovery. This closes the gap where Claude incorrectly
-                    # labels output as PART 1/1 but still truncates before completion.
-                    if detect_truncation(build_output):
-                        continuation_count = 0
-                        recovery_mode = "multipart fallback" if part_info['is_multipart'] else "standard fallback"
-                        print_warning(
-                            f"BIG BUILD DETECTED: {recovery_mode} continuation mode active "
-                            f"(max continuations={max_continuations})"
-                        )
-
-                        while detect_truncation(build_output) and continuation_count < max_continuations:
-                            continuation_count += 1
+                        build_output   = build_response['content'][0]['text']
+                        build_time     = time.time() - start_time
+    
+                        # FIX #1: Detailed logging of cache performance
+                        print_success(f"Claude responded in {build_time:.1f}s")
+                        usage_stats = self._log_claude_usage(build_response, iteration, is_continuation=False)
+    
+                        # Accumulate usage stats
+                        total_calls += 1
+                        if usage_stats['cache_creation_tokens'] > 0:
+                            total_cache_writes += 1
+                            total_cache_write_tokens += usage_stats['cache_creation_tokens']
+                        if usage_stats['cache_read_tokens'] > 0:
+                            total_cache_hits += 1
+                            total_cache_read_tokens += usage_stats['cache_read_tokens']
+                        total_input_tokens += usage_stats['input_tokens']
+                        total_output_tokens += usage_stats['output_tokens']
+    
+                        print_success(f"BUILD completed in {build_time:.1f}s")
+    
+                        # ── TCP-STYLE MULTI-PART ASSEMBLY ──
+                        # Check if Claude split the output into numbered parts
+                        part_info = detect_multipart(build_output)
+                        max_parts = self.max_build_parts
+                        max_continuations = self.max_build_continuations
+    
+                        if part_info['is_multipart'] and not part_info['is_final']:
                             print_warning(
-                                f"Output still truncated - requesting continuation "
-                                f"{continuation_count}/{max_continuations}..."
+                                f"BIG BUILD DETECTED: multipart assembly active "
+                                f"(max parts={max_parts}, current declared parts={part_info.get('total_parts', '?')})"
                             )
-
-                            # Prompt template source: directives/prompts/continuation_prompt.md
-                            continuation_prompt = DirectiveTemplateLoader.render(
-                                'continuation_prompt.md',
-                                startup_id=self.startup_id,
-                                block=self.block,
-                                iteration=iteration,
-                                max_iterations=self.max_qa_iterations,
-                                last_output_tail=build_output[-1500:]
+                            received_files = extract_file_paths_from_output(build_output)
+                            print_info(f"Multi-part build detected: PART {part_info['current_part']}/{part_info['total_parts']}")
+                            print_info(f"  → Files received so far: {len(received_files)}")
+                            if part_info['remaining_files']:
+                                print_info(f"  → Remaining files: {', '.join(part_info['remaining_files'][:10])}")
+    
+                            next_part = part_info['current_part'] + 1
+                            total_parts = part_info['total_parts']
+    
+                            while next_part <= total_parts and next_part <= max_parts:
+                                received_files = extract_file_paths_from_output(build_output)
+                                remaining = part_info['remaining_files']
+                                remaining_str = ', '.join(remaining) if remaining else '(check your manifest)'
+    
+                                # Prompt template source: directives/prompts/part_prompt.md
+                                part_prompt = DirectiveTemplateLoader.render(
+                                    'part_prompt.md',
+                                    next_part=next_part,
+                                    total_parts=total_parts,
+                                    startup_id=self.startup_id,
+                                    received_files_bullets=chr(10).join('- ' + f for f in received_files),
+                                    remaining_str=remaining_str
+                                )
+    
+                                print_info("───────────────────────────────────────────────────────────")
+                                print_info(f"REQUESTING PART {next_part}/{total_parts} - Using cached governance")
+                                print_info(f"  → Part prompt: {len(part_prompt):,} chars")
+                                print_info(f"  → Token limit: {max_tokens:,} tokens")
+                                print_info(f"  → Request timeout: {request_timeout}s")
+                                print_info("───────────────────────────────────────────────────────────")
+    
+                                cont_start = time.time()
+                                cont_response = self.claude.call(
+                                    part_prompt,
+                                    max_tokens=max_tokens,
+                                    cacheable_prefix=governance_section,
+                                    timeout=request_timeout
+                                )
+                                part_output = cont_response['content'][0]['text']
+                                cont_time = time.time() - cont_start
+    
+                                print_success(f"PART {next_part}/{total_parts} received in {cont_time:.1f}s")
+    
+                                # Log and accumulate usage
+                                cont_usage_stats = self._log_claude_usage(cont_response, iteration, is_continuation=True, continuation_num=next_part)
+                                total_calls += 1
+                                if cont_usage_stats['cache_creation_tokens'] > 0:
+                                    total_cache_writes += 1
+                                    total_cache_write_tokens += cont_usage_stats['cache_creation_tokens']
+                                if cont_usage_stats['cache_read_tokens'] > 0:
+                                    total_cache_hits += 1
+                                    total_cache_read_tokens += cont_usage_stats['cache_read_tokens']
+                                total_input_tokens += cont_usage_stats['input_tokens']
+                                total_output_tokens += cont_usage_stats['output_tokens']
+    
+                                # Append part to build output
+                                build_output += "\n\n" + part_output
+    
+                                new_files = extract_file_paths_from_output(part_output)
+                                print_info(f"  → New files in part {next_part}: {len(new_files)}")
+    
+                                # Check if this was the final part
+                                part_info = detect_multipart(part_output)
+                                if part_info['is_final'] or BUILD_COMPLETE_MARKER in part_output:
+                                    all_files = extract_file_paths_from_output(build_output)
+                                    print_success(f"All {total_parts} parts assembled — {len(all_files)} total files")
+                                    break
+    
+                                next_part += 1
+    
+                        # ── FALLBACK: Truncation recovery ──
+                        # If output is still truncated after multipart handling (or without multipart),
+                        # run continuation recovery. This closes the gap where Claude incorrectly
+                        # labels output as PART 1/1 but still truncates before completion.
+                        if detect_truncation(build_output):
+                            continuation_count = 0
+                            recovery_mode = "multipart fallback" if part_info['is_multipart'] else "standard fallback"
+                            print_warning(
+                                f"BIG BUILD DETECTED: {recovery_mode} continuation mode active "
+                                f"(max continuations={max_continuations})"
                             )
-
-                            print_info(f"CONTINUATION {continuation_count} - fallback mode")
-                            cont_start = time.time()
-                            cont_response = self.claude.call(
-                                continuation_prompt,
-                                max_tokens=max_tokens,
-                                cacheable_prefix=governance_section,
-                                timeout=request_timeout
-                            )
-                            continuation_output = cont_response['content'][0]['text']
-                            cont_time = time.time() - cont_start
-
-                            print_success(f"Continuation {continuation_count} completed in {cont_time:.1f}s")
-                            cont_usage_stats = self._log_claude_usage(cont_response, iteration, is_continuation=True, continuation_num=continuation_count)
-                            total_calls += 1
-                            if cont_usage_stats['cache_creation_tokens'] > 0:
-                                total_cache_writes += 1
-                                total_cache_write_tokens += cont_usage_stats['cache_creation_tokens']
-                            if cont_usage_stats['cache_read_tokens'] > 0:
-                                total_cache_hits += 1
-                                total_cache_read_tokens += cont_usage_stats['cache_read_tokens']
-                            total_input_tokens += cont_usage_stats['input_tokens']
-                            total_output_tokens += cont_usage_stats['output_tokens']
-
-                            build_output += "\n\n<!-- CONTINUATION -->\n\n" + continuation_output
-
-                    # Track final truncation status
-                    still_truncated = detect_truncation(build_output)
-
-                    if still_truncated:
-                        print_error(f"Build still incomplete after multi-part/continuation assembly")
-                    else:
-                        all_files = extract_file_paths_from_output(build_output)
-                        print_success(f"Build complete — {len(all_files)} files extracted")
-
-                    self.artifacts.save_build_output(iteration, build_output)
-
-                    # Post-build pruning for boilerplate mode: keep business/** only
-                    if self.use_boilerplate:
-                        self.artifacts.prune_non_business_artifacts(iteration)
-
-                    # Defect iteration: carry forward all non-defect files from previous iteration.
-                    # Claude outputs only defect-target files; harness fills in the rest.
-                    if self.use_boilerplate and iteration > 1 and previous_defects:
-                        claude_output_paths = extract_file_paths_from_output(build_output)
-                        self.artifacts.merge_forward_from_previous_iteration(iteration, claude_output_paths)
-
-                    # FIX #6: save defect fix artifact on iterations 2+
-                    if iteration > 1 and previous_defects:
-                        self.artifacts.save_defect_fix(iteration, build_output)
-
-                except Exception as e:
-                    print_error(f"BUILD failed: {e}")
-                    return False, str(e)
+    
+                            while detect_truncation(build_output) and continuation_count < max_continuations:
+                                continuation_count += 1
+                                print_warning(
+                                    f"Output still truncated - requesting continuation "
+                                    f"{continuation_count}/{max_continuations}..."
+                                )
+    
+                                # Prompt template source: directives/prompts/continuation_prompt.md
+                                continuation_prompt = DirectiveTemplateLoader.render(
+                                    'continuation_prompt.md',
+                                    startup_id=self.startup_id,
+                                    block=self.block,
+                                    iteration=iteration,
+                                    max_iterations=self.max_qa_iterations,
+                                    last_output_tail=build_output[-1500:]
+                                )
+    
+                                print_info(f"CONTINUATION {continuation_count} - fallback mode")
+                                cont_start = time.time()
+                                cont_response = self.claude.call(
+                                    continuation_prompt,
+                                    max_tokens=max_tokens,
+                                    cacheable_prefix=governance_section,
+                                    timeout=request_timeout
+                                )
+                                continuation_output = cont_response['content'][0]['text']
+                                cont_time = time.time() - cont_start
+    
+                                print_success(f"Continuation {continuation_count} completed in {cont_time:.1f}s")
+                                cont_usage_stats = self._log_claude_usage(cont_response, iteration, is_continuation=True, continuation_num=continuation_count)
+                                total_calls += 1
+                                if cont_usage_stats['cache_creation_tokens'] > 0:
+                                    total_cache_writes += 1
+                                    total_cache_write_tokens += cont_usage_stats['cache_creation_tokens']
+                                if cont_usage_stats['cache_read_tokens'] > 0:
+                                    total_cache_hits += 1
+                                    total_cache_read_tokens += cont_usage_stats['cache_read_tokens']
+                                total_input_tokens += cont_usage_stats['input_tokens']
+                                total_output_tokens += cont_usage_stats['output_tokens']
+    
+                                build_output += "\n\n<!-- CONTINUATION -->\n\n" + continuation_output
+    
+                        # Track final truncation status
+                        still_truncated = detect_truncation(build_output)
+    
+                        if still_truncated:
+                            print_error(f"Build still incomplete after multi-part/continuation assembly")
+                        else:
+                            all_files = extract_file_paths_from_output(build_output)
+                            print_success(f"Build complete — {len(all_files)} files extracted")
+    
+                        self.artifacts.save_build_output(iteration, build_output)
+    
+                        # Post-build pruning for boilerplate mode: keep business/** only
+                        if self.use_boilerplate:
+                            self.artifacts.prune_non_business_artifacts(iteration)
+    
+                        # Defect iteration: carry forward all non-defect files from previous iteration.
+                        # Claude outputs only defect-target files; harness fills in the rest.
+                        if self.use_boilerplate and iteration > 1 and previous_defects:
+                            claude_output_paths = extract_file_paths_from_output(build_output)
+                            self.artifacts.merge_forward_from_previous_iteration(iteration, claude_output_paths)
+    
+                        # FIX #6: save defect fix artifact on iterations 2+
+                        if iteration > 1 and previous_defects:
+                            self.artifacts.save_defect_fix(iteration, build_output)
+    
+                    except Exception as e:
+                        print_error(f"BUILD failed: {e}")
+                        return False, str(e)
 
                 # ================================================
                 # TRUNCATION & QUESTION DETECTION
@@ -4123,6 +4167,27 @@ Examples:
         type=int,
         default=Config.MAX_QA_ITERATIONS,
         help='Max BUILD→QA iterations for this run. Default: 5'
+    )
+    parser.add_argument(
+        '--resume-run',
+        type=str,
+        default=None,
+        help='Path to an existing run directory to resume (skips new dir creation).'
+    )
+    parser.add_argument(
+        '--resume-iteration',
+        type=int,
+        default=1,
+        help='Which iteration to resume from (used with --resume-run). Default: 1'
+    )
+    parser.add_argument(
+        '--resume-mode',
+        choices=['qa', 'fix'],
+        default=None,
+        help=(
+            'qa  — skip Claude BUILD for --resume-iteration, run fresh QA on existing artifacts. '
+            'fix — load QA report from --resume-iteration as defects, start Claude FIX at iter+1.'
+        )
     )
 
     args = parser.parse_args()
