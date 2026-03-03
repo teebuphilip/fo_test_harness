@@ -4198,6 +4198,11 @@ Examples:
     if args.max_iterations < 1:
         parser.error("--max-iterations must be >= 1")
 
+    # If --resume-run is given without --resume-mode, default to qa
+    if args.resume_run and not args.resume_mode:
+        args.resume_mode = 'qa'
+        print(f"→ --resume-run set without --resume-mode — defaulting to qa")
+
     # Resolve block from flag
     block = 'A' if args.block_a else 'B'
 
