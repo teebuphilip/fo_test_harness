@@ -958,11 +958,50 @@ class ArtifactManager:
                 return True
         return False
 
+    @staticmethod
+    def _remap_to_valid_path(rel_path: str) -> str | None:
+        """Return the canonical business/ path for a wrong-path file, or None if unmappable.
+
+        Rules:
+          *.py  in app/api/, app/routers/, app/routes/, backend/routes/ → business/backend/routes/<name>
+          *.py  in app/models/, models/                                  → business/models/<name>
+          *.py  in app/services/, services/                              → business/services/<name>
+          *.jsx in pages/, app/, src/pages/, frontend/pages/             → business/frontend/pages/<name>
+          *.js|*.jsx in lib/, frontend/lib/, src/lib/                    → business/frontend/lib/<name>
+        """
+        import os
+        name = os.path.basename(rel_path)
+        parts = rel_path.replace('\\', '/').split('/')
+
+        if name.endswith('.py'):
+            for marker in ('api', 'routers', 'routes'):
+                if marker in parts:
+                    return f'business/backend/routes/{name}'
+            if 'models' in parts:
+                return f'business/models/{name}'
+            if 'services' in parts:
+                return f'business/services/{name}'
+        elif name.endswith(('.jsx', '.tsx')):
+            canonical = name.replace('.tsx', '.jsx')
+            # lib files
+            if 'lib' in parts:
+                return f'business/frontend/lib/{canonical}'
+            # page files
+            return f'business/frontend/pages/{canonical}'
+        elif name.endswith('.js') and 'lib' in parts:
+            return f'business/frontend/lib/{name}'
+
+        return None  # unmappable — will be pruned
+
     def prune_non_business_artifacts(self, iteration: int):
         """Remove non-business artifacts and regenerate manifest.
 
-        Pass 1: remove files not under business/
-        Pass 2: remove business/** files not on the valid-path whitelist
+        Pass 1: wrong-path files (not under business/).
+          - If a valid-path equivalent already exists in this iteration → prune (duplicate).
+          - If NO equivalent exists → remap to the canonical business/ path to avoid losing logic.
+          - Truly unmappable files are pruned.
+
+        Pass 2: business/** files not on the valid-path whitelist
                 (e.g. business/tests/, business/backend/services/,
                  business/app/, business/backend/__init__.py, .tsx files)
         """
@@ -973,6 +1012,7 @@ class ArtifactManager:
         SKIP = {'artifact_manifest.json', 'build_state.json', 'execution_declaration.json'}
 
         removed = 0
+        remapped = 0
         invalid_business = 0
         for file_path in sorted(artifacts_dir.rglob('*')):
             if not file_path.is_file():
@@ -980,9 +1020,25 @@ class ArtifactManager:
             rel_path = str(file_path.relative_to(artifacts_dir))
             if rel_path in SKIP:
                 continue
+
             if not rel_path.startswith('business/'):
-                file_path.unlink()
-                removed += 1
+                canonical = self._remap_to_valid_path(rel_path)
+                if canonical:
+                    dest = artifacts_dir / canonical
+                    if dest.exists():
+                        # Correct-path version already present — discard the duplicate
+                        file_path.unlink()
+                        removed += 1
+                        print_warning(f"  → Pruned duplicate wrong-path: {rel_path} (kept {canonical})")
+                    else:
+                        # No correct-path version — salvage by remapping
+                        dest.parent.mkdir(parents=True, exist_ok=True)
+                        file_path.rename(dest)
+                        remapped += 1
+                        print_warning(f"  → Remapped {rel_path} → {canonical}")
+                else:
+                    file_path.unlink()
+                    removed += 1
             elif not self._is_valid_business_path(rel_path):
                 file_path.unlink()
                 print_warning(f"  → Pruned invalid business path: {rel_path}")
@@ -995,7 +1051,9 @@ class ArtifactManager:
 
         if removed:
             print_warning(f"  → Pruned {removed} non-business artifact(s)")
-        if removed or invalid_business:
+        if remapped:
+            print_success(f"  → Remapped {remapped} wrong-path file(s) to correct business/ paths")
+        if removed or remapped or invalid_business:
             self._write_artifact_manifest(artifacts_dir)
 
     def merge_forward_from_previous_iteration(self, iteration: int, claude_output_paths: list):
