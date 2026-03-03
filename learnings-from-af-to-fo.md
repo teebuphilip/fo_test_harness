@@ -67,6 +67,19 @@
   QA catches again next iteration. The fix must name the exact import and usage:
   `import { useAuth0 } from '@auth0/auth0-react'; const { user } = useAuth0(); consultant_id: user?.sub`.
 
+- **Collateral regeneration is the primary cause of defect count explosions in late iterations.**
+  Claude doesn't have previous file content in the prompt — only file paths. When told to output all files
+  with only the defects changed, it regenerates non-defect files from memory → drift → regression.
+  1 defect can become 6 defects in a single iteration this way.
+  Fix requires three parts: (1) prompt change so Claude only outputs defect files, (2) harness merge-forward
+  to copy unchanged files from previous iteration, (3) synthetic QA input built from merged artifact set
+  so QA evaluates the complete picture. Changing the prompt alone is insufficient — the harness must fill in
+  the non-defect files or QA will flag them as missing.
+
+- **QA false positives on known-good boilerplate imports waste iterations.**
+  QA hallucinated `from core.database import Base, get_db` as an incorrect import path — burning 2 iterations.
+  Any import that is part of the boilerplate must be listed explicitly in the DO NOT FLAG section of qa_prompt.md.
+
 - **QA needs to know correct boilerplate patterns, not just what the boilerplate provides.**
   Telling QA "the boilerplate has auth" doesn't prevent it from flagging `Depends(get_current_user)`
   as a defect. QA needs to see: "this import IS the auth — do not flag missing auth when it's present".

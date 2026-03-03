@@ -961,6 +961,75 @@ class ArtifactManager:
             print_warning(f"  → Pruned {removed} non-business artifact(s)")
             self._write_artifact_manifest(artifacts_dir)
 
+    def merge_forward_from_previous_iteration(self, iteration: int, claude_output_paths: list):
+        """
+        After a defect-only patch iteration, copy any business/** files from the previous
+        iteration that Claude did NOT output into the current iteration's artifact dir.
+        This prevents non-defect files from being lost when Claude outputs only defect files.
+        """
+        import shutil
+        prev_dir = self.build_dir / f'iteration_{iteration-1:02d}_artifacts'
+        curr_dir = self.build_dir / f'iteration_{iteration:02d}_artifacts'
+        if not prev_dir.exists() or not curr_dir.exists():
+            return
+
+        # Normalize Claude's output paths for comparison
+        output_set = set(p.lstrip('./') for p in claude_output_paths)
+
+        copied = 0
+        for file_path in sorted(prev_dir.rglob('*')):
+            if not file_path.is_file():
+                continue
+            rel_path = str(file_path.relative_to(prev_dir))
+            if rel_path in ('artifact_manifest.json', 'build_state.json', 'execution_declaration.json'):
+                continue
+            if not rel_path.startswith('business/'):
+                continue
+            if rel_path in output_set:
+                continue  # Claude already output this file — keep Claude's version
+            dest = curr_dir / rel_path
+            if not dest.exists():
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(file_path, dest)
+                copied += 1
+
+        if copied > 0:
+            print_info(f"  → Carried forward {copied} unchanged file(s) from iteration {iteration-1:02d}")
+            self._write_artifact_manifest(curr_dir)
+
+    def build_synthetic_qa_output(self, iteration: int) -> str:
+        """
+        Build a synthetic build_output string from the current iteration's merged artifact
+        directory, formatted as FILE: headers + code fences. Used to give QA an accurate
+        view of the full artifact set after merge-forward, not just Claude's partial output.
+        """
+        artifacts_dir = self.build_dir / f'iteration_{iteration:02d}_artifacts'
+        if not artifacts_dir.exists():
+            return ""
+
+        ext_to_lang = {
+            '.py': 'python', '.jsx': 'jsx', '.js': 'jsx', '.ts': 'typescript',
+            '.tsx': 'typescript', '.json': 'json', '.md': 'markdown',
+            '.css': 'css', '.html': 'html', '.sh': 'bash', '.txt': 'text',
+        }
+        skip = {'artifact_manifest.json', 'build_state.json', 'execution_declaration.json'}
+
+        parts = []
+        for file_path in sorted(artifacts_dir.rglob('*')):
+            if not file_path.is_file():
+                continue
+            rel_path = str(file_path.relative_to(artifacts_dir))
+            if rel_path in skip:
+                continue
+            lang = ext_to_lang.get(file_path.suffix.lower(), 'text')
+            try:
+                content = file_path.read_text(encoding='utf-8', errors='replace')
+            except Exception:
+                continue
+            parts.append(f'**FILE: {rel_path}**\n```{lang}\n{content}\n```')
+
+        return '\n\n'.join(parts)
+
     def save_qa_report(self, iteration: int, report: str):
         """Save QA report from ChatGPT"""
         path = self.qa_dir / f'iteration_{iteration:02d}_qa_report.txt'
@@ -3387,6 +3456,12 @@ class FOHarness:
                     if self.use_boilerplate:
                         self.artifacts.prune_non_business_artifacts(iteration)
 
+                    # Defect iteration: carry forward all non-defect files from previous iteration.
+                    # Claude outputs only defect-target files; harness fills in the rest.
+                    if self.use_boilerplate and iteration > 1 and previous_defects:
+                        claude_output_paths = extract_file_paths_from_output(build_output)
+                        self.artifacts.merge_forward_from_previous_iteration(iteration, claude_output_paths)
+
                     # FIX #6: save defect fix artifact on iterations 2+
                     if iteration > 1 and previous_defects:
                         self.artifacts.save_defect_fix(iteration, build_output)
@@ -3554,8 +3629,16 @@ class FOHarness:
 
                 print_info("Calling ChatGPT for QA...")
 
+                # For defect iterations in boilerplate mode, QA receives the full merged
+                # artifact set (not Claude's partial defect-only output) so it evaluates
+                # the complete picture rather than just the 1-3 files Claude patched.
+                if self.use_boilerplate and iteration > 1 and previous_defects:
+                    qa_build_output = self.artifacts.build_synthetic_qa_output(iteration)
+                else:
+                    qa_build_output = build_output
+
                 qa_prompt = PromptTemplates.qa_prompt(
-                    build_output,
+                    qa_build_output,
                     self.intake_data,
                     self.block,
                     self.effective_tech_stack,

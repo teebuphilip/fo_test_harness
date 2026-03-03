@@ -30,6 +30,9 @@ Validate the build output from Claude against the intake requirements and FO Bui
 - .env.example
 - .gitignore
 - Test files (flag MEDIUM at most)
+- `from core.database import Base, get_db` — this IS the correct boilerplate import path, do NOT flag it as incorrect
+- `from core.rbac import get_current_user` — this IS the correct boilerplate auth import, do NOT flag it as missing auth
+- `Depends(get_current_user)` in route signatures — this IS correct auth, do NOT flag as missing authentication
 
 **DEFECT CLASSIFICATION:**
 - IMPLEMENTATION_BUG

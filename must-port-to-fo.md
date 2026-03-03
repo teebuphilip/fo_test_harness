@@ -78,11 +78,16 @@
    - Also added: `NEVER use Flask (Blueprint, request, jsonify). Use APIRouter.`
    - Removed "write a TODO comment if unsure" fallback — was giving Claude permission to defer DB impl.
 
-5. Collateral regeneration lock ⬜ TODO
-   - When fixing defects, Claude regenerates adjacent files (tests, config) unnecessarily, causing regressions.
-   - Fix: add explicit file-level output lock to `build_patch_first_file_lock.md`:
-     "ONLY output files whose paths appear in the DEFECTS TO FIX section. Do NOT output any other files."
-   - Observed: iteration 7 had 2 defects; iteration 8 fixed them but regressed 3 other files to 3 defects.
+5. Collateral regeneration lock ✅ DONE (2026-03-03)
+   - When fixing defects, Claude regenerated adjacent files from memory → regressions. Iter 9→10: 1 defect → 6.
+   - Fix (three parts):
+     a) Prompts: `build_patch_first_file_lock.md` + `build_previous_defects.md` — Claude now outputs ONLY
+        defect-target files. Non-defect files explicitly excluded.
+     b) Harness: `ArtifactManager.merge_forward_from_previous_iteration()` — after extraction, copies any
+        business/** file from previous iteration that Claude didn't output into current iteration's dir.
+     c) Harness: `ArtifactManager.build_synthetic_qa_output()` — builds full merged artifact set as
+        FILE: headers + code fences. QA receives this for defect iterations (not Claude's partial output).
+   - Also fixed: false QA defect on `from core.database import Base, get_db` — added to DO NOT FLAG in qa_prompt.md.
 
 6. Patch code fence requirement ✅ DONE (2026-03-02)
    - Root cause: Claude outputs file content as raw text after **FILE:** headers in patch iterations,
