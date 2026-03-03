@@ -18,6 +18,7 @@
 - If you omit the FILE header on any code block, the build FAILS.
 - If you place frontend pages outside `business/frontend/pages/`, the build FAILS.
 - If you place backend routes outside `business/backend/routes/`, the build FAILS.
+- NEVER output files under `app/`, `app/api/`, `app/core/`, `src/`, `tests/`, `backend/`, `frontend/` — these paths are FORBIDDEN. The harness will silently discard them and your logic will be lost.
 
 **DATA LAYER PROHIBITIONS (HARD — NO EXCEPTIONS):**
 - NEVER use Python dicts as storage: `x_db = {}`, `data = []`, `store = {}` — all forbidden.
@@ -177,6 +178,11 @@ export default function MyPage() {
 **FILE: frontend/src/components/ClientList.jsx**
 **FILE: backend/tests/test_clients.py**
 **FILE: package.json**
+**FILE: app/api/assessments.py** ← FORBIDDEN (use business/backend/routes/assessments.py)
+**FILE: app/core/scoring.py** ← FORBIDDEN (use business/services/ScoringService.py)
+**FILE: app/api/auth.py** ← FORBIDDEN (auth is handled by boilerplate core)
+**FILE: tests/test_assessments.py** ← FORBIDDEN (tests are generated separately, not by you)
+**FILE: src/components/Dashboard.jsx** ← FORBIDDEN (use business/frontend/pages/)
 
 **PRE-PROMPT CHECKLIST (MUST PASS BEFORE YOU OUTPUT):**
 - All files are under `business/**`.

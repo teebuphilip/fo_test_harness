@@ -40,6 +40,13 @@
 ## Governance Alignment
 - Keep default iteration cap aligned to locked policy (`5`) but allow CLI override for controlled exception runs.
 
+11. Forbidden path prohibition strengthened ✅ DONE (2026-03-03)
+    - Claude generated duplicate logic under `app/api/`, `app/core/`, `tests/` alongside correct `business/` files.
+    - Harness pruned them silently → logic lost, wasted iterations.
+    - Fix: added explicit forbidden path list to HARD FAIL CONDITIONS and INVALID EXAMPLES in
+      `build_boilerplate_path_rules.md`: `app/`, `app/api/`, `app/core/`, `src/`, `tests/`, `backend/`, `frontend/`
+    - Includes counterexamples mapping wrong path → correct `business/` equivalent.
+
 ## Priority 3 (QA Convergence)
 1. QA defect `Fix:` field ✅ DONE (2026-03-02)
    - Added `Fix:` to defect output format so QA provides exact code change, not just problem description.

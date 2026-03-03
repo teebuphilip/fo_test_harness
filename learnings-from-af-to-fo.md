@@ -73,6 +73,14 @@
   The QA prompt must include the exact correct pattern for each capability, paired with explicit
   DO NOT FLAG / DO FLAG rules. Otherwise QA creates false defects that block convergence.
 
+- **Claude hedges by generating code in BOTH the correct path and familiar wrong paths.**
+  Even when the prompt says "output only under `business/**`", Claude generates correct `business/backend/routes/`
+  files AND duplicate logic under `app/api/`, `app/core/`, `tests/`. The harness pruner silently discards the
+  wrong-path files — but they contained real logic, wasting iterations and tokens.
+  Fix: explicitly name the forbidden paths (`app/`, `tests/`, `src/`, etc.) in HARD FAIL CONDITIONS and
+  INVALID EXAMPLES with ← FORBIDDEN annotations and the correct equivalent path. Vague "only business/" is
+  insufficient — Claude needs to see the exact wrong paths it tends to produce.
+
 ## Bottom Line
 - Reliability came from harness-side deterministic controls, not expecting model session continuity.
 - QA convergence requires both: specific defect descriptions (Fix: field) AND upfront prohibitions
