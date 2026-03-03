@@ -73,6 +73,13 @@
   The QA prompt must include the exact correct pattern for each capability, paired with explicit
   DO NOT FLAG / DO FLAG rules. Otherwise QA creates false defects that block convergence.
 
+- **QA cannot detect missing frontend if it evaluates pruned files Claude generated in wrong paths.**
+  If Claude generates `app/api/assessments.py` (pruned) but no `business/frontend/pages/*.jsx`, QA sees
+  a seemingly complete build and accepts. The missing frontend is invisible because QA has no structural
+  checklist — "verify required artifacts" is undefined without an explicit path-level requirement.
+  Fix: add a REQUIRED STRUCTURE block to qa_prompt.md with explicit path patterns and severity levels.
+  Also instruct QA to ignore files outside business/ entirely — not evaluate, not reference in defects.
+
 - **Claude hedges by generating code in BOTH the correct path and familiar wrong paths.**
   Even when the prompt says "output only under `business/**`", Claude generates correct `business/backend/routes/`
   files AND duplicate logic under `app/api/`, `app/core/`, `tests/`. The harness pruner silently discards the

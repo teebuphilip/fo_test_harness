@@ -40,6 +40,16 @@
 ## Governance Alignment
 - Keep default iteration cap aligned to locked policy (`5`) but allow CLI override for controlled exception runs.
 
+12. QA required structure checklist ✅ DONE (2026-03-03)
+    - QA had no structural checklist — "verify required artifacts" with no definition of required.
+    - Missing frontend (no business/frontend/pages/*.jsx) went unflagged; QA evaluated pruned app/ files instead.
+    - Fix: added REQUIRED STRUCTURE block to qa_prompt.md:
+      - business/frontend/pages/*.jsx absent → HIGH SPEC_COMPLIANCE_ISSUE
+      - business/backend/routes/*.py absent → HIGH SPEC_COMPLIANCE_ISSUE
+      - business/README-INTEGRATION.md absent → MEDIUM
+      - business/package.json absent → MEDIUM
+      - Files outside business/ (app/, src/, tests/) → ignore entirely, do not reference in defects
+
 11. Forbidden path prohibition strengthened ✅ DONE (2026-03-03)
     - Claude generated duplicate logic under `app/api/`, `app/core/`, `tests/` alongside correct `business/` files.
     - Harness pruned them silently → logic lost, wasted iterations.
