@@ -45,10 +45,18 @@ Before writing any defect, verify: can you find a `**FILE: path/to/file**` heade
 - Files in `business/models/*.py` and `business/services/*.py` — these ARE correct locations, do NOT flag as misplaced
 - Auth0 token: `const token = await getAccessTokenSilently();` then `'Authorization': \`Bearer ${token}\`` — this IS the correct pattern, do NOT flag as "missing await"
 - Auth0 token (inline): `` `Bearer ${await getAccessTokenSilently()}` `` — also correct, do NOT flag
+- Auth0 destructuring with `getAccessTokenSilently` present: `const { user, isLoading, getAccessTokenSilently } = useAuth0()` — this IS CORRECT, do NOT flag anything about Auth0 token usage
+- SQLAlchemy ORM queries: `db.query(Model).filter(...)`, `tenant_db.query(Model).filter(...)`, `.query().filter().all()`, `.query().filter().first()`, `.order_by(...)` — these ARE proper SQLAlchemy ORM, NOT "inline SQL". Do NOT flag as "inline SQL without ORM". "Inline SQL" only means raw SQL strings like `db.execute("SELECT * FROM ...")`.
+- Absence of `.tsx` files — if all frontend files use `.jsx`, this is CORRECT. Do NOT flag the non-existence of `.tsx` files as a problem.
 
-**Auth0 BUG to FLAG (IMPLEMENTATION_BUG HIGH):**
-- `user.getAccessTokenSilently()` — `getAccessTokenSilently` is NOT a method on the Auth0 `user` profile object. It MUST be destructured from `useAuth0()`: `const { user, getAccessTokenSilently } = useAuth0();`
-- Correct Fix: change `const { user, isLoading } = useAuth0();` to `const { user, isLoading, getAccessTokenSilently } = useAuth0();` and change `user.getAccessTokenSilently()` to `getAccessTokenSilently()`
+**Auth0 BUG to FLAG (IMPLEMENTATION_BUG HIGH) — VERIFICATION REQUIRED:**
+BEFORE writing this defect you MUST complete this verification:
+1. Find a line in the build output that literally contains the text `user.getAccessTokenSilently()`
+2. QUOTE that exact line in your defect report
+3. If you CANNOT quote such a line verbatim — you MUST NOT flag this defect
+4. If the file contains `const { ..., getAccessTokenSilently } = useAuth0()` — the code IS ALREADY CORRECT, do NOT flag anything
+- The bug: `user.getAccessTokenSilently()` — `getAccessTokenSilently` is NOT a method on the Auth0 `user` profile object
+- The fix: destructure `getAccessTokenSilently` from `useAuth0()` directly: `const { user, isLoading, getAccessTokenSilently } = useAuth0();`
 
 **DEFECT CLASSIFICATION:**
 - IMPLEMENTATION_BUG

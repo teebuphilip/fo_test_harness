@@ -160,6 +160,16 @@
      lib.analytics_lib, lib.meilisearch_lib
    - Claude instructed to scan intake and USE applicable ones, never rebuild from scratch.
 
+17. QA Auth0 + ORM hallucination fix ✅ DONE (2026-03-03)
+    - Home.jsx had CORRECT Auth0 pattern from iteration 4 onwards: `const { user, isLoading, getAccessTokenSilently } = useAuth0()`
+    - QA hallucinated the Auth0 defect for 9 consecutive iterations (4-12) by pattern-matching on `useAuth0`
+      in the code without actually checking if `user.getAccessTokenSilently()` was present.
+    - Fix: added VERIFICATION REQUIRED block to Auth0 BUG section in qa_prompt.md:
+      QA must QUOTE the exact line containing `user.getAccessTokenSilently()` before flagging.
+      If it can't quote it, it cannot flag. If destructuring already has getAccessTokenSilently — correct, do NOT flag.
+    - Also fixed: SQLAlchemy `.query().filter()` chains flagged as "inline SQL without ORM" — added to DO NOT FLAG.
+    - Also fixed: QA flagging ABSENCE of .tsx files as a defect (inverted logic) — added to DO NOT FLAG.
+
 16. Full capability coverage — all missing modules added ✅ DONE (2026-03-03)
     - `build_boilerplate_capabilities.md` was missing: data_retention (#41-44), monitoring/sentry,
       webhook_entitlements router, auth0_lib (user management), betteruptime_lib (uptime monitoring).

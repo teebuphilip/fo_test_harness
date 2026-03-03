@@ -115,6 +115,27 @@
   INVALID EXAMPLES with ← FORBIDDEN annotations and the correct equivalent path. Vague "only business/" is
   insufficient — Claude needs to see the exact wrong paths it tends to produce.
 
+- **A "flag this pattern" rule in the QA prompt causes hallucinated defects when the pattern isn't present.**
+  The Auth0 BUG TO FLAG section instructed QA to flag `user.getAccessTokenSilently()`. ChatGPT read this
+  rule, saw `useAuth0` anywhere in the code, and reported the defect without verifying the wrong pattern was present.
+  Home.jsx had CORRECT code (`const { user, isLoading, getAccessTokenSilently } = useAuth0()`) from iteration 4.
+  QA still flagged it as broken for 9 straight iterations — consuming the entire iteration budget on phantom bugs.
+  Fix: every "flag this pattern" rule must include a VERIFICATION REQUIREMENT: quote the exact wrong line verbatim
+  before writing the defect. If you cannot quote it, you cannot flag it. This forces ChatGPT to actually read
+  the code rather than pattern-match on the rule description.
+  General rule: any QA instruction that says "flag X" must have a corresponding "ONLY if you see literal X in output".
+
+- **SQLAlchemy ORM query chains look like "inline SQL" to an LLM without explicit guidance.**
+  `tenant_db.query(Model).filter(Model.column == value).all()` is correct SQLAlchemy ORM.
+  QA flagged it as "inline SQL without ORM abstraction" because it sees `.filter()` calls and infers raw SQL.
+  Fix: add to DO NOT FLAG in qa_prompt.md: `.query().filter().all()`, `.query().filter().first()` are ORM.
+  "Inline SQL" only means raw SQL strings: `db.execute("SELECT * FROM ...")`.
+
+- **Absence-of-pattern rules invert in QA output.**
+  "Do NOT flag .tsx unless you see a .tsx header" caused QA to flag "Missing .tsx reference that confirms .jsx usage" —
+  the absence of .tsx became a defect about the absence of .tsx. Rules about what NOT to flag should always be
+  written as positive confirmations: "If all frontend files are .jsx — this is CORRECT."
+
 - **Partial capability coverage causes the same recurring bugs as no coverage.**
   Having 20 of 44 capabilities in the build directive means the 24 missing ones will always be
   hallucinated or reimplemented from scratch. The Auth0 `user.getAccessTokenSilently()` bug is
