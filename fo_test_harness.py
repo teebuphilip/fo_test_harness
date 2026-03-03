@@ -103,8 +103,9 @@ class Config:
     }
     REQUEST_TIMEOUT_DEFAULT = 300  # 5 minutes for later iterations
 
-    MAX_RETRIES     = 3      # retries on transient errors (rate limit, 529)
-    RETRY_SLEEP     = 5      # seconds between retries
+    MAX_RETRIES        = 6      # retries on transient errors (rate limit, 529)
+    RETRY_SLEEP        = 5      # seconds between retries (multiplied by attempt)
+    RETRY_SLEEP_429    = 60     # minimum wait on 429 rate-limit (ChatGPT hits this hard)
     MAX_BUILD_PARTS_DEFAULT = 10            # default multipart ceiling
     MAX_BUILD_CONTINUATIONS_DEFAULT = 9     # default fallback continuation ceiling
 
@@ -602,7 +603,7 @@ class ChatGPTClient:
                     response.raise_for_status()
 
                 if response.status_code in (429, 500, 529):
-                    wait = Config.RETRY_SLEEP * attempt
+                    wait = Config.RETRY_SLEEP_429 if response.status_code == 429 else Config.RETRY_SLEEP * attempt
                     print_warning(f"ChatGPT API transient error {response.status_code} — retry {attempt}/{Config.MAX_RETRIES} in {wait}s")
                     time.sleep(wait)
                     last_error = f"HTTP {response.status_code}"
