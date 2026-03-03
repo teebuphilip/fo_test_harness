@@ -160,6 +160,17 @@
      lib.analytics_lib, lib.meilisearch_lib
    - Claude instructed to scan intake and USE applicable ones, never rebuild from scratch.
 
+18. Structural QA verification gate — quote-it-or-drop-it ✅ DONE (2026-03-03)
+    - Per-capability DO NOT FLAG rules are whack-a-mole: ChatGPT will pattern-match any
+      "flag this" rule without verifying the code, for every capability one by one.
+    - Fix: added universal VERIFY BEFORE YOU FLAG block to qa_prompt.md:
+      - Every defect requires quoting the exact offending line verbatim
+      - If you cannot quote it, you cannot write the defect
+      - Any import from core.* or lib.*_lib = capability correctly integrated — DO NOT FLAG
+      - No inference from pattern names or descriptions — only literal quoted evidence
+    - Also added same rule to tech_stack_context in fo_test_harness.py BOILERPLATE MODULES block.
+    - This one rule prevents all future per-capability hallucinations, not just Auth0.
+
 17. QA Auth0 + ORM hallucination fix ✅ DONE (2026-03-03)
     - Home.jsx had CORRECT Auth0 pattern from iteration 4 onwards: `const { user, isLoading, getAccessTokenSilently } = useAuth0()`
     - QA hallucinated the Auth0 defect for 9 consecutive iterations (4-12) by pattern-matching on `useAuth0`

@@ -1628,6 +1628,7 @@ This is a LOWCODE build using the teebu-saas-boilerplate framework.
 6. DO flag if Claude built infrastructure that should use boilerplate instead
 
 **BOILERPLATE MODULES — WHAT CORRECT INTEGRATION LOOKS LIKE:**
+RULE: If you see any import from `core.*` or `lib.*_lib` in a file, that capability IS correctly integrated. You MUST NOT flag it as missing, broken, or incorrectly implemented unless you can quote a specific wrong line. The presence of the import IS the implementation.
 The following imports and patterns ARE correct boilerplate usage. Do NOT flag them as bugs or missing implementations:
 
 Authentication (correct):

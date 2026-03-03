@@ -115,6 +115,15 @@
   INVALID EXAMPLES with ← FORBIDDEN annotations and the correct equivalent path. Vague "only business/" is
   insufficient — Claude needs to see the exact wrong paths it tends to produce.
 
+- **Per-capability DO NOT FLAG rules are whack-a-mole — the fix must be structural.**
+  Each new capability in the boilerplate will produce the same class of hallucination: QA reads
+  a "flag this" rule, sees something related in the code, and fires the defect without verifying.
+  The correct fix is a single universal rule: "quote the exact offending line verbatim before writing
+  any defect — if you cannot quote it, you cannot write it." This one rule prevents all future
+  per-capability hallucinations. Also: "any import from core.* or lib.*_lib = correctly integrated,
+  do not flag as missing or broken." These two structural rules make per-capability DO NOT FLAG entries
+  mostly unnecessary.
+
 - **A "flag this pattern" rule in the QA prompt causes hallucinated defects when the pattern isn't present.**
   The Auth0 BUG TO FLAG section instructed QA to flag `user.getAccessTokenSilently()`. ChatGPT read this
   rule, saw `useAuth0` anywhere in the code, and reported the defect without verifying the wrong pattern was present.

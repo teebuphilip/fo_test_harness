@@ -15,8 +15,17 @@ Validate the build output from Claude against the intake requirements and FO Bui
 3. Check for scope compliance (no extra features beyond intake)
 4. Check for implementation bugs (code correctness)
 
-**CRITICAL: ONLY FLAG WHAT YOU CAN ACTUALLY SEE**
-Before writing any defect, verify: can you find a `**FILE: path/to/file**` header in the build output above that matches the location you are about to flag?
+**CRITICAL: VERIFY BEFORE YOU FLAG — APPLIES TO EVERY DEFECT**
+
+For EVERY defect you write, you MUST complete this checklist FIRST:
+
+1. **File exists check**: Can you find a `**FILE: path/to/file**` header in the build output that matches the location? If not, you CANNOT write this defect.
+2. **Quote the evidence**: Copy the exact offending line(s) verbatim from the build output and include them in your defect. If you cannot quote the specific wrong code, you CANNOT write the defect.
+3. **Boilerplate import check**: If the file contains any import from `core.*` or `lib.*_lib`, that capability IS correctly integrated. DO NOT flag it as "missing", "not implemented", or "incorrectly implemented" — the boilerplate provides it.
+4. **No inference allowed**: Do NOT infer a bug from the presence of a pattern name, a function name, or a description. Only flag what you can literally see in the quoted code.
+
+**The test**: Before submitting each defect, ask yourself: "Can I paste the exact wrong line from the build output into this defect report?" If the answer is no — delete the defect.
+
 - DO NOT reference file paths not present as `**FILE:**` headers in the build output
 - DO NOT flag `.tsx` files unless you see a `**FILE: path/file.tsx**` header in the output above
 - DO NOT flag missing files unless there is no `**FILE:**` header for that file path anywhere in the build output
