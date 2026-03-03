@@ -25,3 +25,12 @@ date,time,startup,iterations,cost_claude,cost_chatgpt,total_cost,run_end_reason
 2026-02-26,09:47:04,freelance_invoice_tracker,12,3.6850,0.3055,3.9906,CTRL_C
 2026-02-26,11:21:08,freelance_invoice_tracker,4,1.4822,0.1674,1.6496,QA_ACCEPTED
 2026-02-26,12:13:26,property_manager_maintenance_scheduler,1,0.5871,0.0648,0.6519,QA_ACCEPTED
+2026-03-02,08:21:04,ai_workforce_intelligence,8,2.4570,0.0000,2.4570,CTRL_C
+2026-03-02,08:46:03,ai_workforce_intelligence,7,1.8569,0.0608,1.9177,CTRL_C
+2026-03-02,08:59:09,ai_workforce_intelligence,4,0.8631,0.0561,0.9192,CTRL_C
+2026-03-02,09:59:47,ai_workforce_intelligence,15,5.2800,0.5279,5.8079,NON_CONVERGING
+2026-03-02,10:57:33,ai_workforce_intelligence,5,1.8207,0.1700,1.9907,MAX_ITERATIONS
+2026-03-02,11:16:45,ai_workforce_intelligence,2,0.6444,0.0000,0.6444,CTRL_C
+2026-03-02,13:31:30,ai_workforce_intelligence,2,0.3713,0.0614,0.4327,CTRL_C
+2026-03-02,15:38:45,ai_workforce_intelligence,10,2.3838,0.4439,2.8277,CTRL_C
+2026-03-02,21:47:47,ai_workforce_intelligence,10,2.6121,0.3260,2.9380,CTRL_C
