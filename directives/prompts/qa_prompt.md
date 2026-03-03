@@ -16,7 +16,8 @@ Validate the build output from Claude against the intake requirements and FO Bui
 4. Check for implementation bugs (code correctness)
 
 **REQUIRED STRUCTURE (check these before anything else):**
-- At least one `business/frontend/pages/*.jsx` file MUST be present — if absent, flag HIGH SPEC_COMPLIANCE_ISSUE
+- At least one `business/frontend/pages/*.jsx` file MUST be present — if absent, flag HIGH SPEC_COMPLIANCE_ISSUE. Files in `business/frontend/app/` do NOT count — app router is forbidden, pages router required.
+- `.tsx` or `.ts` frontend files are WRONG — flag HIGH SPEC_COMPLIANCE_ISSUE if present instead of `.jsx`.
 - At least one `business/backend/routes/*.py` file MUST be present — if absent, flag HIGH SPEC_COMPLIANCE_ISSUE
 - `business/README-INTEGRATION.md` MUST be present — if absent, flag MEDIUM SPEC_COMPLIANCE_ISSUE
 - `business/package.json` MUST be present — if absent, flag MEDIUM SPEC_COMPLIANCE_ISSUE

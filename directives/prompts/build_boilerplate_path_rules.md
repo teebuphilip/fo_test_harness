@@ -2,7 +2,7 @@
 - Output files ONLY under `business/**`.
 - REQUIRED: include `business/README-INTEGRATION.md`.
 - REQUIRED: include `business/package.json`.
-- Frontend pages MUST be in `business/frontend/pages/*.jsx`.
+- Frontend pages MUST be in `business/frontend/pages/*.jsx` — `.jsx` extension, NOT `.tsx`, NOT `.ts`.
 - Backend API routes MUST be in `business/backend/routes/*.py`.
 - Every code block MUST have an explicit **FILE: path/to/file** header.
 - Do NOT emit unlabeled code fences.
@@ -19,6 +19,8 @@
 - If you place frontend pages outside `business/frontend/pages/`, the build FAILS.
 - If you place backend routes outside `business/backend/routes/`, the build FAILS.
 - NEVER output files under `app/`, `app/api/`, `app/core/`, `src/`, `tests/`, `backend/`, `frontend/` — these paths are FORBIDDEN. The harness will silently discard them and your logic will be lost.
+- NEVER use `business/frontend/app/` (Next.js app router) — the boilerplate uses pages router. Use `business/frontend/pages/` ONLY.
+- NEVER use `.tsx` or `.ts` extensions for frontend pages — use `.jsx` ONLY.
 
 **DATA LAYER PROHIBITIONS (HARD — NO EXCEPTIONS):**
 - NEVER use Python dicts as storage: `x_db = {}`, `data = []`, `store = {}` — all forbidden.
@@ -183,10 +185,13 @@ export default function MyPage() {
 **FILE: app/api/auth.py** ← FORBIDDEN (auth is handled by boilerplate core)
 **FILE: tests/test_assessments.py** ← FORBIDDEN (tests are generated separately, not by you)
 **FILE: src/components/Dashboard.jsx** ← FORBIDDEN (use business/frontend/pages/)
+**FILE: business/frontend/app/assessments/page.tsx** ← FORBIDDEN (app router + .tsx — use business/frontend/pages/Assessments.jsx)
+**FILE: business/frontend/app/page.tsx** ← FORBIDDEN (use business/frontend/pages/Dashboard.jsx)
+**FILE: business/frontend/components/Navigation.tsx** ← FORBIDDEN (.tsx not allowed; components belong in business/frontend/pages/ or business/frontend/lib/)
 
 **PRE-PROMPT CHECKLIST (MUST PASS BEFORE YOU OUTPUT):**
 - All files are under `business/**`.
-- Frontend pages are in `business/frontend/pages/`.
+- Frontend pages are in `business/frontend/pages/` with `.jsx` extension (NOT app/, NOT .tsx).
 - Backend routes are in `business/backend/routes/`.
 - `business/README-INTEGRATION.md` is included.
 - `business/package.json` is included.

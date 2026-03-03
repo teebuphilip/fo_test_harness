@@ -93,6 +93,12 @@
   Fix: add a REQUIRED STRUCTURE block to qa_prompt.md with explicit path patterns and severity levels.
   Also instruct QA to ignore files outside business/ entirely — not evaluate, not reference in defects.
 
+- **Blocking one wrong path causes Claude to invent another wrong path.**
+  Prohibiting root-level `app/` caused Claude to generate `business/frontend/app/` (Next.js app router)
+  with `.tsx` extensions instead of `.jsx`. Each prohibition must include all known variants.
+  The boilerplate uses pages router — `business/frontend/pages/*.jsx` is the only valid frontend path.
+  Prohibitions must name the exact wrong paths with ← FORBIDDEN annotations and the correct equivalent.
+
 - **Claude hedges by generating code in BOTH the correct path and familiar wrong paths.**
   Even when the prompt says "output only under `business/**`", Claude generates correct `business/backend/routes/`
   files AND duplicate logic under `app/api/`, `app/core/`, `tests/`. The harness pruner silently discards the

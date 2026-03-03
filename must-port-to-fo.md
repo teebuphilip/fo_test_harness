@@ -40,6 +40,12 @@
 ## Governance Alignment
 - Keep default iteration cap aligned to locked policy (`5`) but allow CLI override for controlled exception runs.
 
+13. Forbid business/frontend/app/ and .tsx extensions ✅ DONE (2026-03-03)
+    - Claude switched from root-level app/ (blocked) to business/frontend/app/ with .tsx files.
+    - Boilerplate uses pages router — business/frontend/pages/*.jsx only.
+    - Fix: added to HARD FAIL CONDITIONS and INVALID EXAMPLES in build_boilerplate_path_rules.md.
+    - Added .tsx detection to QA required structure check in qa_prompt.md.
+
 12. QA required structure checklist ✅ DONE (2026-03-03)
     - QA had no structural checklist — "verify required artifacts" with no definition of required.
     - Missing frontend (no business/frontend/pages/*.jsx) went unflagged; QA evaluated pruned app/ files instead.
