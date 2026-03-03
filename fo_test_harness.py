@@ -959,7 +959,7 @@ class ArtifactManager:
         return False
 
     @staticmethod
-    def _remap_to_valid_path(rel_path: str) -> str | None:
+    def _remap_to_valid_path(rel_path: str):
         """Return the canonical business/ path for a wrong-path file, or None if unmappable.
 
         Rules:
