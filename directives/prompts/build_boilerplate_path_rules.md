@@ -105,6 +105,64 @@ def delete_client(client_id: str, db: Session = Depends(get_db)):
 - Timestamps: `Column(DateTime, default=datetime.utcnow)` — always on created_at/updated_at
 - Router variable MUST be named `router` (not `bp`, not `blueprint`) — the auto-loader expects `router`
 
+**BOILERPLATE AUTH REFERENCE — USE THESE EXACT PATTERNS:**
+
+The boilerplate provides Auth0-based authentication. NEVER write your own auth. NEVER hardcode user IDs.
+
+```python
+# Backend: get the authenticated user
+from core.rbac import get_current_user
+from fastapi import Depends
+
+# get_current_user returns:
+# {
+#   "sub": "auth0|abc123",   ← use this as user_id / consultant_id / owner_id
+#   "email": "user@example.com",
+#   "roles": {"user"},
+#   "tenant_id": "myapp",
+# }
+
+@router.get("/clients")
+async def list_clients(current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    user_id = current_user["sub"]   # This is the real user ID — NEVER hardcode this
+    return db.query(Client).filter(Client.owner_id == user_id).all()
+
+@router.post("/clients", status_code=201)
+async def create_client(data: dict, current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    data["owner_id"] = current_user["sub"]   # Inject real user ID before save
+    client = Client(**data)
+    db.add(client)
+    db.commit()
+    db.refresh(client)
+    return client
+```
+
+**AUTH PROHIBITIONS:**
+- NEVER write `consultant_id: 'consultant_1'` or any hardcoded user ID string
+- NEVER write `# TODO: Get from auth context` — use `current_user["sub"]` directly
+- NEVER roll your own JWT parsing — `get_current_user` handles it
+- NEVER add `user_id` as a query parameter that the caller provides — get it from `current_user`
+
+**Frontend: get the authenticated user**
+```jsx
+import { useAuth0 } from '@auth0/auth0-react';
+
+export default function MyPage() {
+  const { user, isLoading } = useAuth0();
+
+  // user.sub is the user ID (same as backend current_user["sub"])
+  // user.email is the email
+
+  const [formData, setFormData] = useState({
+    name: '',
+    // DO NOT hardcode owner_id here — send request without it,
+    // the backend injects it from the JWT via current_user["sub"]
+  });
+
+  // ...
+}
+```
+
 **VALID EXAMPLES:**
 **FILE: business/frontend/pages/ClientDashboard.jsx**
 **FILE: business/backend/routes/assessments.py**

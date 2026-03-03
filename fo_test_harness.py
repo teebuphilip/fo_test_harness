@@ -1185,6 +1185,8 @@ class PromptTemplates:
         if tech_stack == 'lowcode':
             boilerplate_path_instruction = "\n\n" + DirectiveTemplateLoader.render(
                 'build_boilerplate_path_rules.md'
+            ) + "\n\n" + DirectiveTemplateLoader.render(
+                'build_boilerplate_capabilities.md'
             ) + "\n\n"
 
         previous_defects_section = ""
@@ -1441,32 +1443,11 @@ it will be considered DELETED. QA will flag it as missing and you'll loop foreve
         # Enforce boilerplate-only output paths when lowcode is active
         boilerplate_path_instruction = ""
         if tech_stack == 'lowcode':
-            boilerplate_path_instruction = """
-**CRITICAL FILE PATH RULES (BOILERPLATE MODE):**
-- Output files ONLY under `business/**`.
-- REQUIRED: include `business/README-INTEGRATION.md`.
-- REQUIRED: include `business/package.json`.
-- Every code block MUST have an explicit **FILE: path/to/file** header.
-- Do NOT emit unlabeled code fences.
-**HARD FAIL CONDITIONS:**
-- If you output ANY file outside `business/**`, the build FAILS.
-- If you omit the FILE header on any code block, the build FAILS.
-**VALID EXAMPLES:**
-**FILE: business/models/Client.js**
-**FILE: business/services/ReportService.js**
-**FILE: business/tests/report_service.test.js**
-**FILE: business/package.json**
-**INVALID EXAMPLES (DO NOT OUTPUT):**
-**FILE: backend/tests/test_clients.py**
-**FILE: frontend/src/components/ClientList.jsx**
-**FILE: package.json**
-**PRE-PROMPT CHECKLIST (MUST PASS BEFORE YOU OUTPUT):**
-- All files are under `business/**`.
-- `business/README-INTEGRATION.md` is included.
-- `business/package.json` is included.
-- Every code block has a **FILE:** header.
-- No unlabeled code fences.
-"""
+            boilerplate_path_instruction = "\n\n" + DirectiveTemplateLoader.render(
+                'build_boilerplate_path_rules.md'
+            ) + "\n\n" + DirectiveTemplateLoader.render(
+                'build_boilerplate_capabilities.md'
+            ) + "\n\n"
 
         # Inject external integration policy
         integration_instructions = ""
@@ -1536,6 +1517,63 @@ This is a LOWCODE build using the teebu-saas-boilerplate framework.
 4. DO validate that business logic correctly integrates with boilerplate patterns
 5. DO validate that business models/services/components are complete
 6. DO flag if Claude built infrastructure that should use boilerplate instead
+
+**BOILERPLATE MODULES — WHAT CORRECT INTEGRATION LOOKS LIKE:**
+The following imports and patterns ARE correct boilerplate usage. Do NOT flag them as bugs or missing implementations:
+
+Authentication (correct):
+  `from core.rbac import get_current_user` + `Depends(get_current_user)` in route signature
+  `current_user["sub"]` used as user/owner/consultant ID
+  `from core.rbac import require_role` + `Depends(require_role("admin"))` for role gating
+  Frontend: `import {{ useAuth0 }} from '@auth0/auth0-react'` + `user.sub`
+  → DO NOT flag: "missing authentication", "consultant_id not validated", "hardcoded user check"
+  → DO FLAG: hardcoded ID strings like `'consultant_1'`, `'current_user'`, `'user_123'`
+
+Multi-tenancy (correct):
+  `from core.tenancy import TenantMixin` on SQLAlchemy models, `get_tenant_db(db, tenant_id)`
+  → DO NOT flag: "missing tenant isolation" when TenantMixin is present
+
+Usage limits (correct):
+  `from core.usage_limits import check_and_increment` called before metered operations
+  → DO NOT flag: "missing quota enforcement" when check_and_increment is called
+
+AI calls (correct):
+  `from core.ai_governance import call_ai` — handles Claude/OpenAI, cost tracking, budgets
+  → DO NOT flag: "missing AI implementation", "no cost tracking" when call_ai is used
+
+Social posting (correct):
+  `from core.posting import post_to_reddit, post_to_twitter, post_to_linkedin` etc.
+  → DO NOT flag: "missing social integration" when core.posting is imported
+
+Email (correct):
+  `from lib.mailerlite_lib import load_mailerlite_lib` + `.send_welcome_email()` etc.
+  → DO NOT flag: "missing email service" when mailerlite_lib is imported
+
+Billing/Stripe (correct):
+  `from lib.stripe_lib import load_stripe_lib` + `.create_subscription_product()` etc.
+  → DO NOT flag: "missing payment implementation" when stripe_lib is imported
+
+Analytics (correct):
+  `from lib.analytics_lib import load_analytics_lib` + `.track_event()` etc.
+  → DO NOT flag: "missing analytics" when analytics_lib is imported
+
+Search (correct):
+  `from lib.meilisearch_lib import load_meilisearch_lib` + `.search()` etc.
+  → DO NOT flag: "missing search" when meilisearch_lib is imported
+
+Onboarding/Trial/Activation (correct):
+  `from core.onboarding import get_or_create_onboarding, mark_step_complete`
+  `from core.trial import start_trial, is_trial_active`
+  `from core.activation import record_activation`
+  → DO NOT flag missing onboarding/trial/activation when these are imported
+
+**WHAT TO FLAG (incorrect patterns even in lowcode):**
+  - Hardcoded user/owner IDs: `consultant_id: 'consultant_1'`, `user_id = 'test_user'`
+  - Dict/in-memory storage: `items_db = {}`, `data = []` used as a database
+  - Sequential integer IDs: `id = len(db) + 1`
+  - Flask patterns in backend: `from flask import Blueprint`, `@bp.route`, `jsonify()`
+  - Hardcoded data arrays in frontend instead of API fetch calls
+  - Custom reimplementation of auth, payments, or email that bypasses boilerplate modules
 
 **═══════════════════════════════════════════════════════════════**
 **SCOPE VALIDATION RULES FOR LOWCODE**

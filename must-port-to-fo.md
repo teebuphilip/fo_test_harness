@@ -67,6 +67,55 @@
      "ONLY output files whose paths appear in the DEFECTS TO FIX section. Do NOT output any other files."
    - Observed: iteration 7 had 2 defects; iteration 8 fixed them but regressed 3 other files to 3 defects.
 
+6. Patch code fence requirement ✅ DONE (2026-03-02)
+   - Root cause: Claude outputs file content as raw text after **FILE:** headers in patch iterations,
+     without wrapping in code fences (```language...```). ArtifactManager regex only extracts files
+     inside code fences. Result: patch iterations produce 0-2 files instead of full set → QA skipped.
+   - Observed: iterations 2, 3, 8 extracted only package.json/README despite 1900+ line build outputs.
+   - Fix: added explicit code fence requirement to `build_patch_first_file_lock.md` HARD CONSTRAINTS:
+     "Every file MUST use **FILE: path**\n```language\n...\n``` format. NEVER output raw file content."
+   - Also added: "NEVER output raw file content without a code fence — extraction requires code fences."
+
+7. Auth context pattern for consultant_id ✅ DONE (2026-03-02)
+   - Root cause: Claude hardcodes `consultant_id: 'consultant_1'` with `// TODO: Get from auth context`.
+     Defect fix says "use auth context" but doesn't specify the exact pattern. TODO comment gives
+     Claude permission to defer the fix.
+   - Real pattern: backend `from core.rbac import get_current_user` → `current_user["sub"]`.
+     Frontend: `import { useAuth0 } from '@auth0/auth0-react'; const { user } = useAuth0();`
+   - Fix: added AUTH CONTEXT FIX PATTERN section to `build_previous_defects.md` with exact import + usage.
+
+10. QA boilerplate module recognition ✅ DONE (2026-03-03)
+    - QA (ChatGPT) didn't know what correct boilerplate integration looks like, so it flagged
+      valid patterns as defects: `Depends(get_current_user)` flagged as "missing auth",
+      `call_ai()` flagged as "no AI implementation", etc.
+    - Fix: added BOILERPLATE MODULES — WHAT CORRECT INTEGRATION LOOKS LIKE section to
+      `tech_stack_context` in `fo_test_harness.py` (QA prompt).
+    - For each capability: shows correct import pattern + "DO NOT flag X when Y is present"
+    - Also explicitly lists WHAT TO FLAG: hardcoded IDs, dict storage, Flask patterns, etc.
+
+9. All 44 boilerplate capabilities injected into build prompt ✅ DONE (2026-03-03)
+   - Created `directives/prompts/build_boilerplate_capabilities.md` — compact reference of all 44
+     capabilities with exact import paths and key function signatures.
+   - Wired into harness at BOTH boilerplate_path_instruction injection points (lines ~1186, ~1444).
+   - Claude now sees: core.rbac, core.tenancy, core.entitlements, core.usage_limits, core.ai_governance,
+     core.onboarding, core.trial, core.activation, core.listings, core.purchase_delivery,
+     core.posting, core.legal_consent, core.offboarding, core.account_closure, core.fraud,
+     core.financial_governance, core.expense_tracking + lib.stripe_lib, lib.mailerlite_lib,
+     lib.analytics_lib, lib.meilisearch_lib
+   - Claude instructed to scan intake and USE applicable ones, never rebuild from scratch.
+
+8. Boilerplate core module interfaces not injected ✅ DONE (2026-03-02)
+   - Root cause: Build prompt only told Claude about `core.database`. It did not know about
+     `core.rbac.get_current_user` (auth), `core.tenancy.TenantMixin` (multi-tenancy), or
+     `core.posting` (social media). `FO_BOILERPLATE_INTEGRATION_RULES.txt` says "boilerplate has auth"
+     but never gives the import path — so Claude writes its own auth from scratch every time.
+   - Fix: added BOILERPLATE AUTH REFERENCE section to `build_boilerplate_path_rules.md`:
+     - Exact import: `from core.rbac import get_current_user`
+     - Exact return shape: `{"sub": ..., "email": ..., "roles": ..., "tenant_id": ...}`
+     - Correct route pattern: `Depends(get_current_user)`, use `current_user["sub"]` as owner ID
+     - Auth prohibitions: no hardcoded IDs, no TODO comments, no custom JWT parsing
+     - Frontend: `useAuth0()` → `user.sub`
+
 ## Acceptance Criteria for Port
 - No pre-QA false-fail caused by manifest staleness.
 - No skipped continuation when output is still truncated.

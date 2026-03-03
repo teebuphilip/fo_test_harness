@@ -25,8 +25,16 @@ Your primary objective is stability: preserve file completeness while fixing onl
 - REQUIRED: `business/package.json`.
 - Frontend pages only in `business/frontend/pages/*.jsx`.
 - Backend routes only in `business/backend/routes/*.py`.
-- Every code block MUST have: **FILE: path/to/file.ext**
-- No unlabeled code fences.
+- Every file MUST use this exact format — the FILE header immediately followed by a code fence:
+  ```
+  **FILE: business/path/to/file.ext**
+  ```language
+  <complete file content>
+  ```
+  ```
+- Use language tags: `python` for .py, `jsx` for .jsx/.js, `json` for .json, `markdown` for .md.
+- NEVER output raw file content without a code fence — the extraction system requires code fences.
+- No unlabeled code fences (every ``` block must have a language tag).
 
 **DO NOT DO:**
 - Do not introduce new features.

@@ -46,6 +46,33 @@
 - A "write a TODO comment if unsure" fallback is counterproductive. It gives Claude permission to defer
   DB implementation, which QA then flags every iteration. Remove fallback; provide the reference instead.
 
+- **Claude needs the exact import + function signature to use a boilerplate module — not a description.**
+  Listing "Authentication ✅" tells Claude nothing. It needs: `from core.rbac import get_current_user`,
+  the return shape `{"sub": ..., "tenant_id": ...}`, and an example route. Same for every capability.
+  The 44-capability reference in `build_boilerplate_capabilities.md` gives Claude exactly what it needs
+  to select and integrate the right modules for each intake without rebuilding anything from scratch.
+- **Listing what the boilerplate provides is not enough — Claude needs the exact import path.**
+  `FO_BOILERPLATE_INTEGRATION_RULES.txt` says "Authentication ✅" but Claude still hardcodes user IDs
+  because it doesn't know that `from core.rbac import get_current_user` exists. High-level descriptions
+  of what the boilerplate provides have zero effect unless the exact module, import path, and usage
+  pattern are in the prompt. Same applies to tenancy, posting, etc.
+- **Missing code fences in patch iterations cause silent extraction failure.**
+  Claude outputs file content as raw text after `**FILE:**` headers in patch/defect iterations — no code
+  fences. ArtifactManager only extracts files within triple-backtick fences. The PATCH_FIRST prompt said
+  "every code block must have **FILE:** header" but never said "every file must be in a code block".
+  Claude satisfied both rules separately, producing raw text files that were invisible to the extractor.
+  Fix: patch prompt must say "wrap every file in ```language...``` fences; never output raw file content".
+- **Vague auth context fixes defer the problem instead of solving it.**
+  "Get consultant_id from auth context" causes Claude to write `// TODO: Get from auth context` — which
+  QA catches again next iteration. The fix must name the exact import and usage:
+  `import { useAuth0 } from '@auth0/auth0-react'; const { user } = useAuth0(); consultant_id: user?.sub`.
+
+- **QA needs to know correct boilerplate patterns, not just what the boilerplate provides.**
+  Telling QA "the boilerplate has auth" doesn't prevent it from flagging `Depends(get_current_user)`
+  as a defect. QA needs to see: "this import IS the auth — do not flag missing auth when it's present".
+  The QA prompt must include the exact correct pattern for each capability, paired with explicit
+  DO NOT FLAG / DO FLAG rules. Otherwise QA creates false defects that block convergence.
+
 ## Bottom Line
 - Reliability came from harness-side deterministic controls, not expecting model session continuity.
 - QA convergence requires both: specific defect descriptions (Fix: field) AND upfront prohibitions

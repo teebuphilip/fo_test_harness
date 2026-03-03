@@ -54,6 +54,13 @@ def get_item(item_id: str, db: Session = Depends(get_db)):
     return item
 ```
 
+**AUTH CONTEXT FIX PATTERN:**
+If any defect mentions "hardcoded consultant_id", "hardcoded user id", "hardcoded owner_id", or "get from auth context":
+- Backend routes: Add `current_user: dict = Depends(get_current_user)` as a parameter (import from `core.rbac`). Use `current_user["sub"]` as the user/owner/consultant ID. Never accept user_id as a caller-provided query param.
+- Frontend (JSX): Remove the hardcoded value from formData entirely. The backend injects the user ID from the JWT. If you must display it, use `import { useAuth0 } from '@auth0/auth0-react'; const { user } = useAuth0();` and `user.sub`.
+- Do NOT use `'consultant_1'`, `'current_user'`, or any other hardcoded string placeholder.
+- Do NOT add a `// TODO:` comment — implement the actual pattern.
+
 **DEFECTS TO FIX:**
 {{previous_defects}}
 
