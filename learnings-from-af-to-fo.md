@@ -115,7 +115,20 @@
   INVALID EXAMPLES with ← FORBIDDEN annotations and the correct equivalent path. Vague "only business/" is
   insufficient — Claude needs to see the exact wrong paths it tends to produce.
 
+- **Partial capability coverage causes the same recurring bugs as no coverage.**
+  Having 20 of 44 capabilities in the build directive means the 24 missing ones will always be
+  hallucinated or reimplemented from scratch. The Auth0 `user.getAccessTokenSilently()` bug is
+  an example: the frontend Auth0 pattern was absent from the directive → Claude inferred it from
+  the backend-only pattern → wrong. Every capability the boilerplate provides must be in the directive
+  with exact import path + working code sample — especially frontend hooks and components.
+  Missing infrastructure modules (data_retention, monitoring, webhook_entitlements) lead to Claude
+  inventing its own GDPR deletion, error tracking, and Stripe webhook handlers — all incorrect.
+  Fix: enumerate ALL capabilities in `build_boilerplate_capabilities.md` with exact code patterns:
+  backend core, shared libs, AND frontend hooks/components. Include anti-patterns (WRONG examples)
+  for any capability that has a known hallucination tendency (like Auth0 token access).
+
 ## Bottom Line
 - Reliability came from harness-side deterministic controls, not expecting model session continuity.
 - QA convergence requires both: specific defect descriptions (Fix: field) AND upfront prohibitions
   that prevent the failure pattern from appearing in the first place.
+- Full capability coverage (not partial) is required — missing capabilities = recurring unfixable bugs.

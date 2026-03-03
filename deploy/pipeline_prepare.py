@@ -79,6 +79,17 @@ def main():
         action="store_true",
         help="Only generate/update railway.deploy.json and vercel.deploy.json; skip Git push.",
     )
+    target_group = parser.add_mutually_exclusive_group()
+    target_group.add_argument(
+        "--railway-only",
+        action="store_true",
+        help="Generate/update only railway.deploy.json.",
+    )
+    target_group.add_argument(
+        "--vercel-only",
+        action="store_true",
+        help="Generate/update only vercel.deploy.json.",
+    )
     args = parser.parse_args()
 
     repo_path = Path(args.repo).expanduser().resolve()
@@ -116,13 +127,17 @@ def main():
     print(f"  [prepare] {RAILWAY_STATE_FILE}: project={railway_cfg.get('project', 'unnamed')}")
     print(f"  [prepare] {VERCEL_STATE_FILE}: project={vercel_cfg.get('project', 'unnamed')}")
 
+    update_railway = not args.vercel_only
+    update_vercel = not args.railway_only
+    target_label = "railway only" if args.railway_only else ("vercel only" if args.vercel_only else "railway + vercel")
+
     # STEP 0: AI generation/update
     railway_cfg_path = repo_path / RAILWAY_STATE_FILE
     vercel_cfg_path = repo_path / VERCEL_STATE_FILE
     has_existing = railway_cfg_path.exists() and vercel_cfg_path.exists()
 
     print(f"\n{'='*60}")
-    print(f"STEP 0/2: Generate {RAILWAY_STATE_FILE} + {VERCEL_STATE_FILE} via AI")
+    print(f"STEP 0/2: Generate deploy config(s) via AI ({target_label})")
     print(f"{'='*60}")
     if has_existing and not args.regenerate_configs:
         print("  [prepare] Existing config files found - skipping AI regeneration")
@@ -135,17 +150,21 @@ def main():
             claude_model=args.claude_model,
         )
 
-        if railway_ai_cfg:
+        if update_railway and railway_ai_cfg:
             railway_cfg.update(railway_ai_cfg)
-        if vercel_ai_cfg:
+        if update_vercel and vercel_ai_cfg:
             vercel_cfg.update(vercel_ai_cfg)
 
         # Enforce canonical names even if AI output differs
-        railway_cfg["project"] = project_base_name
-        vercel_cfg["project"] = f"{project_base_name}-frontend"
+        if update_railway:
+            railway_cfg["project"] = project_base_name
+        if update_vercel:
+            vercel_cfg["project"] = f"{project_base_name}-frontend"
 
-        write_config_back(repo_path, RAILWAY_STATE_FILE, railway_cfg)
-        write_config_back(repo_path, VERCEL_STATE_FILE, vercel_cfg)
+        if update_railway:
+            write_config_back(repo_path, RAILWAY_STATE_FILE, railway_cfg)
+        if update_vercel:
+            write_config_back(repo_path, VERCEL_STATE_FILE, vercel_cfg)
 
     github_url = ""
     github_repo = ""
@@ -166,7 +185,12 @@ def main():
     print(f"{'='*60}")
     print(f"  Repo path: {repo_path}")
     if args.configs_only:
-        print(f"  Configs:   {RAILWAY_STATE_FILE}, {VERCEL_STATE_FILE} updated")
+        updated = []
+        if update_railway:
+            updated.append(RAILWAY_STATE_FILE)
+        if update_vercel:
+            updated.append(VERCEL_STATE_FILE)
+        print(f"  Configs:   {', '.join(updated)} updated")
         print("  Git push:  skipped (--configs-only)")
     else:
         print(f"  GitHub:    {github_url}")

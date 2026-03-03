@@ -16,8 +16,8 @@ import os
 import shutil
 import subprocess
 import sys
-import tempfile
 import zipfile
+from datetime import datetime
 from pathlib import Path
 
 
@@ -63,6 +63,38 @@ def _safe_name(name: str) -> str:
     return name.strip().lower().replace(" ", "-").replace("_", "-")
 
 
+def _repo_path_from_zip(zip_path: Path, dest_root: Path) -> Path:
+    top = _zip_top_level_dir(zip_path)
+    repo_name = _safe_name(top) if top else _safe_name(zip_path.stem)
+    if "-block-b" in repo_name:
+        repo_name = repo_name.split("-block-b", 1)[0]
+    return dest_root / repo_name
+
+
+def _confirm_destructive_action() -> bool:
+    response = input("ARE YOU SURE??? (Y/N) ").strip().upper()
+    return response == "Y"
+
+
+def _preclean_repo_path(repo_path: Path, clean_existing: bool, hard_delete_existing: bool):
+    if not repo_path.exists():
+        return
+    if clean_existing:
+        if not _confirm_destructive_action():
+            print("[INFO] Aborted by user.")
+            sys.exit(1)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_path = repo_path.parent / f"{repo_path.name}_backup_{timestamp}"
+        shutil.move(str(repo_path), str(backup_path))
+        print(f"[INFO] Archived existing repo to: {backup_path}")
+    elif hard_delete_existing:
+        if not _confirm_destructive_action():
+            print("[INFO] Aborted by user.")
+            sys.exit(1)
+        shutil.rmtree(repo_path)
+        print(f"[INFO] Deleted existing repo: {repo_path}")
+
+
 def extract_zip(zip_path: Path, dest_root: Path) -> Path:
     """
     1) Create empty repo folder in ~/Documents/work
@@ -72,10 +104,7 @@ def extract_zip(zip_path: Path, dest_root: Path) -> Path:
     """
     dest_root.mkdir(parents=True, exist_ok=True)
     top = _zip_top_level_dir(zip_path)
-    repo_name = _safe_name(top) if top else _safe_name(zip_path.stem)
-    if "-block-b" in repo_name:
-        repo_name = repo_name.split("-block-b", 1)[0]
-    repo_path = dest_root / repo_name
+    repo_path = _repo_path_from_zip(zip_path, dest_root)
 
     repo_path.mkdir(parents=True, exist_ok=True)
     local_zip = repo_path / zip_path.name
@@ -177,6 +206,17 @@ def _derive_repo_name(repo_path: Path) -> str:
 def main():
     parser = argparse.ArgumentParser(description="Extract zip to ~/Documents/work and push to GitHub")
     parser.add_argument("zip_path", help="Path to build zip")
+    cleanup_group = parser.add_mutually_exclusive_group()
+    cleanup_group.add_argument(
+        "--clean-existing",
+        action="store_true",
+        help="Archive existing target repo folder before extraction (asks for confirmation).",
+    )
+    cleanup_group.add_argument(
+        "--hard-delete-existing",
+        action="store_true",
+        help="Delete existing target repo folder before extraction (asks for confirmation).",
+    )
     args = parser.parse_args()
 
     zip_path = Path(args.zip_path).expanduser().resolve()
@@ -187,6 +227,13 @@ def main():
     config = load_config()
     github_token = config["github"]["token"]
     github_username = config["github"]["username"]
+
+    target_repo_path = _repo_path_from_zip(zip_path, WORK_ROOT)
+    _preclean_repo_path(
+        target_repo_path,
+        clean_existing=args.clean_existing,
+        hard_delete_existing=args.hard_delete_existing,
+    )
 
     repo_path = extract_zip(zip_path, WORK_ROOT)
     print(f"[INFO] Repo path: {repo_path}")

@@ -155,7 +155,8 @@ async def create_client(data: dict, current_user: dict = Depends(get_current_use
 import { useAuth0 } from '@auth0/auth0-react';
 
 export default function MyPage() {
-  const { user, isLoading } = useAuth0();
+  // ALWAYS destructure getAccessTokenSilently — it is NOT a method on user
+  const { user, isLoading, getAccessTokenSilently } = useAuth0();
 
   // user.sub is the user ID (same as backend current_user["sub"])
   // user.email is the email
@@ -166,9 +167,22 @@ export default function MyPage() {
     // the backend injects it from the JWT via current_user["sub"]
   });
 
-  // ...
+  // CORRECT: call getAccessTokenSilently() directly (destructured above)
+  const fetchData = async () => {
+    const token = await getAccessTokenSilently();
+    const response = await fetch('/api/something', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    // ...
+  };
+
+  // WRONG (never do this): user.getAccessTokenSilently() — method does not exist on user object
 }
 ```
+
+**AUTH0 TOKEN RULE:** `getAccessTokenSilently` MUST be destructured from `useAuth0()`.
+- CORRECT: `const { user, getAccessTokenSilently } = useAuth0();` then `const token = await getAccessTokenSilently();`
+- WRONG: `user.getAccessTokenSilently()` — `user` is a profile object, it has NO `getAccessTokenSilently` method
 
 **VALID EXAMPLES:**
 **FILE: business/frontend/pages/ClientDashboard.jsx**

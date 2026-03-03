@@ -213,8 +213,200 @@ search.delete_document(index="reports", document_id="...")
 
 ---
 
+**BACKEND INFRASTRUCTURE** (`saas-boilerplate/backend/core/` — wiring only, not business logic)
+
+**[DATA RETENTION] Log Purge + GDPR Deletion (#41–44)** — use when app stores AI cost logs, fraud events, or needs GDPR compliance
+```python
+from core.data_retention import (
+    purge_expired_logs,        # #41: delete ai_cost_log/fraud_event/activation_event past TTL
+    apply_retention_rules,     # #42: delete consent_audit/expense_log/stripe_transaction past TTL
+    archive_tenant_data,       # #43: cold-storage snapshot all tenant rows before purge
+    request_data_deletion,     # #44: create GDPR deletion request (30-day SLA)
+    complete_deletion,         # #44: archive + purge all tenant data, mark request completed
+    get_overdue_deletions,     # #44: list pending requests past their SLA deadline
+)
+# Purge expired operational logs (run as scheduled job):
+counts = purge_expired_logs(db)  # {"ai_cost_log": 42, "fraud_event": 0, "activation_event": 3}
+# GDPR deletion request flow:
+req = request_data_deletion(db, tenant_id=current_user["tenant_id"], requested_by=current_user["sub"])
+complete_deletion(db, request_id=req.id)
+```
+
+**[MONITORING] Error Tracking (Sentry)** — always wire in main.py; use capture_error in routes
+```python
+# In main.py startup:
+from core.monitoring import init_monitoring, monitoring_middleware
+init_monitoring(app)                          # call in @app.on_event("startup")
+app.middleware("http")(monitoring_middleware) # attaches tenant context to every Sentry error
+
+# In any route where you catch a handled error you still want tracked:
+from core.monitoring import capture_error, set_feature_context
+try:
+    result = some_risky_operation()
+except Exception as e:
+    capture_error(e, extra={"tenant_id": current_user["tenant_id"], "feature": "report_gen"})
+    raise HTTPException(500, "Operation failed")
+
+# Tag current request with the feature being executed:
+set_feature_context("report_generation", extra={"report_type": "executive"})
+```
+
+**[STRIPE WEBHOOKS] Stripe → Entitlement Auto-Sync** — always include this router; handles purchase/cancel/payment-fail automatically
+```python
+# In main.py — register once, handles checkout.session.completed, subscription.updated/deleted, invoice.payment_failed:
+from core.webhook_entitlements import router as webhook_router
+app.include_router(webhook_router, prefix="/api")
+# No code needed in business routes. When a user pays, their entitlements are granted automatically.
+# When subscription is cancelled or payment fails, entitlements are revoked automatically.
+```
+
+---
+
+**SHARED LIBS — MANAGEMENT** (`teebu-shared-libs/lib/`)
+
+**[AUTH0-MGMT] Auth0 User Management** — use when app needs admin user operations (create accounts, reset passwords, assign roles)
+```python
+from lib.auth0_lib import load_auth0_lib
+auth0 = load_auth0_lib("config/auth0_config.json")
+# Create a user programmatically (e.g. on invitation flow):
+result = auth0.create_user(email="user@example.com", password="Temp1234!", email_verified=False)
+user_id = result["data"]["user_id"]  # "auth0|..."
+# Send password reset email:
+auth0.send_password_reset_email(email="user@example.com")
+# Assign roles:
+auth0.assign_roles_to_user(user_id, role_ids=["rol_abc123"])
+# Look up user:
+user = auth0.get_user_by_email("user@example.com")["data"]
+```
+
+**[UPTIME] Uptime Monitoring (BetterUptime)** — use to create monitors on app startup; surface in /health endpoint
+```python
+from lib.betteruptime_lib import load_betteruptime_lib
+uptime = load_betteruptime_lib()  # reads BETTERUPTIME_API_KEY from env
+# Create a monitor for your app's health endpoint (call once at startup):
+uptime.create_monitor(name="MyApp API", url="https://api.myapp.com/health")
+# Surface in /health endpoint:
+health_status = uptime.betteruptime_health_check()  # {"uptime_monitoring": "enabled", "monitor_count": 1}
+# Show active incidents in admin dashboard:
+incidents = uptime.list_incidents(resolved=False)["data"]
+```
+
+---
+
+**FRONTEND CAPABILITIES** (for `business/frontend/pages/*.jsx`)
+
+**[FRONTEND-AUTH0] Auth0 Authentication** — ALWAYS use this exact pattern; NEVER call methods on the `user` object
+```jsx
+import { useAuth0 } from '@auth0/auth0-react';
+
+function MyPage() {
+  // CORRECT: destructure getAccessTokenSilently from useAuth0(), NOT from user
+  const { user, getAccessTokenSilently, isLoading } = useAuth0();
+
+  const fetchData = async () => {
+    const token = await getAccessTokenSilently();  // CORRECT
+    // WRONG (recurring bug): user.getAccessTokenSilently()  ← user is a plain object, not a class
+    const res = await fetch('/api/my-route', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+  };
+
+  const userId = user?.sub;  // "auth0|abc123" — NEVER hardcode a user ID
+  if (isLoading) return <div>Loading...</div>;
+}
+```
+
+**[FRONTEND-API] Authenticated API Calls** — use the pre-configured axios instance; never build raw fetch with auth headers
+```jsx
+import api from '../utils/api';  // Axios instance: baseURL=REACT_APP_API_URL, auto-attaches Bearer token
+
+// GET request:
+const response = await api.get('/reports/');
+const reports = response.data;
+
+// POST request:
+const result = await api.post('/reports/', { title: 'Q1 Summary', type: 'executive' });
+
+// With error handling:
+try {
+  const { data } = await api.post('/ai/generate', { prompt: '...' });
+  setContent(data.content);
+} catch (err) {
+  setError(err.response?.data?.detail || 'Failed');
+}
+```
+
+**[FRONTEND-ENTITLEMENTS] Feature Gating Hooks** — use to conditionally show/hide features based on subscription
+```jsx
+import { useEntitlements, useCanAccess } from '../core/useEntitlements';
+
+function MyPage() {
+  // Full hook (multiple checks):
+  const { can, canAny, loading } = useEntitlements();
+  if (loading) return <Spinner />;
+  if (can("ai_reports")) { /* show AI reports button */ }
+  if (canAny("analytics_basic", "analytics_pro")) { /* show any analytics */ }
+
+  // Simpler single-feature check:
+  const allowed = useCanAccess("bulk_export");
+  if (allowed === null) return <Spinner />;  // null = still loading
+  if (!allowed) return <UpgradePrompt />;
+}
+```
+
+**[FRONTEND-GATE] EntitlementGate Component** — wrap any premium UI section; auto-shows upgrade prompt if not entitled
+```jsx
+import EntitlementGate from '../core/EntitlementGate';
+
+// Basic gate — shows built-in upgrade prompt if user lacks entitlement:
+<EntitlementGate feature="ai_sorting">
+  <AIPanel />
+</EntitlementGate>
+
+// Gate with custom plan label and description:
+<EntitlementGate feature="bulk_export" planName="Pro" description="Export all records to CSV.">
+  <ExportButton />
+</EntitlementGate>
+
+// Gate on ANY of multiple features:
+<EntitlementGate anyOf={["analytics_basic", "analytics_pro"]}>
+  <Reports />
+</EntitlementGate>
+
+// Custom fallback instead of default upgrade prompt:
+<EntitlementGate feature="admin_panel" fallback={<div>Admin only</div>}>
+  <AdminPanel />
+</EntitlementGate>
+```
+
+**[FRONTEND-ANALYTICS] Product Analytics Hook** — call trackEvent on every meaningful user action
+```jsx
+import useAnalytics from '../hooks/useAnalytics';
+
+function MyPage() {
+  const { trackEvent, trackPageView } = useAnalytics();
+
+  // Track page view on mount:
+  useEffect(() => { trackPageView('/dashboard/reports', 'Reports'); }, []);
+
+  // Track user actions:
+  const handleGenerate = async () => {
+    await generateReport();
+    trackEvent('report_generated', { type: 'executive', length: 'full' });
+  };
+
+  const handleExport = () => {
+    exportCSV();
+    trackEvent('export_clicked', { format: 'csv' });
+  };
+}
+```
+
+---
+
 **HOW TO USE THIS:**
 1. Read the intake — identify which capabilities the app needs.
 2. Import and USE those capabilities in your business routes — do not reimplement them.
-3. If the intake mentions AI generation → use `call_ai`. Social → use `posting`. Email → use `mailerlite`. Search → use `meilisearch`. Payments → use `stripe`. Multi-user data → use `TenantMixin`. Metered features → use `check_and_increment`. First-run wizard → use `onboarding`. Trial → use `trial`. Marketplace → use `listings` + `purchase_delivery`.
+3. If the intake mentions AI generation → use `call_ai`. Social → use `posting`. Email → use `mailerlite`. Search → use `meilisearch`. Payments → use `stripe`. Multi-user data → use `TenantMixin`. Metered features → use `check_and_increment`. First-run wizard → use `onboarding`. Trial → use `trial`. Marketplace → use `listings` + `purchase_delivery`. Data deletion → use `data_retention`. Error tracking → use `core.monitoring`. Stripe webhook sync → include `webhook_entitlements` router. User management → use `auth0_lib`. Uptime monitoring → use `betteruptime_lib`. Frontend feature gating → use `useEntitlements`/`EntitlementGate`. Frontend analytics → use `useAnalytics`. Frontend API calls → use `api` (axios instance).
 4. NEVER build a custom version of any capability listed above.
+5. FRONTEND: ALWAYS destructure `getAccessTokenSilently` from `useAuth0()` — NEVER call it as `user.getAccessTokenSilently()`.

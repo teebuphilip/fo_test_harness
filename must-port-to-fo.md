@@ -40,6 +40,21 @@
 ## Governance Alignment
 - Keep default iteration cap aligned to locked policy (`5`) but allow CLI override for controlled exception runs.
 
+15. QA hallucination + Auth0 token pattern fix ✅ DONE (2026-03-03)
+    - QA (ChatGPT) hallucinated .tsx/app/ files that didn't exist in artifacts → burned iters 1-6 on ghost defects.
+    - Build prompt showed `const { user, isLoading } = useAuth0()` without `getAccessTokenSilently` →
+      Claude always generated `user.getAccessTokenSilently()` (not a method on user object) → recurring unfixable bug.
+    - QA misdescribed the bug as "missing await" instead of "called on wrong object" → Claude couldn't fix it.
+    - Fix (3 parts):
+      a) `qa_prompt.md`: Added "CRITICAL: ONLY FLAG WHAT YOU CAN ACTUALLY SEE" block — must see `**FILE: path/file.tsx**`
+         header before flagging .tsx; .tsx rule is now "ONLY IF you see a header". Also added anti-hallucination
+         rules for app/ directory files.
+      b) `build_boilerplate_path_rules.md`: Updated Auth0 frontend template to include `getAccessTokenSilently`
+         in destructuring + explicit CORRECT/WRONG examples showing `user.getAccessTokenSilently()` is invalid.
+      c) `build_previous_defects.md`: Added AUTH0 TOKEN FIX PATTERN section with exact correct/wrong patterns.
+      d) `qa_prompt.md` DO NOT FLAG: added correct token patterns; added Auth0 BUG section with exact defect
+         description and fix so QA describes it correctly when it does appear.
+
 14. Whitelist-based business path pruning ✅ DONE (2026-03-03)
     - Junk files under business/ (tests/, backend/services/, backend/__init__.py, backend/app.py, app/)
       survived pruning because they started with business/. Merge_forward then froze them in permanently.
@@ -144,6 +159,20 @@
      core.financial_governance, core.expense_tracking + lib.stripe_lib, lib.mailerlite_lib,
      lib.analytics_lib, lib.meilisearch_lib
    - Claude instructed to scan intake and USE applicable ones, never rebuild from scratch.
+
+16. Full capability coverage — all missing modules added ✅ DONE (2026-03-03)
+    - `build_boilerplate_capabilities.md` was missing: data_retention (#41-44), monitoring/sentry,
+      webhook_entitlements router, auth0_lib (user management), betteruptime_lib (uptime monitoring).
+    - Also missing entire FRONTEND CAPABILITIES section:
+      - Auth0 correct pattern (getAccessTokenSilently destructured from useAuth0, NOT user.getAccessTokenSilently)
+      - api.js axios instance usage (pre-auth'd, never raw fetch)
+      - useEntitlements / useCanAccess hooks
+      - EntitlementGate component (auto upgrade prompt)
+      - useAnalytics hook (trackEvent, trackPageView)
+    - Fix: appended new BACKEND INFRASTRUCTURE, SHARED LIBS — MANAGEMENT, and FRONTEND CAPABILITIES
+      sections to `build_boilerplate_capabilities.md`.
+    - HOW TO USE guidance updated with complete intake-capability mapping.
+    - Anti-regression rule added: "ALWAYS destructure getAccessTokenSilently from useAuth0() — NEVER user.getAccessTokenSilently()"
 
 8. Boilerplate core module interfaces not injected ✅ DONE (2026-03-02)
    - Root cause: Build prompt only told Claude about `core.database`. It did not know about

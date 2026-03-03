@@ -1292,6 +1292,8 @@ class PromptTemplates:
                 'build_boilerplate_path_rules.md'
             ) + "\n\n" + DirectiveTemplateLoader.render(
                 'build_boilerplate_capabilities.md'
+            ) + "\n\n" + DirectiveTemplateLoader.render(
+                'build_boilerplate_sample_code.md'
             ) + "\n\n"
 
         previous_defects_section = ""
@@ -1552,6 +1554,8 @@ it will be considered DELETED. QA will flag it as missing and you'll loop foreve
                 'build_boilerplate_path_rules.md'
             ) + "\n\n" + DirectiveTemplateLoader.render(
                 'build_boilerplate_capabilities.md'
+            ) + "\n\n" + DirectiveTemplateLoader.render(
+                'build_boilerplate_sample_code.md'
             ) + "\n\n"
 
         # Inject external integration policy
@@ -1760,6 +1764,12 @@ or is it a reasonable implementation detail to support an existing feature?"
 
 **═══════════════════════════════════════════════════════════════**
 """
+
+        # Inject sample code QA reference for lowcode builds
+        if tech_stack == 'lowcode':
+            tech_stack_context += "\n\n" + DirectiveTemplateLoader.render(
+                'build_boilerplate_sample_code.md'
+            ) + "\n\n"
 
         # FIX #8: Inject QA override if present
         qa_override_context = ""

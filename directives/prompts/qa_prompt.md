@@ -15,9 +15,16 @@ Validate the build output from Claude against the intake requirements and FO Bui
 3. Check for scope compliance (no extra features beyond intake)
 4. Check for implementation bugs (code correctness)
 
+**CRITICAL: ONLY FLAG WHAT YOU CAN ACTUALLY SEE**
+Before writing any defect, verify: can you find a `**FILE: path/to/file**` header in the build output above that matches the location you are about to flag?
+- DO NOT reference file paths not present as `**FILE:**` headers in the build output
+- DO NOT flag `.tsx` files unless you see a `**FILE: path/file.tsx**` header in the output above
+- DO NOT flag missing files unless there is no `**FILE:**` header for that file path anywhere in the build output
+- DO NOT flag `business/frontend/app/` paths — evaluate only files that appear under `business/frontend/pages/`
+
 **REQUIRED STRUCTURE (check these before anything else):**
 - At least one `business/frontend/pages/*.jsx` file MUST be present — if absent, flag HIGH SPEC_COMPLIANCE_ISSUE. Files in `business/frontend/app/` do NOT count — app router is forbidden, pages router required.
-- `.tsx` or `.ts` frontend files are WRONG — flag HIGH SPEC_COMPLIANCE_ISSUE if present instead of `.jsx`.
+- `.tsx` or `.ts` frontend files are WRONG — flag HIGH SPEC_COMPLIANCE_ISSUE ONLY IF you see a `**FILE: path/file.tsx**` header in the build output. If all frontend files are `.jsx`, do NOT flag anything.
 - At least one `business/backend/routes/*.py` file MUST be present — if absent, flag HIGH SPEC_COMPLIANCE_ISSUE
 - `business/README-INTEGRATION.md` MUST be present — if absent, flag MEDIUM SPEC_COMPLIANCE_ISSUE
 - `business/package.json` MUST be present — if absent, flag MEDIUM SPEC_COMPLIANCE_ISSUE
@@ -36,6 +43,12 @@ Validate the build output from Claude against the intake requirements and FO Bui
 - `Depends(get_current_user)` in route signatures — this IS correct auth, do NOT flag as missing authentication
 - Files in `business/frontend/pages/*.jsx` — these ARE the correct frontend pages, do NOT flag as "frontend logic mixing" or misplaced
 - Files in `business/models/*.py` and `business/services/*.py` — these ARE correct locations, do NOT flag as misplaced
+- Auth0 token: `const token = await getAccessTokenSilently();` then `'Authorization': \`Bearer ${token}\`` — this IS the correct pattern, do NOT flag as "missing await"
+- Auth0 token (inline): `` `Bearer ${await getAccessTokenSilently()}` `` — also correct, do NOT flag
+
+**Auth0 BUG to FLAG (IMPLEMENTATION_BUG HIGH):**
+- `user.getAccessTokenSilently()` — `getAccessTokenSilently` is NOT a method on the Auth0 `user` profile object. It MUST be destructured from `useAuth0()`: `const { user, getAccessTokenSilently } = useAuth0();`
+- Correct Fix: change `const { user, isLoading } = useAuth0();` to `const { user, isLoading, getAccessTokenSilently } = useAuth0();` and change `user.getAccessTokenSilently()` to `getAccessTokenSilently()`
 
 **DEFECT CLASSIFICATION:**
 - IMPLEMENTATION_BUG
