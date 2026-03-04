@@ -611,8 +611,32 @@ class ChatGPTClient:
 
                 if response.status_code in (429, 500, 529):
                     if response.status_code == 429:
+                        # Dump error body so we know WHICH limit we hit
+                        try:
+                            err_body = response.json()
+                            err_msg  = err_body.get('error', {})
+                            print_warning(f"  429 error type : {err_msg.get('type', '?')}")
+                            print_warning(f"  429 error code : {err_msg.get('code', '?')}")
+                            print_warning(f"  429 message    : {err_msg.get('message', '?')[:200]}")
+                        except Exception:
+                            print_warning(f"  429 body       : {response.text[:300]}")
+
+                        # Dump rate-limit headers so we know limits + resets
+                        rl_headers = {
+                            'limit-req':     response.headers.get('x-ratelimit-limit-requests'),
+                            'remain-req':    response.headers.get('x-ratelimit-remaining-requests'),
+                            'reset-req':     response.headers.get('x-ratelimit-reset-requests'),
+                            'limit-tok':     response.headers.get('x-ratelimit-limit-tokens'),
+                            'remain-tok':    response.headers.get('x-ratelimit-remaining-tokens'),
+                            'reset-tok':     response.headers.get('x-ratelimit-reset-tokens'),
+                            'Retry-After':   response.headers.get('Retry-After') or response.headers.get('retry-after'),
+                        }
+                        for k, v in rl_headers.items():
+                            if v is not None:
+                                print_warning(f"  {k:12s}: {v}")
+
                         # Honor Retry-After if present; otherwise exponential backoff + jitter
-                        retry_after = response.headers.get('Retry-After') or response.headers.get('retry-after')
+                        retry_after = rl_headers['Retry-After']
                         if retry_after:
                             try:
                                 wait = float(retry_after)
