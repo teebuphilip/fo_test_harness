@@ -1426,13 +1426,11 @@ def package_output_zip(run_dir: Path, startup_id: str, block: str, use_boilerpla
             artifact_dirs = sorted(build_dir.glob('iteration_*_artifacts'))
             latest_artifacts = artifact_dirs[-1] if artifact_dirs else None
             if latest_artifacts:
-                ZIP_EXCLUDE_PREFIXES = ('business/tests/', 'business/backend/tests/')
                 for file_path in latest_artifacts.rglob('*'):
                     if not file_path.is_file():
                         continue
                     rel_path = file_path.relative_to(latest_artifacts)
-                    rel_str = str(rel_path)
-                    if rel_str.startswith('business/') and not any(rel_str.startswith(p) for p in ZIP_EXCLUDE_PREFIXES):
+                    if str(rel_path).startswith('business/'):
                         arcname = root / 'saas-boilerplate' / rel_path
                         zf.write(file_path, arcname)
 
