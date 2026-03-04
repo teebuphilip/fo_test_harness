@@ -3777,6 +3777,13 @@ class FOHarness:
                 # STEP 2: QA (ChatGPT)
                 # ================================================
 
+                # On iteration 2+, the Claude fix call completes in <60s, which means
+                # the previous QA call's TPM window hasn't reset yet → instant 429.
+                # Wait out the full minute before hitting ChatGPT again.
+                if iteration > 1:
+                    print_info("Waiting 60s for OpenAI TPM window to reset before QA call...")
+                    time.sleep(60)
+
                 print_info("Calling ChatGPT for QA...")
 
                 # For defect iterations in boilerplate mode, QA receives the full merged
