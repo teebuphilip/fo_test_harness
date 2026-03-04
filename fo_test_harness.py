@@ -1105,10 +1105,10 @@ class ArtifactManager:
         Rules:
           business/frontend/app/*.tsx|.jsx|.js → business/frontend/pages/*.jsx
           business/frontend/app/*.css          → business/frontend/styles/*.css
-          business/backend/api/*.py            → business/backend/routes/*.py
-          business/backend/app/models/*.py     → business/models/*.py
-          business/backend/app/schemas/*.py    → business/schemas/*.py
-          business/backend/app/services/*.py   → business/services/*.py
+          business/backend/**/api|routers|routes/*.py → business/backend/routes/*.py
+          business/backend/**/models/*.py            → business/models/*.py
+          business/backend/**/schemas/*.py           → business/schemas/*.py
+          business/backend/**/services/*.py          → business/services/*.py
         """
         import os
         name = os.path.basename(rel_path)
@@ -1121,18 +1121,18 @@ class ArtifactManager:
             if name.endswith('.css'):
                 return f'business/frontend/styles/{name}'
 
-        # business/backend/api/ or business/backend/app/api/ → routes/
+        # business/backend/**/ wrong-location .py files
         if 'backend' in parts and name.endswith('.py'):
-            if 'api' in parts or 'routes' in parts:
+            # api/routers/routes anywhere under backend → routes/
+            if 'api' in parts or 'routers' in parts or 'routes' in parts:
                 return f'business/backend/routes/{name}'
-            # business/backend/app/models|schemas|services/ → canonical locations
-            if 'app' in parts:
-                if 'models' in parts:
-                    return f'business/models/{name}'
-                if 'schemas' in parts:
-                    return f'business/schemas/{name}'
-                if 'services' in parts:
-                    return f'business/services/{name}'
+            # models/schemas/services anywhere under backend → canonical top-level
+            if 'models' in parts:
+                return f'business/models/{name}'
+            if 'schemas' in parts:
+                return f'business/schemas/{name}'
+            if 'services' in parts:
+                return f'business/services/{name}'
 
         return None  # unmappable — will be pruned
 
