@@ -92,6 +92,11 @@
 - If the canonical path already exists, the wrong-path file is pruned as a duplicate.
 - Same salvage-or-prune pattern used in Pass 1 for non-business files.
 
+### --qa-wait CLI Flag (TPM Cooldown, Default 0)
+- The 120s TPM cooldown before iteration 2+ QA calls is now a CLI option, defaulting to 0.
+- Use `--qa-wait 120` when hitting TPM 429s on multi-iteration runs.
+- Default of 0 means no wait — don't pay the penalty unless you need it.
+
 ### Switch QA Model to gpt-4o-mini + --gpt-model Flag
 - QA prompts are ~33k tokens; gpt-4o TPM limit is 30k on this org tier — the request is
   physically larger than the window and will never succeed regardless of retry wait time.

@@ -322,6 +322,10 @@
       business/backend/api/*.py → business/backend/routes/*.py
     - Fix 3: Pass 2 now tries _remap_business_path() before deleting, same pattern as Pass 1.
 
+34. --qa-wait CLI flag for TPM cooldown, default 0 ✅ DONE (2026-03-04)
+    - Hardcoded 120s wait before iteration 2+ QA calls removed; now --qa-wait <seconds>.
+    - Default 0 (no wait). Use --qa-wait 120 when hitting TPM 429s.
+
 27. Switch QA model to gpt-4o-mini + --gpt-model CLI flag ✅ DONE (2026-03-04)
     - gpt-4o TPM limit is 30k on the current org tier. QA prompts are ~33k tokens.
       The single request is larger than the window — no retry can ever succeed.
