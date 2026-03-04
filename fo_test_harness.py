@@ -716,6 +716,8 @@ BOILERPLATE_VALID_PATHS = [
     'business/schemas/*.py',
     'business/frontend/lib/*.js',
     'business/frontend/lib/*.jsx',
+    'business/frontend/*.jsx',
+    'business/frontend/*.css',
     'business/README-INTEGRATION.md',
     'business/package.json',
     # Tests — kept so QA can evaluate them, but excluded from ZIP and merge_forward
