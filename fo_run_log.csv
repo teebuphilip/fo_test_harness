@@ -34,3 +34,12 @@ date,time,startup,iterations,cost_claude,cost_chatgpt,total_cost,run_end_reason
 2026-03-02,13:31:30,ai_workforce_intelligence,2,0.3713,0.0614,0.4327,CTRL_C
 2026-03-02,15:38:45,ai_workforce_intelligence,10,2.3838,0.4439,2.8277,CTRL_C
 2026-03-02,21:47:47,ai_workforce_intelligence,10,2.6121,0.3260,2.9380,CTRL_C
+2026-03-03,05:58:54,ai_workforce_intelligence,8,2.6721,0.4024,3.0745,QA_ACCEPTED
+2026-03-03,06:39:02,ai_workforce_intelligence,1,0.0000,0.0000,0.0000,CTRL_C
+2026-03-03,07:35:21,ai_workforce_intelligence,12,2.7543,0.4662,3.2204,MAX_ITERATIONS
+2026-03-03,07:50:43,ai_workforce_intelligence,1,0.3461,0.0451,0.3911,QA_ACCEPTED
+2026-03-03,08:36:38,ai_workforce_intelligence,12,2.3264,0.6012,2.9276,MAX_ITERATIONS
+2026-03-03,09:18:14,ai_workforce_intelligence,12,2.6532,0.6271,3.2803,MAX_ITERATIONS
+2026-03-03,11:46:39,ai_workforce_intelligence,12,2.7930,0.6774,3.4704,MAX_ITERATIONS
+2026-03-03,13:31:30,ai_workforce_intelligence,1,0.0000,0.0000,0.0000,CTRL_C
+2026-03-03,13:47:05,ai_workforce_intelligence,1,0.0000,0.0000,0.0000,CTRL_C
