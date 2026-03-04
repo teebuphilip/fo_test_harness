@@ -541,6 +541,28 @@ class ClaudeClient:
 
                 # Transient errors — retry
                 if response.status_code in (429, 500, 529):
+                    # Dump error body + headers for diagnosis
+                    try:
+                        err_body = response.json()
+                        err_obj  = err_body.get('error', err_body)
+                        print_warning(f"  {response.status_code} error type : {err_obj.get('type', '?')}")
+                        print_warning(f"  {response.status_code} message    : {str(err_obj.get('message', err_obj))[:200]}")
+                    except Exception:
+                        print_warning(f"  {response.status_code} body       : {response.text[:300]}")
+
+                    rl_headers = {
+                        'retry-after':   response.headers.get('retry-after') or response.headers.get('Retry-After'),
+                        'limit-req':     response.headers.get('anthropic-ratelimit-requests-limit'),
+                        'remain-req':    response.headers.get('anthropic-ratelimit-requests-remaining'),
+                        'reset-req':     response.headers.get('anthropic-ratelimit-requests-reset'),
+                        'limit-tok':     response.headers.get('anthropic-ratelimit-tokens-limit'),
+                        'remain-tok':    response.headers.get('anthropic-ratelimit-tokens-remaining'),
+                        'reset-tok':     response.headers.get('anthropic-ratelimit-tokens-reset'),
+                    }
+                    for k, v in rl_headers.items():
+                        if v is not None:
+                            print_warning(f"  {k:12s}: {v}")
+
                     wait = Config.RETRY_SLEEP * attempt
                     print_warning(f"Claude API transient error {response.status_code} — retry {attempt}/{Config.MAX_RETRIES} in {wait}s")
                     time.sleep(wait)
