@@ -24,7 +24,8 @@ End-to-end pipeline for testing the FounderOps BUILD → QA → DEPLOY workflow.
 
 | File | Purpose |
 |------|---------|
-| `fo_test_harness.py` | Main orchestrator (~3800 lines); all BUILD-QA logic |
+| `fo_test_harness.py` | Main orchestrator (~4000 lines); all BUILD-QA logic |
+| `check_openai.py` | Pre-run API health check — Claude + OpenAI, shows TPM quota |
 | `check_boilerplate_fit.py` | Checks if intake suits boilerplate (YES/NO + file list) |
 | `aggregate_ai_costs.py` | Merges cost CSVs |
 | `summarize_harness_runs.py` | Generates run summaries |
@@ -44,11 +45,11 @@ End-to-end pipeline for testing the FounderOps BUILD → QA → DEPLOY workflow.
 |-------|------|------|
 | `Config` | ~36 | Static config: models, token limits, timeouts |
 | `ClaudeClient` | ~452 | Anthropic API wrapper with retry + backoff |
-| `ChatGPTClient` | ~564 | OpenAI API wrapper |
-| `ArtifactManager` | ~633 | Extracts `**FILE: path**` artifacts from Claude output |
+| `ChatGPTClient` | ~564 | OpenAI API wrapper with Retry-After + exponential backoff |
+| `ArtifactManager` | ~647 | Extracts `**FILE: path**` artifacts; remaps wrong-path files |
 | `DirectiveTemplateLoader` | ~425 | Loads prompt markdown files from `directives/prompts/` |
 | `PromptTemplates` | ~1130 | Prompt construction (600+ lines) |
-| `FOHarness` | ~1770 | Main orchestrator; `execute_build_qa_loop()` entry |
+| `FOHarness` | ~1800 | Main orchestrator; `execute_build_qa_loop()` entry |
 
 **Key FOHarness methods:**
 - `execute_build_qa_loop()` — main iteration loop
@@ -94,6 +95,15 @@ python fo_test_harness.py \
 - `--max-iterations N` — Override default 5-iteration cap
 - `--max-parts N` — Multipart output limit (default 10)
 - `--max-continuations N` — Continuation limit (default 9)
+- `--resume-run <dir>` — Resume a killed run from an existing run directory
+- `--resume-iteration N` — Which iteration to resume from (default 1)
+- `--resume-mode qa|fix` — `qa`: skip Claude BUILD, run fresh QA on existing artifacts; `fix`: load QA report as defects, run Claude fix at N+1. Defaults to `qa` when `--resume-run` is given.
+
+**Check APIs before running:**
+```bash
+python check_openai.py          # both Claude + OpenAI
+python check_openai.py --openai # shows TPM quota remaining
+```
 
 ### Step 3: Deploy
 ```bash
@@ -145,7 +155,25 @@ fo_harness_runs/<startup>_BLOCK_<X>_<timestamp>/
 ### Defect Injection
 - QA report → `PREVIOUS_DEFECTS` block in next BUILD prompt
 - QA defects must include `Fix:` field (exact code change, not just description)
+- QA defects must include `Evidence:` field (exact wrong line quoted verbatim — no quote = invalid defect)
 - Enrichment: `_enrich_defects_with_fix_context()` prepends architectural guidance for boilerplate patterns
+
+### Wrong-Path File Salvage
+- Pruner detects files Claude generated in wrong paths (e.g. `app/api/foo.py`)
+- If a valid-path equivalent exists → prune duplicate, keep correct one
+- If NO equivalent exists → remap to correct `business/` path (never discard)
+- Handled by `ArtifactManager._remap_to_valid_path()` + `prune_non_business_artifacts()`
+
+### Warm-Start Resume
+- Use `--resume-run` to reuse an existing run dir after a 429 kill
+- `qa` mode: loads existing build output, skips Claude BUILD, runs fresh QA
+- `fix` mode: loads existing QA report as defects, starts Claude fix at N+1
+- Loop start iteration is set to `--resume-iteration` (not always 1)
+
+### ChatGPT 429 Handling
+- Reads `Retry-After` header and waits exactly that long when present
+- Falls back to exponential backoff + jitter: `RETRY_SLEEP * 2^attempt` capped at 60s
+- 60s TPM cooldown injected before QA call on iteration 2+ (TPM window reset)
 
 ### Boilerplate Decision
 - Default: `/Users/teebuphilip/Documents/work/teebu-saas-platform`
@@ -210,8 +238,15 @@ For deploy: `GITHUB_TOKEN`, `GITHUB_USERNAME`, `RAILWAY_TOKEN`, `VERCEL_TOKEN`
 |------|---------|
 | `README.md` | Quick start + troubleshooting |
 | `AGENTS.md` | Agent operating instructions |
-| `changelog.md` | Recent changes (QA convergence, multipart, deploy) |
-| `learnings-from-af-to-fo.md` | Reliability lessons |
+| `changelog.md` | Recent changes — **always update after each session** |
+| `must-port-to-fo.md` | Changes in harness not yet in FO production — **always update + evaluate** |
+| `learnings-from-af-to-fo.md` | Root cause lessons — **always update with new findings** |
 | `intake/README.md` | Intake generation details |
 | `FO_ARTIFACT_FORMAT_RULES.txt` | File formatting standards Claude must follow |
 | `FO_BOILERPLATE_INTEGRATION_RULES.txt` | Boilerplate constraints |
+
+## Standing Rules for This Codebase
+
+- **After every session:** update `changelog.md` with what changed.
+- **After every code/prompt change:** evaluate whether it belongs in `must-port-to-fo.md` (harness-only fix or needs FO port) and `learnings-from-af-to-fo.md` (new root cause or pattern).
+- **Never port to FO production** until builds are proven working through a full run set. Port sequence to be determined after ~70 builds.
