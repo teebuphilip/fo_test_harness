@@ -25,6 +25,14 @@
   Claude fix calls complete in <60s; without a pause the next QA call fires
   before the previous call's 30k TPM window has cleared → instant 429.
 
+### Stop Pruning Unmappable business/ Files — Leave for QA
+- The whitelist was growing every run as legitimate files kept being silently deleted.
+  The whitelist approach was wrong — we were playing whack-a-mole.
+- Pass 2 now: remap if possible; prune only if an exact duplicate of a canonical-path file.
+  If unmappable — leave in place so QA can evaluate it.
+- `merge_forward` already gates on the whitelist, so unmapped files won't accumulate
+  across iterations. QA is the right place to catch structural issues, not the pruner.
+
 ### Pruner: Keep business/frontend/*.jsx and *.css
 - `business/frontend/App.jsx` and `business/frontend/App.css` (root-level frontend files)
   were being pruned — whitelist only covered `pages/*.jsx` and `styles/*.css`.

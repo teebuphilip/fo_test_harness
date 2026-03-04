@@ -249,6 +249,12 @@
       (2) ABSOLUTE RULES block: "hypothetical", "for reference", "based on guidelines"
       in a location field = fabricated defect = must be deleted.
 
+33. Stop pruning unmappable business/ files — leave for QA ✅ DONE (2026-03-04)
+    - Whitelist was growing every run. Wrong approach — whack-a-mole.
+    - Pass 2 now only hard-deletes exact duplicates of canonical-path files.
+      Everything else unmappable is left in place for QA to evaluate.
+    - merge_forward already gates on whitelist — unmapped files won't accumulate.
+
 32. Pruner: keep business/frontend/*.jsx and *.css ✅ DONE (2026-03-04)
     - App.jsx and App.css at the frontend root were pruned — whitelist only covered
       pages/*.jsx and styles/*.css, not root-level frontend files.

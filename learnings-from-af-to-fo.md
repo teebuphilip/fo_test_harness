@@ -204,6 +204,13 @@
   Fix: use gpt-4o-mini which has 200k TPM on the same tier and is sufficient for structured
   QA validation. Add a --gpt-model CLI flag so the model can be swapped without code changes.
 
+- **A whitelist pruner on business/ is whack-a-mole — use remap + merge_forward gate instead.**
+  Every run produced new legitimate files not on the whitelist. The right design:
+  Pass 1 remaps non-business wrong-path files. Pass 2 remaps wrong-location business/ files
+  and prunes only exact duplicates. Anything unmappable stays for QA to evaluate.
+  merge_forward gates on the whitelist so unmapped files don't carry forward between iterations.
+  QA is the right place to catch structural problems, not a pruner that guesses what's valid.
+
 - **Pruning tests before QA creates a self-defeating loop: delete tests → QA flags missing tests → regen tests → repeat.**
   Tests are not runtime artifacts but QA needs to see them to validate the build, and the
   founder needs them in the project handoff ZIP for local dev and CI/CD.
