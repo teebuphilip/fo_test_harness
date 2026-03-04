@@ -204,6 +204,18 @@
   Fix: use gpt-4o-mini which has 200k TPM on the same tier and is sufficient for structured
   QA validation. Add a --gpt-model CLI flag so the model can be swapped without code changes.
 
+- **QA flags intentional test behaviour as bugs — the test file rule must say what counts as a bug.**
+  A test that sends invalid JSON is testing error handling, not broken. QA needs explicit guidance:
+  only flag literal bugs in the test code itself (wrong assertion, broken import, syntax error).
+  Never flag a test for what it intentionally exercises. Never flag missing test coverage for
+  a specific route/model unless the intake spec explicitly required it.
+
+- **Absence-of-thing defects waste iterations — ban them unless the spec required the thing.**
+  "Missing docstring on /reports endpoint" and "missing test cases for clients.py" are not
+  defects if the intake spec never asked for them. QA invents these because it sees a route
+  and reasons backwards to what should accompany it. The Evidence rule already blocks these
+  in theory (you can't quote a missing line), but an explicit ban is needed in practice.
+
 - **A whitelist pruner on business/ is whack-a-mole — use remap + merge_forward gate instead.**
   Every run produced new legitimate files not on the whitelist. The right design:
   Pass 1 remaps non-business wrong-path files. Pass 2 remaps wrong-location business/ files

@@ -322,6 +322,13 @@
       business/backend/api/*.py → business/backend/routes/*.py
     - Fix 3: Pass 2 now tries _remap_business_path() before deleting, same pattern as Pass 1.
 
+35. QA prompt: test file rules, absence defects, stdlib in requirements ✅ DONE (2026-03-04)
+    - QA flagged intentional test behaviour as IMPLEMENTATION_BUG (test sending invalid JSON).
+      Fix: only flag literal bugs in test code; never flag what a test intentionally tests.
+    - QA invented defects about missing comments/tests for specific files (absence-of-thing).
+      Fix: absence defects invalid unless intake spec required them; Evidence must be quotable.
+    - Added: stdlib modules in requirements.txt (uuid, os, etc.) = MEDIUM defect.
+
 34. --qa-wait CLI flag for TPM cooldown, default 0 ✅ DONE (2026-03-04)
     - Hardcoded 120s wait before iteration 2+ QA calls removed; now --qa-wait <seconds>.
     - Default 0 (no wait). Use --qa-wait 120 when hitting TPM 429s.

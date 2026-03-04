@@ -92,6 +92,17 @@
 - If the canonical path already exists, the wrong-path file is pruned as a duplicate.
 - Same salvage-or-prune pattern used in Pass 1 for non-business files.
 
+### QA Prompt: Test File Rules, Absence Defects, Stdlib in Requirements
+- **Test files**: QA was flagging intentional test behaviour (e.g. sending invalid JSON to
+  test error handling) as IMPLEMENTATION_BUG. Now: only flag literal bugs in the test code
+  itself. Never flag a test for what it is intentionally testing. Never flag missing test
+  coverage for a specific file unless the intake spec required it.
+- **Absence-of-thing defects**: Defects about missing comments, docstrings, or tests for a
+  specific file are invalid unless the intake spec required them. If your Evidence field
+  would be empty or describe an absence — the defect must be deleted.
+- **Stdlib in requirements.txt**: `uuid`, `os`, `json`, `re`, `datetime` etc. should NOT be
+  in requirements.txt. These are now explicitly called out as MEDIUM defects.
+
 ### --qa-wait CLI Flag (TPM Cooldown, Default 0)
 - The 120s TPM cooldown before iteration 2+ QA calls is now a CLI option, defaulting to 0.
 - Use `--qa-wait 120` when hitting TPM 429s on multi-iteration runs.
