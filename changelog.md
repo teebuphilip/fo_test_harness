@@ -25,6 +25,16 @@
   Claude fix calls complete in <60s; without a pause the next QA call fires
   before the previous call's 30k TPM window has cleared → instant 429.
 
+### Pruner: Fix _remap_business_path — routers + drop app guard
+- Two bugs vs Pass 1 logic:
+  1. `'routers'` was missing from Pass 2 check — Pass 1 checks `(api, routers, routes)`,
+     Pass 2 only checked `api` or `routes`. `business/backend/app/routers/` files
+     were falling through to `None` and being pruned.
+  2. `if 'app' in parts` guard was too strict — `business/backend/models/` or
+     `business/backend/schemas/` (no `app` in path) returned `None` and got pruned.
+- Fix: now mirrors Pass 1 exactly — `api|routers|routes` anywhere under `backend` →
+  `routes/`; `models|schemas|services` anywhere under `backend` → canonical top-level.
+
 ### Pruner: Remap business/backend/app/ Subdirectories
 - Claude generates `business/backend/app/models/`, `schemas/`, `services/` — all were being
   pruned instead of remapped because `_remap_business_path` only handled `backend/api/`.

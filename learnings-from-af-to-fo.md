@@ -204,6 +204,14 @@
   Fix: use gpt-4o-mini which has 200k TPM on the same tier and is sufficient for structured
   QA validation. Add a --gpt-model CLI flag so the model can be swapped without code changes.
 
+- **Pass 1 and Pass 2 remap logic must be kept in sync — any marker in Pass 1 must also appear in Pass 2.**
+  Pass 1 (`_remap_to_valid_path`) checked `(api, routers, routes)` for route files.
+  Pass 2 (`_remap_business_path`) only checked `api` and `routes` — missing `routers`.
+  `business/backend/app/routers/*.py` files fell through to `None` and were pruned.
+  Also: a guard like `if 'app' in parts` that's not in Pass 1 creates silent gaps —
+  `business/backend/models/` (no `app` in path) wouldn't remap without it.
+  Rule: Pass 2 remap conditions must be a superset of Pass 1 conditions, not a subset.
+
 - **Claude nests correct logic inside wrong intermediate directories — remap rules must handle full path depth.**
   `business/backend/app/models/assessment.py` is correct logic in the wrong location.
   A remap rule that only checks `'api' in parts` misses `business/backend/app/models/`.
