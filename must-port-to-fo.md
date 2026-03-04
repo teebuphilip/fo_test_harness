@@ -249,6 +249,11 @@
       (2) ABSOLUTE RULES block: "hypothetical", "for reference", "based on guidelines"
       in a location field = fabricated defect = must be deleted.
 
+32. Pruner: keep business/frontend/*.jsx and *.css ✅ DONE (2026-03-04)
+    - App.jsx and App.css at the frontend root were pruned — whitelist only covered
+      pages/*.jsx and styles/*.css, not root-level frontend files.
+    - Fix: added business/frontend/*.jsx and business/frontend/*.css to whitelist.
+
 31. Test file handling: visible to QA, not carried forward, included in ZIP ✅ DONE (2026-03-04)
     - Tests were pruned before QA saw them → QA flagged "missing tests" MEDIUM → wasted iteration.
     - Fix: tests survive pruner (added to whitelist), excluded from merge_forward (no accumulation).

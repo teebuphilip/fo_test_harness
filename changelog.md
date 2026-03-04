@@ -25,6 +25,11 @@
   Claude fix calls complete in <60s; without a pause the next QA call fires
   before the previous call's 30k TPM window has cleared → instant 429.
 
+### Pruner: Keep business/frontend/*.jsx and *.css
+- `business/frontend/App.jsx` and `business/frontend/App.css` (root-level frontend files)
+  were being pruned — whitelist only covered `pages/*.jsx` and `styles/*.css`.
+- Added `business/frontend/*.jsx` and `business/frontend/*.css` to whitelist.
+
 ### Test File Handling: Visible to QA, Not Carried Forward, Included in ZIP
 - Tests were pruned before QA — QA then flagged "missing tests" as MEDIUM, burning an
   iteration to regenerate files we just deleted.
