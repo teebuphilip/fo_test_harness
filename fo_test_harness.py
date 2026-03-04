@@ -46,7 +46,7 @@ class Config:
 
     # Models
     CLAUDE_MODEL = 'claude-sonnet-4-20250514'  # Tech/Builder
-    GPT_MODEL    = 'gpt-4o'                    # QA/Validator
+    GPT_MODEL    = 'gpt-4o-mini'               # QA/Validator — 200k TPM vs gpt-4o's 30k TPM
 
     # Token Limits
     # FIX #1: 200000 was the context window (input), not output limit.
@@ -4325,6 +4325,11 @@ Examples:
             'fix — load QA report from --resume-iteration as defects, start Claude FIX at iter+1.'
         )
     )
+    parser.add_argument(
+        '--gpt-model',
+        default=None,
+        help='Override the ChatGPT model (e.g. gpt-4o, gpt-4o-mini). Default: gpt-4o-mini.'
+    )
 
     args = parser.parse_args()
     if args.max_parts < 1:
@@ -4338,6 +4343,11 @@ Examples:
     if args.resume_run and not args.resume_mode:
         args.resume_mode = 'qa'
         print(f"→ --resume-run set without --resume-mode — defaulting to qa")
+
+    # Apply model overrides
+    if args.gpt_model:
+        Config.GPT_MODEL = args.gpt_model
+        print(f"→ GPT model override: {Config.GPT_MODEL}")
 
     # Resolve block from flag
     block = 'A' if args.block_a else 'B'
