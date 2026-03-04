@@ -40,6 +40,14 @@
 ## Governance Alignment
 - Keep default iteration cap aligned to locked policy (`5`) but allow CLI override for controlled exception runs.
 
+18. Filter: banned evidence phrases + presence validation + ORM package allowlist ✅ DONE (2026-03-04)
+    - Three new checks added to _filter_hallucinated_defects():
+      Check 2: Evidence containing N/A/"not applicable"/"presence of the file is confirmed" etc. → auto-remove
+      Check 4: Presence claim ("no .jsx files", "missing routes") contradicted by actual build output → auto-remove
+    - qa_prompt.md: Added sqlalchemy, psycopg2, pydantic, fastapi, uvicorn, httpx, python-jose etc. to
+      DO NOT FLAG — these are valid external packages, not stdlib. QA was flagging sqlalchemy as stdlib.
+    - New class attributes on FOHarness: _BANNED_EVIDENCE_PHRASES (10 phrases), _PRESENCE_CLAIMS (8 patterns)
+
 17. EXPLAINED resolution path per fo_build_qa_defect_routing_rules.json ✅ DONE (2026-03-04)
     - Build governance defines FIXED + EXPLAINED as the two valid resolution modes.
       Our prompts only implemented FIXED. EXPLAINED path was completely absent.

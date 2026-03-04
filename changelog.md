@@ -2,6 +2,19 @@
 
 ## 2026-03-04
 
+### Harness Filter: Three New Removal Checks (N/A evidence, presence claims, ORM packages)
+- **Check 2 — Banned absence phrases**: Evidence containing N/A, "not applicable", "presence of the file is confirmed",
+  "the presence of the file", "not present in the build output", "file not shown", "not visible in output"
+  is auto-removed. Catches gpt-4o-mini's pattern of writing `Evidence: N/A (the presence of the file is confirmed)`
+  which bypassed the backtick check. 3 defects from run 20260304 iter 2 would have been caught.
+- **Check 4 — Presence claims**: If Problem+Evidence claims a required file type is absent (e.g. "No .jsx files
+  found", "Missing backend routes") but the actual file IS present in the build output → defect auto-removed.
+  Pattern table: 8 claim patterns × 2 file patterns (pages/*.jsx, routes/*.py).
+- **`qa_prompt.md` — Valid external packages DO NOT FLAG list**: Added `sqlalchemy`, `alembic`, `psycopg2`,
+  `pydantic`, `fastapi`, `uvicorn`, `httpx`, `python-jose`, `passlib`, `celery`, `redis`, `boto3`,
+  `stripe`, `requests`, `aiohttp`. These are real external packages — QA was incorrectly flagging
+  sqlalchemy as "standard library" (iter 4 DEFECT-2 in latest run).
+
 ### EXPLAINED Resolution Path — Per Governance fo_build_qa_defect_routing_rules.json
 - Build governance defines two resolution modes: `FIXED` (code change) and `EXPLAINED` (explanation with rule citation).
   Our prompts only implemented `FIXED`. `EXPLAINED` path was completely missing.

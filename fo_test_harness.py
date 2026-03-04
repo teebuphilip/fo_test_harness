@@ -3547,15 +3547,47 @@ class FOHarness:
                 return text
         return ''
 
+    # Phrases banned from Evidence fields per qa_prompt.md ABSOLUTE RULES.
+    # Any defect whose Evidence contains one of these is auto-removed.
+    _BANNED_EVIDENCE_PHRASES = [
+        'n/a',
+        'not applicable',
+        'content of this file is not present',
+        'file not shown',
+        'not visible in output',
+        'presence of the file is confirmed',
+        'the presence of the file',
+        'not present in the build output',
+        'file is absent',
+        'file does not exist in the build',
+    ]
+
+    # Structural presence claims: if QA says one of these things is missing,
+    # we verify against the actual build output. Key: claim substring → file
+    # pattern to look for in qa_build_output.
+    _PRESENCE_CLAIMS = [
+        # (claim pattern in Problem/Evidence,  file pattern that must exist)
+        (r'no\s+\.jsx\s+files',               r'\*\*FILE: business/frontend/pages/\S+\.jsx'),
+        (r'no frontend pages',                r'\*\*FILE: business/frontend/pages/\S+\.jsx'),
+        (r'missing.*frontend.*pages',         r'\*\*FILE: business/frontend/pages/\S+\.jsx'),
+        (r'no \.jsx.*frontend',               r'\*\*FILE: business/frontend/pages/\S+\.jsx'),
+        (r'missing.*backend.*route',          r'\*\*FILE: business/backend/routes/\S+\.py'),
+        (r'no.*backend.*route',               r'\*\*FILE: business/backend/routes/\S+\.py'),
+        (r'missing.*routes.*file',            r'\*\*FILE: business/backend/routes/\S+\.py'),
+        (r'at least one.*route.*not.*present',r'\*\*FILE: business/backend/routes/\S+\.py'),
+    ]
+
     def _filter_hallucinated_defects(self, qa_report: str, qa_build_output: str) -> str:
         """
-        Post-process QA report to auto-remove defects that are:
-        1. Located outside business/** — QA evaluated out-of-scope files
-        2. Evidence is backtick-quoted code that does not appear anywhere in the
-           build output — QA fabricated the evidence
+        Post-process QA report to auto-remove defects that are invalid.
 
-        Returns a cleaned QA report with updated SUMMARY counts and verdict.
-        If all defects are removed, flips verdict to ACCEPTED.
+        Checks applied per defect (in order):
+        1. Location outside business/**               — out-of-scope file
+        2. Evidence contains a banned absence phrase  — banned per qa_prompt rules
+        3. Backtick-quoted evidence not in build output — fabricated code
+        4. Presence claim is false — QA says X is missing but X IS in build output
+
+        Returns cleaned report with updated counts. Flips to ACCEPTED if 0 remain.
         """
         # Extract the DEFECTS section
         defects_section_match = re.search(
@@ -3590,7 +3622,6 @@ class FOHarness:
             if path_match:
                 file_path = path_match.group(1).strip()
             else:
-                # Try bare path pattern
                 bare = re.search(r'([\w][^\s,;]+\.\w+)', location_raw)
                 file_path = bare.group(1).strip() if bare else location_raw
 
@@ -3601,27 +3632,60 @@ class FOHarness:
                 print_warning(f"  [FILTER] Removed {defect_id}: {reason}")
                 continue
 
-            # --- Check 2: Backtick-quoted evidence must exist in build output ---
+            # --- Extract Evidence + Problem text for checks 2-4 ---
             ev_match = re.search(
                 r'-\s*Evidence:\s*(.*?)(?=\n\s*-\s*(?:Problem|Expected|Fix|Severity):|\Z)',
                 block, re.DOTALL
             )
-            if ev_match:
-                evidence_text = ev_match.group(1).strip()
-                # Extract all inline backtick snippets
-                backtick_snippets = re.findall(r'`([^`]+)`', evidence_text)
-                meaningful = [s.strip() for s in backtick_snippets if len(s.strip()) > 8]
-                if meaningful:
-                    found = any(snippet in qa_build_output for snippet in meaningful)
-                    if not found:
+            evidence_text = ev_match.group(1).strip() if ev_match else ''
+
+            prob_match = re.search(
+                r'-\s*Problem:\s*(.*?)(?=\n\s*-\s*(?:Expected|Fix|Severity):|\Z)',
+                block, re.DOTALL
+            )
+            problem_text = prob_match.group(1).strip() if prob_match else ''
+
+            # --- Check 2: Evidence must not contain banned absence phrases ---
+            evidence_lower = evidence_text.lower()
+            banned_hit = next(
+                (p for p in self._BANNED_EVIDENCE_PHRASES if p in evidence_lower), None
+            )
+            if banned_hit:
+                reason = f"Evidence contains banned phrase '{banned_hit}' — invalid per QA rules"
+                removed.append((defect_id, block, reason))
+                print_warning(f"  [FILTER] Removed {defect_id}: {reason}")
+                continue
+
+            # --- Check 3: Backtick-quoted evidence must exist in build output ---
+            backtick_snippets = re.findall(r'`([^`]+)`', evidence_text)
+            meaningful = [s.strip() for s in backtick_snippets if len(s.strip()) > 8]
+            if meaningful:
+                found = any(snippet in qa_build_output for snippet in meaningful)
+                if not found:
+                    reason = f"Evidence {meaningful[:1]} not found in build output — fabricated"
+                    removed.append((defect_id, block, reason))
+                    print_warning(f"  [FILTER] Removed {defect_id}: {reason}")
+                    continue
+
+            # --- Check 4: Presence claims — verify against actual build output ---
+            combined_claim = (evidence_text + ' ' + problem_text).lower()
+            for claim_pattern, file_pattern in self._PRESENCE_CLAIMS:
+                if re.search(claim_pattern, combined_claim, re.IGNORECASE):
+                    # QA claims this file/type is missing — check if it actually is
+                    if re.search(file_pattern, qa_build_output, re.IGNORECASE):
                         reason = (
-                            f"Evidence {meaningful[:1]} not found in build output — fabricated"
+                            f"Presence claim '{claim_pattern}' is false — "
+                            f"matching file found in build output"
                         )
                         removed.append((defect_id, block, reason))
                         print_warning(f"  [FILTER] Removed {defect_id}: {reason}")
-                        continue
+                        break  # Only need one match to disqualify
+            else:
+                kept.append(block)
+                continue
 
-            kept.append(block)
+            # If we broke out of the for loop (presence claim removed it), don't kept.append
+
 
         if not removed:
             return qa_report  # Nothing changed — return original

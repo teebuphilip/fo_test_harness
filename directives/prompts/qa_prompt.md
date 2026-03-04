@@ -98,6 +98,10 @@ For EVERY defect you write, you MUST complete this checklist FIRST:
   line — if your Evidence field would be empty or describe something absent, delete the defect.
 - Standard library modules in requirements.txt (e.g. `uuid`, `os`, `json`, `re`, `datetime`)
   ARE defects — they should not be listed as external dependencies. Flag MEDIUM.
+- The following packages in requirements.txt are CORRECT external dependencies — do NOT flag them:
+  `sqlalchemy`, `alembic`, `psycopg2`, `psycopg2-binary`, `pydantic`, `fastapi`, `uvicorn`,
+  `httpx`, `python-jose`, `passlib`, `python-multipart`, `celery`, `redis`, `boto3`,
+  `stripe`, `auth0-python`, `requests`, `aiohttp`, `anyio`. These are real packages, not stdlib.
 
 **Auth0 BUG to FLAG (IMPLEMENTATION_BUG HIGH) — VERIFICATION REQUIRED:**
 BEFORE writing this defect you MUST complete this verification:
