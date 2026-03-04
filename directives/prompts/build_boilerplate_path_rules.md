@@ -25,6 +25,20 @@
 - NEVER create `business/backend/__init__.py` or `business/backend/app.py` — these are boilerplate internals, do not touch them.
 - NEVER create `business/backend/services/**` — services belong in `business/services/` (not inside backend/).
 - NEVER create `business/app/**` — this path is forbidden.
+
+**BOILERPLATE BOUNDARY — THE BOILERPLATE IS A BLACK BOX. DO NOT RECREATE ITS INTERNALS.**
+
+If you feel the urge to create any of these — STOP. Use the import instead:
+
+| If you want to create...                        | WRONG                                      | CORRECT                                              |
+|-------------------------------------------------|--------------------------------------------|------------------------------------------------------|
+| Auth middleware / JWT verification              | `backend/app/middleware/auth.py`           | `from core.rbac import get_current_user`             |
+| Database connection / session factory           | `backend/app/db.py`, `database.py`         | `from core.database import Base, get_db`             |
+| Utility helpers / calculation functions         | `backend/app/utils/calculations.py`        | Put in `business/services/MyService.py`              |
+| Tenant isolation logic                          | `backend/app/middleware/tenant.py`         | `from core.tenancy import get_tenant_db`             |
+| Auth0 / user management                        | `backend/app/auth/auth0.py`               | `from lib.auth0_lib import load_auth0_lib`           |
+
+The boilerplate already provides all of the above. Any file you create at `backend/app/middleware/`, `backend/app/utils/`, `backend/app/core/`, or `backend/app/auth/` will be **silently deleted** by the harness. Your code will vanish and QA will fail.
 - `user.getAccessTokenSilently()` anywhere in any file is a HARD FAIL — this method does not exist on the Auth0 user object. The build will be REJECTED by QA every single time this appears. Use `const { getAccessTokenSilently } = useAuth0();` and call `getAccessTokenSilently()` directly.
 
 **DATA LAYER PROHIBITIONS (HARD — NO EXCEPTIONS):**

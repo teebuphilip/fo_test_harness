@@ -2,6 +2,11 @@
 
 ## 2026-03-04
 
+### CSVs: Run data updated
+- `fo_run_log.csv`: 3 new ai_workforce_intelligence BLOCK_B runs appended
+- `ai_costs_aggregated.csv`: refreshed aggregate totals
+- `harness_summary_costs.csv`: updated summary with latest runs
+
 ### Harness Filter: Three New Removal Checks (N/A evidence, presence claims, ORM packages)
 - **Check 2 — Banned absence phrases**: Evidence containing N/A, "not applicable", "presence of the file is confirmed",
   "the presence of the file", "not present in the build output", "file not shown", "not visible in output"

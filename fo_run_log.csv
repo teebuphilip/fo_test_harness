@@ -51,3 +51,6 @@ date,time,startup,iterations,cost_claude,cost_chatgpt,total_cost,run_end_reason
 2026-03-04,08:57:29,ai_workforce_intelligence,5,0.9812,0.5394,1.5207,CTRL_C
 2026-03-04,09:23:09,ai_workforce_intelligence,5,1.3677,0.6743,2.0419,CTRL_C
 2026-03-04,09:37:45,ai_workforce_intelligence,4,0.9670,0.5162,1.4832,CTRL_C
+2026-03-04,09:55:14,ai_workforce_intelligence,4,1.0348,0.5436,1.5783,CTRL_C
+2026-03-04,10:19:51,ai_workforce_intelligence,3,0.8369,0.3073,1.1442,CTRL_C
+2026-03-04,11:25:19,ai_workforce_intelligence,7,1.5775,1.4167,2.9942,CTRL_C
