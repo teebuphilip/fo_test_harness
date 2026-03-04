@@ -204,6 +204,14 @@
   Fix: use gpt-4o-mini which has 200k TPM on the same tier and is sufficient for structured
   QA validation. Add a --gpt-model CLI flag so the model can be swapped without code changes.
 
+- **The pruner whitelist must cover every file type Claude legitimately generates — not just the happy path.**
+  Pydantic schemas (business/schemas/*.py), FastAPI entry point (business/backend/main.py),
+  and frontend components (business/frontend/components/) are all real output that belongs in the build.
+  A whitelist that only lists pages/*.jsx and routes/*.py silently discards an entire layer of the app.
+  The remap logic must also handle .js files, not just .jsx/.tsx — Claude generates both.
+  frontend/app/*.js, frontend/components/*.js, and frontend root config files (package.json,
+  next.config.js) all need explicit remap rules in _remap_to_valid_path (Pass 1).
+
 - **Pruner whitelist must include frontend config files, not just page/route source files.**
   next.config.js, postcss.config.js, tailwind.config.ts, package.json are required for the
   frontend to build and run. They are not junk. A whitelist that only lists pages/*.jsx and

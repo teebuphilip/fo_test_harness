@@ -25,6 +25,18 @@
   Claude fix calls complete in <60s; without a pause the next QA call fires
   before the previous call's 30k TPM window has cleared → instant 429.
 
+### Pruner: Schemas, Components, backend/main.py, Frontend .js Remap
+- `business/schemas/*.py` (Pydantic schemas) were being pruned — added to whitelist.
+- `business/backend/main.py` (FastAPI entry point) was being pruned — added to whitelist.
+- `business/frontend/components/*.jsx/.js` were being pruned — added to whitelist.
+- `frontend/app/*.js` page files were pruned (Pass 1 remap only handled `.jsx`/`.tsx`, not `.js`).
+  Now remapped to `business/frontend/pages/`.
+- `frontend/components/*.js` were silently dropped. Now remapped to `business/frontend/components/`.
+- `frontend/package.json`, `frontend/next.config.js` etc. at frontend root now remapped
+  to `business/frontend/<name>` (matched by filename, not extension).
+- `business/frontend/app/*.js` (Pass 2): now remapped to `pages/` alongside `.tsx`/`.jsx`.
+- `business/tests/` files still correctly pruned (not part of deployment contract).
+
 ### Pruner Whitelist Expansion + App Router Remapping
 - `BOILERPLATE_VALID_PATHS` only covered `pages/*.jsx`, `routes/*.py`, `lib/` — so legitimate
   frontend config files Claude generates (next.config.js, package.json, postcss.config.js,

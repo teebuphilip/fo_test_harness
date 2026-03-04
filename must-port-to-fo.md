@@ -249,6 +249,14 @@
       (2) ABSOLUTE RULES block: "hypothetical", "for reference", "based on guidelines"
       in a location field = fabricated defect = must be deleted.
 
+28. Pruner: schemas, components, backend/main.py, frontend .js remap ✅ DONE (2026-03-04)
+    - business/schemas/*.py (Pydantic), business/backend/main.py (FastAPI entry point),
+      business/frontend/components/*.jsx/.js were all being silently pruned.
+    - frontend/app/*.js page files not remapped (only .jsx/.tsx were handled).
+    - frontend/components/*.js, frontend/package.json, frontend/next.config.js not remapped.
+    - Fix: expanded BOILERPLATE_VALID_PATHS + updated both _remap_to_valid_path (Pass 1)
+      and _remap_business_path (Pass 2) to cover all missing cases.
+
 25. Pruner whitelist too aggressive — config files and app/ router remapping ✅ DONE (2026-03-04)
     - BOILERPLATE_VALID_PATHS only listed pages/*.jsx, routes/*.py, lib/ — so legitimate
       frontend config files (next.config.js, package.json, postcss.config.js, tailwind.config.ts)
