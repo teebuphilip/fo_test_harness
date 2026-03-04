@@ -707,9 +707,13 @@ BOILERPLATE_VALID_PATHS = [
     # Core deployment contract
     'business/frontend/pages/*.jsx',
     'business/frontend/pages/*.js',
+    'business/frontend/components/*.jsx',
+    'business/frontend/components/*.js',
     'business/backend/routes/*.py',
+    'business/backend/main.py',
     'business/models/*.py',
     'business/services/*.py',
+    'business/schemas/*.py',
     'business/frontend/lib/*.js',
     'business/frontend/lib/*.jsx',
     'business/README-INTEGRATION.md',
@@ -1047,11 +1051,15 @@ class ArtifactManager:
         """Return the canonical business/ path for a wrong-path file, or None if unmappable.
 
         Rules:
-          *.py  in app/api/, app/routers/, app/routes/, backend/routes/ → business/backend/routes/<name>
-          *.py  in app/models/, models/                                  → business/models/<name>
-          *.py  in app/services/, services/                              → business/services/<name>
-          *.jsx in pages/, app/, src/pages/, frontend/pages/             → business/frontend/pages/<name>
-          *.js|*.jsx in lib/, frontend/lib/, src/lib/                    → business/frontend/lib/<name>
+          *.py  in api/, routers/, routes/          → business/backend/routes/<name>
+          *.py  in models/                          → business/models/<name>
+          *.py  in services/                        → business/services/<name>
+          *.py  in schemas/                         → business/schemas/<name>
+          *.jsx|*.tsx                               → business/frontend/pages/<name.jsx>  (or lib/)
+          *.js|*.jsx in lib/                        → business/frontend/lib/<name>
+          *.js|*.jsx in components/                 → business/frontend/components/<name>
+          *.js|*.jsx in app/ or pages/              → business/frontend/pages/<name>
+          package.json / *.config.js/ts in frontend/→ business/frontend/<name>
         """
         import os
         name = os.path.basename(rel_path)
@@ -1065,15 +1073,27 @@ class ArtifactManager:
                 return f'business/models/{name}'
             if 'services' in parts:
                 return f'business/services/{name}'
-        elif name.endswith(('.jsx', '.tsx')):
+            if 'schemas' in parts:
+                return f'business/schemas/{name}'
+
+        elif name.endswith(('.jsx', '.tsx', '.js')):
             canonical = name.replace('.tsx', '.jsx')
-            # lib files
             if 'lib' in parts:
                 return f'business/frontend/lib/{canonical}'
-            # page files
-            return f'business/frontend/pages/{canonical}'
-        elif name.endswith('.js') and 'lib' in parts:
-            return f'business/frontend/lib/{name}'
+            if 'components' in parts:
+                return f'business/frontend/components/{canonical}'
+            if 'app' in parts or 'pages' in parts:
+                return f'business/frontend/pages/{canonical}'
+            if 'frontend' in parts:
+                # catch-all for frontend root .js files
+                return f'business/frontend/{canonical}'
+
+        elif name in ('package.json', 'next.config.js', 'next.config.ts',
+                      'postcss.config.js', 'postcss.config.ts',
+                      'tailwind.config.js', 'tailwind.config.ts',
+                      'tsconfig.json', 'jsconfig.json'):
+            if 'frontend' in parts:
+                return f'business/frontend/{name}'
 
         return None  # unmappable — will be pruned
 
@@ -1093,7 +1113,7 @@ class ArtifactManager:
 
         # business/frontend/app/ → pages/ or styles/
         if 'frontend' in parts and 'app' in parts:
-            if name.endswith(('.tsx', '.jsx')):
+            if name.endswith(('.tsx', '.jsx', '.js')):
                 return f'business/frontend/pages/{name.replace(".tsx", ".jsx")}'
             if name.endswith('.css'):
                 return f'business/frontend/styles/{name}'
@@ -1113,8 +1133,8 @@ class ArtifactManager:
           - Truly unmappable files are pruned.
 
         Pass 2: business/** files not on the valid-path whitelist
-                (e.g. business/tests/, business/backend/services/,
-                 business/app/, business/backend/__init__.py, .tsx files)
+                (e.g. business/tests/, business/frontend/app/ files,
+                 business/backend/__init__.py, stray .tsx files)
         """
         artifacts_dir = self.build_dir / f'iteration_{iteration:02d}_artifacts'
         if not artifacts_dir.exists():
