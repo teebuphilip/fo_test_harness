@@ -207,6 +207,44 @@
      - Auth prohibitions: no hardcoded IDs, no TODO comments, no custom JWT parsing
      - Frontend: `useAuth0()` → `user.sub`
 
+19. Wrong-path file salvage (remap instead of discard) ✅ DONE (2026-03-04)
+    - Pruner was silently deleting files Claude generated in wrong paths (app/api/foo.py)
+      even when no correct-path equivalent existed — logic permanently lost.
+    - Fix: added `_remap_to_valid_path()` to ArtifactManager. Before pruning, check if a
+      valid-path equivalent already exists. If YES → prune duplicate. If NO → rename/move
+      the file to the correct business/ path instead of deleting it.
+    - Remap rules: app/api/*.py → business/backend/routes/, models/*.py → business/models/,
+      services/*.py → business/services/, *.jsx/*.tsx → business/frontend/pages/ or lib/.
+
+20. Warm-start resume (skip Claude BUILD on 429-killed runs) ✅ DONE (2026-03-04)
+    - ChatGPT 429 was killing runs after a good Claude build — throwing away the build output
+      and forcing a full re-run from scratch (wasting Claude tokens + time).
+    - Fix: added --resume-run, --resume-iteration, --resume-mode cli flags.
+      qa mode: reuse existing build artifacts, skip Claude BUILD, run fresh QA.
+      fix mode: load existing QA report as previous_defects, start Claude fix at iter N+1.
+    - --resume-run alone defaults to qa mode (no need to specify --resume-mode).
+    - Run dir is reused in-place (no copying).
+
+21. ChatGPT 429 retry: Retry-After header + exponential backoff + jitter ✅ DONE (2026-03-04)
+    - Flat 60s retry was ignoring OpenAI's Retry-After header and had no jitter.
+    - Fix: (1) read Retry-After header and use it exactly when present.
+      (2) if no header: exponential backoff (RETRY_SLEEP * 2^attempt) capped at 60s
+      with 50-100% jitter so retries don't all land at the same time.
+
+22. 60s TPM cooldown before QA on iteration 2+ ✅ DONE (2026-03-04)
+    - Claude fix calls complete in <60s, so the previous QA call's 30k TPM window
+      hasn't reset when the next QA call fires immediately — instant 429.
+    - Fix: sleep 60s before the ChatGPT QA call on iteration 2+.
+
+23. QA hallucination: Evidence: required field + ban "hypothetical" ✅ DONE (2026-03-04)
+    - QA wrote defects with location "(hypothetical for reference)" — fabricated entirely.
+      Also cited real files (reports.py) but invented Flask imports that weren't there.
+      quote-it-or-drop-it rule was advisory and being ignored.
+    - Fix: (1) added Evidence: as a required field in the defect output format — QA must
+      paste the exact wrong line verbatim before writing Problem/Fix. No paste = no defect.
+      (2) ABSOLUTE RULES block: "hypothetical", "for reference", "based on guidelines"
+      in a location field = fabricated defect = must be deleted.
+
 ## Acceptance Criteria for Port
 - No pre-QA false-fail caused by manifest staleness.
 - No skipped continuation when output is still truncated.

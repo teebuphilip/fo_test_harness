@@ -157,6 +157,30 @@
   backend core, shared libs, AND frontend hooks/components. Include anti-patterns (WRONG examples)
   for any capability that has a known hallucination tendency (like Auth0 token access).
 
+- **Wrong-path files must be remapped, not deleted.**
+  When Claude generates app/api/foo.py with no business/backend/routes/foo.py equivalent,
+  deleting the wrong-path file permanently loses the only copy of that logic.
+  Fix: check for a valid-path equivalent first. If it exists → prune the duplicate.
+  If not → rename/move to the correct business/ path.
+
+- **QA "Evidence:" field forces honest defect reporting.**
+  Requiring QA to paste the exact wrong line verbatim before writing a defect prevents
+  fabrication. If QA can't paste it, it can't write the defect. Advisory "quote it or
+  drop it" rules are ignored — the field must be part of the required output format.
+
+- **The word "hypothetical" in a defect location = fabricated. Ban it explicitly.**
+  QA wrote `(hypothetical for reference)` in the Location field — admitting the defect
+  was invented. Adding an ABSOLUTE RULES block that forbids this word closes the loophole.
+
+- **OpenAI's Retry-After header must be obeyed, not ignored.**
+  Flat retry delays ignore what OpenAI explicitly tells you to wait. Read the header;
+  use it when present. Fall back to exponential backoff + jitter when absent.
+
+- **TPM quota resets per minute — a 60s pause before iteration 2+ QA prevents 429 storms.**
+  Claude fix calls complete in <60s. Without a deliberate pause, the next QA call fires
+  before the previous call's token window has cleared. One minute of patience eliminates
+  the most common 429 failure mode in multi-iteration runs.
+
 ## Bottom Line
 - Reliability came from harness-side deterministic controls, not expecting model session continuity.
 - QA convergence requires both: specific defect descriptions (Fix: field) AND upfront prohibitions
