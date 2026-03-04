@@ -2,6 +2,22 @@
 
 ## 2026-03-04
 
+### ZIP packager: guard against empty run_dir + skip nested ZIPs
+- **Root cause**: `package_output_zip()` had no guard on `run_dir.name`. When `run_dir` resolved
+  to `Path('.')` (e.g. via `--resume-run .`), `run_dir.name == ''` → ZIP named `.zip` in harness
+  runs dir, and `Path('.').rglob('*')` swept the **entire repo** (36GB of fo_harness_runs/) into it.
+  Produced a 38GB corrupt `.zip` file in `fo_harness_runs/` → ZIP64 RuntimeError on Ctrl+C.
+- **Fixes** (`package_output_zip` + `FOHarness.__init__`):
+  - Early guard: validate `run_dir.name` is non-empty and doesn't resolve to cwd — raises clear
+    `ValueError` instead of silently creating a multi-GB ZIP.
+  - `_EXCLUDED_EXTS = {'.zip'}`: all three rglob passes skip existing ZIP files.
+  - `allowZip64=True` explicit (defensive, was default but now stated).
+  - Write-then-rename: write to `.zip.tmp` first, rename to `.zip` on success; `finally` block
+    deletes the temp file if write is interrupted (Ctrl+C or exception) — no corrupt partials left.
+  - `resume_run` validation in `FOHarness.__init__`: a path with empty name, `.`, `..`, or that
+    resolves to cwd is now rejected — falls through to fresh run directory creation.
+- Deleted the 38GB `fo_harness_runs/.zip` file.
+
 ### CSVs: Run data updated
 - `fo_run_log.csv`: 3 new ai_workforce_intelligence BLOCK_B runs appended
 - `ai_costs_aggregated.csv`: refreshed aggregate totals

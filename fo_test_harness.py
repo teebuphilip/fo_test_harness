@@ -1451,6 +1451,21 @@ def package_output_zip(run_dir: Path, startup_id: str, block: str, use_boilerpla
     ZIP name matches the run directory name for easy pairing.
     Returns the path to the created ZIP.
     """
+    # Guard: run_dir must be a named, resolvable subdirectory — not '.' or '' which would
+    # cause rglob to sweep the entire codebase and produce a multi-GB corrupt ZIP.
+    resolved = run_dir.resolve()
+    if not run_dir.name or run_dir.name in ('.', '..') or resolved == Path.cwd().resolve():
+        raise ValueError(
+            f"Invalid run_dir '{run_dir}': must be a named harness run subdirectory, "
+            f"not the current working directory or an empty path."
+        )
+    if not resolved.is_dir():
+        raise FileNotFoundError(f"run_dir does not exist: {run_dir}")
+
+    # Excluded file types and directory names for all rglob passes
+    _EXCLUDED_DIRS = frozenset(['node_modules', '.git', '.claude', 'scripts', '__pycache__'])
+    _EXCLUDED_EXTS = frozenset(['.zip'])  # never recurse existing ZIPs into the archive
+
     zip_path = Config.OUTPUT_DIR / f'{run_dir.name}.zip'
 
     print_info(f"Packaging output ZIP: {zip_path.name}")
@@ -1464,48 +1479,65 @@ def package_output_zip(run_dir: Path, startup_id: str, block: str, use_boilerpla
         else:
             print_warning(f"Boilerplate not found at {boilerplate_source} - skipping")
 
-    with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
-        if use_boilerplate and boilerplate_source and boilerplate_source.exists():
-            # Assemble a single startup root folder with boilerplate + overlay
-            root = Path(startup_id)
+    zip_path_tmp = zip_path.with_suffix('.zip.tmp')
+    try:
+        with zipfile.ZipFile(zip_path_tmp, 'w', zipfile.ZIP_DEFLATED, allowZip64=True) as zf:
+            if use_boilerplate and boilerplate_source and boilerplate_source.exists():
+                # Assemble a single startup root folder with boilerplate + overlay
+                root = Path(startup_id)
 
-            # 1) Add boilerplate under startup root
-            for file_path in boilerplate_source.rglob('*'):
-                if file_path.is_file():
-                    if any(exclude in file_path.parts for exclude in ['node_modules', '.git', '.claude', 'scripts', '__pycache__', '.DS_Store']):
-                        continue
-                    rel_path = file_path.relative_to(boilerplate_source)
-                    arcname = root / rel_path
-                    zf.write(file_path, arcname)
-
-            # 2) Overlay latest build artifacts into saas-boilerplate/business/**
-            build_dir = run_dir / 'build'
-            artifact_dirs = sorted(build_dir.glob('iteration_*_artifacts'))
-            latest_artifacts = artifact_dirs[-1] if artifact_dirs else None
-            if latest_artifacts:
-                for file_path in latest_artifacts.rglob('*'):
-                    if not file_path.is_file():
-                        continue
-                    rel_path = file_path.relative_to(latest_artifacts)
-                    if str(rel_path).startswith('business/'):
-                        arcname = root / 'saas-boilerplate' / rel_path
+                # 1) Add boilerplate under startup root
+                for file_path in boilerplate_source.rglob('*'):
+                    if file_path.is_file():
+                        if any(p in _EXCLUDED_DIRS for p in file_path.parts):
+                            continue
+                        if file_path.suffix in _EXCLUDED_EXTS:
+                            continue
+                        rel_path = file_path.relative_to(boilerplate_source)
+                        arcname = root / rel_path
                         zf.write(file_path, arcname)
 
-            # 3) Include harness outputs under startup root for traceability
-            for file_path in run_dir.rglob('*'):
-                if file_path.is_file():
-                    if '.claude' in file_path.parts or 'scripts' in file_path.parts:
-                        continue
-                    arcname = root / '_harness' / file_path.relative_to(run_dir)
-                    zf.write(file_path, arcname)
-        else:
-            # Default legacy packaging: add run directory contents
-            for file_path in run_dir.rglob('*'):
-                if file_path.is_file():
-                    arcname = file_path.relative_to(Config.OUTPUT_DIR)
-                    zf.write(file_path, arcname)
+                # 2) Overlay latest build artifacts into saas-boilerplate/business/**
+                build_dir = run_dir / 'build'
+                artifact_dirs = sorted(build_dir.glob('iteration_*_artifacts'))
+                latest_artifacts = artifact_dirs[-1] if artifact_dirs else None
+                if latest_artifacts:
+                    for file_path in latest_artifacts.rglob('*'):
+                        if not file_path.is_file():
+                            continue
+                        if file_path.suffix in _EXCLUDED_EXTS:
+                            continue
+                        rel_path = file_path.relative_to(latest_artifacts)
+                        if str(rel_path).startswith('business/'):
+                            arcname = root / 'saas-boilerplate' / rel_path
+                            zf.write(file_path, arcname)
 
-        # Legacy boilerplate/ layout is superseded by startup-root assembly
+                # 3) Include harness outputs under startup root for traceability
+                for file_path in run_dir.rglob('*'):
+                    if file_path.is_file():
+                        if any(p in _EXCLUDED_DIRS for p in file_path.parts):
+                            continue
+                        if file_path.suffix in _EXCLUDED_EXTS:
+                            continue
+                        arcname = root / '_harness' / file_path.relative_to(run_dir)
+                        zf.write(file_path, arcname)
+            else:
+                # Default legacy packaging: add run directory contents
+                for file_path in run_dir.rglob('*'):
+                    if file_path.is_file():
+                        if file_path.suffix in _EXCLUDED_EXTS:
+                            continue
+                        arcname = file_path.relative_to(Config.OUTPUT_DIR)
+                        zf.write(file_path, arcname)
+
+        # Atomic rename: only replace zip_path if write completed successfully
+        zip_path_tmp.rename(zip_path)
+
+    except (KeyboardInterrupt, Exception):
+        # Clean up the partial/temp ZIP so we don't leave a corrupt file behind
+        if zip_path_tmp.exists():
+            zip_path_tmp.unlink()
+        raise
 
     zip_size_mb = zip_path.stat().st_size / (1024 * 1024)
     print_success(f"ZIP created: {zip_path} ({zip_size_mb:.2f} MB)")
@@ -2275,7 +2307,14 @@ class FOHarness:
 
         # Warm-start: reuse an existing run directory if --resume-run was given
         resume_run = Path(getattr(cli_args, 'resume_run', None) or '')
-        if resume_run.is_dir():
+        _cwd = Path.cwd().resolve()
+        _valid_resume = (
+            resume_run.name  # non-empty name (excludes '.', '..', '')
+            and resume_run.name not in ('.', '..')
+            and resume_run.resolve() != _cwd
+            and resume_run.is_dir()
+        )
+        if _valid_resume:
             self.run_dir = resume_run
             print_info(f"Warm-start: reusing run directory {self.run_dir}")
         else:

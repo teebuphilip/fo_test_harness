@@ -40,6 +40,11 @@
 ## Governance Alignment
 - Keep default iteration cap aligned to locked policy (`5`) but allow CLI override for controlled exception runs.
 
+19. ZIP packager: guard against empty run_dir + skip nested ZIPs ✅ DONE (2026-03-04)
+    - `run_dir = Path('.')` caused `run_dir.name == ''` → ZIP named `.zip`, rglob swept entire repo → 38GB corrupt file.
+    - Fix: early ValueError guard on empty name / cwd resolve; `.zip` excluded from all rglob passes;
+      write-then-rename pattern; `resume_run` validation in FOHarness.__init__ rejects . / .. / cwd.
+
 18. Filter: banned evidence phrases + presence validation + ORM package allowlist ✅ DONE (2026-03-04)
     - Three new checks added to _filter_hallucinated_defects():
       Check 2: Evidence containing N/A/"not applicable"/"presence of the file is confirmed" etc. → auto-remove
