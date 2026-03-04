@@ -205,9 +205,10 @@
   QA validation. Add a --gpt-model CLI flag so the model can be swapped without code changes.
 
 - **Pruning tests before QA creates a self-defeating loop: delete tests → QA flags missing tests → regen tests → repeat.**
-  Tests are not deployment artifacts but QA needs to see them to validate the build.
+  Tests are not runtime artifacts but QA needs to see them to validate the build, and the
+  founder needs them in the project handoff ZIP for local dev and CI/CD.
   The right split: tests survive pruner (QA-visible), excluded from merge_forward (no accumulation
-  across iterations), excluded from ZIP (not deployed). Three separate gates, each doing one job.
+  across iterations), included in ZIP (full project handoff). Two gates, not three.
 
 - **Pass 1 and Pass 2 remap logic must be kept in sync — any marker in Pass 1 must also appear in Pass 2.**
   Pass 1 (`_remap_to_valid_path`) checked `(api, routers, routes)` for route files.
