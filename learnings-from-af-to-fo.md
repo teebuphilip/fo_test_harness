@@ -197,6 +197,13 @@
   Fix: always dump error body + all rate-limit headers on every transient error (429/500/529)
   for both Claude and ChatGPT clients.
 
+- **A QA prompt larger than the model's TPM limit will never succeed — switch models, don't retry.**
+  gpt-4o has a 30k TPM limit on lower org tiers. A QA prompt with a large build output is
+  ~33k tokens. No amount of waiting clears a per-minute window when the single request exceeds
+  the limit. The error message says exactly this: "Request too large... Limit 30000, Requested 33160."
+  Fix: use gpt-4o-mini which has 200k TPM on the same tier and is sufficient for structured
+  QA validation. Add a --gpt-model CLI flag so the model can be swapped without code changes.
+
 - **Pruner whitelist must include frontend config files, not just page/route source files.**
   next.config.js, postcss.config.js, tailwind.config.ts, package.json are required for the
   frontend to build and run. They are not junk. A whitelist that only lists pages/*.jsx and

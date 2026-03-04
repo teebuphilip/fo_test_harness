@@ -37,6 +37,13 @@
 - If the canonical path already exists, the wrong-path file is pruned as a duplicate.
 - Same salvage-or-prune pattern used in Pass 1 for non-business files.
 
+### Switch QA Model to gpt-4o-mini + --gpt-model Flag
+- QA prompts are ~33k tokens; gpt-4o TPM limit is 30k on this org tier — the request is
+  physically larger than the window and will never succeed regardless of retry wait time.
+- Switched default `GPT_MODEL` from `gpt-4o` to `gpt-4o-mini` (200k TPM, same tier).
+- Added `--gpt-model` CLI flag to override without touching code
+  (e.g. `--gpt-model gpt-4o` to switch back on a higher tier).
+
 ### API Error Diagnostics (Rate-Limit Headers + Error Body)
 - On every **ChatGPT 429** and every **Claude 429/500/529**, now prints:
   - `error type`, `error code`, `message` from the JSON response body

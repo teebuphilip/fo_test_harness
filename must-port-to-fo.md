@@ -263,6 +263,12 @@
       business/backend/api/*.py → business/backend/routes/*.py
     - Fix 3: Pass 2 now tries _remap_business_path() before deleting, same pattern as Pass 1.
 
+27. Switch QA model to gpt-4o-mini + --gpt-model CLI flag ✅ DONE (2026-03-04)
+    - gpt-4o TPM limit is 30k on the current org tier. QA prompts are ~33k tokens.
+      The single request is larger than the window — no retry can ever succeed.
+    - Fix: changed default GPT_MODEL to gpt-4o-mini (200k TPM on same tier).
+    - Added --gpt-model CLI flag to override at runtime without touching code.
+
 26. API error diagnostics: dump body + rate-limit headers on every transient error ✅ DONE (2026-03-04)
     - 429s were retrying blind — no visibility into which limit was hit (RPM vs TPM vs
       daily quota vs org cap) or when the window resets.
