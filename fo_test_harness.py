@@ -720,8 +720,14 @@ BOILERPLATE_VALID_PATHS = [
     'business/frontend/*.css',
     'business/README-INTEGRATION.md',
     'business/package.json',
+    # Backend dependencies
+    'business/backend/requirements.txt',
     # Tests — kept so QA can evaluate them, but excluded from ZIP and merge_forward
     'business/tests/*.py',
+    'business/tests/*.js',
+    'business/tests/*.jsx',
+    'business/tests/*.ts',
+    'business/tests/*.tsx',
     'business/backend/tests/*.py',
     'business/tests/conftest.py',
     'business/backend/tests/conftest.py',
@@ -735,6 +741,10 @@ BOILERPLATE_VALID_PATHS = [
     'business/frontend/tailwind.config.ts',
     'business/frontend/tsconfig.json',
     'business/frontend/jsconfig.json',
+    'business/frontend/jest.config.js',
+    'business/frontend/jest.config.ts',
+    'business/frontend/jest.setup.js',
+    'business/frontend/jest.setup.ts',
     'business/frontend/styles/*.css',
     'business/frontend/public/*',
 ]
@@ -1045,6 +1055,10 @@ class ArtifactManager:
             self._write_artifact_manifest(artifacts_dir)
 
     @staticmethod
+    def _sha256(path: Path) -> str:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+
+    @staticmethod
     def _is_valid_business_path(rel_path: str) -> bool:
         """Return True if rel_path matches the boilerplate whitelist."""
         import fnmatch
@@ -1082,8 +1096,28 @@ class ArtifactManager:
                 return f'business/services/{name}'
             if 'schemas' in parts:
                 return f'business/schemas/{name}'
+            if 'tests' in parts or name.startswith('test_'):
+                return f'business/tests/{name}'
+
+        elif name == 'requirements.txt':
+            # Backend dependency file — always belongs in business/backend/
+            return 'business/backend/requirements.txt'
 
         elif name.endswith(('.jsx', '.tsx', '.js')):
+            # Next.js app router: app/**/page.tsx — derive component name from route segments
+            if name in ('page.tsx', 'page.jsx', 'page.js') and 'app' in parts:
+                app_idx = len(parts) - 1 - list(reversed(parts)).index('app')
+                route_parts = parts[app_idx + 1:-1]  # segments between 'app' and 'page.*'
+                if route_parts:
+                    component = ''.join(p.capitalize() for p in route_parts)
+                else:
+                    component = 'index'
+                return f'business/frontend/pages/{component}.jsx'
+
+            # JS test files
+            if 'tests' in parts or '.test.' in name or '.spec.' in name:
+                return f'business/tests/{name}'
+
             canonical = name.replace('.tsx', '.jsx')
             if 'lib' in parts:
                 return f'business/frontend/lib/{canonical}'
@@ -1092,15 +1126,16 @@ class ArtifactManager:
             if 'app' in parts or 'pages' in parts:
                 return f'business/frontend/pages/{canonical}'
             if 'frontend' in parts:
-                # catch-all for frontend root .js files
                 return f'business/frontend/{canonical}'
 
         elif name in ('package.json', 'next.config.js', 'next.config.ts',
                       'postcss.config.js', 'postcss.config.ts',
                       'tailwind.config.js', 'tailwind.config.ts',
-                      'tsconfig.json', 'jsconfig.json'):
-            if 'frontend' in parts:
-                return f'business/frontend/{name}'
+                      'tsconfig.json', 'jsconfig.json',
+                      'jest.config.js', 'jest.config.ts',
+                      'jest.setup.js', 'jest.setup.ts'):
+            # Always remap to business/frontend/ regardless of where Claude placed them
+            return f'business/frontend/{name}'
 
         return None  # unmappable — will be pruned
 
@@ -1179,9 +1214,12 @@ class ArtifactManager:
                     dest = artifacts_dir / canonical
                     if dest.exists():
                         # Correct-path version already present — discard the duplicate
+                        if self._sha256(file_path) == self._sha256(dest):
+                            print_warning(f"  → Pruned identical duplicate: {rel_path} (kept {canonical})")
+                        else:
+                            print_warning(f"  → CONFLICT: {rel_path} differs from {canonical} — keeping canonical, discarding wrong-path")
                         file_path.unlink()
                         removed += 1
-                        print_warning(f"  → Pruned duplicate wrong-path: {rel_path} (kept {canonical})")
                     else:
                         # No correct-path version — salvage by remapping
                         dest.parent.mkdir(parents=True, exist_ok=True)
@@ -1191,14 +1229,18 @@ class ArtifactManager:
                 else:
                     file_path.unlink()
                     removed += 1
+                    print_warning(f"  → Pruned (no remap): {rel_path}")
             elif not self._is_valid_business_path(rel_path):
                 # Try to remap to canonical path (e.g. app/*.tsx → pages/*.jsx)
                 canonical = self._remap_business_path(rel_path)
                 if canonical:
                     dest = artifacts_dir / canonical
                     if dest.exists():
+                        if self._sha256(file_path) == self._sha256(dest):
+                            print_warning(f"  → Pruned identical duplicate: {rel_path} (kept {canonical})")
+                        else:
+                            print_warning(f"  → CONFLICT: {rel_path} differs from {canonical} — keeping canonical, discarding wrong-path")
                         file_path.unlink()
-                        print_warning(f"  → Pruned duplicate business path: {rel_path} (kept {canonical})")
                         invalid_business += 1
                     else:
                         dest.parent.mkdir(parents=True, exist_ok=True)
@@ -1214,11 +1256,11 @@ class ArtifactManager:
                 dir_path.rmdir()
 
         if removed:
-            print_warning(f"  → Pruned {removed} non-business artifact(s)")
+            print_warning(f"  → Pruned {removed} file(s) total (listed above)")
         if remapped:
-            print_success(f"  → Remapped {remapped} wrong-path file(s) to correct business/ paths")
+            print_success(f"  → Remapped {remapped} wrong-path file(s) to correct business/ paths (listed above)")
         if invalid_business:
-            print_warning(f"  → Pruned {invalid_business} duplicate business path(s)")
+            print_warning(f"  → Pruned {invalid_business} duplicate business path(s) (listed above)")
         if removed or remapped or invalid_business:
             self._write_artifact_manifest(artifacts_dir)
 
@@ -1259,9 +1301,10 @@ class ArtifactManager:
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(file_path, dest)
                 copied += 1
+                print_info(f"  → Carried forward: {rel_path}")
 
         if copied > 0:
-            print_info(f"  → Carried forward {copied} unchanged file(s) from iteration {iteration-1:02d}")
+            print_info(f"  → Carried forward {copied} unchanged file(s) from iteration {iteration-1:02d} (listed above)")
             self._write_artifact_manifest(curr_dir)
 
     def build_synthetic_qa_output(self, iteration: int) -> str:

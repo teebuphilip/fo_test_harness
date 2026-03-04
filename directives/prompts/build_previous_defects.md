@@ -60,12 +60,13 @@ If any defect mentions "hardcoded consultant_id", "hardcoded user id", "hardcode
 - Do NOT use `'consultant_1'`, `'current_user'`, or any other hardcoded string placeholder.
 - Do NOT add a `// TODO:` comment — implement the actual pattern.
 
-**AUTH0 TOKEN FIX PATTERN:**
-If any defect mentions "getAccessTokenSilently", "access token", or "user.getAccessTokenSilently":
+**AUTH0 TOKEN RULE — APPLIES TO EVERY JSX FILE YOU OUTPUT, NO EXCEPTIONS:**
+Before outputting ANY `.jsx` file, scan it for `user.getAccessTokenSilently()`. If found, fix it.
 - `getAccessTokenSilently` is NOT a method on the `user` object — it MUST be destructured from `useAuth0()`
 - CORRECT destructuring: `const { user, isLoading, getAccessTokenSilently } = useAuth0();`
 - CORRECT usage: `const token = await getAccessTokenSilently();` then `'Authorization': \`Bearer ${token}\``
-- WRONG (never do): `user.getAccessTokenSilently()` — this will throw at runtime
+- WRONG (never do): `user.getAccessTokenSilently()` — this will throw at runtime and WILL be caught by QA
+- This rule applies whether or not any defect mentions it. Every new or modified JSX file must comply.
 
 **DEFECTS TO FIX:**
 {{previous_defects}}

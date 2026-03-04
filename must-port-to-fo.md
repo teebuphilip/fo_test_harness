@@ -322,6 +322,65 @@
       business/backend/api/*.py → business/backend/routes/*.py
     - Fix 3: Pass 2 now tries _remap_business_path() before deleting, same pattern as Pass 1.
 
+42. Pruner: remap requirements.txt + root-level config files + JS tests ✅ DONE (2026-03-04)
+    - requirements.txt (at any path) → business/backend/requirements.txt (added to whitelist)
+    - Root-level package.json, next.config.js, postcss.config.js, tailwind.config.js,
+      jest.config.js, jest.setup.js: remap now unconditional (was only when 'frontend' in parts)
+    - .test.js / .spec.js files: added JS test remap → business/tests/<name>
+    - Whitelist: added business/backend/requirements.txt, business/tests/*.js|jsx|ts|tsx,
+      business/frontend/jest.config.js|ts, business/frontend/jest.setup.js|ts
+
+41. Build prompt: harden Auth0 token rule — prevent per-file regression ✅ DONE (2026-03-04)
+    - user.getAccessTokenSilently() appeared in every new JSX file Claude generated across
+      3 iterations. Rule existed as explanatory text but not in enforcement gates.
+    - Fix: (1) Added to HARD FAIL CONDITIONS in build_boilerplate_path_rules.md with "QA will
+      REJECT every time" framing. (2) Added to PRE-PROMPT CHECKLIST — Claude must scan every
+      .jsx file before output. (3) Made rule unconditional in build_previous_defects.md —
+      was "if any defect mentions it", now "applies to every JSX file, no exceptions".
+
+40. QA prompt: current_user["sub"] + package version DO NOT FLAG rules ✅ DONE (2026-03-04)
+    - `current_user["sub"]` flagged as "hardcoded user ID" — it's the correct dynamic auth ID
+      from Depends(get_current_user). Added explicit DO NOT FLAG with definition of what
+      hardcoding actually means (literal strings like "user_123", not current_user["sub"]).
+    - React 18 flagged as "should upgrade to React 19" — version choices are not defects.
+      Added DO NOT FLAG: versions are not wrong unless intake spec requires a specific one.
+
+39. Pruner: checksum-based duplicate detection ✅ DONE (2026-03-04)
+    - Before: duplicate detection was size-based heuristic; conflicts silently discarded.
+    - Now: SHA256 both files before pruning. Identical → safe prune. Different → CONFLICT
+      warning visible in log so content loss is never silent.
+    - Added _sha256() static helper on ArtifactManager.
+
+38. Pruner: remap tests/*.py + fix app router page.tsx name collision ✅ DONE (2026-03-04)
+    - tests/test_*.py had no remap → pruned. Fix: added tests/ rule → business/tests/<name>.
+    - frontend/src/app/clients/page.tsx, app/assessments/page.tsx etc. all remapped to
+      business/frontend/pages/page.jsx (same name → overwrote each other). Fix: when
+      name is page.tsx/jsx/js and 'app' in path, derive component name from route segments:
+      app/clients/page.tsx → Clients.jsx, app/clients/new/page.tsx → ClientsNew.jsx.
+
+37. QA prompt: hedged language + self-contradicting evidence + inference bans ✅ DONE (2026-03-04)
+    - iter 3 DEFECT-3: Evidence said "No .jsx files are absent" but Problem said ".jsx absent" —
+      self-contradicting. iter 4 DEFECT-1: inferred handleDelete is broken from call site only.
+      iter 4 DEFECT-2: used correct Auth0 destructuring as evidence for a missing auth check.
+      iter 3+4 DEFECT-4: flagged a Column default value as a scope violation.
+    - Fix: 4 new ABSOLUTE RULES in qa_prompt.md:
+      1. Hedged language ban: "does not seem to", "may suggest", "could indicate" etc. = delete
+      2. Self-contradicting Evidence ban: Evidence must support the Problem, not contradict it
+      3. SCOPE_CHANGE column ban: column/field/default alone ≠ user-facing feature
+      4. Call-site inference ban: must quote function body, not just the call site
+
+36. QA prompt: fabricated Evidence phrases + core.database false positive ✅ DONE (2026-03-04)
+    - QA was writing MEDIUM defects for package.json and README-INTEGRATION.md with Evidence
+      "Content of this file is not present in the build output" — fabricating content defects
+      for files it never read. Existing absence-of-thing rule was not specific enough.
+    - QA was also flagging `from core.database import Base, get_db` as a DB integration bug
+      despite an existing DO NOT FLAG rule — the rule was buried in the DO NOT FLAG list and ignored.
+    - Fix: added two new ABSOLUTE RULES to qa_prompt.md (violations = invalid QA report):
+      1. Evidence fields with "Content of this file is not present", "file not shown", or
+         equivalent phrases are forbidden — if you can't read the file, delete the defect.
+      2. Any defect citing `from core.database import Base, get_db` as wrong must be deleted —
+         this is the correct boilerplate import.
+
 35. QA prompt: test file rules, absence defects, stdlib in requirements ✅ DONE (2026-03-04)
     - QA flagged intentional test behaviour as IMPLEMENTATION_BUG (test sending invalid JSON).
       Fix: only flag literal bugs in test code; never flag what a test intentionally tests.

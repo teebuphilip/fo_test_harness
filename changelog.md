@@ -2,6 +2,83 @@
 
 ## 2026-03-04
 
+### Pruner: Checksum-Based Duplicate Detection
+- Before pruning a duplicate (wrong-path or wrong-business-path), now checksums both files.
+- If SHA256 match → "Pruned identical duplicate" — provably lossless.
+- If SHA256 differ → "CONFLICT" warning — canonical kept, wrong-path discarded, but conflict
+  is visible so you can investigate rather than silently losing content.
+- Added `_sha256(path)` static helper on ArtifactManager; reuses existing hashlib import.
+
+### Pruner: Remap tests/*.py + App Router page.tsx Name Collision
+- `tests/test_*.py` had no remap rule — silently pruned instead of going to `business/tests/`.
+  Fix: added `'tests' in parts or name.startswith('test_')` → `business/tests/<name>`.
+- Next.js app router files (`frontend/src/app/clients/page.tsx`, etc.) all remapped to
+  `business/frontend/pages/page.jsx` — every file had the same output name so they overwrote
+  each other. Root cause: `name = page.tsx` for all of them; remap used the filename not the route.
+  Fix: when `name in ('page.tsx', 'page.jsx', 'page.js')` and `'app' in parts`, derive the
+  component name from route segments between `app/` and `page.*`:
+  - `app/clients/page.tsx`     → `Clients.jsx`
+  - `app/clients/new/page.tsx` → `ClientsNew.jsx`
+  - `app/assessments/page.tsx` → `Assessments.jsx`
+
+### Pruner: Remap requirements.txt + Root-Level Config Files + JS Tests
+- `requirements.txt` (anywhere) had no remap → pruned. Fix: always remaps to
+  `business/backend/requirements.txt`. Added to whitelist.
+- Root-level `package.json`, `next.config.js`, `postcss.config.js`, `tailwind.config.js`,
+  `jest.config.js`, `jest.setup.js` were pruned when not under `frontend/` — remap rule
+  only fired when `'frontend' in parts`. Fix: config file remap is now unconditional —
+  these filenames always go to `business/frontend/<name>` regardless of where Claude placed them.
+  Added jest config files to remap list and whitelist.
+- JS test files (`.test.js`, `.spec.js`) had no remap → pruned. Fix: added `.test.`/`.spec.`
+  name check → `business/tests/<name>`. Added `business/tests/*.js|jsx|ts|tsx` to whitelist.
+
+### Build Prompt: Harden Auth0 Token Rule to Prevent Per-File Regression
+- Root cause: `user.getAccessTokenSilently()` appeared in EVERY new JSX file Claude generated
+  across all 3 iterations, even after explicit CORRECT/WRONG examples were in the build prompt.
+  The rule existed but only as explanatory text — it was not in the enforcement gates.
+- Fix 1 (`build_boilerplate_path_rules.md`): Added to HARD FAIL CONDITIONS:
+  "`user.getAccessTokenSilently()` anywhere = HARD FAIL — QA will REJECT every time".
+- Fix 2 (`build_boilerplate_path_rules.md`): Added to PRE-PROMPT CHECKLIST:
+  "Scan every .jsx file for `user.getAccessTokenSilently()` — fix before outputting".
+- Fix 3 (`build_previous_defects.md`): Made rule unconditional — previously said "if any defect
+  mentions getAccessTokenSilently". Now: "applies to EVERY JSX file you output, no exceptions,
+  whether or not any defect mentions it."
+
+### QA Prompt: current_user["sub"] + Package Version DO NOT FLAG Rules
+- `current_user["sub"]` was being flagged as "hardcoded user ID" — it is the correct dynamic
+  auth ID extracted from the JWT via `Depends(get_current_user)`. Added to DO NOT FLAG.
+  Only literal strings like `"user_123"` or `"consultant_1"` count as hardcoded.
+- Package versions (e.g. `"react": "^18.2.0"`) were being flagged as outdated/requiring upgrade.
+  Added to DO NOT FLAG — version choices are not defects unless intake spec requires a specific version.
+
+### QA Prompt: Hedged Language + Self-Contradicting Evidence + Inference Bans
+- Added 4 new ABSOLUTE RULES to `qa_prompt.md`:
+  1. **Hedged language ban**: "does not seem to", "may suggest", "could indicate", "appears to",
+     "might be" in a defect = guessing not evidence — delete the defect.
+  2. **Self-contradicting Evidence ban**: if Evidence says files are present but Problem says
+     they're absent — delete the defect. QA must read its own Evidence before submitting.
+  3. **SCOPE_CHANGE column ban**: a database column, field name, or default value alone is NOT
+     a user-facing feature. Only flag scope if intake spec explicitly excludes it AND you can
+     quote the wrong implementing line.
+  4. **Call-site inference ban**: quoting `onClick={() => handleDelete(id)}` does not prove
+     handleDelete is broken. Must quote the function definition body or delete the defect.
+- Root cause: iter 3 DEFECT-3 had self-contradictory evidence ("No instances of .jsx are absent"
+  → problem "jsx absent"). Iter 4 DEFECT-1 inferred broken delete from call site only.
+  Iter 4 DEFECT-2 used correct Auth0 code as evidence for a missing feature. Iter 3/4 DEFECT-4
+  flagged a column default as a scope violation.
+
+### QA Prompt: Fabricated Evidence Phrases + core.database False Positive
+- Added two new ABSOLUTE RULES to `qa_prompt.md`:
+  1. **Fabricated Evidence ban**: Evidence fields that say "Content of this file is not present
+     in the build output", "file not shown", "not visible in output", or any equivalent are
+     forbidden. If you can't read the file in the build output, you cannot write a content defect
+     — delete the defect entirely.
+  2. **core.database false positive ban**: `from core.database import Base, get_db` is the correct
+     boilerplate DB import. Any defect citing this import as wrong or incomplete must be deleted.
+- Root cause: QA was writing MEDIUM defects for package.json and README-INTEGRATION.md with
+  Evidence "Content of this file is not present in the build output" — fabricating content defects
+  for files it never read. Existing absence-of-thing rule was not specific enough to catch this pattern.
+
 ### Warm-Start Resume (Skip Claude BUILD on 429-Killed Runs)
 - Added `--resume-run <dir>`, `--resume-iteration N`, `--resume-mode qa|fix` CLI flags.
 - `qa` mode: reuse existing build artifacts from the run dir, skip Claude BUILD entirely,

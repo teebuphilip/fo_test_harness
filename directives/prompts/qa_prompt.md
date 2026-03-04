@@ -30,6 +30,12 @@ For EVERY defect you write, you MUST complete this checklist FIRST:
 - NEVER use the word "hypothetical" in any defect. If you write "hypothetical", that defect is fabricated — delete it.
 - NEVER use the phrase "for reference" or "based on guidelines" in a location field. Location must be a real file path from the build output.
 - NEVER write a defect for a file you have not read in the build output above. No exceptions.
+- NEVER write an Evidence field that says "Content of this file is not present in the build output", "file not shown", "not visible in output", or any equivalent. If you cannot read the file in the build output above, you CANNOT write a defect about its content. Delete the defect entirely.
+- NEVER flag `from core.database import Base, get_db` as an error — this IS the correct boilerplate DB import. If your defect cites this import as wrong or incomplete, delete the defect.
+- NEVER write a defect using hedged language: "does not seem to", "may suggest", "could indicate", "appears to", "might be". These phrases mean you are guessing, not citing evidence. If you are not certain because you can quote the wrong line — delete the defect.
+- NEVER write a defect whose Evidence contradicts its own Problem. If your Evidence says files are present but your Problem says they are absent — delete the defect. Read your own Evidence before submitting.
+- NEVER write a SCOPE_CHANGE_REQUEST based on a column name, field name, or default value alone. A database column is not a user-facing feature. Only flag scope violations when the intake spec explicitly excludes the feature and you can quote the wrong line of code that implements it.
+- NEVER infer that a function is broken from its call site. If you quote `onClick={() => handleDelete(id)}` but have not read the `handleDelete` function body — you CANNOT write a defect about what handleDelete does. Find the function definition and quote the wrong line in it, or delete the defect.
 
 - DO NOT reference file paths not present as `**FILE:**` headers in the build output
 - DO NOT flag `.tsx` files unless you see a `**FILE: path/file.tsx**` header in the output above
@@ -59,6 +65,8 @@ For EVERY defect you write, you MUST complete this checklist FIRST:
 - `from core.database import Base, get_db` — this IS the correct boilerplate import path, do NOT flag it as incorrect
 - `from core.rbac import get_current_user` — this IS the correct boilerplate auth import, do NOT flag it as missing auth
 - `Depends(get_current_user)` in route signatures — this IS correct auth, do NOT flag as missing authentication
+- `current_user["sub"]` as an owner/user identifier — this IS the correct dynamic auth ID extracted from the JWT via `Depends(get_current_user)`. Do NOT flag as "hardcoded user ID" or "hardcoded identifier". Hardcoding means a literal string like `"user_123"` or `"consultant_1"` — NOT `current_user["sub"]`.
+- Package versions (e.g. `"react": "^18.2.0"`) — do NOT flag a package version as wrong, outdated, or requiring upgrade unless the intake spec explicitly requires a specific version. Choosing React 18 vs 19, or any other version, is NOT a defect.
 - Files in `business/frontend/pages/*.jsx` — these ARE the correct frontend pages, do NOT flag as "frontend logic mixing" or misplaced
 - Files in `business/models/*.py` and `business/services/*.py` — these ARE correct locations, do NOT flag as misplaced
 - Auth0 token: `const token = await getAccessTokenSilently();` then `'Authorization': \`Bearer ${token}\`` — this IS the correct pattern, do NOT flag as "missing await"

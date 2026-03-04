@@ -25,6 +25,7 @@
 - NEVER create `business/backend/__init__.py` or `business/backend/app.py` — these are boilerplate internals, do not touch them.
 - NEVER create `business/backend/services/**` — services belong in `business/services/` (not inside backend/).
 - NEVER create `business/app/**` — this path is forbidden.
+- `user.getAccessTokenSilently()` anywhere in any file is a HARD FAIL — this method does not exist on the Auth0 user object. The build will be REJECTED by QA every single time this appears. Use `const { getAccessTokenSilently } = useAuth0();` and call `getAccessTokenSilently()` directly.
 
 **DATA LAYER PROHIBITIONS (HARD — NO EXCEPTIONS):**
 - NEVER use Python dicts as storage: `x_db = {}`, `data = []`, `store = {}` — all forbidden.
@@ -220,3 +221,4 @@ export default function MyPage() {
 - `business/package.json` is included.
 - Every code block has a **FILE:** header.
 - No unlabeled code fences.
+- Scan every `.jsx` file you wrote: does ANY line contain `user.getAccessTokenSilently()`? If yes — fix it before outputting. Replace with `const { getAccessTokenSilently } = useAuth0();` at the top of the component and call `getAccessTokenSilently()` directly.

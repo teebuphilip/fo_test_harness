@@ -43,11 +43,14 @@ def summarize_runs(csv_path):
         
         # Calculate average cost for QA_ACCEPTED runs only
         accepted_costs = [
-            float(r['total_cost']) 
-            for r in runs 
+            float(r['total_cost'])
+            for r in runs
             if r['run_end_reason'] == 'QA_ACCEPTED' and float(r['total_cost']) > 0
         ]
         avg_cost = sum(accepted_costs) / len(accepted_costs) if accepted_costs else 0
+
+        # Total spend across ALL runs for this startup
+        total_cost = sum(float(r['total_cost']) for r in runs if r.get('total_cost'))
         
         # Find most common failure mode (excluding QA_ACCEPTED)
         failures = [r['run_end_reason'] for r in runs if r['run_end_reason'] != 'QA_ACCEPTED']
@@ -74,6 +77,7 @@ def summarize_runs(csv_path):
             'runs': total_runs,
             'passes': qa_accepted,
             'avg_cost': avg_cost,
+            'total_cost': total_cost,
             'failure': failure_detail
         })
     
@@ -85,17 +89,18 @@ def format_table(summaries):
     
     # Build table
     lines = []
-    lines.append("Product                      | Runs | Passes | Avg Cost | Main Failure Mode")
-    lines.append("-----------------------------|------|--------|----------|-------------------")
-    
+    lines.append("Product                      | Runs | Passes | Avg Cost | Total Cost | Main Failure Mode")
+    lines.append("-----------------------------|------|--------|----------|------------|-------------------")
+
     for s in summaries:
-        name = s['startup'].replace('_', ' ').title()[:28]  # Truncate long names
+        name = s['startup'].replace('_', ' ').title()[:28]
         runs = str(s['runs']).rjust(4)
         passes = str(s['passes']).rjust(6)
-        cost = f"${s['avg_cost']:.2f}".rjust(8)
-        failure = s['failure'][:40]  # Truncate long failure messages
-        
-        lines.append(f"{name:<28} | {runs} | {passes} | {cost} | {failure}")
+        avg = f"${s['avg_cost']:.2f}".rjust(8)
+        total = f"${s['total_cost']:.2f}".rjust(10)
+        failure = s['failure'][:40]
+
+        lines.append(f"{name:<28} | {runs} | {passes} | {avg} | {total} | {failure}")
 
     return "\n".join(lines)
 
