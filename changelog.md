@@ -37,6 +37,15 @@
 - If the canonical path already exists, the wrong-path file is pruned as a duplicate.
 - Same salvage-or-prune pattern used in Pass 1 for non-business files.
 
+### API Error Diagnostics (Rate-Limit Headers + Error Body)
+- On every **ChatGPT 429** and every **Claude 429/500/529**, now prints:
+  - `error type`, `error code`, `message` from the JSON response body
+  - All rate-limit headers: `limit-requests`, `remaining-requests`, `reset-requests`,
+    `limit-tokens`, `remaining-tokens`, `reset-tokens`, `retry-after`
+  - ChatGPT: `x-ratelimit-*` headers; Claude: `anthropic-ratelimit-*` headers
+- `reset-req` / `reset-tok` are UTC timestamps — tells you exactly when the window clears.
+- Makes it possible to distinguish RPM vs TPM vs daily quota vs org cap without guessing.
+
 ### API Call Timestamps
 - Added datetime timestamps to every `ClaudeClient.call()` and `ChatGPTClient.call()`.
 - Prints `[YYYY-MM-DD HH:MM:SS] → <API> request sent` before each request.

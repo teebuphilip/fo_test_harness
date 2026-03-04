@@ -182,10 +182,28 @@
   then would have skipped BUILD on iter 2. Fix: set iteration = _ws_iteration before the
   while loop, same pattern fix mode already used (iteration = _ws_iteration + 1).
 
-- **TPM quota resets per minute — a 60s pause before iteration 2+ QA prevents 429 storms.**
+- **TPM quota resets per minute — a 120s pause before iteration 2+ QA prevents 429 storms.**
   Claude fix calls complete in <60s. Without a deliberate pause, the next QA call fires
-  before the previous call's token window has cleared. One minute of patience eliminates
+  before the previous call's token window has cleared. Two minutes of patience eliminates
   the most common 429 failure mode in multi-iteration runs.
+
+- **Persistent 429s after 120s+ waits are not TPM — log the error body and rate-limit headers.**
+  If retrying every 2 minutes still hits 429, the limit is RPM (requests per minute), daily
+  token quota, or an org-level spend cap — none of which reset in under a minute.
+  The OpenAI 429 response body contains `error.type` and `error.message` that name the exact
+  limit. The `x-ratelimit-reset-requests` / `x-ratelimit-reset-tokens` headers give the exact
+  UTC reset time. Without logging these, you're guessing. Same applies to Anthropic:
+  `anthropic-ratelimit-*` headers carry the same information.
+  Fix: always dump error body + all rate-limit headers on every transient error (429/500/529)
+  for both Claude and ChatGPT clients.
+
+- **Pruner whitelist must include frontend config files, not just page/route source files.**
+  next.config.js, postcss.config.js, tailwind.config.ts, package.json are required for the
+  frontend to build and run. They are not junk. A whitelist that only lists pages/*.jsx and
+  routes/*.py silently deletes the entire Next.js config layer every iteration.
+  Fix: add all known frontend config/infrastructure paths to BOILERPLATE_VALID_PATHS.
+  Also: business/frontend/app/ (App Router) files must be remapped to pages/ (Pages Router),
+  not deleted — same salvage-or-prune logic used for non-business wrong-path files in Pass 1.
 
 ## Bottom Line
 - Reliability came from harness-side deterministic controls, not expecting model session continuity.

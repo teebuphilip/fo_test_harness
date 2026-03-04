@@ -263,6 +263,16 @@
       business/backend/api/*.py → business/backend/routes/*.py
     - Fix 3: Pass 2 now tries _remap_business_path() before deleting, same pattern as Pass 1.
 
+26. API error diagnostics: dump body + rate-limit headers on every transient error ✅ DONE (2026-03-04)
+    - 429s were retrying blind — no visibility into which limit was hit (RPM vs TPM vs
+      daily quota vs org cap) or when the window resets.
+    - Fix: on every ChatGPT 429 and every Claude 429/500/529, print:
+        error type, error code, message (from response JSON body)
+        all x-ratelimit-* headers (ChatGPT) / anthropic-ratelimit-* headers (Claude):
+        limit-requests, remaining-requests, reset-requests,
+        limit-tokens, remaining-tokens, reset-tokens, retry-after
+    - reset-req / reset-tok timestamps tell you the exact UTC time the window clears.
+
 24. Timestamps on every Claude + ChatGPT API call ✅ DONE (2026-03-04)
     - No visibility into when API requests were sent or how long they took — hard to
       diagnose 429 timing or slow responses.
