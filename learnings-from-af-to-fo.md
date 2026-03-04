@@ -211,6 +211,15 @@
   merge_forward gates on the whitelist so unmapped files don't carry forward between iterations.
   QA is the right place to catch structural problems, not a pruner that guesses what's valid.
 
+  | What happens now                              | Why                                      |
+  |-----------------------------------------------|------------------------------------------|
+  | Non-business file with a remap                | Moved to canonical path                  |
+  | Non-business file, no remap                   | Deleted (truly outside the project)      |
+  | business/ file with a remap                   | Moved to canonical path                  |
+  | business/ file that's a duplicate             | Deleted (canonical version exists)       |
+  | business/ file, no remap, not duplicate       | Left in place for QA                     |
+  | Any file in merge_forward not on whitelist    | Not carried forward (no accumulation)    |
+
 - **Pruning tests before QA creates a self-defeating loop: delete tests → QA flags missing tests → regen tests → repeat.**
   Tests are not runtime artifacts but QA needs to see them to validate the build, and the
   founder needs them in the project handoff ZIP for local dev and CI/CD.

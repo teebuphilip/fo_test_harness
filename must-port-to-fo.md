@@ -255,6 +255,15 @@
       Everything else unmappable is left in place for QA to evaluate.
     - merge_forward already gates on whitelist — unmapped files won't accumulate.
 
+    | What happens now                              | Why                                      |
+    |-----------------------------------------------|------------------------------------------|
+    | Non-business file with a remap                | Moved to canonical path                  |
+    | Non-business file, no remap                   | Deleted (truly outside the project)      |
+    | business/ file with a remap                   | Moved to canonical path                  |
+    | business/ file that's a duplicate             | Deleted (canonical version exists)       |
+    | business/ file, no remap, not duplicate       | Left in place for QA                     |
+    | Any file in merge_forward not on whitelist    | Not carried forward (no accumulation)    |
+
 32. Pruner: keep business/frontend/*.jsx and *.css ✅ DONE (2026-03-04)
     - App.jsx and App.css at the frontend root were pruned — whitelist only covered
       pages/*.jsx and styles/*.css, not root-level frontend files.
