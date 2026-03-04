@@ -3364,6 +3364,10 @@ class FOHarness:
             previous_defects = _qa_report_path.read_text()
             iteration        = _ws_iteration + 1
             print_success(f"Warm-start (fix): loaded QA report from iter {_ws_iteration} — resuming at iter {iteration}")
+        elif _ws_run_dir.is_dir() and _ws_mode == 'qa':
+            # Jump the loop counter to the requested iteration — Claude BUILD will be skipped for it
+            iteration = _ws_iteration
+            print_success(f"Warm-start (qa): starting loop at iter {iteration} — Claude BUILD will be skipped")
 
         try:
             while iteration <= self.max_qa_iterations:
