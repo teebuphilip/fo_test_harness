@@ -718,6 +718,11 @@ BOILERPLATE_VALID_PATHS = [
     'business/frontend/lib/*.jsx',
     'business/README-INTEGRATION.md',
     'business/package.json',
+    # Tests — kept so QA can evaluate them, but excluded from ZIP and merge_forward
+    'business/tests/*.py',
+    'business/backend/tests/*.py',
+    'business/tests/conftest.py',
+    'business/backend/tests/conftest.py',
     # Frontend config / infrastructure (Claude-generated, valid to keep)
     'business/frontend/package.json',
     'business/frontend/next.config.js',
@@ -1228,6 +1233,10 @@ class ArtifactManager:
         # Normalize Claude's output paths for comparison
         output_set = set(p.lstrip('./') for p in claude_output_paths)
 
+        # Tests survive the whitelist (so QA can see them) but must NOT accumulate across
+        # iterations — Claude should regenerate them each time if needed.
+        NO_FORWARD = ('business/tests/', 'business/backend/tests/')
+
         copied = 0
         for file_path in sorted(prev_dir.rglob('*')):
             if not file_path.is_file():
@@ -1237,6 +1246,8 @@ class ArtifactManager:
                 continue
             if not self._is_valid_business_path(rel_path):
                 continue  # Never carry forward invalid paths
+            if any(rel_path.startswith(p) for p in NO_FORWARD):
+                continue  # Tests visible to QA but not carried forward
             if rel_path in output_set:
                 continue  # Claude already output this file — keep Claude's version
             dest = curr_dir / rel_path
@@ -1415,11 +1426,13 @@ def package_output_zip(run_dir: Path, startup_id: str, block: str, use_boilerpla
             artifact_dirs = sorted(build_dir.glob('iteration_*_artifacts'))
             latest_artifacts = artifact_dirs[-1] if artifact_dirs else None
             if latest_artifacts:
+                ZIP_EXCLUDE_PREFIXES = ('business/tests/', 'business/backend/tests/')
                 for file_path in latest_artifacts.rglob('*'):
                     if not file_path.is_file():
                         continue
                     rel_path = file_path.relative_to(latest_artifacts)
-                    if str(rel_path).startswith('business/'):
+                    rel_str = str(rel_path)
+                    if rel_str.startswith('business/') and not any(rel_str.startswith(p) for p in ZIP_EXCLUDE_PREFIXES):
                         arcname = root / 'saas-boilerplate' / rel_path
                         zf.write(file_path, arcname)
 
