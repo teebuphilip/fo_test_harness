@@ -25,6 +25,17 @@
   Claude fix calls complete in <60s; without a pause the next QA call fires
   before the previous call's 30k TPM window has cleared → instant 429.
 
+### Test File Handling: Visible to QA, Excluded from ZIP and merge_forward
+- Tests were pruned before QA — QA then flagged "missing tests" as MEDIUM, burning an
+  iteration to regenerate files we just deleted.
+- Fix (3 parts):
+  1. `business/tests/` and `business/backend/tests/` added to whitelist — tests survive
+     the pruner so QA can evaluate them.
+  2. `merge_forward` explicitly excludes test paths — tests don't accumulate across
+     iterations; Claude must regenerate them if needed.
+  3. ZIP builder excludes `business/tests/` and `business/backend/tests/` — test files
+     don't end up in the deployment artifact sent to Railway/Vercel.
+
 ### Pruner: Fix _remap_business_path — routers + drop app guard
 - Two bugs vs Pass 1 logic:
   1. `'routers'` was missing from Pass 2 check — Pass 1 checks `(api, routers, routes)`,

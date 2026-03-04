@@ -249,6 +249,11 @@
       (2) ABSOLUTE RULES block: "hypothetical", "for reference", "based on guidelines"
       in a location field = fabricated defect = must be deleted.
 
+31. Test file handling: visible to QA, excluded from ZIP and merge_forward ✅ DONE (2026-03-04)
+    - Tests were pruned before QA saw them → QA flagged "missing tests" MEDIUM → wasted iteration.
+    - Fix: tests survive pruner (added to whitelist), excluded from merge_forward (no accumulation),
+      excluded from ZIP (not deployed to Railway/Vercel).
+
 30. Pruner: fix _remap_business_path — routers + drop app guard ✅ DONE (2026-03-04)
     - 'routers' was missing from Pass 2 route marker check (Pass 1 checks api/routers/routes).
     - 'if app in parts' guard was too strict — business/backend/models/ without 'app'

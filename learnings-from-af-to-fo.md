@@ -204,6 +204,11 @@
   Fix: use gpt-4o-mini which has 200k TPM on the same tier and is sufficient for structured
   QA validation. Add a --gpt-model CLI flag so the model can be swapped without code changes.
 
+- **Pruning tests before QA creates a self-defeating loop: delete tests → QA flags missing tests → regen tests → repeat.**
+  Tests are not deployment artifacts but QA needs to see them to validate the build.
+  The right split: tests survive pruner (QA-visible), excluded from merge_forward (no accumulation
+  across iterations), excluded from ZIP (not deployed). Three separate gates, each doing one job.
+
 - **Pass 1 and Pass 2 remap logic must be kept in sync — any marker in Pass 1 must also appear in Pass 2.**
   Pass 1 (`_remap_to_valid_path`) checked `(api, routers, routes)` for route files.
   Pass 2 (`_remap_business_path`) only checked `api` and `routes` — missing `routers`.
