@@ -212,6 +212,17 @@
   frontend/app/*.js, frontend/components/*.js, and frontend root config files (package.json,
   next.config.js) all need explicit remap rules in _remap_to_valid_path (Pass 1).
 
+  | File                              | Was    | Now                                      |
+  |-----------------------------------|--------|------------------------------------------|
+  | business/schemas/*.py             | pruned | kept (added to whitelist)                |
+  | business/backend/main.py          | pruned | kept (added to whitelist)                |
+  | business/frontend/components/     | pruned | kept (added to whitelist)                |
+  | frontend/app/*.js                 | pruned | remapped → business/frontend/pages/      |
+  | frontend/components/*.js          | pruned | remapped → business/frontend/components/ |
+  | frontend/package.json etc.        | pruned | remapped → business/frontend/<name>      |
+  | business/frontend/app/*.js        | pruned | remapped → business/frontend/pages/      |
+  | business/tests/                   | pruned | still pruned ✓ (correct)                 |
+
 - **Pruner whitelist must include frontend config files, not just page/route source files.**
   next.config.js, postcss.config.js, tailwind.config.ts, package.json are required for the
   frontend to build and run. They are not junk. A whitelist that only lists pages/*.jsx and

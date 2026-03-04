@@ -257,6 +257,17 @@
     - Fix: expanded BOILERPLATE_VALID_PATHS + updated both _remap_to_valid_path (Pass 1)
       and _remap_business_path (Pass 2) to cover all missing cases.
 
+    | File                              | Was    | Now                                      |
+    |-----------------------------------|--------|------------------------------------------|
+    | business/schemas/*.py             | pruned | kept (added to whitelist)                |
+    | business/backend/main.py          | pruned | kept (added to whitelist)                |
+    | business/frontend/components/     | pruned | kept (added to whitelist)                |
+    | frontend/app/*.js                 | pruned | remapped → business/frontend/pages/      |
+    | frontend/components/*.js          | pruned | remapped → business/frontend/components/ |
+    | frontend/package.json etc.        | pruned | remapped → business/frontend/<name>      |
+    | business/frontend/app/*.js        | pruned | remapped → business/frontend/pages/      |
+    | business/tests/                   | pruned | still pruned ✓ (correct)                 |
+
 25. Pruner whitelist too aggressive — config files and app/ router remapping ✅ DONE (2026-03-04)
     - BOILERPLATE_VALID_PATHS only listed pages/*.jsx, routes/*.py, lib/ — so legitimate
       frontend config files (next.config.js, package.json, postcss.config.js, tailwind.config.ts)
