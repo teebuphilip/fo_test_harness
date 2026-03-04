@@ -973,15 +973,25 @@ class ArtifactManager:
             # Create parent directories if the filename contains subdirectories
             artifact_path.parent.mkdir(parents=True, exist_ok=True)
 
-            # Don't overwrite existing files with duplicates (e.g. build_state.json
-            # appearing in multiple parts). Keep the first version which is usually
-            # more complete. Exception: numbered artifacts can always be written.
+            # Duplicate / overwrite decision:
+            #   - Identical content (checksum match) → skip, no point writing
+            #   - Different content, new is suspiciously tiny (<100 chars) → likely
+            #     a truncated stub; keep existing and warn
+            #   - Different content, reasonable size → prefer new (Claude intentionally
+            #     regenerated it, e.g. to fix a defect; old version may be defective)
             if artifact_path.exists() and not filename.startswith('artifact_'):
-                existing_size = artifact_path.stat().st_size
-                new_size = len(code_content)
-                if new_size <= existing_size:
-                    print_warning(f"  → Skipped duplicate: {filename} (keeping existing {existing_size} chars over new {new_size} chars)")
+                existing_bytes = artifact_path.read_bytes()
+                new_bytes = code_content.encode('utf-8')
+                if existing_bytes == new_bytes:
+                    # Truly identical — no need to rewrite
                     continue
+                existing_size = len(existing_bytes)
+                new_size = len(new_bytes)
+                if new_size < 100 and new_size < existing_size // 2:
+                    print_warning(f"  → Skipped (truncated stub): {filename} (existing {existing_size}b, new only {new_size}b)")
+                    continue
+                if new_size < existing_size:
+                    print_warning(f"  → Overwriting: {filename} (new version smaller but different: {new_size} < {existing_size} chars — keeping new)")
                 else:
                     print_warning(f"  → Overwriting: {filename} (new version larger: {new_size} > {existing_size} chars)")
 
@@ -3516,6 +3526,134 @@ class FOHarness:
         header = "**BOILERPLATE FIX CONTEXT (READ BEFORE APPLYING DEFECT FIXES):**\n" + "\n\n".join(fixes)
         return header + "\n\n" + "=" * 60 + "\n\n" + qa_report
 
+    def _filter_hallucinated_defects(self, qa_report: str, qa_build_output: str) -> str:
+        """
+        Post-process QA report to auto-remove defects that are:
+        1. Located outside business/** — QA evaluated out-of-scope files
+        2. Evidence is backtick-quoted code that does not appear anywhere in the
+           build output — QA fabricated the evidence
+
+        Returns a cleaned QA report with updated SUMMARY counts and verdict.
+        If all defects are removed, flips verdict to ACCEPTED.
+        """
+        # Extract the DEFECTS section
+        defects_section_match = re.search(
+            r'(### DEFECTS\s*)(.*?)(### VERDICT)',
+            qa_report, re.DOTALL
+        )
+        if not defects_section_match:
+            return qa_report  # Can't parse — pass through unchanged
+
+        defects_section = defects_section_match.group(2)
+
+        # Split into individual DEFECT-N blocks
+        defect_blocks = re.split(r'(?=DEFECT-\d+:)', defects_section)
+        defect_blocks = [b.strip() for b in defect_blocks if re.match(r'DEFECT-\d+:', b.strip())]
+
+        if not defect_blocks:
+            return qa_report
+
+        kept = []
+        removed = []
+
+        for block in defect_blocks:
+            defect_id = re.match(r'(DEFECT-\d+):', block)
+            defect_id = defect_id.group(1) if defect_id else 'DEFECT-?'
+
+            # --- Extract Location ---
+            loc_match = re.search(r'-\s*Location:\s*(.+?)(?:\n|$)', block)
+            location_raw = loc_match.group(1).strip() if loc_match else ''
+
+            # Strip **FILE: ...** markers and extract the path
+            path_match = re.search(r'\*\*FILE:\s*([^*]+)\*\*', location_raw)
+            if path_match:
+                file_path = path_match.group(1).strip()
+            else:
+                # Try bare path pattern
+                bare = re.search(r'([\w][^\s,;]+\.\w+)', location_raw)
+                file_path = bare.group(1).strip() if bare else location_raw
+
+            # --- Check 1: Location must be inside business/** ---
+            if file_path and not file_path.startswith('business/'):
+                reason = f"Location '{file_path}' is outside business/** — out-of-scope"
+                removed.append((defect_id, block, reason))
+                print_warning(f"  [FILTER] Removed {defect_id}: {reason}")
+                continue
+
+            # --- Check 2: Backtick-quoted evidence must exist in build output ---
+            ev_match = re.search(
+                r'-\s*Evidence:\s*(.*?)(?=\n\s*-\s*(?:Problem|Expected|Fix|Severity):|\Z)',
+                block, re.DOTALL
+            )
+            if ev_match:
+                evidence_text = ev_match.group(1).strip()
+                # Extract all inline backtick snippets
+                backtick_snippets = re.findall(r'`([^`]+)`', evidence_text)
+                meaningful = [s.strip() for s in backtick_snippets if len(s.strip()) > 8]
+                if meaningful:
+                    found = any(snippet in qa_build_output for snippet in meaningful)
+                    if not found:
+                        reason = (
+                            f"Evidence {meaningful[:1]} not found in build output — fabricated"
+                        )
+                        removed.append((defect_id, block, reason))
+                        print_warning(f"  [FILTER] Removed {defect_id}: {reason}")
+                        continue
+
+            kept.append(block)
+
+        if not removed:
+            return qa_report  # Nothing changed — return original
+
+        # --- Rebuild SUMMARY counts ---
+        kept_text = '\n'.join(kept)
+        bug_count  = len(re.findall(r'IMPLEMENTATION_BUG',   kept_text))
+        spec_count = len(re.findall(r'SPEC_COMPLIANCE_ISSUE', kept_text))
+        scope_count = len(re.findall(r'SCOPE_CHANGE_REQUEST', kept_text))
+        total_kept = len(kept)
+
+        summary = (
+            f"### SUMMARY\n"
+            f"- Total defects found: {total_kept}\n"
+            f"- IMPLEMENTATION_BUG: {bug_count}\n"
+            f"- SPEC_COMPLIANCE_ISSUE: {spec_count}\n"
+            f"- SCOPE_CHANGE_REQUEST: {scope_count}\n"
+        )
+
+        filter_note = (
+            f"> **[HARNESS FILTER]** Removed {len(removed)} defect(s): "
+            + ', '.join(d[0] for d in removed)
+            + ' — fabricated evidence or out-of-scope locations.\n'
+        )
+
+        # Renumber kept defects sequentially
+        counter = [0]
+        def _renumber(m):
+            counter[0] += 1
+            return f'DEFECT-{counter[0]}:'
+        renumbered = re.sub(r'DEFECT-\d+:', _renumber, '\n\n'.join(kept))
+
+        if total_kept > 0:
+            defects_body = renumbered
+            verdict = f"QA STATUS: REJECTED - [{total_kept}] defect{'s' if total_kept != 1 else ''} require fixing"
+        else:
+            defects_body = (
+                f"(All {len(removed)} QA defect(s) removed by harness filter — "
+                "fabricated evidence or out-of-scope file locations.)"
+            )
+            verdict = "QA STATUS: ACCEPTED - Ready for deployment"
+
+        new_report = (
+            f"## QA REPORT\n\n"
+            f"{filter_note}\n"
+            f"{summary}\n"
+            f"### DEFECTS\n\n{defects_body}\n\n"
+            f"### VERDICT\n{verdict}"
+        )
+
+        print_info(f"  [FILTER] QA report filtered: {len(removed)} defect(s) removed, {total_kept} remaining")
+        return new_report
+
     def execute_build_qa_loop(self) -> Tuple[bool, str]:
         """
         Execute BUILD → QA loop until QA accepts or max iterations hit.
@@ -4035,6 +4173,14 @@ class FOHarness:
                     total_gpt_calls += 1
                     total_gpt_input_tokens += gpt_usage['input_tokens']
                     total_gpt_output_tokens += gpt_usage['output_tokens']
+
+                    # Filter fabricated / out-of-scope defects before acting on report
+                    raw_qa_report = qa_report
+                    qa_report = self._filter_hallucinated_defects(qa_report, qa_build_output)
+                    if qa_report != raw_qa_report:
+                        self.artifacts.save_log(
+                            f'iteration_{iteration:02d}_qa_report_raw', raw_qa_report
+                        )
 
                     self.artifacts.save_qa_report(iteration, qa_report)
 

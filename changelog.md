@@ -2,6 +2,20 @@
 
 ## 2026-03-04
 
+### Harness: Post-QA Defect Filter — Remove Hallucinated Defects
+- Added `_filter_hallucinated_defects(qa_report, qa_build_output)` on `FOHarness`.
+- Runs immediately after QA response, before saving the report or acting on REJECTED verdict.
+- Removes defects with **two failure modes**:
+  1. **Location outside `business/**`** — QA evaluated out-of-scope files (e.g. `frontend/app/`, `backend/api/`)
+  2. **Fabricated backtick evidence** — quoted code snippet (>8 chars) that does not appear anywhere in the build output
+- If all defects removed → flips verdict to `QA STATUS: ACCEPTED - Ready for deployment`
+- Saves raw (unfiltered) report to `logs/iteration_XX_qa_report_raw.log` when filtering occurs
+- Recalculates SUMMARY counts (IMPLEMENTATION_BUG / SPEC_COMPLIANCE_ISSUE / SCOPE_CHANGE_REQUEST)
+- Renumbers remaining defects sequentially
+- Verified against real run (`20260303_131548`): removed all 7 defects across 3 iterations —
+  that run would have accepted on iteration 1 instead of burning 3 wasted patch iterations
+
+
 ### Pruner: Checksum-Based Duplicate Detection
 - Before pruning a duplicate (wrong-path or wrong-business-path), now checksums both files.
 - If SHA256 match → "Pruned identical duplicate" — provably lossless.
@@ -20,6 +34,32 @@
   - `app/clients/page.tsx`     → `Clients.jsx`
   - `app/clients/new/page.tsx` → `ClientsNew.jsx`
   - `app/assessments/page.tsx` → `Assessments.jsx`
+
+### Extractor: Checksum-Based Overwrite — Prefer New Over Size
+- Old logic: `new_size <= existing_size → skip`. This caused Claude's defect-fix output
+  to be discarded when the fix made the file slightly smaller (e.g. removed bad questions
+  from AssessmentForm.jsx — 8525 vs 8529 chars → old defective version kept).
+- New logic:
+  - Identical content (checksum) → skip (no-op)
+  - Different content, new < 100 chars AND new < half of existing → truncated stub, skip
+  - Different content, otherwise → prefer new (Claude intentionally regenerated it)
+- Logged as "Overwriting: (new version smaller but different)" when new is smaller.
+
+### QA Prompt: Ban "Not applicable" Evidence Phrases
+- Iter 2 DEFECT-002/003/004 all had Evidence: "(Not applicable as specific dependencies
+  are missing)" — fabricated, same pattern as "Content not present". Added to banned phrases.
+
+### Build Prompt: Block Boilerplate Internal File Creation
+- Claude was generating `backend/app/middleware/auth.py`, `backend/app/utils/calculations.py`
+  etc. despite `backend/` being in the HARD FAIL list. Root cause: when a defect mentions
+  "missing auth" or "missing utils", Claude's instinct is to create the infrastructure file
+  rather than use the boilerplate import.
+- Fix (`build_boilerplate_path_rules.md`): added BOILERPLATE BOUNDARY table mapping the
+  wrong urge → correct import for auth, DB, utils, tenancy, Auth0. Explicit warning that
+  files created at `backend/app/middleware/`, `backend/app/utils/` etc. will be deleted.
+- Fix (`build_previous_defects.md`): added rule 6 to CRITICAL RULES: "DO NOT create
+  boilerplate internals". Added IF A DEFECT MENTIONS MISSING AUTH / MIDDLEWARE / UTILS
+  section with correct imports for each case.
 
 ### Pruner: Remap requirements.txt + Root-Level Config Files + JS Tests
 - `requirements.txt` (anywhere) had no remap → pruned. Fix: always remaps to

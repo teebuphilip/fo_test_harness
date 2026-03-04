@@ -40,6 +40,18 @@
 ## Governance Alignment
 - Keep default iteration cap aligned to locked policy (`5`) but allow CLI override for controlled exception runs.
 
+16. Harness-level defect filter: remove hallucinated/out-of-scope QA defects ✅ DONE (2026-03-04)
+    - gpt-4o-mini fabricates evidence (quotes code that doesn't exist) and evaluates files outside business/**.
+      This caused 3-iteration runs on 100% invalid defects with zero real fixes needed.
+    - Fix: `_filter_hallucinated_defects(qa_report, qa_build_output)` added to FOHarness.
+      Two checks per defect:
+      1. Location must start with `business/` — else remove
+      2. Backtick-quoted snippets (>8 chars) in Evidence must appear in build output — else remove (fabricated)
+    - If all defects filtered → verdict flipped to ACCEPTED (saves full patch iteration)
+    - Raw QA report saved to logs/ for debugging when filtering occurs
+    - Called immediately after QA response, before save_qa_report()
+    - Verified: would have caught all 7 invalid defects across 3 iterations of run 20260303_131548
+
 15. QA hallucination + Auth0 token pattern fix ✅ DONE (2026-03-03)
     - QA (ChatGPT) hallucinated .tsx/app/ files that didn't exist in artifacts → burned iters 1-6 on ghost defects.
     - Build prompt showed `const { user, isLoading } = useAuth0()` without `getAccessTokenSilently` →
@@ -321,6 +333,22 @@
       business/frontend/app/*.css → business/frontend/styles/*.css
       business/backend/api/*.py → business/backend/routes/*.py
     - Fix 3: Pass 2 now tries _remap_business_path() before deleting, same pattern as Pass 1.
+
+45. Extractor: checksum-based overwrite — prefer new over size heuristic ✅ DONE (2026-03-04)
+    - Size heuristic (keep larger) caused defect-fix output to be discarded when fix made
+      file slightly smaller. New logic: identical → skip; tiny stub → skip; otherwise → prefer new.
+
+44. QA prompt: ban "Not applicable" evidence phrases ✅ DONE (2026-03-04)
+    - "(Not applicable as specific dependencies are missing)" was being used as Evidence
+      for fabricated defects. Added to banned Evidence phrases alongside "Content not present".
+
+43. Build prompt: block boilerplate internal file creation ✅ DONE (2026-03-04)
+    - Claude generated backend/app/middleware/auth.py, backend/app/utils/calculations.py
+      despite backend/ being in the HARD FAIL list. When defects mention "missing auth" or
+      "missing utils", Claude creates infrastructure files instead of using boilerplate imports.
+    - Fix: BOILERPLATE BOUNDARY table in build_boilerplate_path_rules.md maps each wrong
+      urge to the correct import. Rule 6 added to defect fix CRITICAL RULES. "IF A DEFECT
+      MENTIONS MISSING AUTH" section added to build_previous_defects.md.
 
 42. Pruner: remap requirements.txt + root-level config files + JS tests ✅ DONE (2026-03-04)
     - requirements.txt (at any path) → business/backend/requirements.txt (added to whitelist)
