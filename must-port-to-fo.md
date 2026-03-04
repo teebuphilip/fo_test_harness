@@ -249,6 +249,15 @@
       (2) ABSOLUTE RULES block: "hypothetical", "for reference", "based on guidelines"
       in a location field = fabricated defect = must be deleted.
 
+29. Pruner: remap business/backend/app/ subdirectories ✅ DONE (2026-03-04)
+    - Claude generates business/backend/app/models/, schemas/, services/ — all were pruned
+      because _remap_business_path only handled backend/api/ → routes/.
+    - Fix: added remap rules for all business/backend/app/ subdirs:
+      business/backend/app/models/*.py   → business/models/
+      business/backend/app/schemas/*.py  → business/schemas/
+      business/backend/app/services/*.py → business/services/
+      business/backend/app/api/*.py      → business/backend/routes/
+
 28. Pruner: schemas, components, backend/main.py, frontend .js remap ✅ DONE (2026-03-04)
     - business/schemas/*.py (Pydantic), business/backend/main.py (FastAPI entry point),
       business/frontend/components/*.jsx/.js were all being silently pruned.

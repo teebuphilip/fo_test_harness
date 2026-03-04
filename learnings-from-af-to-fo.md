@@ -204,6 +204,12 @@
   Fix: use gpt-4o-mini which has 200k TPM on the same tier and is sufficient for structured
   QA validation. Add a --gpt-model CLI flag so the model can be swapped without code changes.
 
+- **Claude nests correct logic inside wrong intermediate directories — remap rules must handle full path depth.**
+  `business/backend/app/models/assessment.py` is correct logic in the wrong location.
+  A remap rule that only checks `'api' in parts` misses `business/backend/app/models/`.
+  Every subdirectory pattern Claude generates needs an explicit rule: models/, schemas/,
+  services/, api/ under business/backend/app/ all need separate remap targets.
+
 - **The pruner whitelist must cover every file type Claude legitimately generates — not just the happy path.**
   Pydantic schemas (business/schemas/*.py), FastAPI entry point (business/backend/main.py),
   and frontend components (business/frontend/components/) are all real output that belongs in the build.

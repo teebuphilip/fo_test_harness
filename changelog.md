@@ -25,6 +25,15 @@
   Claude fix calls complete in <60s; without a pause the next QA call fires
   before the previous call's 30k TPM window has cleared → instant 429.
 
+### Pruner: Remap business/backend/app/ Subdirectories
+- Claude generates `business/backend/app/models/`, `schemas/`, `services/` — all were being
+  pruned instead of remapped because `_remap_business_path` only handled `backend/api/`.
+- Now remaps:
+  - `business/backend/app/models/*.py`   → `business/models/`
+  - `business/backend/app/schemas/*.py`  → `business/schemas/`
+  - `business/backend/app/services/*.py` → `business/services/`
+  - `business/backend/app/api/*.py`      → `business/backend/routes/`
+
 ### Pruner: Schemas, Components, backend/main.py, Frontend .js Remap
 - `business/schemas/*.py` (Pydantic schemas) were being pruned — added to whitelist.
 - `business/backend/main.py` (FastAPI entry point) was being pruned — added to whitelist.
