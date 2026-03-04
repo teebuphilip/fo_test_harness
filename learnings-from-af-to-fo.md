@@ -176,6 +176,12 @@
   Flat retry delays ignore what OpenAI explicitly tells you to wait. Read the header;
   use it when present. Fall back to exponential backoff + jitter when absent.
 
+- **Resume mode must set the loop start iteration explicitly, not just the skip condition.**
+  qa resume mode checked `iteration == _ws_iteration` to skip Claude BUILD, but never set
+  `iteration = _ws_iteration` before the loop. Loop started at 1, called Claude on iter 1,
+  then would have skipped BUILD on iter 2. Fix: set iteration = _ws_iteration before the
+  while loop, same pattern fix mode already used (iteration = _ws_iteration + 1).
+
 - **TPM quota resets per minute — a 60s pause before iteration 2+ QA prevents 429 storms.**
   Claude fix calls complete in <60s. Without a deliberate pause, the next QA call fires
   before the previous call's token window has cleared. One minute of patience eliminates

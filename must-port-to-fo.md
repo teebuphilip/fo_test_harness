@@ -224,6 +224,9 @@
       fix mode: load existing QA report as previous_defects, start Claude fix at iter N+1.
     - --resume-run alone defaults to qa mode (no need to specify --resume-mode).
     - Run dir is reused in-place (no copying).
+    - Bug fix: qa mode was not setting loop start iteration to --resume-iteration,
+      so the loop started at 1 and called Claude anyway. Fixed: set iteration = _ws_iteration
+      before the while loop (mirrors how fix mode sets iteration = _ws_iteration + 1).
 
 21. ChatGPT 429 retry: Retry-After header + exponential backoff + jitter ✅ DONE (2026-03-04)
     - Flat 60s retry was ignoring OpenAI's Retry-After header and had no jitter.
