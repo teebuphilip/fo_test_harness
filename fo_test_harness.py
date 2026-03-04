@@ -3953,12 +3953,12 @@ class FOHarness:
                 # STEP 2: QA (ChatGPT)
                 # ================================================
 
-                # On iteration 2+, the Claude fix call completes in <60s, which means
-                # the previous QA call's TPM window hasn't reset yet → instant 429.
-                # Wait out the full minute before hitting ChatGPT again.
-                if iteration > 1:
-                    print_info("Waiting 120s for OpenAI TPM window to reset before QA call...")
-                    time.sleep(120)
+                # On iteration 2+, optionally wait for the OpenAI TPM window to reset.
+                # Use --qa-wait <seconds> if hitting 429s on multi-iteration runs.
+                _qa_wait = int(getattr(self.cli_args, 'qa_wait', 0) or 0)
+                if iteration > 1 and _qa_wait > 0:
+                    print_info(f"Waiting {_qa_wait}s for OpenAI TPM window to reset before QA call...")
+                    time.sleep(_qa_wait)
 
                 print_info("Calling ChatGPT for QA...")
 
@@ -4376,6 +4376,13 @@ Examples:
         '--gpt-model',
         default=None,
         help='Override the ChatGPT model (e.g. gpt-4o, gpt-4o-mini). Default: gpt-4o-mini.'
+    )
+    parser.add_argument(
+        '--qa-wait',
+        type=int,
+        default=0,
+        metavar='SECONDS',
+        help='Seconds to wait before each QA call on iteration 2+ (TPM cooldown). Default: 0.'
     )
 
     args = parser.parse_args()
