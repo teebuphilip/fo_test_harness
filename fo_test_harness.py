@@ -3526,6 +3526,27 @@ class FOHarness:
         header = "**BOILERPLATE FIX CONTEXT (READ BEFORE APPLYING DEFECT FIXES):**\n" + "\n\n".join(fixes)
         return header + "\n\n" + "=" * 60 + "\n\n" + qa_report
 
+    def _extract_defect_resolutions(self, build_output: str) -> str:
+        """
+        Extract the ## DEFECT RESOLUTIONS block from Claude's patch output.
+        Claude may respond to a defect with EXPLAINED (explanation) instead of FIXED (code change).
+        Returns the resolutions text if present, empty string otherwise.
+        """
+        match = re.search(
+            r'##\s*DEFECT RESOLUTIONS\s*\n(.*?)(?=\n##\s|\nPATCH_SET_COMPLETE|\Z)',
+            build_output, re.DOTALL | re.IGNORECASE
+        )
+        if match:
+            text = match.group(1).strip()
+            if text:
+                explained = re.findall(r'DEFECT-\d+:\s*EXPLAINED', text, re.IGNORECASE)
+                print_info(
+                    f"  [RESOLUTIONS] Found EXPLAINED resolutions: "
+                    f"{len(explained)} defect(s) — {', '.join(explained)}"
+                )
+                return text
+        return ''
+
     def _filter_hallucinated_defects(self, qa_report: str, qa_build_output: str) -> str:
         """
         Post-process QA report to auto-remove defects that are:
@@ -4150,6 +4171,21 @@ class FOHarness:
                     qa_build_output = self.artifacts.build_synthetic_qa_output(iteration)
                 else:
                     qa_build_output = build_output
+
+                # Prepend any EXPLAINED resolutions from Claude's patch output so QA
+                # can evaluate them before assessing the artifact set (per governance:
+                # fo_build_qa_defect_routing_rules.json > remediate_or_explain).
+                if iteration > 1:
+                    defect_resolutions = self._extract_defect_resolutions(build_output)
+                    if defect_resolutions:
+                        qa_build_output = (
+                            "## CLAUDE DEFECT RESOLUTIONS\n\n"
+                            "Claude resolved some defects via EXPLAINED (governance citation) "
+                            "rather than code changes. Evaluate each before assessing artifacts.\n\n"
+                            + defect_resolutions
+                            + "\n\n---\n\n"
+                            + qa_build_output
+                        )
 
                 qa_prompt = PromptTemplates.qa_prompt(
                     qa_build_output,

@@ -40,6 +40,18 @@
 ## Governance Alignment
 - Keep default iteration cap aligned to locked policy (`5`) but allow CLI override for controlled exception runs.
 
+17. EXPLAINED resolution path per fo_build_qa_defect_routing_rules.json ✅ DONE (2026-03-04)
+    - Build governance defines FIXED + EXPLAINED as the two valid resolution modes.
+      Our prompts only implemented FIXED. EXPLAINED path was completely absent.
+    - Fix (4 parts):
+      a) `build_previous_defects.md`: Added EXPLAINED format. Claude can emit `## DEFECT RESOLUTIONS`
+         block with `DEFECT-N: EXPLAINED` + governance rule citation. Valid cases listed.
+      b) `build_patch_first_file_lock.md`: Same. OUTPUT CONTRACT updated.
+      c) `qa_prompt.md`: Added STEP 0 — evaluate EXPLAINED resolutions before artifact check.
+         QA uses a validity table to accept or reject each explanation.
+      d) `fo_test_harness.py`: `_extract_defect_resolutions()` detects resolutions block in
+         Claude's output; prepends as `## CLAUDE DEFECT RESOLUTIONS` in qa_build_output.
+
 16. Harness-level defect filter: remove hallucinated/out-of-scope QA defects ✅ DONE (2026-03-04)
     - gpt-4o-mini fabricates evidence (quotes code that doesn't exist) and evaluates files outside business/**.
       This caused 3-iteration runs on 100% invalid defects with zero real fixes needed.

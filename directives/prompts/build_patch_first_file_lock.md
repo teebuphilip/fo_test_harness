@@ -41,12 +41,31 @@ Do NOT output these files. They are preserved by the harness as-is from the prev
 - Do not emit partial snippets for required files.
 
 **OUTPUT CONTRACT:**
-1. First line: `PATCH_PLAN: <1-3 lines explaining exact defect-only edits>`
-2. Then output ONLY the defect-target file blocks.
-3. Last line: `PATCH_SET_COMPLETE`
+1. First line: `PATCH_PLAN: <1-3 lines — for each defect: FIXED or EXPLAINED>`
+2. If any defects are EXPLAINED: output a `## DEFECT RESOLUTIONS` block next (see format below).
+3. Then output ONLY the defect-target file blocks for FIXED defects.
+4. Last line: `PATCH_SET_COMPLETE`
+
+**EXPLAINED RESOLUTION FORMAT:**
+Use this for defects that are invalid, out-of-scope, or by-design. No code output for these defects.
+```
+## DEFECT RESOLUTIONS
+
+DEFECT-[N]: EXPLAINED
+- Governance Rule: [cite the exact rule file, e.g. fo_build_file_structure_rules.json]
+  OR
+- Intake Reference: [cite the exact intake field/section]
+- Explanation: [1-2 sentences why this defect is not valid or is by-design]
+```
+
+Valid reasons to use EXPLAINED:
+- File flagged is outside `business/**` (boilerplate infrastructure — not your build)
+- Feature flagged is explicitly in the intake spec (not scope creep — cite the section)
+- File is auto-generated post-QA by harness (README-INTEGRATION.md, artifact_manifest.json, etc.)
+- QA cited code that does not exist in your output (fabricated evidence)
 
 **SELF-CHECK BEFORE FINAL OUTPUT:**
-- You are outputting ONLY files from DEFECT TARGET FILES — nothing else.
+- Every defect is either FIXED (file output) or EXPLAINED (in DEFECT RESOLUTIONS block).
 - No file path outside `business/**`.
 - No new scope beyond defects.
 - No non-defect files included.

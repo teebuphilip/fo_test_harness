@@ -2,6 +2,21 @@
 
 ## 2026-03-04
 
+### EXPLAINED Resolution Path — Per Governance fo_build_qa_defect_routing_rules.json
+- Build governance defines two resolution modes: `FIXED` (code change) and `EXPLAINED` (explanation with rule citation).
+  Our prompts only implemented `FIXED`. `EXPLAINED` path was completely missing.
+- **`build_previous_defects.md`**: Added EXPLAINED format. Claude can now prefix a `## DEFECT RESOLUTIONS` block
+  with `DEFECT-N: EXPLAINED` entries before any file output. Valid reasons: file outside business/**,
+  feature in intake spec, auto-generated file, fabricated evidence.
+- **`build_patch_first_file_lock.md`**: Same addition. OUTPUT CONTRACT updated to allow DEFECT RESOLUTIONS
+  block between PATCH_PLAN and file outputs.
+- **`qa_prompt.md`**: Added STEP 0 — evaluate EXPLAINED resolutions first. QA reads the
+  `## CLAUDE DEFECT RESOLUTIONS` section, checks each explanation against a validity table,
+  and marks valid ones as RESOLVED (excluded from defect list).
+- **`fo_test_harness.py`**: Added `_extract_defect_resolutions(build_output)` — detects `## DEFECT RESOLUTIONS`
+  block in Claude's patch output. If found, prepends it to `qa_build_output` as
+  `## CLAUDE DEFECT RESOLUTIONS` so QA sees it before the artifact files.
+
 ### Harness: Post-QA Defect Filter — Remove Hallucinated Defects
 - Added `_filter_hallucinated_defects(qa_report, qa_build_output)` on `FOHarness`.
 - Runs immediately after QA response, before saving the report or acting on REJECTED verdict.
