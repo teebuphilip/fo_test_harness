@@ -51,7 +51,11 @@ For EVERY defect you write, you MUST complete this checklist FIRST:
 - README.md
 - .env.example
 - .gitignore
-- Test files (flag MEDIUM at most)
+- Test files: ONLY flag a test file if the test code itself contains a literal bug (e.g. wrong
+  assertion, broken import, syntax error). DO NOT flag a test for what it is intentionally
+  testing — a test that sends invalid JSON IS testing error handling, not broken code.
+  DO NOT flag missing test coverage for a specific route or model — absence of a test is not
+  a defect unless the intake spec explicitly required tests for that file. Flag MEDIUM at most.
 - `from core.database import Base, get_db` — this IS the correct boilerplate import path, do NOT flag it as incorrect
 - `from core.rbac import get_current_user` — this IS the correct boilerplate auth import, do NOT flag it as missing auth
 - `Depends(get_current_user)` in route signatures — this IS correct auth, do NOT flag as missing authentication
@@ -62,6 +66,11 @@ For EVERY defect you write, you MUST complete this checklist FIRST:
 - Auth0 destructuring with `getAccessTokenSilently` present: `const { user, isLoading, getAccessTokenSilently } = useAuth0()` — this IS CORRECT, do NOT flag anything about Auth0 token usage
 - SQLAlchemy ORM queries: `db.query(Model).filter(...)`, `tenant_db.query(Model).filter(...)`, `.query().filter().all()`, `.query().filter().first()`, `.order_by(...)` — these ARE proper SQLAlchemy ORM, NOT "inline SQL". Do NOT flag as "inline SQL without ORM". "Inline SQL" only means raw SQL strings like `db.execute("SELECT * FROM ...")`.
 - Absence of `.tsx` files — if all frontend files use `.jsx`, this is CORRECT. Do NOT flag the non-existence of `.tsx` files as a problem.
+- Absence-of-thing defects (missing comments, missing docstrings, missing tests for a specific
+  file) are NOT valid unless the intake spec explicitly required them. You cannot quote a missing
+  line — if your Evidence field would be empty or describe something absent, delete the defect.
+- Standard library modules in requirements.txt (e.g. `uuid`, `os`, `json`, `re`, `datetime`)
+  ARE defects — they should not be listed as external dependencies. Flag MEDIUM.
 
 **Auth0 BUG to FLAG (IMPLEMENTATION_BUG HIGH) — VERIFICATION REQUIRED:**
 BEFORE writing this defect you MUST complete this verification:
