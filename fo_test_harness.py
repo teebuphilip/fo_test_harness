@@ -603,8 +603,24 @@ class ChatGPTClient:
                     response.raise_for_status()
 
                 if response.status_code in (429, 500, 529):
-                    wait = Config.RETRY_SLEEP_429 if response.status_code == 429 else Config.RETRY_SLEEP * attempt
-                    print_warning(f"ChatGPT API transient error {response.status_code} — retry {attempt}/{Config.MAX_RETRIES} in {wait}s")
+                    if response.status_code == 429:
+                        # Honor Retry-After if present; otherwise exponential backoff + jitter
+                        retry_after = response.headers.get('Retry-After') or response.headers.get('retry-after')
+                        if retry_after:
+                            try:
+                                wait = float(retry_after)
+                                print_warning(f"ChatGPT API 429 — Retry-After: {wait}s — retry {attempt}/{Config.MAX_RETRIES}")
+                            except ValueError:
+                                wait = Config.RETRY_SLEEP_429
+                                print_warning(f"ChatGPT API 429 — retry {attempt}/{Config.MAX_RETRIES} in {wait}s")
+                        else:
+                            import random
+                            base = min(Config.RETRY_SLEEP_429, Config.RETRY_SLEEP * (2 ** attempt))
+                            wait = base * (0.5 + random.random() * 0.5)  # jitter: 50–100% of base
+                            print_warning(f"ChatGPT API 429 — retry {attempt}/{Config.MAX_RETRIES} in {wait:.0f}s (backoff+jitter)")
+                    else:
+                        wait = Config.RETRY_SLEEP * attempt
+                        print_warning(f"ChatGPT API transient error {response.status_code} — retry {attempt}/{Config.MAX_RETRIES} in {wait}s")
                     time.sleep(wait)
                     last_error = f"HTTP {response.status_code}"
                     continue
