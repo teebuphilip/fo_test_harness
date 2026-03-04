@@ -18,12 +18,18 @@
 - Retry count increased from 3 to 6 (`MAX_RETRIES = 6`).
 - Added `RETRY_SLEEP_429 = 60` — minimum wait for 429 rate-limit errors.
 - **Retry-After header**: now read and obeyed exactly when OpenAI sends it.
-- **Exponential backoff + jitter**: when no Retry-After header, waits
-  `RETRY_SLEEP * 2^attempt` capped at 60s, randomised 50–100% so retries
-  don't all land at the same time after a burst.
-- Added 60s TPM cooldown before the ChatGPT QA call on iteration 2+.
+- **Exponential backoff + jitter + 120s penalty**: when no Retry-After header, waits
+  `base * (0.5 + random() * 0.5) + 120` where base = `min(60, RETRY_SLEEP * 2^attempt)`.
+  The +120s ensures aggressive cooldown after each 429 hit.
+- **120s TPM cooldown** before the ChatGPT QA call on iteration 2+ (increased from 60s).
   Claude fix calls complete in <60s; without a pause the next QA call fires
   before the previous call's 30k TPM window has cleared → instant 429.
+
+### API Call Timestamps
+- Added datetime timestamps to every `ClaudeClient.call()` and `ChatGPTClient.call()`.
+- Prints `[YYYY-MM-DD HH:MM:SS] → <API> request sent` before each request.
+- Prints `[YYYY-MM-DD HH:MM:SS] ← <API> response received (Xs)` with elapsed seconds on success.
+- Covers all 13 call sites (build, fix, patch, polish, docs, tests, deploy, QA) in one edit.
 
 ### Wrong-Path File Salvage (Remap Instead of Discard)
 - Pruner was silently deleting files Claude generated in wrong paths (e.g.

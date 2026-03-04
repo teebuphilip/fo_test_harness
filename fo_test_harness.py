@@ -525,12 +525,15 @@ class ClaudeClient:
         last_error = None
         for attempt in range(1, Config.MAX_RETRIES + 1):
             try:
+                _ts_req = datetime.now()
+                print_info(f"[{_ts_req.strftime('%Y-%m-%d %H:%M:%S')}] → Claude API request sent")
                 response = requests.post(
                     Config.ANTHROPIC_API,
                     json=payload,
                     headers=headers,
                     timeout=timeout
                 )
+                _ts_resp = datetime.now()
 
                 # Fatal errors — do not retry
                 if response.status_code in (400, 401, 403):
@@ -545,6 +548,7 @@ class ClaudeClient:
                     continue
 
                 response.raise_for_status()
+                print_info(f"[{_ts_resp.strftime('%Y-%m-%d %H:%M:%S')}] ← Claude API response received ({(_ts_resp - _ts_req).total_seconds():.1f}s)")
                 return response.json()
 
             except requests.exceptions.Timeout:
@@ -592,12 +596,15 @@ class ChatGPTClient:
         last_error = None
         for attempt in range(1, Config.MAX_RETRIES + 1):
             try:
+                _ts_req = datetime.now()
+                print_info(f"[{_ts_req.strftime('%Y-%m-%d %H:%M:%S')}] → ChatGPT API request sent")
                 response = requests.post(
                     Config.OPENAI_API,
                     json=payload,
                     headers=headers,
                     timeout=Config.REQUEST_TIMEOUT
                 )
+                _ts_resp = datetime.now()
 
                 if response.status_code in (400, 401, 403):
                     response.raise_for_status()
@@ -616,8 +623,8 @@ class ChatGPTClient:
                         else:
                             import random
                             base = min(Config.RETRY_SLEEP_429, Config.RETRY_SLEEP * (2 ** attempt))
-                            wait = base * (0.5 + random.random() * 0.5)  # jitter: 50–100% of base
-                            print_warning(f"ChatGPT API 429 — retry {attempt}/{Config.MAX_RETRIES} in {wait:.0f}s (backoff+jitter)")
+                            wait = base * (0.5 + random.random() * 0.5) + 120  # jitter + 120s penalty
+                            print_warning(f"ChatGPT API 429 — retry {attempt}/{Config.MAX_RETRIES} in {wait:.0f}s (backoff+jitter+120s)")
                     else:
                         wait = Config.RETRY_SLEEP * attempt
                         print_warning(f"ChatGPT API transient error {response.status_code} — retry {attempt}/{Config.MAX_RETRIES} in {wait}s")
@@ -626,6 +633,7 @@ class ChatGPTClient:
                     continue
 
                 response.raise_for_status()
+                print_info(f"[{_ts_resp.strftime('%Y-%m-%d %H:%M:%S')}] ← ChatGPT API response received ({(_ts_resp - _ts_req).total_seconds():.1f}s)")
                 return response.json()
 
             except requests.exceptions.Timeout:
@@ -3801,8 +3809,8 @@ class FOHarness:
                 # the previous QA call's TPM window hasn't reset yet → instant 429.
                 # Wait out the full minute before hitting ChatGPT again.
                 if iteration > 1:
-                    print_info("Waiting 60s for OpenAI TPM window to reset before QA call...")
-                    time.sleep(60)
+                    print_info("Waiting 120s for OpenAI TPM window to reset before QA call...")
+                    time.sleep(120)
 
                 print_info("Calling ChatGPT for QA...")
 

@@ -228,16 +228,17 @@
       so the loop started at 1 and called Claude anyway. Fixed: set iteration = _ws_iteration
       before the while loop (mirrors how fix mode sets iteration = _ws_iteration + 1).
 
-21. ChatGPT 429 retry: Retry-After header + exponential backoff + jitter ✅ DONE (2026-03-04)
+21. ChatGPT 429 retry: Retry-After header + exponential backoff + jitter + 120s penalty ✅ DONE (2026-03-04)
     - Flat 60s retry was ignoring OpenAI's Retry-After header and had no jitter.
     - Fix: (1) read Retry-After header and use it exactly when present.
       (2) if no header: exponential backoff (RETRY_SLEEP * 2^attempt) capped at 60s
-      with 50-100% jitter so retries don't all land at the same time.
+      with 50-100% jitter + 120s penalty so retries back off aggressively.
+    - Formula: base * (0.5 + random() * 0.5) + 120
 
-22. 60s TPM cooldown before QA on iteration 2+ ✅ DONE (2026-03-04)
+22. 120s TPM cooldown before QA on iteration 2+ ✅ DONE (2026-03-04)
     - Claude fix calls complete in <60s, so the previous QA call's 30k TPM window
       hasn't reset when the next QA call fires immediately — instant 429.
-    - Fix: sleep 60s before the ChatGPT QA call on iteration 2+.
+    - Fix: sleep 120s before the ChatGPT QA call on iteration 2+.
 
 23. QA hallucination: Evidence: required field + ban "hypothetical" ✅ DONE (2026-03-04)
     - QA wrote defects with location "(hypothetical for reference)" — fabricated entirely.
@@ -247,6 +248,14 @@
       paste the exact wrong line verbatim before writing Problem/Fix. No paste = no defect.
       (2) ABSOLUTE RULES block: "hypothetical", "for reference", "based on guidelines"
       in a location field = fabricated defect = must be deleted.
+
+24. Timestamps on every Claude + ChatGPT API call ✅ DONE (2026-03-04)
+    - No visibility into when API requests were sent or how long they took — hard to
+      diagnose 429 timing or slow responses.
+    - Fix: added datetime.now() timestamp prints before requests.post() and after
+      successful response in both ClaudeClient.call() and ChatGPTClient.call().
+    - Format: [YYYY-MM-DD HH:MM:SS] → <API> request sent / ← response received (Xs)
+    - One edit covers all call sites (13 total) — no per-call changes needed.
 
 ## Acceptance Criteria for Port
 - No pre-QA false-fail caused by manifest staleness.
