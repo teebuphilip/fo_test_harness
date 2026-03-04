@@ -249,6 +249,20 @@
       (2) ABSOLUTE RULES block: "hypothetical", "for reference", "based on guidelines"
       in a location field = fabricated defect = must be deleted.
 
+25. Pruner whitelist too aggressive — config files and app/ router remapping ✅ DONE (2026-03-04)
+    - BOILERPLATE_VALID_PATHS only listed pages/*.jsx, routes/*.py, lib/ — so legitimate
+      frontend config files (next.config.js, package.json, postcss.config.js, tailwind.config.ts)
+      were being pruned. Also, business/frontend/app/ (App Router) files were deleted instead
+      of being remapped to the correct pages/ (Pages Router) location.
+    - Fix 1: Expanded BOILERPLATE_VALID_PATHS to include business/frontend/ config files:
+      package.json, next.config.js/ts, postcss.config.js/ts, tailwind.config.js/ts,
+      tsconfig.json, jsconfig.json, styles/*.css, public/*.
+    - Fix 2: Added _remap_business_path() static method — handles Pass 2 remapping:
+      business/frontend/app/*.tsx|.jsx → business/frontend/pages/*.jsx
+      business/frontend/app/*.css → business/frontend/styles/*.css
+      business/backend/api/*.py → business/backend/routes/*.py
+    - Fix 3: Pass 2 now tries _remap_business_path() before deleting, same pattern as Pass 1.
+
 24. Timestamps on every Claude + ChatGPT API call ✅ DONE (2026-03-04)
     - No visibility into when API requests were sent or how long they took — hard to
       diagnose 429 timing or slow responses.

@@ -658,7 +658,9 @@ class ChatGPTClient:
 # Valid boilerplate business/** paths — anything outside this is pruned.
 # Pattern syntax is fnmatch (shell-style wildcards).
 BOILERPLATE_VALID_PATHS = [
+    # Core deployment contract
     'business/frontend/pages/*.jsx',
+    'business/frontend/pages/*.js',
     'business/backend/routes/*.py',
     'business/models/*.py',
     'business/services/*.py',
@@ -666,6 +668,18 @@ BOILERPLATE_VALID_PATHS = [
     'business/frontend/lib/*.jsx',
     'business/README-INTEGRATION.md',
     'business/package.json',
+    # Frontend config / infrastructure (Claude-generated, valid to keep)
+    'business/frontend/package.json',
+    'business/frontend/next.config.js',
+    'business/frontend/next.config.ts',
+    'business/frontend/postcss.config.js',
+    'business/frontend/postcss.config.ts',
+    'business/frontend/tailwind.config.js',
+    'business/frontend/tailwind.config.ts',
+    'business/frontend/tsconfig.json',
+    'business/frontend/jsconfig.json',
+    'business/frontend/styles/*.css',
+    'business/frontend/public/*',
 ]
 
 class ArtifactManager:
@@ -1017,6 +1031,33 @@ class ArtifactManager:
 
         return None  # unmappable — will be pruned
 
+    @staticmethod
+    def _remap_business_path(rel_path: str):
+        """Remap a wrong-location business/ path to a valid whitelist path.
+
+        Called from Pass 2 before deleting invalid business/ files.
+        Rules:
+          business/frontend/app/*.tsx|.jsx → business/frontend/pages/*.jsx
+          business/frontend/app/*.css      → business/frontend/styles/*.css
+          business/backend/api/*.py        → business/backend/routes/*.py
+        """
+        import os
+        name = os.path.basename(rel_path)
+        parts = rel_path.replace('\\', '/').split('/')
+
+        # business/frontend/app/ → pages/ or styles/
+        if 'frontend' in parts and 'app' in parts:
+            if name.endswith(('.tsx', '.jsx')):
+                return f'business/frontend/pages/{name.replace(".tsx", ".jsx")}'
+            if name.endswith('.css'):
+                return f'business/frontend/styles/{name}'
+
+        # business/backend/api/ → routes/
+        if 'backend' in parts and 'api' in parts and name.endswith('.py'):
+            return f'business/backend/routes/{name}'
+
+        return None  # unmappable — will be pruned
+
     def prune_non_business_artifacts(self, iteration: int):
         """Remove non-business artifacts and regenerate manifest.
 
@@ -1064,9 +1105,23 @@ class ArtifactManager:
                     file_path.unlink()
                     removed += 1
             elif not self._is_valid_business_path(rel_path):
-                file_path.unlink()
-                print_warning(f"  → Pruned invalid business path: {rel_path}")
-                invalid_business += 1
+                # Try to remap before deleting (e.g. app/*.tsx → pages/*.jsx)
+                canonical = self._remap_business_path(rel_path)
+                if canonical:
+                    dest = artifacts_dir / canonical
+                    if dest.exists():
+                        file_path.unlink()
+                        print_warning(f"  → Pruned duplicate business path: {rel_path} (kept {canonical})")
+                        invalid_business += 1
+                    else:
+                        dest.parent.mkdir(parents=True, exist_ok=True)
+                        file_path.rename(dest)
+                        remapped += 1
+                        print_warning(f"  → Remapped business path: {rel_path} → {canonical}")
+                else:
+                    file_path.unlink()
+                    print_warning(f"  → Pruned invalid business path: {rel_path}")
+                    invalid_business += 1
 
         # Remove empty directories
         for dir_path in sorted(artifacts_dir.rglob('*'), reverse=True):

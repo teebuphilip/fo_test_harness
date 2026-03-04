@@ -25,6 +25,18 @@
   Claude fix calls complete in <60s; without a pause the next QA call fires
   before the previous call's 30k TPM window has cleared → instant 429.
 
+### Pruner Whitelist Expansion + App Router Remapping
+- `BOILERPLATE_VALID_PATHS` only covered `pages/*.jsx`, `routes/*.py`, `lib/` — so legitimate
+  frontend config files Claude generates (next.config.js, package.json, postcss.config.js,
+  tailwind.config.ts, tsconfig.json, styles/*.css, public/*) were being silently deleted.
+- Added all frontend config and infrastructure paths to the whitelist.
+- Added `_remap_business_path()`: Pass 2 now remaps instead of deletes when possible:
+  - `business/frontend/app/*.tsx|.jsx` → `business/frontend/pages/*.jsx` (App Router → Pages Router)
+  - `business/frontend/app/*.css` → `business/frontend/styles/*.css`
+  - `business/backend/api/*.py` → `business/backend/routes/*.py`
+- If the canonical path already exists, the wrong-path file is pruned as a duplicate.
+- Same salvage-or-prune pattern used in Pass 1 for non-business files.
+
 ### API Call Timestamps
 - Added datetime timestamps to every `ClaudeClient.call()` and `ChatGPTClient.call()`.
 - Prints `[YYYY-MM-DD HH:MM:SS] → <API> request sent` before each request.
