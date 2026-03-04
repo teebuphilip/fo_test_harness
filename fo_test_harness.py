@@ -1151,9 +1151,11 @@ class ArtifactManager:
           - If NO equivalent exists → remap to the canonical business/ path to avoid losing logic.
           - Truly unmappable files are pruned.
 
-        Pass 2: business/** files not on the valid-path whitelist
-                (e.g. business/tests/, business/frontend/app/ files,
-                 business/backend/__init__.py, stray .tsx files)
+        Pass 2: business/** files not on the valid-path whitelist.
+                Try to remap to canonical path. If remappable → move.
+                If duplicate of canonical → prune.
+                If unmappable → leave in place for QA; merge_forward
+                gates on the whitelist so it won't carry forward.
         """
         artifacts_dir = self.build_dir / f'iteration_{iteration:02d}_artifacts'
         if not artifacts_dir.exists():
@@ -1190,7 +1192,7 @@ class ArtifactManager:
                     file_path.unlink()
                     removed += 1
             elif not self._is_valid_business_path(rel_path):
-                # Try to remap before deleting (e.g. app/*.tsx → pages/*.jsx)
+                # Try to remap to canonical path (e.g. app/*.tsx → pages/*.jsx)
                 canonical = self._remap_business_path(rel_path)
                 if canonical:
                     dest = artifacts_dir / canonical
@@ -1203,10 +1205,8 @@ class ArtifactManager:
                         file_path.rename(dest)
                         remapped += 1
                         print_warning(f"  → Remapped business path: {rel_path} → {canonical}")
-                else:
-                    file_path.unlink()
-                    print_warning(f"  → Pruned invalid business path: {rel_path}")
-                    invalid_business += 1
+                # If no remap: leave the file in place for QA to evaluate.
+                # merge_forward gates on the whitelist so it won't accumulate.
 
         # Remove empty directories
         for dir_path in sorted(artifacts_dir.rglob('*'), reverse=True):
@@ -1217,6 +1217,8 @@ class ArtifactManager:
             print_warning(f"  → Pruned {removed} non-business artifact(s)")
         if remapped:
             print_success(f"  → Remapped {remapped} wrong-path file(s) to correct business/ paths")
+        if invalid_business:
+            print_warning(f"  → Pruned {invalid_business} duplicate business path(s)")
         if removed or remapped or invalid_business:
             self._write_artifact_manifest(artifacts_dir)
 
