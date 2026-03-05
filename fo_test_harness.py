@@ -3875,6 +3875,7 @@ class FOHarness:
         1b. Location is __init__.py                   — Python plumbing, never a defect
         2. Evidence contains a banned absence phrase  — banned per qa_prompt rules
         3. Backtick-quoted evidence not in build output — fabricated code
+        6. All backtick evidence snippets are code comments (# or //) — stub files are intentional
         5a. Auth0 contradiction: evidence shows correct destructuring but problem says wrong call
         5b. Fix == Evidence: fix instructs what evidence already shows — self-invalidating
         4. Presence claim is false — QA says X is missing but X IS in build output
@@ -3963,6 +3964,36 @@ class FOHarness:
                 found = any(snippet in qa_build_output for snippet in meaningful)
                 if not found:
                     reason = f"Evidence {meaningful[:1]} not found in build output — fabricated"
+                    removed.append((defect_id, block, reason))
+                    print_warning(f"  [FILTER] Removed {defect_id}: {reason}")
+                    continue
+
+            # --- Check 6: Comment-only evidence — only suppress explicit scope exclusions ---
+            # Narrowed rule: only filter when all snippets are comments AND at least one
+            # snippet clearly states a scope-exclusion boundary. This prevents false
+            # negatives where comment-only evidence is actually indicating missing code.
+            if meaningful:
+                all_comments = all(
+                    s.lstrip().startswith('#') or s.lstrip().startswith('//')
+                    for s in meaningful
+                )
+                scope_exclusion_phrases = (
+                    'not in scope',
+                    'out of scope',
+                    'outside scope',
+                    'per intake requirements',
+                    'excluded by intake',
+                    'intentionally excluded',
+                )
+                has_scope_exclusion = any(
+                    any(p in s.lower() for p in scope_exclusion_phrases)
+                    for s in meaningful
+                )
+                if all_comments and has_scope_exclusion:
+                    reason = (
+                        f"Comment-only scope-exclusion evidence ({meaningful[:1]}) — "
+                        "intentional boundary note, not executable defect"
+                    )
                     removed.append((defect_id, block, reason))
                     print_warning(f"  [FILTER] Removed {defect_id}: {reason}")
                     continue
@@ -4100,9 +4131,9 @@ class FOHarness:
         return best
 
     @staticmethod
-    def _run_static_check(artifacts_dir: Path) -> list:
+    def _run_static_check(artifacts_dir: Path, intake_data: dict = None) -> list:
         """
-        Run deterministic static checks on extracted Python artifacts.
+        Run deterministic static checks on extracted artifacts.
 
         Checks (in order):
         1. AST syntax — parse every .py file; any SyntaxError is HIGH
@@ -4111,6 +4142,12 @@ class FOHarness:
         4. Wrong Base import — uses app.models.base or raw declarative_base(); HIGH
         5. Requirements.txt YAML contamination — docker-compose YAML in pip file; HIGH
         6. Unauthenticated routes — endpoint defined without Depends(get_current_user); MEDIUM
+        7. File-role mismatch — router code in models/ or executable route files with no endpoints
+        8. Frontend config file mismatch — swapped/invalid next/postcss/tailwind config
+        9. Local import integrity — module existence + case-sensitive path + imported symbol existence
+        10. Route↔service contract sanity — missing method or constructor arity mismatch
+        11. Intake-aware KPI contract (if intake_data is provided)
+        12. Intake-aware downloadable-report contract (if intake_data is provided)
 
         Returns list of defect dicts:
             {'id': 'STATIC-N', 'file': path, 'issue': str, 'severity': HIGH|MEDIUM, 'fix': str}
@@ -4119,6 +4156,7 @@ class FOHarness:
 
         defects = []
         counter = [0]
+        parsed_ast = {}
 
         def add_defect(file_path, issue, severity, fix):
             counter[0] += 1
@@ -4130,6 +4168,50 @@ class FOHarness:
                 'fix': fix
             })
 
+        def _read(path: Path) -> str:
+            try:
+                return path.read_text(encoding='utf-8', errors='replace')
+            except Exception:
+                return ''
+
+        def _list_children_exact(dir_path: Path) -> set:
+            try:
+                return {p.name for p in dir_path.iterdir()}
+            except Exception:
+                return set()
+
+        def _exists_case_sensitive(root: Path, rel_parts: list) -> bool:
+            cur = root
+            for idx, part in enumerate(rel_parts):
+                children = _list_children_exact(cur)
+                if part not in children:
+                    return False
+                cur = cur / part
+                if idx < len(rel_parts) - 1 and not cur.is_dir():
+                    return False
+            return cur.exists()
+
+        def _module_rel_from_business_module(module_name: str) -> str:
+            # business.services.foo -> business/services/foo.py
+            return str(Path(*module_name.split('.'))).replace('\\', '/') + '.py'
+
+        def _gather_exported_symbols(mod_ast: ast.AST) -> set:
+            out = set()
+            for node in getattr(mod_ast, 'body', []):
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                    out.add(node.name)
+                elif isinstance(node, ast.Assign):
+                    for t in node.targets:
+                        if isinstance(t, ast.Name):
+                            out.add(t.id)
+                elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+                    out.add(node.target.id)
+                elif isinstance(node, ast.ImportFrom):
+                    for a in node.names:
+                        if a.name != '*':
+                            out.add(a.asname or a.name)
+            return out
+
         py_files = sorted(artifacts_dir.rglob('*.py'))
 
         # ── CHECK 1: AST Syntax ──────────────────────────────────────────────
@@ -4139,7 +4221,7 @@ class FOHarness:
                 continue
             try:
                 source = py_file.read_text(encoding='utf-8', errors='replace')
-                ast.parse(source, filename=str(py_file))
+                parsed_ast[rel] = ast.parse(source, filename=str(py_file))
             except SyntaxError as e:
                 add_defect(
                     rel,
@@ -4171,10 +4253,7 @@ class FOHarness:
         # ── CHECK 3: Missing TenantMixin import ─────────────────────────────
         for py_file in py_files:
             rel = str(py_file.relative_to(artifacts_dir))
-            try:
-                source = py_file.read_text(encoding='utf-8', errors='replace')
-            except Exception:
-                continue
+            source = _read(py_file)
             # Class inherits TenantMixin
             if re.search(r'class\s+\w+\s*\([^)]*TenantMixin[^)]*\)', source):
                 # But import is absent
@@ -4195,10 +4274,7 @@ class FOHarness:
         # ── CHECK 4: Wrong Base import ───────────────────────────────────────
         for py_file in py_files:
             rel = str(py_file.relative_to(artifacts_dir))
-            try:
-                source = py_file.read_text(encoding='utf-8', errors='replace')
-            except Exception:
-                continue
+            source = _read(py_file)
             if re.search(r'from\s+app\.models\.base\s+import', source):
                 add_defect(
                     rel,
@@ -4215,13 +4291,16 @@ class FOHarness:
                 )
 
         # ── CHECK 5: Requirements.txt YAML contamination ─────────────────────
-        req_file = artifacts_dir / 'business' / 'requirements.txt'
-        if not req_file.exists():
-            # Try root
-            req_file = artifacts_dir / 'requirements.txt'
-        if req_file.exists():
+        req_candidates = [
+            artifacts_dir / 'business' / 'backend' / 'requirements.txt',
+            artifacts_dir / 'business' / 'requirements.txt',
+            artifacts_dir / 'requirements.txt',
+        ]
+        for req_file in req_candidates:
+            if not req_file.exists():
+                continue
             try:
-                req_content = req_file.read_text(encoding='utf-8', errors='replace')
+                req_content = _read(req_file)
                 yaml_indicators = ['services:', 'version:', 'image:', 'container_name:', 'networks:', 'volumes:']
                 found_yaml = [ind for ind in yaml_indicators if ind in req_content]
                 if found_yaml:
@@ -4257,6 +4336,236 @@ class FOHarness:
                     'MEDIUM',
                     'Import `from core.rbac import get_current_user` and add `current_user: dict = Depends(get_current_user)` to each endpoint signature'
                 )
+
+        # ── CHECK 7: File-role mismatch (models vs routes) ───────────────────
+        models_dir = artifacts_dir / 'business' / 'models'
+        if models_dir.exists():
+            for py_file in sorted(models_dir.glob('*.py')):
+                rel = str(py_file.relative_to(artifacts_dir))
+                source = _read(py_file)
+                if 'APIRouter' in source or re.search(r'@router\.(get|post|put|delete|patch)\s*\(', source):
+                    add_defect(
+                        rel,
+                        'Model file contains route/router code (APIRouter or @router.* decorator)',
+                        'HIGH',
+                        'Move route handlers to business/backend/routes/*.py and keep models/*.py as SQLAlchemy models only'
+                    )
+
+        if routes_dir.exists():
+            for py_file in sorted(routes_dir.glob('*.py')):
+                rel = str(py_file.relative_to(artifacts_dir))
+                source = _read(py_file)
+                has_route = bool(re.search(r'@router\.(get|post|put|delete|patch)\s*\(', source))
+                if has_route:
+                    continue
+                # Allow explicit scope-boundary stubs (comment-only route file)
+                scope_stub = (
+                    'not in scope' in source.lower()
+                    or 'per intake requirements' in source.lower()
+                    or 'out of scope' in source.lower()
+                )
+                non_comment_code = [
+                    ln for ln in source.splitlines()
+                    if ln.strip() and not ln.lstrip().startswith('#')
+                ]
+                if non_comment_code and not scope_stub:
+                    add_defect(
+                        rel,
+                        'Route file has executable code but defines no @router endpoints',
+                        'MEDIUM',
+                        'Define route decorators in this file or move non-route code to the correct layer'
+                    )
+
+        # ── CHECK 8: Frontend config-file mismatch ───────────────────────────
+        frontend_dir = artifacts_dir / 'business' / 'frontend'
+        if frontend_dir.exists():
+            next_cfg = frontend_dir / 'next.config.js'
+            postcss_cfg = frontend_dir / 'postcss.config.js'
+            tailwind_cfgs = [frontend_dir / 'tailwind.config.js', frontend_dir / 'tailwind.config.ts']
+
+            if next_cfg.exists():
+                s = _read(next_cfg)
+                if 'compilerOptions' in s:
+                    add_defect(
+                        str(next_cfg.relative_to(artifacts_dir)),
+                        'next.config.js appears to contain tsconfig content (compilerOptions)',
+                        'HIGH',
+                        'Replace with valid Next.js config object (module.exports = { ... })'
+                    )
+            if postcss_cfg.exists():
+                s = _read(postcss_cfg)
+                if 'rewrites()' in s or 'destination:' in s or 'nextConfig' in s:
+                    add_defect(
+                        str(postcss_cfg.relative_to(artifacts_dir)),
+                        'postcss.config.js appears to contain Next.js config content',
+                        'HIGH',
+                        'Replace with PostCSS plugin config: module.exports = { plugins: { tailwindcss: {}, autoprefixer: {} } }'
+                    )
+            for cfg in tailwind_cfgs:
+                if not cfg.exists():
+                    continue
+                s = _read(cfg)
+                if not re.search(r'\bcontent\s*:', s):
+                    add_defect(
+                        str(cfg.relative_to(artifacts_dir)),
+                        'Tailwind config is missing `content:` paths (likely swapped/invalid config file)',
+                        'HIGH',
+                        'Add proper Tailwind config with `content` globs and theme/plugins sections'
+                    )
+
+        # ── CHECK 9: Local import integrity (module/symbol/case) ────────────
+        module_ast = {rel: parsed_ast.get(rel) for rel in parsed_ast.keys()}
+        module_exports = {rel: _gather_exported_symbols(tree) for rel, tree in module_ast.items() if tree}
+
+        for rel, tree in module_ast.items():
+            if not tree:
+                continue
+            for node in ast.walk(tree):
+                if not isinstance(node, ast.ImportFrom) or not node.module:
+                    continue
+                mod = node.module
+                if not mod.startswith('business.'):
+                    continue
+                expected_rel = _module_rel_from_business_module(mod)
+                expected_path = artifacts_dir / expected_rel
+                if not expected_path.exists():
+                    add_defect(
+                        rel,
+                        f'Local import module `{mod}` does not resolve to `{expected_rel}` in artifacts',
+                        'HIGH',
+                        f'Create `{expected_rel}` or fix the import path in `{rel}`'
+                    )
+                    continue
+                # case-sensitive enforcement for Linux deploy targets
+                if not _exists_case_sensitive(artifacts_dir, expected_rel.split('/')):
+                    add_defect(
+                        rel,
+                        f'Case-sensitive import mismatch for `{mod}` (path casing differs from filesystem)',
+                        'HIGH',
+                        f'Align import casing exactly with filesystem path `{expected_rel}`'
+                    )
+                exported = module_exports.get(expected_rel, set())
+                for alias in node.names:
+                    sym = alias.name
+                    if sym == '*':
+                        continue
+                    if sym not in exported:
+                        add_defect(
+                            rel,
+                            f'Import `{sym}` not defined in `{expected_rel}`',
+                            'HIGH',
+                            f'Define `{sym}` in `{expected_rel}` or correct the import in `{rel}`'
+                        )
+
+        # ── CHECK 10: Route↔service contract sanity ──────────────────────────
+        class_meta = {}  # class_name -> (rel, init_min, init_max, methods:set)
+        for rel, tree in module_ast.items():
+            if not tree:
+                continue
+            for node in getattr(tree, 'body', []):
+                if not isinstance(node, ast.ClassDef):
+                    continue
+                init_min = 0
+                init_max = 0
+                methods = set()
+                for item in node.body:
+                    if isinstance(item, ast.FunctionDef):
+                        methods.add(item.name)
+                        if item.name == '__init__':
+                            args = item.args.args[1:]  # drop self
+                            defaults = item.args.defaults or []
+                            init_max = len(args)
+                            init_min = len(args) - len(defaults)
+                class_meta[node.name] = (rel, init_min, init_max, methods)
+
+        if routes_dir.exists():
+            for py_file in sorted(routes_dir.glob('*.py')):
+                rel = str(py_file.relative_to(artifacts_dir))
+                source = _read(py_file)
+                # var = ClassName(...)
+                for m in re.finditer(r'(\w+)\s*=\s*(\w+)\(([^)]*)\)', source):
+                    var_name, class_name, args_raw = m.group(1), m.group(2), m.group(3).strip()
+                    if class_name not in class_meta:
+                        continue
+                    _, init_min, init_max, methods = class_meta[class_name]
+                    arg_count = 0 if not args_raw else len([a for a in args_raw.split(',') if a.strip()])
+                    if arg_count < init_min or arg_count > init_max:
+                        add_defect(
+                            rel,
+                            f'Constructor call `{class_name}({args_raw})` does not match `__init__` arity '
+                            f'({init_min}..{init_max})',
+                            'HIGH',
+                            f'Fix constructor call or `__init__` signature for class `{class_name}`'
+                        )
+                    # var.method(...)
+                    for mm in re.finditer(rf'{re.escape(var_name)}\.(\w+)\s*\(', source):
+                        meth = mm.group(1)
+                        if meth not in methods:
+                            add_defect(
+                                rel,
+                                f'Call to missing method `{class_name}.{meth}()`',
+                                'HIGH',
+                                f'Implement `{meth}()` on `{class_name}` or change route call to an existing method'
+                            )
+
+        # ── CHECK 11: Intake-aware KPI contract (optional) ───────────────────
+        if intake_data:
+            try:
+                block_b = intake_data.get('block_b', {})
+                kpi_defs = block_b.get('kpi_definitions', []) or []
+                kpi_ids = [str(k.get('kpi_id', '')).strip() for k in kpi_defs if k.get('kpi_id')]
+                if kpi_ids:
+                    service_files = sorted((artifacts_dir / 'business' / 'services').glob('*.py'))
+                    service_blob = '\n'.join(_read(p) for p in service_files)
+                    for kid in kpi_ids:
+                        if not re.search(rf'\b{re.escape(kid)}\b', service_blob):
+                            add_defect(
+                                'business/services',
+                                f'Intake KPI `{kid}` is not represented in business/services KPI logic',
+                                'HIGH',
+                                f'Implement KPI `{kid}` calculation path in the canonical KPI service'
+                            )
+                    # single source-of-truth warning if multiple KPI engines found
+                    kpi_service_candidates = []
+                    for p in service_files:
+                        txt = _read(p)
+                        if re.search(r'kpi|calculate_', txt, re.IGNORECASE):
+                            if re.search(r'\b(TTC|PDPT|RPL|BCI|IMV|ESAT)\b', txt):
+                                kpi_service_candidates.append(str(p.relative_to(artifacts_dir)))
+                    if len(kpi_service_candidates) > 1:
+                        add_defect(
+                            'business/services',
+                            f'Multiple KPI service implementations detected: {", ".join(kpi_service_candidates)}',
+                            'MEDIUM',
+                            'Consolidate KPI calculations into one canonical service to avoid divergence'
+                        )
+            except Exception:
+                pass
+
+        # ── CHECK 12: Intake-aware downloadable-report contract (optional) ───
+        if intake_data:
+            try:
+                hero = intake_data.get('block_b', {}).get('hero_answers', {})
+                must_have = [str(x).lower() for x in hero.get('Q4_must_have_features', [])]
+                q10 = str(hero.get('Q10_shipping_preference', '')).lower()
+                requires_download = any('downloadable executive report' in x for x in must_have) or ('downloadable report' in q10)
+                if requires_download:
+                    code_files = []
+                    for glob_pat in ('business/backend/routes/*.py', 'business/services/*.py', 'business/frontend/pages/*.jsx', 'business/frontend/components/*.js', 'business/frontend/components/*.jsx'):
+                        code_files.extend(sorted(artifacts_dir.glob(glob_pat)))
+                    blob = '\n'.join(_read(p).lower() for p in code_files)
+                    has_download = any(token in blob for token in (
+                        '/download', 'download_', 'export_', 'pdf', 'fileresponse', 'streamingresponse'
+                    ))
+                    if not has_download:
+                        add_defect(
+                            'business/backend/routes/reports.py',
+                            'Intake requires downloadable executive report, but no explicit download/export implementation was detected',
+                            'HIGH',
+                            'Add a report download/export endpoint (e.g., PDF/file response) and frontend trigger'
+                        )
+            except Exception:
+                pass
 
         return defects
 
@@ -4462,6 +4771,43 @@ class FOHarness:
         # FIX #9: Track consecutive validation failures
         consecutive_validation_failures = 0
 
+        # Gate telemetry (O): explicit execution trace for QA/STATIC/CONSISTENCY
+        gate_trace = []
+
+        def _record_gate(gate: str, status: str, detail: str = '', iter_num: int = None):
+            gate_trace.append({
+                'iteration': int(iter_num if iter_num is not None else iteration),
+                'gate': gate,
+                'status': status,
+                'detail': detail,
+                'ts': datetime.utcnow().isoformat()
+            })
+
+        def _flush_gate_trace(tag: str = 'gate_telemetry'):
+            try:
+                self.artifacts.save_log(tag, json.dumps(gate_trace, indent=2))
+            except Exception:
+                pass
+
+        def _run_final_consistency_if_needed(last_iter: int, governance_section: str = ''):
+            """
+            Final consistency pass on terminal failures (I).
+            Visibility-only: does not mutate loop state.
+            """
+            if last_iter <= 0:
+                return
+            _record_gate('CONSISTENCY_FINAL', 'START', 'final consistency on terminal path', last_iter)
+            issues = self._run_ai_consistency_check(last_iter, governance_section or '')
+            if issues:
+                _record_gate('CONSISTENCY_FINAL', 'FAIL', f'{len(issues)} issue(s)', last_iter)
+                lines = [self._format_consistency_defects_for_claude(issues)]
+                try:
+                    self.artifacts.save_log('final_consistency_report', "\n\n".join(lines))
+                except Exception:
+                    pass
+            else:
+                _record_gate('CONSISTENCY_FINAL', 'PASS', 'no issues', last_iter)
+
         # ── Warm-start setup ──────────────────────────────────────────
         _ws_run_dir   = Path(getattr(self.cli_args, 'resume_run', None) or '')
         _ws_iteration = int(getattr(self.cli_args, 'resume_iteration', 1))
@@ -4518,7 +4864,7 @@ class FOHarness:
 
             _ws_static_issues = []
             if _ws_mode == 'static':
-                _ws_static_issues = self._run_static_check(_ws_initial_artifacts_dir)
+                _ws_static_issues = self._run_static_check(_ws_initial_artifacts_dir, intake_data=self.intake_data)
                 if _ws_static_issues:
                     high = sum(1 for d in _ws_static_issues if d['severity'] == 'HIGH')
                     print_warning(f"  [STATIC] {len(_ws_static_issues)} defect(s) found ({high} HIGH)")
@@ -5092,6 +5438,7 @@ class FOHarness:
                     time.sleep(_qa_wait)
 
                 print_info("Calling ChatGPT for QA...")
+                _record_gate('FEATURE_QA', 'START', 'calling ChatGPT', iteration)
 
                 # For defect iterations in boilerplate mode, QA receives the full merged
                 # artifact set (not Claude's partial defect-only output) so it evaluates
@@ -5177,6 +5524,7 @@ class FOHarness:
                 # ================================================
 
                 if "QA STATUS: ACCEPTED" in qa_report:
+                    _record_gate('FEATURE_QA', 'PASS', 'QA accepted', iteration)
                     print_success(f"GATE 1 PASSED: Feature QA ACCEPTED on iteration {iteration}")
                     _qa_accepted_at_iter = iteration
 
@@ -5185,9 +5533,11 @@ class FOHarness:
                     print_info("═══════════════════════════════════════════════════════════")
                     print_info("GATE 2: STATIC CHECK — Deterministic code quality pass")
                     print_info("═══════════════════════════════════════════════════════════")
+                    _record_gate('STATIC', 'START', 'running deterministic static checks', iteration)
                     _static_artifacts_dir = self.artifacts.build_dir / f'iteration_{iteration:02d}_artifacts'
-                    static_defects = self._run_static_check(_static_artifacts_dir)
+                    static_defects = self._run_static_check(_static_artifacts_dir, intake_data=self.intake_data)
                     if static_defects:
+                        _record_gate('STATIC', 'FAIL', f'{len(static_defects)} defect(s)', iteration)
                         high = sum(1 for d in static_defects if d['severity'] == 'HIGH')
                         print_warning(f"  [STATIC] FAIL — {len(static_defects)} defect(s) ({high} HIGH)")
                         for d in static_defects:
@@ -5203,14 +5553,17 @@ class FOHarness:
                         print_info(f"Starting iteration {iteration} with static fix...")
                         continue
                     print_success("  [STATIC] PASS — no static defects")
+                    _record_gate('STATIC', 'PASS', 'no static defects', iteration)
 
                     # ── GATE 3: AI cross-file consistency check ──────────────────
                     print_info("")
                     print_info("═══════════════════════════════════════════════════════════")
                     print_info("GATE 3: AI CONSISTENCY CHECK — Cross-file analysis")
                     print_info("═══════════════════════════════════════════════════════════")
+                    _record_gate('CONSISTENCY', 'START', 'running AI consistency check', iteration)
                     consistency_issues = self._run_ai_consistency_check(iteration, governance_section)
                     if consistency_issues:
+                        _record_gate('CONSISTENCY', 'FAIL', f'{len(consistency_issues)} issue(s)', iteration)
                         print_warning(f"  [CONSISTENCY] FAIL — {len(consistency_issues)} issue(s)")
                         for iss in consistency_issues:
                             sev_fn = print_error if iss.get('severity') == 'HIGH' else print_warning
@@ -5226,6 +5579,7 @@ class FOHarness:
                         print_info(f"Starting iteration {iteration} with consistency fix...")
                         continue
                     print_success("  [CONSISTENCY] PASS — no cross-file consistency issues")
+                    _record_gate('CONSISTENCY', 'PASS', 'no consistency issues', iteration)
 
                     # ── All three gates passed ────────────────────────────────────
                     print_success("")
@@ -5236,6 +5590,7 @@ class FOHarness:
                     break
 
                 elif "QA STATUS: REJECTED" in qa_report:
+                    _record_gate('FEATURE_QA', 'FAIL', 'QA rejected', iteration)
                     # Feature QA rejected — reset defect source to 'qa' and repair
                     defect_source        = 'qa'
                     _raw_pending_defects = []
@@ -5286,7 +5641,8 @@ class FOHarness:
                                     total_gpt_calls, total_gpt_input_tokens, total_gpt_output_tokens,
                                     run_end_reason='NON_CONVERGING'
                                 )
-
+                                _run_final_consistency_if_needed(iteration, governance_section if 'governance_section' in locals() else '')
+                                _flush_gate_trace()
                                 return False, "NON_CONVERGING_DEFECTS"
 
                     # FIX #9: Show cumulative cost after each QA iteration
@@ -5325,13 +5681,15 @@ class FOHarness:
                             total_gpt_calls, total_gpt_input_tokens, total_gpt_output_tokens,
                             run_end_reason='MAX_ITERATIONS'
                         )
-
+                        _run_final_consistency_if_needed(iteration - 1, governance_section if 'governance_section' in locals() else '')
+                        _flush_gate_trace()
                         return False, "MAX_ITERATIONS_EXCEEDED"
 
                     print_info(f"Starting iteration {iteration} with defect fixes...")
                     continue
 
                 else:
+                    _record_gate('FEATURE_QA', 'ERROR', 'verdict unclear', iteration)
                     print_error("QA report format invalid — no clear ACCEPTED/REJECTED verdict")
                     self._print_cost_summary(
                         iteration, total_calls, total_cache_writes, total_cache_hits,
@@ -5340,6 +5698,8 @@ class FOHarness:
                         total_gpt_calls, total_gpt_input_tokens, total_gpt_output_tokens,
                         run_end_reason='QA_VERDICT_UNCLEAR'
                     )
+                    _run_final_consistency_if_needed(iteration, governance_section if 'governance_section' in locals() else '')
+                    _flush_gate_trace()
                     return False, "QA_VERDICT_UNCLEAR"
 
             # ── Post-loop: called only via break (all gates passed or max-iter during static/consistency) ──
@@ -5364,9 +5724,13 @@ class FOHarness:
                     total_gpt_calls, total_gpt_input_tokens, total_gpt_output_tokens,
                     run_end_reason=end_reason
                 )
+                if not _loop_success:
+                    _run_final_consistency_if_needed(iteration, governance_section if 'governance_section' in locals() else '')
+                _flush_gate_trace()
                 return _loop_success, build_output
 
         except KeyboardInterrupt:
+            _record_gate('HARNESS', 'INTERRUPTED', 'Ctrl+C', iteration)
             print_error("\n\n⚠️  BUILD INTERRUPTED (Ctrl+C)")
             print_info(f"Stopped at iteration {iteration}")
             # Show final cost before exiting
@@ -5384,6 +5748,7 @@ class FOHarness:
             claude_cost = cache_write_cost + cache_read_cost + non_cached_input_cost + output_cost
             gpt_cost = ((total_gpt_input_tokens / 1_000_000) * 2.50) + ((total_gpt_output_tokens / 1_000_000) * 10.00)
             self._log_run_csv(iteration, claude_cost, gpt_cost, 'CTRL_C')
+            _flush_gate_trace('gate_telemetry_interrupt')
             raise  # Re-raise to propagate
 
         return False, "Should not reach here"
@@ -5678,7 +6043,7 @@ Examples:
         print_info("═══════════════════════════════════════════════════════════")
         print_info(f"STANDALONE STATIC CHECK: {artifacts_dir}")
         print_info("═══════════════════════════════════════════════════════════")
-        defects = FOHarness._run_static_check(artifacts_dir)
+        defects = FOHarness._run_static_check(artifacts_dir, intake_data=None)
         if not defects:
             print_success("STATIC CHECK: PASS — no defects found")
             sys.exit(0)

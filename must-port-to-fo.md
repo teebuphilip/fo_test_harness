@@ -1,5 +1,34 @@
 # Must Port to FO
 
+## New Hardening Bundle (2026-03-06)
+1. Narrowed QA comment-only filter (Check 6)
+- Only suppresses comment-only defects when evidence explicitly states scope exclusion
+  (`not in scope`, `per intake requirements`, etc.).
+- Prevents false negatives on real missing implementations hidden behind comments.
+
+2. Static check expansions
+- Added deterministic checks for:
+  - router code inside `business/models/*`
+  - executable route files with no endpoints
+  - frontend config file swaps/mismatches (`next.config.js`, `postcss.config.js`, `tailwind.config.*`)
+  - local import integrity (module exists, case-sensitive path match, imported symbol exists)
+  - route↔service contract sanity (constructor arity + missing method call)
+  - intake-aware KPI contract validation
+  - intake-aware downloadable-report contract validation
+
+3. Static requirements path bug fix
+- `business/backend/requirements.txt` now checked for YAML/docker-compose contamination.
+
+4. Gate telemetry + terminal consistency pass
+- Added per-iteration gate telemetry logging (Feature QA / Static / Consistency).
+- Added final consistency pass on terminal failure paths (max-iter/non-converging/verdict unclear)
+  with `final_consistency_report` log output.
+
+5. AI consistency prompt extensions
+- Added frontend API URL ↔ backend route check guidance.
+- Added React hook misuse check guidance.
+⬜ TODO for FO codebase
+
 ## Priority 0 (First)
 1. Truncation recovery fix
 - Run fallback continuations whenever output remains truncated, regardless of multipart mode.
@@ -39,6 +68,14 @@
 
 ## Governance Alignment
 - Keep default iteration cap aligned to locked policy (`5`) but allow CLI override for controlled exception runs.
+
+31. Filter Check 6: comment-only evidence removal ✅ DONE (2026-03-06)
+    - If ALL backtick evidence snippets in a defect start with # or //, it's a code comment.
+    - Stub files Claude creates to satisfy scope complaints (e.g. `# No endpoints - X not in scope`)
+      are intentional — QA flagging the comment is invalid.
+    - Added after Check 3 (fabricated evidence) in _filter_hallucinated_defects().
+    - Removes stub-comment defects like: clients.py, workforce_data.py, engagements.py scope complaints.
+    ⬜ TODO for FO codebase
 
 30. Unified QA loop: Feature QA → Static → AI Consistency ✅ DONE (2026-03-06)
     - Single unified while loop; no nested sub-loops. All three gates must pass in sequence.

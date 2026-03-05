@@ -2,6 +2,66 @@
 
 ## 2026-03-06
 
+### Static + QA hardening: false-negative filter narrowed, deterministic checks expanded, gate telemetry added
+
+Implemented multi-part harness hardening to catch real integration/runtime defects earlier and surface terminal consistency issues:
+
+- **Check 6 narrowed** in `_filter_hallucinated_defects()`:
+  - Comment-only evidence is now filtered **only** when snippets explicitly indicate scope exclusion
+    (e.g., "not in scope", "per intake requirements", "out of scope").
+  - Prevents over-filtering legitimate missing-implementation defects.
+
+- **`_run_static_check()` expanded** and now accepts optional intake context:
+  - Signature: `_run_static_check(artifacts_dir: Path, intake_data: dict = None)`
+  - Added checks for:
+    - `business/backend/requirements.txt` YAML contamination path (plus existing candidates)
+    - file-role mismatch (router code in `business/models/*`, executable route file with no endpoints)
+    - frontend config mismatch (`next.config.js`/`postcss.config.js`/`tailwind.config.*`)
+    - local import integrity (module existence, case-sensitive path alignment, imported symbol existence)
+    - route↔service contract sanity (constructor arity + missing method call detection)
+    - intake-aware KPI contract verification
+    - intake-aware downloadable-report contract verification
+
+- **Gate telemetry (O)** in `execute_build_qa_loop()`:
+  - Added structured `gate_trace` logging for Feature QA / Static / Consistency gates.
+  - Saved via `artifacts.save_log('gate_telemetry', ...)`.
+
+- **Final consistency-on-terminal-path (I)**:
+  - Added final consistency pass on terminal failure paths (`NON_CONVERGING`, `MAX_ITERATIONS`, unclear QA verdict, and post-loop non-success path).
+  - Writes `final_consistency_report` log when issues are found.
+
+- **AI consistency prompt extended** (`directives/prompts/build_ai_consistency.md`):
+  - Added frontend API URL ↔ backend route integrity check.
+  - Added React hook misuse check for runtime-breaking cases.
+
+- **Call-site updates**:
+  - Main static gate and warm-start static gate now pass `intake_data=self.intake_data`.
+  - Standalone static mode explicitly passes `intake_data=None`.
+
+## 2026-03-06
+
+### Filter Check 6: comment-only evidence → stub files are intentional
+
+**Root cause**: Claude creates stub files with Python/JS comments like
+`# No endpoints - X is not in scope per intake requirements` to satisfy prior scope-boundary
+QA complaints. QA then flags those same comment strings as evidence of a new scope violation
+(SCOPE-BOUNDARY or SCOPE-CHANGE defect). The evidence is a code comment — not executable code.
+This is always invalid.
+
+**Fix**: Added Check 6 to `_filter_hallucinated_defects()`:
+- If every meaningful backtick-quoted evidence snippet starts with `#` (Python comment) or `//` (JS comment), the defect is removed.
+- Defects removed with reason: `"Comment-only evidence: all backtick snippets are code comments (...) — stub files with scope explanations are intentional"`
+
+**Observed at**: iter 40 of `ai_workforce_intelligence_BLOCK_B_20260305_063802`
+- Raw DEFECT-2: `# No endpoints - engagement tracking is not in scope per intake requirements`
+- Raw DEFECT-5: `# No model - workforce data management beyond KPI calculations is not in scope`
+- Raw DEFECT-7: `# No endpoints - workforce data management is not in scope per intake requirements`
+All three now correctly removed. Previous 9-defect report → 3 remaining real defects.
+
+**Docstring updated**: Check ordering now reflects actual execution order (1, 1b, 2, 3, 6, 5a, 5b, 4).
+
+---
+
 ### Unified QA loop: Feature QA → Static → AI Consistency (all three gates must pass)
 
 **Architecture redesign**: Replaced the nested `_run_static_fix_loop` sub-loop with a single

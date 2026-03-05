@@ -1,5 +1,18 @@
 # Learnings From AF to FO
 
+## Latest Learnings (2026-03-06)
+- Comment-only QA evidence needs scope-language gating. A blanket "comment-only = ignore" rule hides real misses.
+- Deterministic static checks should validate role contracts, not just syntax:
+  - models must be models (no routers)
+  - routes/services must match constructor+method contracts
+  - imports must resolve with symbol existence and case-sensitive filenames.
+- Frontend config sanity checks catch high-frequency broken artifact swaps quickly with zero AI cost.
+- Intake-aware static checks close a major gap:
+  - KPI definitions in intake must map to implemented KPI logic
+  - "downloadable report" must map to explicit export/download capability.
+- Gate telemetry is required for operator trust: always log which gates ran/skipped and why.
+- Final consistency-on-terminal-failure gives actionable post-mortem defects instead of silent exits.
+
 ## What Broke Most Often
 - Large lowcode outputs hit token limits and dropped required files.
 - Multipart metadata from model can be inconsistent (e.g., declares final part while still truncated).
