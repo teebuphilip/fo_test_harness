@@ -2,6 +2,23 @@
 
 ## 2026-03-05
 
+### QA middle-tier: defect history, prohibition awareness, root cause classification
+QA (gpt-4o-mini) had no memory — evaluated each build cold with no awareness of previous
+iterations, recurring patterns, or accumulated prohibitions.
+
+- `qa_prompt.md`: two new context blocks injected before intake:
+  - `{{prohibitions_block}}`: same hard-constraint list Claude receives — QA knows what's
+    already been prohibited and can flag violations immediately as PROHIBITION VIOLATED HIGH
+  - `{{defect_history_block}}`: summary of all tracked defects with occurrence counts so QA
+    can classify RECURRING-PATTERN vs ONE-TIME-BUG without re-evaluating from scratch
+- `qa_prompt.md`: new ROOT CAUSE TYPES section (ONE-TIME-BUG | SCOPE-BOUNDARY | RECURRING-PATTERN)
+- `qa_prompt.md`: new FIX FIELD RULES — SCOPE-BOUNDARY and RECURRING-PATTERN fixes must be
+  categorical ("file must not contain X or any equivalent") not just "remove X"
+- `qa_prompt.md`: `Root cause type:` field added to DEFECT output format
+- Harness: `_build_qa_defect_history(recurring_tracker)` — formats history block from tracker
+- Harness: `qa_prompt()` signature extended: `prohibitions_block`, `defect_history_block` params
+- Harness: call site passes both blocks; defect_history_block built from shared recurring_tracker
+
 ### Claude thinking stage + permanent prohibitions for scope oscillation
 Root cause of non-convergence: Claude acts as a junior dev fixing a ticket — removes the named
 field but regenerates the same concept next iteration. No commitment step, no pattern awareness.

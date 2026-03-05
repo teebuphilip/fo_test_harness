@@ -1902,7 +1902,7 @@ it will be considered DELETED. QA will flag it as missing and you'll loop foreve
         return (governance_section, dynamic_section)
 
     @staticmethod
-    def qa_prompt(build_output: str, intake_data: dict, block: str, tech_stack: str = 'custom', qa_override: dict = None) -> str:
+    def qa_prompt(build_output: str, intake_data: dict, block: str, tech_stack: str = 'custom', qa_override: dict = None, prohibitions_block: str = '', defect_history_block: str = '') -> str:
         """
         Generate QA prompt for ChatGPT.
 
@@ -2108,6 +2108,8 @@ or is it a reasonable implementation detail to support an existing feature?"
             'qa_prompt.md',
             tech_stack_context=tech_stack_context,
             qa_override_context=qa_override_context,
+            prohibitions_block=prohibitions_block,
+            defect_history_block=defect_history_block,
             block=block,
             block_key=block_key,
             block_data_json=json.dumps(block_data, indent=2),
@@ -3628,6 +3630,30 @@ class FOHarness:
         return defects
 
     @staticmethod
+    def _build_qa_defect_history(recurring_tracker: dict) -> str:
+        """
+        Build the {{defect_history_block}} string for the QA prompt.
+        Shows all tracked defects with their occurrence counts so QA can
+        recognise recurring patterns vs one-time bugs.
+        Returns empty string if nothing tracked yet.
+        """
+        if not recurring_tracker:
+            return ''
+
+        lines = [
+            '**DEFECT HISTORY (from previous iterations — for pattern recognition):**',
+            'Use this to classify root cause types. Same file+issue appearing 2+ times = RECURRING-PATTERN.',
+            '',
+        ]
+        for (location, classification), entry in recurring_tracker.items():
+            count = entry['count']
+            label = 'RECURRING-PATTERN' if count >= 2 else 'appeared once'
+            lines.append(f'- {location} ({classification} — {label}, {count}x)')
+            lines.append(f'  Pattern: {entry["last_problem"][:100]}')
+        lines.append('')
+        return '\n'.join(lines) + '\n---\n'
+
+    @staticmethod
     def _build_prohibitions_block(recurring_tracker: dict) -> str:
         """
         Build the {{prohibitions_block}} string from the recurring defect tracker.
@@ -4377,7 +4403,9 @@ class FOHarness:
                     self.intake_data,
                     self.block,
                     self.effective_tech_stack,
-                    self.qa_override
+                    self.qa_override,
+                    prohibitions_block=prohibitions_block,
+                    defect_history_block=self._build_qa_defect_history(recurring_tracker)
                 )
 
                 self.artifacts.save_log(f'iteration_{iteration:02d}_qa_prompt', qa_prompt)

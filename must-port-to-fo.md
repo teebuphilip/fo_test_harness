@@ -40,6 +40,13 @@
 ## Governance Alignment
 - Keep default iteration cap aligned to locked policy (`5`) but allow CLI override for controlled exception runs.
 
+23. QA middle-tier: defect history + prohibition awareness + root cause classification ✅ DONE (2026-03-05)
+    - qa_prompt.md: {{prohibitions_block}} and {{defect_history_block}} injected before intake.
+      Root cause types (ONE-TIME-BUG | SCOPE-BOUNDARY | RECURRING-PATTERN) added to defect format.
+      Fix field rules require categorical statements for scope/recurring defects.
+      Root cause type field added to DEFECT output format.
+    - Harness: _build_qa_defect_history(), qa_prompt() extended, call site wired.
+
 22. Claude thinking stage + permanent prohibitions ✅ DONE (2026-03-05)
     - build_patch_first_file_lock.md: ## DEFECT ANALYSIS section added as step 1 of OUTPUT CONTRACT.
       Per defect: root cause, pattern type, reintroduction risk, categorical commitment.
