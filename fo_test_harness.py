@@ -4317,13 +4317,12 @@ class FOHarness:
                 print_warning("  [STATIC] PATCH_SET_COMPLETE not found in Claude output — using full output")
 
             next_iter = current_iter + 1
-            self.artifacts.save_build_output(next_iter, fix_output)
+            # save_build_output saves the raw output AND runs artifact extraction
+            self.artifacts.save_build_output(next_iter, fix_output, extract_from=fix_output_for_extraction)
 
-            # ── Extract artifacts ────────────────────────────────────────────
-            next_artifacts_dir = self.artifacts.build_dir / f'iteration_{next_iter:02d}_artifacts'
-            next_artifacts_dir.mkdir(parents=True, exist_ok=True)
-            extracted_paths = self.artifacts.extract_artifacts(fix_output_for_extraction, next_iter)
-            print_info(f"  [STATIC] Extracted {len(extracted_paths)} file(s) to iteration_{next_iter:02d}_artifacts/")
+            # Get the list of paths Claude output (for merge_forward)
+            extracted_paths = extract_file_paths_from_output(fix_output_for_extraction)
+            print_info(f"  [STATIC] Extracted files for iteration_{next_iter:02d}: {len(extracted_paths)} path(s)")
 
             # ── Merge forward non-defect files ───────────────────────────────
             self.artifacts.merge_forward_from_previous_iteration(next_iter, extracted_paths)
