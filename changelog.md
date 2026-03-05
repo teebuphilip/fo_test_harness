@@ -26,6 +26,12 @@ Follow-up update:
   - test assertion scripts
   - Newman/CI execution notes
 
+Safety update:
+- Post-QA testcase-doc generation is now **non-fatal**:
+  - If testcase doc generation call fails, harness logs warning and continues.
+  - If testcase directive file is missing, harness warns and skips testcase-doc step.
+  - Build result is not marked failed due to testcase-doc polish failure.
+
 ### Static + QA hardening: false-negative filter narrowed, deterministic checks expanded, gate telemetry added
 
 Implemented multi-part harness hardening to catch real integration/runtime defects earlier and surface terminal consistency issues:
