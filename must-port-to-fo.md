@@ -40,6 +40,15 @@
 ## Governance Alignment
 - Keep default iteration cap aligned to locked policy (`5`) but allow CLI override for controlled exception runs.
 
+22. Claude thinking stage + permanent prohibitions ✅ DONE (2026-03-05)
+    - build_patch_first_file_lock.md: ## DEFECT ANALYSIS section added as step 1 of OUTPUT CONTRACT.
+      Per defect: root cause, pattern type, reintroduction risk, categorical commitment.
+    - build_previous_defects.md + build_patch_first_file_lock.md: {{prohibitions_block}} placeholder.
+    - Harness: _extract_defects_for_tracking(), _build_prohibitions_block(), recurring_tracker dict,
+      prohibitions_block var — after 2+ appearances of same (location, classification), promoted to
+      hard prohibition and injected into every subsequent patch prompt.
+    - build_prompt(): new prohibitions_block param passed to both template renders.
+
 21. QA prompt + harness filter: ignore __init__.py defects ✅ DONE (2026-03-05)
     - qa_prompt.md: __init__.py added to DO NOT FLAG list.
     - _filter_hallucinated_defects() check 1b: removes any defect whose Location is an __init__.py.

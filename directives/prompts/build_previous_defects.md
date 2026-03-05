@@ -1,3 +1,4 @@
+{{prohibitions_block}}
 **PREVIOUS QA ITERATION — DEFECTS TO RESOLVE:**
 ChatGPT QA reported the following defects. Resolve ALL of them.
 

@@ -2,6 +2,26 @@
 
 ## 2026-03-05
 
+### Claude thinking stage + permanent prohibitions for scope oscillation
+Root cause of non-convergence: Claude acts as a junior dev fixing a ticket — removes the named
+field but regenerates the same concept next iteration. No commitment step, no pattern awareness.
+
+**Claude thinking stage** (`build_patch_first_file_lock.md`):
+- Added `## DEFECT ANALYSIS` as step 1 of OUTPUT CONTRACT — must be written before PATCH_PLAN
+  and before any file output. Per defect: root cause, pattern type (ONE-TIME-BUG | SCOPE-BOUNDARY |
+  RECURRING-VIOLATION), reintroduction risk (HIGH/LOW), and categorical commitment of what will NOT
+  be output. Forces Claude to demonstrate understanding of the scope boundary before touching files.
+
+**Permanent prohibitions** (harness + both prompt templates):
+- `_extract_defects_for_tracking()`: parses QA report into (location, classification, problem, fix) entries
+- `_build_prohibitions_block()`: formats promoted entries as hard constraints with categorical rules
+- `recurring_tracker` in main loop: tracks (location, classification) → occurrence count
+- After 2+ appearances: promoted to `PERMANENT PROHIBITIONS` block, injected into every subsequent
+  patch prompt via `{{prohibitions_block}}` placeholder in both `build_previous_defects.md` and
+  `build_patch_first_file_lock.md`. Phrased as hard product boundary decisions, not fix instructions.
+- `build_prompt()` signature: new `prohibitions_block` optional param
+- Console: `[PROHIBITIONS] N recurring defect(s) promoted to hard prohibition` on promotion
+
 ### QA prompt + harness filter: ignore `__init__.py` defects
 - `qa_prompt.md`: added `__init__.py` to DO NOT FLAG list — QA must never write a defect
   whose Location is an `__init__.py` file, and must never flag a missing `__init__.py`.

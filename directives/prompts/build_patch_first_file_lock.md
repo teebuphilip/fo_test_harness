@@ -34,6 +34,7 @@ Do NOT output these files. They are preserved by the harness as-is from the prev
 - NEVER output raw file content without a code fence — the extraction system requires code fences.
 - No unlabeled code fences (every ``` block must have a language tag).
 
+{{prohibitions_block}}
 **DO NOT DO:**
 - Do not introduce new features.
 - Do not rename/move files unless defect explicitly requires it.
@@ -41,10 +42,19 @@ Do NOT output these files. They are preserved by the harness as-is from the prev
 - Do not emit partial snippets for required files.
 
 **OUTPUT CONTRACT:**
-1. First line: `PATCH_PLAN: <1-3 lines — for each defect: FIXED or EXPLAINED>`
-2. If any defects are EXPLAINED: output a `## DEFECT RESOLUTIONS` block next (see format below).
-3. Then output ONLY the defect-target file blocks for FIXED defects.
-4. Last line: `PATCH_SET_COMPLETE`
+1. First: `## DEFECT ANALYSIS` — write this section BEFORE any file output or PATCH_PLAN.
+   For EACH defect, write exactly:
+   ```
+   DEFECT-[N]:
+   - Root cause: [why this occurred — be specific about your world model vs the intake boundary]
+   - Pattern type: ONE-TIME-BUG | SCOPE-BOUNDARY | RECURRING-VIOLATION
+   - Reintroduction risk: HIGH | LOW — [if HIGH: name the exact pattern you will avoid, not just the field]
+   - Commitment: [what you will NOT output, stated categorically — not just the named field/endpoint]
+   ```
+2. Then: `PATCH_PLAN: <1-3 lines — for each defect: FIXED or EXPLAINED>`
+3. If any defects are EXPLAINED: output a `## DEFECT RESOLUTIONS` block next (see format below).
+4. Then output ONLY the defect-target file blocks for FIXED defects.
+5. Last line: `PATCH_SET_COMPLETE`
 
 **EXPLAINED RESOLUTION FORMAT:**
 Use this for defects that are invalid, out-of-scope, or by-design. No code output for these defects.
@@ -65,7 +75,9 @@ Valid reasons to use EXPLAINED:
 - QA cited code that does not exist in your output (fabricated evidence)
 
 **SELF-CHECK BEFORE FINAL OUTPUT:**
+- `## DEFECT ANALYSIS` section was written before PATCH_PLAN and before any file output.
 - Every defect is either FIXED (file output) or EXPLAINED (in DEFECT RESOLUTIONS block).
 - No file path outside `business/**`.
 - No new scope beyond defects.
 - No non-defect files included.
+- Any HIGH reintroduction risk from DEFECT ANALYSIS is not present in the output files.

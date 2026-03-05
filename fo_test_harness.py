@@ -1571,7 +1571,8 @@ class PromptTemplates:
         startup_id: str = 'unknown',
         force_tech_stack: Optional[str] = None,
         required_file_inventory: Optional[list] = None,
-        defect_target_files: Optional[list] = None
+        defect_target_files: Optional[list] = None,
+        prohibitions_block: Optional[str] = None
     ) -> Tuple[str, str]:
         """
         Generate BUILD prompt for Claude.
@@ -1629,14 +1630,17 @@ class PromptTemplates:
             if not defect_target_bullets:
                 defect_target_bullets = "- (no explicit file paths found in defects; infer minimal targets)"
 
+            _prohibitions = prohibitions_block or ''
             previous_defects_section = "\n\n" + DirectiveTemplateLoader.render(
                 'build_previous_defects.md',
-                previous_defects=previous_defects
+                previous_defects=previous_defects,
+                prohibitions_block=_prohibitions
             ) + "\n\n"
             previous_defects_section += "\n\n" + DirectiveTemplateLoader.render(
                 'build_patch_first_file_lock.md',
                 required_file_inventory_bullets=required_inventory_bullets,
-                defect_target_files_bullets=defect_target_bullets
+                defect_target_files_bullets=defect_target_bullets,
+                prohibitions_block=_prohibitions
             ) + "\n\n"
 
         governance_section = DirectiveTemplateLoader.render(
@@ -3593,6 +3597,65 @@ class FOHarness:
                 return text
         return ''
 
+    @staticmethod
+    def _extract_defects_for_tracking(qa_report: str) -> list:
+        """
+        Parse a QA report into a list of dicts for recurrence tracking.
+        Returns: [{'location': str, 'classification': str, 'problem': str, 'fix': str}, ...]
+        """
+        defects = []
+        blocks = re.split(r'(?=DEFECT-\d+:)', qa_report)
+        for block in blocks:
+            if not re.match(r'DEFECT-\d+:', block.strip()):
+                continue
+            loc = re.search(r'-\s*Location:\s*(.+?)(?:\n|$)', block)
+            cls = re.search(r'DEFECT-\d+:\s*(\S+)', block)
+            prob = re.search(r'-\s*Problem:\s*(.*?)(?=\n\s*-\s*(?:Expected|Fix|Severity):|\Z)', block, re.DOTALL)
+            fix  = re.search(r'-\s*Fix:\s*(.*?)(?=\n\s*-\s*Severity:|\Z)', block, re.DOTALL)
+
+            location = loc.group(1).strip() if loc else ''
+            # Strip **FILE: ...** markers
+            fm = re.search(r'\*\*FILE:\s*([^*]+)\*\*', location)
+            if fm:
+                location = fm.group(1).strip()
+
+            defects.append({
+                'location':       location,
+                'classification': cls.group(1).strip() if cls else '',
+                'problem':        prob.group(1).strip() if prob else '',
+                'fix':            fix.group(1).strip() if fix else '',
+            })
+        return defects
+
+    @staticmethod
+    def _build_prohibitions_block(recurring_tracker: dict) -> str:
+        """
+        Build the {{prohibitions_block}} string from the recurring defect tracker.
+        Only includes entries that have reached the promotion threshold (count >= 2).
+        Returns empty string if nothing to prohibit yet.
+        """
+        promoted = {k: v for k, v in recurring_tracker.items() if v['count'] >= 2}
+        if not promoted:
+            return ''
+
+        lines = [
+            '**PERMANENT PROHIBITIONS — HARD CONSTRAINTS FROM PREVIOUS ITERATIONS:**',
+            'These patterns have been flagged in 2+ consecutive iterations.',
+            'They are NOT defects to weigh — they are hard product boundary decisions.',
+            'You MUST NOT output them in any form, under any name.',
+            '',
+        ]
+        for i, ((location, classification), entry) in enumerate(promoted.items(), 1):
+            lines.append(
+                f'PROHIBITION-{i}: {location} ({classification} — appeared {entry["count"]}x)'
+            )
+            lines.append(f'  Problem pattern: {entry["last_problem"][:120]}')
+            lines.append(f'  Last fix instruction: {entry["last_fix"][:120]}')
+            lines.append(f'  HARD RULE: Do not output this pattern in any form. Not these names, not equivalent names.')
+            lines.append('')
+
+        return '\n'.join(lines) + '\n---\n'
+
     # Phrases banned from Evidence fields per qa_prompt.md ABSOLUTE RULES.
     # Any defect whose Evidence contains one of these is auto-removed.
     _BANNED_EVIDENCE_PHRASES = [
@@ -3804,6 +3867,8 @@ class FOHarness:
 
         iteration        = 1
         previous_defects = None
+        recurring_tracker = {}   # (location, classification) → {count, last_problem, last_fix}
+        prohibitions_block = ''  # accumulated prohibition text, injected into every patch prompt
         build_output     = None
 
         # FIX #1: Track cumulative usage for final cost summary (Claude)
@@ -3894,7 +3959,8 @@ class FOHarness:
                         self.startup_id,
                         self.effective_tech_stack,
                         required_file_inventory,
-                        defect_target_files
+                        defect_target_files,
+                        prohibitions_block
                     )
 
                     # FIX #4: Dynamic max tokens based on iteration
@@ -4432,6 +4498,20 @@ class FOHarness:
                     )
 
                     previous_defects = self._enrich_defects_with_fix_context(qa_report)
+
+                    # Track recurrence — promote to prohibition after 2+ appearances
+                    for d in self._extract_defects_for_tracking(qa_report):
+                        key = (d['location'], d['classification'])
+                        if key not in recurring_tracker:
+                            recurring_tracker[key] = {'count': 0, 'last_problem': '', 'last_fix': ''}
+                        recurring_tracker[key]['count'] += 1
+                        recurring_tracker[key]['last_problem'] = d['problem']
+                        recurring_tracker[key]['last_fix']     = d['fix']
+                    prohibitions_block = self._build_prohibitions_block(recurring_tracker)
+                    if prohibitions_block:
+                        promoted = sum(1 for v in recurring_tracker.values() if v['count'] >= 2)
+                        print_warning(f"  [PROHIBITIONS] {promoted} recurring defect(s) promoted to hard prohibition")
+
                     iteration       += 1
 
                     if iteration > self.max_qa_iterations:
