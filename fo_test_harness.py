@@ -3629,6 +3629,7 @@ class FOHarness:
 
         Checks applied per defect (in order):
         1. Location outside business/**               — out-of-scope file
+        1b. Location is __init__.py                   — Python plumbing, never a defect
         2. Evidence contains a banned absence phrase  — banned per qa_prompt rules
         3. Backtick-quoted evidence not in build output — fabricated code
         4. Presence claim is false — QA says X is missing but X IS in build output
@@ -3674,6 +3675,14 @@ class FOHarness:
             # --- Check 1: Location must be inside business/** ---
             if file_path and not file_path.startswith('business/'):
                 reason = f"Location '{file_path}' is outside business/** — out-of-scope"
+                removed.append((defect_id, block, reason))
+                print_warning(f"  [FILTER] Removed {defect_id}: {reason}")
+                continue
+
+            # --- Check 1b: __init__.py is never a valid defect target ---
+            import os as _os
+            if _os.path.basename(file_path) == '__init__.py':
+                reason = f"Location '{file_path}' is an __init__.py — Python package plumbing, never a defect target"
                 removed.append((defect_id, block, reason))
                 print_warning(f"  [FILTER] Removed {defect_id}: {reason}")
                 continue
