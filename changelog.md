@@ -32,6 +32,18 @@ Safety update:
   - If testcase directive file is missing, harness warns and skips testcase-doc step.
   - Build result is not marked failed due to testcase-doc polish failure.
 
+### Optional Gate 4: Quality gate (default OFF) + LOW-accept policy
+
+- Added optional Gate 4 (`--quality-gate`) after AI consistency:
+  - Completeness vs intake
+  - Code quality
+  - Enhanceability
+  - Deployability
+- Prompt is templatized in `directives/prompts/build_quality_gate.md`.
+- LOW-accept policy enabled:
+  - Gate passes if **Completeness**, **Code quality**, and **Deployability** are `PASS` or `LOW`.
+  - Enhanceability remains visible in report but does not block under this policy.
+
 ### Static + QA hardening: false-negative filter narrowed, deterministic checks expanded, gate telemetry added
 
 Implemented multi-part harness hardening to catch real integration/runtime defects earlier and surface terminal consistency issues:

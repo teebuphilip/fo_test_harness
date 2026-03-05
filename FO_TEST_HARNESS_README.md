@@ -84,6 +84,21 @@ Additional optional polish directive override:
 
 This lets you template and evolve post-QA testcase document requirements without code changes.
 
+Optional Gate 4:
+
+```bash
+--quality-gate
+```
+
+Runs a fourth QA gate (default OFF) for:
+- completeness vs intake
+- code quality
+- enhanceability
+- deployability
+
+Current pass policy:
+- Gate passes when completeness, code quality, and deployability are `PASS` or `LOW`.
+
 ### Real example — Wynwood, Block B (default), no deploy (default)
 
 ```bash

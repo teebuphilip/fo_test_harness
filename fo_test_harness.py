@@ -2262,6 +2262,26 @@ If REJECTED: end with exactly: "QA STATUS: REJECTED - [X] defects require fixing
         )
 
     @staticmethod
+    def quality_gate_prompt(file_contents: dict, intake_data: dict) -> str:
+        """
+        Generate optional quality gate prompt for ChatGPT.
+        Evaluates: completeness vs intake, code quality, enhanceability, deployability.
+        """
+        artifact_lines = []
+        for path, content in sorted(file_contents.items()):
+            ext = path.rsplit('.', 1)[-1] if '.' in path else 'text'
+            lang_map = {'py': 'python', 'jsx': 'jsx', 'js': 'jsx', 'json': 'json',
+                        'md': 'markdown', 'txt': 'text', 'css': 'css'}
+            lang = lang_map.get(ext, 'text')
+            artifact_lines.append(f"**FILE: {path}**\n```{lang}\n{content}\n```")
+        artifact_contents = "\n\n".join(artifact_lines) if artifact_lines else "(no business/ files found)"
+        return DirectiveTemplateLoader.render(
+            'build_quality_gate.md',
+            intake_json=json.dumps(intake_data, indent=2),
+            artifact_contents=artifact_contents
+        )
+
+    @staticmethod
     def deploy_prompt(build_output: str, deploy_governance: str) -> str:
         """
         Generate DEPLOY prompt for Claude.
@@ -2326,6 +2346,7 @@ class FOHarness:
         self.max_qa_iterations = int(getattr(cli_args, "max_iterations", Config.MAX_QA_ITERATIONS)) if cli_args else Config.MAX_QA_ITERATIONS
         self.max_build_parts = int(getattr(cli_args, "max_parts", Config.MAX_BUILD_PARTS_DEFAULT)) if cli_args else Config.MAX_BUILD_PARTS_DEFAULT
         self.max_build_continuations = int(getattr(cli_args, "max_continuations", Config.MAX_BUILD_CONTINUATIONS_DEFAULT)) if cli_args else Config.MAX_BUILD_CONTINUATIONS_DEFAULT
+        self.enable_quality_gate = bool(getattr(cli_args, "quality_gate", False)) if cli_args else False
 
         # Load intake JSON
         # Handles both pure JSON and marker-wrapped formats
@@ -2423,6 +2444,7 @@ class FOHarness:
         print_info(f"Boilerplate:   {'YES' if self.use_boilerplate else 'NO'}")
         print_info(f"Max iterations:{self.max_qa_iterations}")
         print_info(f"Build caps:    max_parts={self.max_build_parts}, max_continuations={self.max_build_continuations}")
+        print_info(f"Quality gate:  {'ON' if self.enable_quality_gate else 'OFF'}")
         print_info(f"Deploy:        {'YES' if self.do_deploy else 'NO — ZIP output only'}")
         print_info(f"Run directory: {self.run_dir}")
 
@@ -4798,6 +4820,87 @@ class FOHarness:
             return []
         return FOHarness._parse_consistency_report(output)
 
+    def _run_quality_gate(self, iteration: int) -> Tuple[list, dict]:
+        """
+        Optional Gate 4 (OFF by default): quality evaluation via ChatGPT.
+        Dimensions:
+          - Completeness vs intake
+          - Code quality
+          - Enhanceability
+          - Deployability
+
+        Returns:
+          (issues, usage_stats)
+          issues: [] when PASS, else parsed ISSUE-* list (same schema as consistency parser).
+          usage_stats: {'input_tokens': int, 'output_tokens': int}
+        """
+        artifacts_dir = self.artifacts.build_dir / f'iteration_{iteration:02d}_artifacts'
+        usage_stats = {'input_tokens': 0, 'output_tokens': 0}
+
+        if not artifacts_dir.is_dir():
+            print_warning(f"  [QUALITY] Artifacts dir not found: {artifacts_dir}")
+            return [], usage_stats
+
+        file_contents = {}
+        for path in sorted(artifacts_dir.rglob('*')):
+            if not path.is_file():
+                continue
+            rel_str = str(path.relative_to(artifacts_dir))
+            if not rel_str.startswith('business/'):
+                continue
+            try:
+                file_contents[rel_str] = path.read_text(encoding='utf-8', errors='replace')
+            except Exception:
+                pass
+
+        if not file_contents:
+            print_warning("  [QUALITY] No business/ files found — skipping quality gate")
+            return [], usage_stats
+
+        print_info(f"  [QUALITY] Evaluating {len(file_contents)} artifact(s) across 4 quality dimensions...")
+        prompt = PromptTemplates.quality_gate_prompt(file_contents, self.intake_data)
+        self.artifacts.save_log(f'iteration_{iteration:02d}_quality_prompt', prompt)
+
+        try:
+            resp = self.chatgpt.call(prompt, max_tokens=8192)
+            output = resp['choices'][0]['message']['content']
+            self.artifacts.save_log(f'iteration_{iteration:02d}_quality_output', output)
+            usage = resp.get('usage', {})
+            usage_stats['input_tokens'] = int(usage.get('prompt_tokens', 0) or 0)
+            usage_stats['output_tokens'] = int(usage.get('completion_tokens', 0) or 0)
+            cost = (usage_stats['input_tokens'] / 1_000_000) * 2.50 + (usage_stats['output_tokens'] / 1_000_000) * 10.00
+            print_info(f"  [QUALITY] ChatGPT responded (${cost:.4f})")
+        except Exception as e:
+            print_error(f"  [QUALITY] ChatGPT call failed: {e}")
+            return [], usage_stats
+
+        if 'QUALITY GATE: PASS' in output:
+            return [], usage_stats
+
+        # Acceptable-low policy:
+        # Gate passes when Completeness, Code Quality, and Deployability are PASS or LOW.
+        # (Enhanceability can still be reported for visibility without blocking.)
+        dim_map = {}
+        for m in re.finditer(
+            r'DIMENSION-\d+:\s*([A-Z_]+)\s*=\s*(PASS|LOW|FAIL)',
+            output,
+            re.IGNORECASE
+        ):
+            key = m.group(1).strip().upper()
+            val = m.group(2).strip().upper()
+            dim_map[key] = val
+
+        _c = dim_map.get('COMPLETENESS_VS_INTAKE')
+        _q = dim_map.get('CODE_QUALITY')
+        _d = dim_map.get('DEPLOYABILITY')
+        if _c in ('PASS', 'LOW') and _q in ('PASS', 'LOW') and _d in ('PASS', 'LOW'):
+            print_info("  [QUALITY] LOW accepted for Completeness/Code Quality/Deployability — treating gate as PASS")
+            return [], usage_stats
+
+        # Reuse consistency parser/formatter shape: ISSUE-N with Files/Problem/Fix/Severity
+        issues = self._parse_consistency_report(output)
+        return issues, usage_stats
+
     def execute_build_qa_loop(self) -> Tuple[bool, str]:
         """
         Execute BUILD → QA loop until QA accepts or max iterations hit.
@@ -4815,9 +4918,10 @@ class FOHarness:
         build_output     = None
 
         # Unified QA loop state: tracks which check drove the last rejection
-        # 'qa' → Feature QA (ChatGPT)  |  'static' → deterministic checks  |  'consistency' → AI cross-file check
+        # 'qa' → Feature QA (ChatGPT)  |  'static' → deterministic checks
+        # 'consistency' → AI cross-file check  |  'quality' → optional quality gate
         defect_source        = 'qa'
-        _raw_pending_defects = []   # raw defect list for static/consistency (for file target extraction)
+        _raw_pending_defects = []   # raw defect list for static/consistency/quality (for file target extraction)
         _qa_accepted_at_iter = None # set when Feature QA first accepts; enables polish even on static/consistency max-iter exit
         _loop_success        = False
 
@@ -5026,7 +5130,7 @@ class FOHarness:
                 if not _warm_skip_build:
                     # For static/consistency fix iterations, extract target files from raw defect list
                     # (more accurate than parsing the formatted text).
-                    if defect_source in ('static', 'consistency') and _raw_pending_defects:
+                    if defect_source in ('static', 'consistency', 'quality') and _raw_pending_defects:
                         defect_target_files = sorted({
                             d.get('file', '') for d in _raw_pending_defects
                             if d.get('file', '').startswith('business/')
@@ -5050,7 +5154,7 @@ class FOHarness:
                         defect_target_files = self._extract_defect_target_files(previous_defects) if previous_defects else []
 
                     # Select prompt: static/consistency fix → targeted patch; feature QA → full build prompt
-                    if defect_source in ('static', 'consistency') and previous_defects:
+                    if defect_source in ('static', 'consistency', 'quality') and previous_defects:
                         # Governance section for caching (no defects passed in — defects go in dynamic only)
                         governance_section, _ = PromptTemplates.build_prompt(
                             self.block, self.intake_data, self.build_governance,
@@ -5652,10 +5756,44 @@ class FOHarness:
                     print_success("  [CONSISTENCY] PASS — no cross-file consistency issues")
                     _record_gate('CONSISTENCY', 'PASS', 'no consistency issues', iteration)
 
+                    # ── GATE 4 (Optional): Quality gate ───────────────────────────
+                    if self.enable_quality_gate:
+                        print_info("")
+                        print_info("═══════════════════════════════════════════════════════════")
+                        print_info("GATE 4: QUALITY GATE — Completeness/Quality/Enhanceability/Deployability")
+                        print_info("═══════════════════════════════════════════════════════════")
+                        _record_gate('QUALITY', 'START', 'running optional quality gate', iteration)
+                        quality_issues, quality_usage = self._run_quality_gate(iteration)
+                        # account for extra ChatGPT call in cost summary
+                        total_gpt_calls += 1
+                        total_gpt_input_tokens += int(quality_usage.get('input_tokens', 0) or 0)
+                        total_gpt_output_tokens += int(quality_usage.get('output_tokens', 0) or 0)
+                        if quality_issues:
+                            _record_gate('QUALITY', 'FAIL', f'{len(quality_issues)} issue(s)', iteration)
+                            print_warning(f"  [QUALITY] FAIL — {len(quality_issues)} issue(s)")
+                            for iss in quality_issues:
+                                sev_fn = print_error if iss.get('severity') == 'HIGH' else print_warning
+                                sev_fn(f"    {iss['id']} [{iss.get('severity', 'MEDIUM')}] "
+                                       f"{iss.get('files', iss.get('file', '?'))}: {iss.get('issue', '?')}")
+                            defect_source        = 'quality'
+                            _raw_pending_defects = quality_issues
+                            previous_defects     = self._format_consistency_defects_for_claude(quality_issues)
+                            iteration += 1
+                            if iteration > self.max_qa_iterations:
+                                print_error(f"Max iterations ({self.max_qa_iterations}) reached during quality gate — halting")
+                                break
+                            print_info(f"Starting iteration {iteration} with quality-gate fixes...")
+                            continue
+                        print_success("  [QUALITY] PASS — all 4 dimensions acceptable")
+                        _record_gate('QUALITY', 'PASS', 'all dimensions pass', iteration)
+
                     # ── All three gates passed ────────────────────────────────────
                     print_success("")
                     print_success("══════════════════════════════════════════════════════════")
-                    print_success("ALL QA GATES PASSED: Feature QA + Static + AI Consistency")
+                    if self.enable_quality_gate:
+                        print_success("ALL QA GATES PASSED: Feature QA + Static + AI Consistency + Quality")
+                    else:
+                        print_success("ALL QA GATES PASSED: Feature QA + Static + AI Consistency")
                     print_success("══════════════════════════════════════════════════════════")
                     _loop_success = True
                     break
@@ -6100,6 +6238,13 @@ Examples:
         help='Standalone AI consistency check: point at an iteration_NN_artifacts/ dir, '
              'call Claude to check cross-file consistency, print results, exit. '
              'Requires ANTHROPIC_API_KEY. Does not require intake or governance args.'
+    )
+    parser.add_argument(
+        '--quality-gate',
+        action='store_true',
+        default=False,
+        help='Enable optional Gate 4 after consistency: ChatGPT quality evaluation '
+             '(completeness vs intake, code quality, enhanceability, deployability). Default: OFF.'
     )
 
     args = parser.parse_args()

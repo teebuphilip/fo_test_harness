@@ -19,6 +19,9 @@
 - For API-heavy apps, include a Postman conversion section in the same directive:
   - this gives a direct path from testcase doc -> collection/newman execution
   - complements Playwright (UI/E2E) with API contract automation.
+- A fourth quality gate is useful as an operator control, but should be optional by default.
+- Using a LOW-accept policy on high-signal dimensions (completeness, code quality, deployability)
+  reduces false blocks while still surfacing quality debt for follow-up.
 
 ## What Broke Most Often
 - Large lowcode outputs hit token limits and dropped required files.

@@ -40,6 +40,13 @@
   - Postman suite conversion plan (collection/folder layout, vars, auth scripts, Newman/CI notes)
 ⬜ TODO for FO codebase
 
+7. Optional Gate 4 quality gate + LOW-accept policy
+- New optional flag: `--quality-gate` (default OFF).
+- New prompt template: `directives/prompts/build_quality_gate.md`.
+- Gate evaluates: completeness vs intake, code quality, enhanceability, deployability.
+- Current policy: gate passes when completeness/code quality/deployability are PASS or LOW.
+⬜ TODO for FO codebase
+
 ## Priority 0 (First)
 1. Truncation recovery fix
 - Run fallback continuations whenever output remains truncated, regardless of multipart mode.
