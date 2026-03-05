@@ -40,6 +40,11 @@
 ## Governance Alignment
 - Keep default iteration cap aligned to locked policy (`5`) but allow CLI override for controlled exception runs.
 
+29. Bugfix: _run_static_fix_loop wrong extraction method ✅ DONE (2026-03-05)
+    - self.artifacts.extract_artifacts() does not exist. Use save_build_output(extract_from=...)
+      then extract_file_paths_from_output() for merge_forward path list. Same pattern as main loop.
+    ⬜ TODO for FO codebase
+
 28. Static check CLI modes ✅ DONE (2026-03-05)
     - --static-check <artifacts_dir>: standalone lint, no API calls, exits 0/1.
     - --resume-mode static: skip main loop, find last accepted iter, run static fix loop + polish.

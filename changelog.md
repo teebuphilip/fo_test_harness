@@ -2,6 +2,12 @@
 
 ## 2026-03-05
 
+### Bugfix: _run_static_fix_loop used non-existent extract_artifacts method
+`self.artifacts.extract_artifacts()` does not exist on `ArtifactManager`.
+Fix: use `save_build_output(next_iter, fix_output, extract_from=...)` (saves raw + extracts)
+then `extract_file_paths_from_output(fix_output_for_extraction)` for the merge_forward path list.
+Same pattern as the main loop.
+
 ### Static check: standalone CLI mode + resume-mode static
 
 Two new ways to invoke the static check from the command line:
