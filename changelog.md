@@ -2,6 +2,12 @@
 
 ## 2026-03-05
 
+### QA prompt + harness filter: ignore `__init__.py` defects
+- `qa_prompt.md`: added `__init__.py` to DO NOT FLAG list — QA must never write a defect
+  whose Location is an `__init__.py` file, and must never flag a missing `__init__.py`.
+- `_filter_hallucinated_defects()`: added check 1b — any defect whose Location resolves to
+  an `__init__.py` filename is auto-removed before the defect reaches the patch loop.
+
 ### Exclude `__init__.py` from whitelist and remap
 - `business/backend/routes/*.py`, `business/models/*.py`, `business/schemas/*.py` all
   matched `__init__.py` via fnmatch — so Claude's `__init__.py` files were carried forward

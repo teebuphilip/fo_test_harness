@@ -40,6 +40,10 @@
 ## Governance Alignment
 - Keep default iteration cap aligned to locked policy (`5`) but allow CLI override for controlled exception runs.
 
+21. QA prompt + harness filter: ignore __init__.py defects ✅ DONE (2026-03-05)
+    - qa_prompt.md: __init__.py added to DO NOT FLAG list.
+    - _filter_hallucinated_defects() check 1b: removes any defect whose Location is an __init__.py.
+
 20. Exclude __init__.py from whitelist and remap ✅ DONE (2026-03-05)
     - `*.py` patterns in BOILERPLATE_VALID_PATHS matched __init__.py via fnmatch → carried forward
       indefinitely by merge_forward → attracted bogus QA defects.
