@@ -40,6 +40,17 @@
 ## Governance Alignment
 - Keep default iteration cap aligned to locked policy (`5`) but allow CLI override for controlled exception runs.
 
+27. Post-QA static check loop ✅ DONE (2026-03-05)
+    - Config.MAX_STATIC_ITERATIONS = 5; --max-static-iterations CLI flag.
+    - FOHarness._run_static_check(): 6 checks (AST syntax, duplicate __tablename__, missing TenantMixin
+      import, wrong Base import, requirements.txt YAML contamination, unauthenticated routes).
+    - FOHarness._format_static_defects_for_claude(): formats list for Claude prompt.
+    - FOHarness._run_static_fix_loop(): Claude fix → merge → Feature QA → static check loop (cap N).
+    - PromptTemplates.static_fix_prompt(): renders new build_static_fix.md template.
+    - directives/prompts/build_static_fix.md: thin template, patch-first contract, boilerplate imports.
+    - Main loop ACCEPTED block: calls _run_static_fix_loop() before _post_qa_polish().
+    ⬜ TODO for FO codebase
+
 26. Fix B: Truncate build output at PATCH_SET_COMPLETE before artifact extraction ✅ DONE (2026-03-05)
     - PATCH_SET_COMPLETE_MARKER constant added at module level.
     - save_build_output(): new optional extract_from param — saves full raw output to disk,

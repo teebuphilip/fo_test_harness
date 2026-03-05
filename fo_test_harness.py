@@ -87,7 +87,8 @@ class Config:
         )
 
     # Iteration Limits
-    MAX_QA_ITERATIONS = 5  # Default aligns with locked governance; CLI can override.
+    MAX_QA_ITERATIONS = 5      # Default aligns with locked governance; CLI can override.
+    MAX_STATIC_ITERATIONS = 5  # Max static-check fix rounds after feature QA acceptance.
 
     # API call settings
     # FIX #6: Increased timeout for large builds with prompt caching.
@@ -2211,6 +2212,34 @@ If REJECTED: end with exactly: "QA STATUS: REJECTED - [X] defects require fixing
 """
 
     @staticmethod
+    def static_fix_prompt(
+        static_defects: str,
+        required_file_inventory: list,
+        defect_target_files: list,
+        prohibitions_block: str = ''
+    ) -> str:
+        """
+        Generate static fix prompt for Claude.
+        Used after feature QA acceptance to fix deterministic code issues
+        (syntax errors, duplicate models, missing imports, unauthenticated routes, etc.)
+        """
+        required_inventory_bullets = "\n".join(f"- {p}" for p in (required_file_inventory or []))
+        if not required_inventory_bullets:
+            required_inventory_bullets = "- (no prior manifest inventory available)"
+
+        defect_target_bullets = "\n".join(f"- {p}" for p in (defect_target_files or []))
+        if not defect_target_bullets:
+            defect_target_bullets = "- (no explicit file paths found in defects; infer minimal targets)"
+
+        return DirectiveTemplateLoader.render(
+            'build_static_fix.md',
+            static_defects=static_defects,
+            required_file_inventory_bullets=required_inventory_bullets,
+            defect_target_files_bullets=defect_target_bullets,
+            prohibitions_block=prohibitions_block
+        )
+
+    @staticmethod
     def deploy_prompt(build_output: str, deploy_governance: str) -> str:
         """
         Generate DEPLOY prompt for Claude.
@@ -2275,6 +2304,7 @@ class FOHarness:
         self.max_qa_iterations = int(getattr(cli_args, "max_iterations", Config.MAX_QA_ITERATIONS)) if cli_args else Config.MAX_QA_ITERATIONS
         self.max_build_parts = int(getattr(cli_args, "max_parts", Config.MAX_BUILD_PARTS_DEFAULT)) if cli_args else Config.MAX_BUILD_PARTS_DEFAULT
         self.max_build_continuations = int(getattr(cli_args, "max_continuations", Config.MAX_BUILD_CONTINUATIONS_DEFAULT)) if cli_args else Config.MAX_BUILD_CONTINUATIONS_DEFAULT
+        self.max_static_iterations = int(getattr(cli_args, "max_static_iterations", Config.MAX_STATIC_ITERATIONS)) if cli_args else Config.MAX_STATIC_ITERATIONS
 
         # Load intake JSON
         # Handles both pure JSON and marker-wrapped formats
@@ -3987,6 +4017,335 @@ class FOHarness:
         print_info(f"  [FILTER] QA report filtered: {len(removed)} defect(s) removed, {total_kept} remaining")
         return new_report
 
+    def _run_static_check(self, artifacts_dir: Path) -> list:
+        """
+        Run deterministic static checks on extracted Python artifacts.
+
+        Checks (in order):
+        1. AST syntax — parse every .py file; any SyntaxError is HIGH
+        2. Duplicate __tablename__ — two models share a DB table name; HIGH
+        3. Missing TenantMixin import — class uses TenantMixin but import absent; HIGH
+        4. Wrong Base import — uses app.models.base or raw declarative_base(); HIGH
+        5. Requirements.txt YAML contamination — docker-compose YAML in pip file; HIGH
+        6. Unauthenticated routes — endpoint defined without Depends(get_current_user); MEDIUM
+
+        Returns list of defect dicts:
+            {'id': 'STATIC-N', 'file': path, 'issue': str, 'severity': HIGH|MEDIUM, 'fix': str}
+        """
+        import ast
+
+        defects = []
+        counter = [0]
+
+        def add_defect(file_path, issue, severity, fix):
+            counter[0] += 1
+            defects.append({
+                'id': f'STATIC-{counter[0]}',
+                'file': file_path,
+                'issue': issue,
+                'severity': severity,
+                'fix': fix
+            })
+
+        py_files = sorted(artifacts_dir.rglob('*.py'))
+
+        # ── CHECK 1: AST Syntax ──────────────────────────────────────────────
+        for py_file in py_files:
+            rel = str(py_file.relative_to(artifacts_dir))
+            if rel in ('artifact_manifest.json', 'build_state.json'):
+                continue
+            try:
+                source = py_file.read_text(encoding='utf-8', errors='replace')
+                ast.parse(source, filename=str(py_file))
+            except SyntaxError as e:
+                add_defect(
+                    rel,
+                    f'SyntaxError at line {e.lineno}: {e.msg}',
+                    'HIGH',
+                    f'Fix syntax error at line {e.lineno} in {rel}: {e.msg}'
+                )
+
+        # ── CHECK 2: Duplicate __tablename__ ────────────────────────────────
+        tablename_map: dict = {}  # tablename → list of files
+        for py_file in py_files:
+            rel = str(py_file.relative_to(artifacts_dir))
+            try:
+                source = py_file.read_text(encoding='utf-8', errors='replace')
+                for match in re.finditer(r'__tablename__\s*=\s*["\']([^"\']+)["\']', source):
+                    tname = match.group(1)
+                    tablename_map.setdefault(tname, []).append(rel)
+            except Exception:
+                continue
+        for tname, files in tablename_map.items():
+            if len(files) > 1:
+                add_defect(
+                    files[0],
+                    f'Duplicate __tablename__ = "{tname}" also defined in: {", ".join(files[1:])}',
+                    'HIGH',
+                    f'Remove the duplicate model class definition. Keep exactly one file with __tablename__ = "{tname}".'
+                )
+
+        # ── CHECK 3: Missing TenantMixin import ─────────────────────────────
+        for py_file in py_files:
+            rel = str(py_file.relative_to(artifacts_dir))
+            try:
+                source = py_file.read_text(encoding='utf-8', errors='replace')
+            except Exception:
+                continue
+            # Class inherits TenantMixin
+            if re.search(r'class\s+\w+\s*\([^)]*TenantMixin[^)]*\)', source):
+                # But import is absent
+                if 'from core.tenancy import' not in source or 'TenantMixin' not in re.findall(
+                    r'from core\.tenancy import ([^\n]+)', source, re.IGNORECASE
+                ).__str__():
+                    # Refined: check that TenantMixin appears in a core.tenancy import
+                    tenancy_imports = re.findall(r'from core\.tenancy import ([^\n]+)', source)
+                    imported_names = ','.join(tenancy_imports)
+                    if 'TenantMixin' not in imported_names:
+                        add_defect(
+                            rel,
+                            'Class inherits TenantMixin but `from core.tenancy import TenantMixin` is absent',
+                            'HIGH',
+                            'Add `from core.tenancy import TenantMixin, get_tenant_db` at top of file'
+                        )
+
+        # ── CHECK 4: Wrong Base import ───────────────────────────────────────
+        for py_file in py_files:
+            rel = str(py_file.relative_to(artifacts_dir))
+            try:
+                source = py_file.read_text(encoding='utf-8', errors='replace')
+            except Exception:
+                continue
+            if re.search(r'from\s+app\.models\.base\s+import', source):
+                add_defect(
+                    rel,
+                    'Uses `from app.models.base import Base` — wrong path for boilerplate',
+                    'HIGH',
+                    'Replace with `from core.database import Base, get_db`'
+                )
+            elif re.search(r'declarative_base\(\)', source) and 'from core.database' not in source:
+                add_defect(
+                    rel,
+                    'Calls `declarative_base()` directly instead of importing Base from boilerplate',
+                    'HIGH',
+                    'Remove `declarative_base()` call; import `Base` from `core.database` instead'
+                )
+
+        # ── CHECK 5: Requirements.txt YAML contamination ─────────────────────
+        req_file = artifacts_dir / 'business' / 'requirements.txt'
+        if not req_file.exists():
+            # Try root
+            req_file = artifacts_dir / 'requirements.txt'
+        if req_file.exists():
+            try:
+                req_content = req_file.read_text(encoding='utf-8', errors='replace')
+                yaml_indicators = ['services:', 'version:', 'image:', 'container_name:', 'networks:', 'volumes:']
+                found_yaml = [ind for ind in yaml_indicators if ind in req_content]
+                if found_yaml:
+                    rel = str(req_file.relative_to(artifacts_dir))
+                    add_defect(
+                        rel,
+                        f'requirements.txt contains docker-compose/YAML content (found: {", ".join(found_yaml)})',
+                        'HIGH',
+                        'Replace entire file with valid pip requirements only (one package per line, no YAML keys)'
+                    )
+            except Exception:
+                pass
+
+        # ── CHECK 6: Unauthenticated routes ──────────────────────────────────
+        routes_dir = artifacts_dir / 'business' / 'backend' / 'routes'
+        if routes_dir.exists():
+            for py_file in sorted(routes_dir.glob('*.py')):
+                rel = str(py_file.relative_to(artifacts_dir))
+                try:
+                    source = py_file.read_text(encoding='utf-8', errors='replace')
+                except Exception:
+                    continue
+                # Skip files with no route decorators
+                if not re.search(r'@router\.(get|post|put|delete|patch)\s*\(', source):
+                    continue
+                # Skip files that already have auth
+                if ('get_current_user' in source or 'require_role' in source):
+                    continue
+                # Flag: has routes but zero auth references
+                add_defect(
+                    rel,
+                    'Backend route file defines endpoints but contains no `Depends(get_current_user)` — all routes are unauthenticated',
+                    'MEDIUM',
+                    'Import `from core.rbac import get_current_user` and add `current_user: dict = Depends(get_current_user)` to each endpoint signature'
+                )
+
+        return defects
+
+    def _format_static_defects_for_claude(self, defects: list) -> str:
+        """
+        Format static defects list into a structured block for Claude's static fix prompt.
+        """
+        if not defects:
+            return "(no static defects)"
+        lines = []
+        for d in defects:
+            lines.append(
+                f"STATIC-{d['id'].replace('STATIC-', '')}: [{d['severity']}] {d['file']}\n"
+                f"  Issue: {d['issue']}\n"
+                f"  Fix: {d['fix']}"
+            )
+        return "\n\n".join(lines)
+
+    def _run_static_fix_loop(
+        self,
+        accepted_iteration: int,
+        governance_section: str,
+        prohibitions_block: str,
+        recurring_tracker: dict,
+        resolved_tracker: dict,
+    ) -> Tuple[bool, int, str]:
+        """
+        Post-QA static check loop.
+
+        Pipeline per pass:
+          1. Run _run_static_check → if clean, return (True, iter, output)
+          2. Call Claude with static_fix_prompt
+          3. Truncate at PATCH_SET_COMPLETE, extract artifacts, merge forward
+          4. Run Feature QA (ChatGPT)
+          5. If QA REJECTED → revert to last-good, return (False, prev_iter, prev_output)
+          6. If QA ACCEPTED → loop back to step 1
+
+        Cap: self.max_static_iterations passes.
+        Returns (passed: bool, final_iteration: int, final_build_output: str)
+        """
+        print_info("")
+        print_info("═══════════════════════════════════════════════════════════")
+        print_info("POST-QA STATIC CHECK — Deterministic code quality pass")
+        print_info("═══════════════════════════════════════════════════════════")
+
+        current_iter = accepted_iteration
+        current_artifacts_dir = self.artifacts.build_dir / f'iteration_{current_iter:02d}_artifacts'
+        current_output = self.artifacts.build_synthetic_qa_output(current_iter)
+
+        for static_pass in range(1, self.max_static_iterations + 1):
+            print_info(f"\n  [STATIC] Pass {static_pass}/{self.max_static_iterations} — checking artifacts from iteration {current_iter:02d}")
+            defects = self._run_static_check(current_artifacts_dir)
+
+            if not defects:
+                print_success(f"  [STATIC] PASS — no static defects found (iteration {current_iter:02d})")
+                return True, current_iter, current_output
+
+            print_warning(f"  [STATIC] {len(defects)} defect(s) found:")
+            for d in defects:
+                print_warning(f"    {d['id']} [{d['severity']}] {d['file']}: {d['issue']}")
+
+            # ── Build static fix prompt ──────────────────────────────────────
+            required_file_inventory = self._get_previous_iteration_inventory(current_iter + 1)
+            # Fallback: read current manifest
+            if not required_file_inventory:
+                manifest_path = current_artifacts_dir / 'artifact_manifest.json'
+                if manifest_path.exists():
+                    try:
+                        manifest = json.load(open(manifest_path))
+                        required_file_inventory = sorted({
+                            a['path'] for a in manifest.get('artifacts', [])
+                            if a.get('path', '').startswith('business/')
+                        })
+                    except Exception:
+                        required_file_inventory = []
+
+            defect_target_files = sorted({d['file'] for d in defects if d['file'].startswith('business/')})
+
+            static_defects_text = self._format_static_defects_for_claude(defects)
+            fix_prompt = PromptTemplates.static_fix_prompt(
+                static_defects=static_defects_text,
+                required_file_inventory=required_file_inventory,
+                defect_target_files=defect_target_files,
+                prohibitions_block=prohibitions_block
+            )
+
+            self.artifacts.save_log(f'iteration_{current_iter + 1:02d}_static_fix_prompt', fix_prompt)
+
+            # ── Call Claude ──────────────────────────────────────────────────
+            print_info(f"  [STATIC] Calling Claude for static fix (pass {static_pass})...")
+            try:
+                start_time = time.time()
+                fix_response = self.claude.call(
+                    fix_prompt,
+                    max_tokens=Config.CLAUDE_MAX_TOKENS,
+                    cacheable_prefix=governance_section,
+                    timeout=Config.REQUEST_TIMEOUT_DEFAULT
+                )
+                fix_output = fix_response['content'][0]['text']
+                elapsed = time.time() - start_time
+
+                usage = fix_response.get('usage', {})
+                in_tok  = usage.get('input_tokens', 0)
+                out_tok = usage.get('output_tokens', 0)
+                cost = (in_tok / 1_000_000) * 3.00 + (out_tok / 1_000_000) * 15.00
+                print_success(f"  [STATIC] Claude responded in {elapsed:.1f}s (${cost:.4f})")
+
+            except Exception as e:
+                print_error(f"  [STATIC] Claude call failed: {e}")
+                return False, current_iter, current_output
+
+            # ── Truncate at PATCH_SET_COMPLETE ───────────────────────────────
+            PATCH_SET_COMPLETE_MARKER = 'PATCH_SET_COMPLETE'
+            if PATCH_SET_COMPLETE_MARKER in fix_output:
+                marker_pos = fix_output.index(PATCH_SET_COMPLETE_MARKER)
+                fix_output_for_extraction = fix_output[:marker_pos + len(PATCH_SET_COMPLETE_MARKER)]
+            else:
+                fix_output_for_extraction = fix_output
+                print_warning("  [STATIC] PATCH_SET_COMPLETE not found in Claude output — using full output")
+
+            next_iter = current_iter + 1
+            self.artifacts.save_build_output(next_iter, fix_output)
+
+            # ── Extract artifacts ────────────────────────────────────────────
+            next_artifacts_dir = self.artifacts.build_dir / f'iteration_{next_iter:02d}_artifacts'
+            next_artifacts_dir.mkdir(parents=True, exist_ok=True)
+            extracted_paths = self.artifacts.extract_artifacts(fix_output_for_extraction, next_iter)
+            print_info(f"  [STATIC] Extracted {len(extracted_paths)} file(s) to iteration_{next_iter:02d}_artifacts/")
+
+            # ── Merge forward non-defect files ───────────────────────────────
+            self.artifacts.merge_forward_from_previous_iteration(next_iter, extracted_paths)
+
+            # ── Run Feature QA ───────────────────────────────────────────────
+            print_info(f"  [STATIC] Running Feature QA on merged iteration {next_iter:02d} artifacts...")
+            qa_build_output = self.artifacts.build_synthetic_qa_output(next_iter)
+            qa_prompt_text = PromptTemplates.qa_prompt(
+                qa_build_output,
+                self.intake_data,
+                self.block,
+                self.effective_tech_stack,
+                self.qa_override,
+                prohibitions_block=prohibitions_block,
+                defect_history_block=self._build_qa_defect_history(recurring_tracker),
+                resolved_defects_block=self._build_resolved_defects_block(resolved_tracker)
+            )
+            self.artifacts.save_log(f'iteration_{next_iter:02d}_static_qa_prompt', qa_prompt_text)
+
+            try:
+                qa_response = self.chatgpt.call(qa_prompt_text)
+                qa_report   = qa_response['choices'][0]['message']['content']
+                # Filter hallucinated defects
+                qa_report = self._filter_hallucinated_defects(qa_report, qa_build_output)
+                self.artifacts.save_qa_report(next_iter, qa_report)
+                print_success(f"  [STATIC] Feature QA complete for iteration {next_iter:02d}")
+            except Exception as e:
+                print_error(f"  [STATIC] Feature QA call failed: {e}")
+                return False, current_iter, current_output
+
+            if "QA STATUS: ACCEPTED" in qa_report:
+                print_success(f"  [STATIC] Feature QA ACCEPTED on iteration {next_iter:02d}")
+                current_iter = next_iter
+                current_artifacts_dir = self.artifacts.build_dir / f'iteration_{current_iter:02d}_artifacts'
+                current_output = qa_build_output
+                # Loop: run static check again
+            else:
+                print_warning(f"  [STATIC] Feature QA REJECTED on iteration {next_iter:02d} — static fix introduced feature regression")
+                print_warning("  [STATIC] Reverting to last feature-QA-accepted state")
+                return False, current_iter, current_output
+
+        print_warning(f"  [STATIC] Static fix loop exhausted ({self.max_static_iterations} passes) without full clean")
+        return False, current_iter, current_output
+
     def execute_build_qa_loop(self) -> Tuple[bool, str]:
         """
         Execute BUILD → QA loop until QA accepts or max iterations hit.
@@ -4630,7 +4989,18 @@ class FOHarness:
                     print_success(f"QA ACCEPTED on iteration {iteration}")
                     print_success("BUILD → QA loop complete — no defects")
 
-                    # FIX #10: Post-QA polish step - generate missing optional files
+                    # ── Static code quality check (post feature-QA) ──────────
+                    static_passed, iteration, build_output = self._run_static_fix_loop(
+                        accepted_iteration=iteration,
+                        governance_section=governance_section,
+                        prohibitions_block=prohibitions_block,
+                        recurring_tracker=recurring_tracker,
+                        resolved_tracker=resolved_tracker,
+                    )
+                    if not static_passed:
+                        print_warning("  [STATIC] Static check could not be fully resolved — proceeding to polish with best state")
+
+                    # ── Post-QA polish step: generate missing optional files ──
                     polish_success, polish_cost = self._post_qa_polish(
                         iteration, build_output, governance_section
                     )
@@ -4992,6 +5362,12 @@ Examples:
         help='Max BUILD→QA iterations for this run. Default: 5'
     )
     parser.add_argument(
+        '--max-static-iterations',
+        type=int,
+        default=Config.MAX_STATIC_ITERATIONS,
+        help='Max static-check fix rounds after feature QA acceptance. Default: 5'
+    )
+    parser.add_argument(
         '--resume-run',
         type=str,
         default=None,
@@ -5032,6 +5408,8 @@ Examples:
         parser.error("--max-continuations must be >= 0")
     if args.max_iterations < 1:
         parser.error("--max-iterations must be >= 1")
+    if args.max_static_iterations < 1:
+        parser.error("--max-static-iterations must be >= 1")
 
     # If --resume-run is given without --resume-mode, default to qa
     if args.resume_run and not args.resume_mode:

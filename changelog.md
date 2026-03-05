@@ -2,6 +2,42 @@
 
 ## 2026-03-05
 
+### Post-QA static check loop: deterministic code quality pass before polish
+
+Root cause: Feature QA (ChatGPT) is a feature auditor, not a static analyzer. It cannot see
+cross-file bugs (duplicate models, wrong imports, unauthenticated routes) and DO NOT FLAG rules
+suppress legitimate code-quality issues. Build ai_workforce_intelligence iter 26 had 8 ship-blocker
+bugs that QA missed: requirements.txt YAML contamination, duplicate SQLAlchemy models, missing
+TenantMixin import, wrong Base import path, and fully unauthenticated backend routes.
+
+**Pipeline change**: After Feature QA ACCEPTED, before post-QA polish, run a deterministic static
+check loop (cap: `--max-static-iterations`, default 5):
+
+**6 static checks in `_run_static_check(artifacts_dir)`:**
+1. **AST syntax** — parse every .py file; SyntaxError → HIGH
+2. **Duplicate `__tablename__`** — two model files share same DB table name → HIGH
+3. **Missing TenantMixin import** — class inherits TenantMixin but import from core.tenancy absent → HIGH
+4. **Wrong Base import** — `from app.models.base import` or raw `declarative_base()` instead of `from core.database import Base` → HIGH
+5. **Requirements.txt YAML** — docker-compose YAML keys (services:, image:, etc.) in pip file → HIGH
+6. **Unauthenticated routes** — backend route file has endpoints but zero `get_current_user` refs → MEDIUM
+
+**If defects found — static fix loop:**
+1. Format defects → call Claude with `build_static_fix.md` prompt (patch-first contract)
+2. Truncate at PATCH_SET_COMPLETE, extract artifacts, merge forward
+3. Run Feature QA — if REJECTED (fix broke feature compliance) → revert to last-good, stop loop
+4. If QA ACCEPTED → run static check again → loop until clean or cap hit
+
+**New files + methods:**
+- `directives/prompts/build_static_fix.md` — thin template, same FILE:/PATCH_SET_COMPLETE contract as build_patch_first_file_lock.md, no DEFECT ANALYSIS section, boilerplate import reference
+- `PromptTemplates.static_fix_prompt()` — static method; renders build_static_fix.md
+- `FOHarness._run_static_check(artifacts_dir)` — returns list of defect dicts
+- `FOHarness._format_static_defects_for_claude(defects)` — formats defect list for Claude prompt
+- `FOHarness._run_static_fix_loop(...)` — orchestrates the loop, returns (passed, final_iter, output)
+- `Config.MAX_STATIC_ITERATIONS = 5`
+- `self.max_static_iterations` on FOHarness
+- `--max-static-iterations` CLI flag (default 5)
+- Main loop: ACCEPTED block now calls `_run_static_fix_loop()` before `_post_qa_polish()`
+
 ### Fix A: Rebuild recurring_tracker on resume (prohibition knowledge survives restart)
 Root cause: `--resume-run` started a fresh process with `recurring_tracker = {}` —
 12 iterations of accumulated prohibitions were silently discarded. Claude had no
