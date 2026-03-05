@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-03-05
+
+### Exclude `__init__.py` from whitelist and remap
+- `business/backend/routes/*.py`, `business/models/*.py`, `business/schemas/*.py` all
+  matched `__init__.py` via fnmatch — so Claude's `__init__.py` files were carried forward
+  indefinitely by `merge_forward`, freezing them into the artifact set. They then attracted
+  bogus QA defects (e.g. health check assertions found inside `__init__.py`).
+- Fix: `_is_valid_business_path()` now returns False for any file named `__init__.py`.
+- Fix: `_remap_to_valid_path()` returns None for `__init__.py` (prune, never remap).
+- Fix: `build_boilerplate_path_rules.md` — added blanket prohibition on any `__init__.py`
+  under `business/**` with explanation that the boilerplate handles Python packaging.
+
 ## 2026-03-04
 
 ### ZIP packager: guard against empty run_dir + skip nested ZIPs

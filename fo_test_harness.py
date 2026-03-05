@@ -1071,7 +1071,10 @@ class ArtifactManager:
     @staticmethod
     def _is_valid_business_path(rel_path: str) -> bool:
         """Return True if rel_path matches the boilerplate whitelist."""
-        import fnmatch
+        import fnmatch, os
+        # __init__.py files are Python package plumbing — never a valid business artifact.
+        if os.path.basename(rel_path) == '__init__.py':
+            return False
         for pattern in BOILERPLATE_VALID_PATHS:
             if fnmatch.fnmatch(rel_path, pattern):
                 return True
@@ -1095,6 +1098,10 @@ class ArtifactManager:
         import os
         name = os.path.basename(rel_path)
         parts = rel_path.replace('\\', '/').split('/')
+
+        # __init__.py is Python package plumbing — never remap, always prune.
+        if name == '__init__.py':
+            return None
 
         if name.endswith('.py'):
             for marker in ('api', 'routers', 'routes'):

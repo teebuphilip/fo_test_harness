@@ -40,6 +40,12 @@
 ## Governance Alignment
 - Keep default iteration cap aligned to locked policy (`5`) but allow CLI override for controlled exception runs.
 
+20. Exclude __init__.py from whitelist and remap ✅ DONE (2026-03-05)
+    - `*.py` patterns in BOILERPLATE_VALID_PATHS matched __init__.py via fnmatch → carried forward
+      indefinitely by merge_forward → attracted bogus QA defects.
+    - Fix: _is_valid_business_path() rejects __init__.py; _remap_to_valid_path() returns None for it.
+    - build_boilerplate_path_rules.md: blanket prohibition on any __init__.py under business/**.
+
 19. ZIP packager: guard against empty run_dir + skip nested ZIPs ✅ DONE (2026-03-04)
     - `run_dir = Path('.')` caused `run_dir.name == ''` → ZIP named `.zip`, rglob swept entire repo → 38GB corrupt file.
     - Fix: early ValueError guard on empty name / cwd resolve; `.zip` excluded from all rglob passes;

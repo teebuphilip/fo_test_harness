@@ -22,7 +22,7 @@
 - NEVER use `business/frontend/app/` (Next.js app router) — the boilerplate uses pages router. Use `business/frontend/pages/` ONLY.
 - NEVER use `.tsx` or `.ts` extensions for frontend pages — use `.jsx` ONLY.
 - NEVER create `business/tests/**` — tests are generated separately by the harness after QA.
-- NEVER create `business/backend/__init__.py` or `business/backend/app.py` — these are boilerplate internals, do not touch them.
+- NEVER create any `__init__.py` file anywhere under `business/**` — the boilerplate handles Python package structure at the infrastructure level. Any `__init__.py` you output will be pruned by the harness.
 - NEVER create `business/backend/services/**` — services belong in `business/services/` (not inside backend/).
 - NEVER create `business/app/**` — this path is forbidden.
 
