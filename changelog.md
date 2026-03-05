@@ -1,5 +1,59 @@
 # Changelog
 
+## 2026-03-06
+
+### Unified QA loop: Feature QA → Static → AI Consistency (all three gates must pass)
+
+**Architecture redesign**: Replaced the nested `_run_static_fix_loop` sub-loop with a single
+unified main loop. All three QA gates must pass in sequence before the build exits:
+
+```
+GATE 1: Feature QA (ChatGPT)      — spec compliance, bugs, scope
+GATE 2: Static check (harness)    — deterministic: AST syntax, duplicate models, wrong imports, unauthenticated routes
+GATE 3: AI Consistency (Claude)   — cross-file: model↔service fields, schema↔model, route↔schema, import chains
+```
+
+Any gate failure triggers a targeted Claude fix iteration and **restarts from GATE 1**.
+No separate sub-loops. `defect_source` ('qa'|'static'|'consistency') tracks the failure source
+and selects the correct prompt for the next Claude build:
+- `'qa'` → full `build_prompt` with QA defects
+- `'static'` → `static_fix_prompt` (targeted patch, PATCH_SET_COMPLETE contract)
+- `'consistency'` → same `static_fix_prompt` format (targeted patch for consistency issues)
+
+**New: AI Consistency check (`_run_ai_consistency_check`)**
+- Calls Claude Sonnet to read all `business/` artifact files
+- Checks 5 cross-file issue types: model↔service fields, schema↔model, route↔schema, import chains, duplicate subsystems
+- New template: `directives/prompts/build_ai_consistency.md`
+- Output: `CONSISTENCY CHECK: PASS` or structured `CONSISTENCY REPORT` with `ISSUE-N:` blocks
+- Parsed by `_parse_consistency_report()`, formatted by `_format_consistency_defects_for_claude()`
+
+**New: `--ai-check <artifacts_dir>` standalone CLI mode**
+- Calls Claude directly on a `iteration_NN_artifacts/` dir, no intake/governance needed
+- Requires `ANTHROPIC_API_KEY`. Exits 0 (PASS) or 1 (FAIL).
+- Uses `_run_ai_consistency_check_standalone()` @staticmethod
+
+**New: `--resume-mode consistency`**
+- Like `--resume-mode static` but skips static check, goes straight to AI consistency check
+- If all checks pass: polish + return True; if fail: falls through to main loop for fix iterations
+
+**Updated: `--resume-mode static`**
+- Now runs **both** static check AND AI consistency check (unified)
+- If all clean: polish + return True (early exit, no main loop needed)
+- If either fails: sets defect_source, falls through to main while loop
+
+**Removed**:
+- `_run_static_fix_loop()` method (logic now inline in unified loop)
+- `Config.MAX_STATIC_ITERATIONS` constant
+- `self.max_static_iterations` instance attr
+- `--max-static-iterations` CLI flag
+
+**Post-loop structure**:
+- Loop breaks (not returns) on success or static/consistency max-iter exhaustion
+- `_qa_accepted_at_iter` variable gates whether polish runs after the loop
+- `_loop_success` determines return value (`True`=all three passed, `False`=max-iter during static/consistency fix)
+
+**commit**: b936a01
+
 ## 2026-03-05
 
 ### Bugfix: _run_static_fix_loop used non-existent extract_artifacts method

@@ -40,6 +40,23 @@
 ## Governance Alignment
 - Keep default iteration cap aligned to locked policy (`5`) but allow CLI override for controlled exception runs.
 
+30. Unified QA loop: Feature QA → Static → AI Consistency ✅ DONE (2026-03-06)
+    - Single unified while loop; no nested sub-loops. All three gates must pass in sequence.
+    - defect_source ('qa'|'static'|'consistency') selects build prompt type for Claude.
+    - GATE 2: _run_static_check() on accepted iteration's artifacts dir (same 6 checks).
+    - GATE 3: _run_ai_consistency_check() — Claude reads all business/ files, checks cross-file
+      consistency (model↔service, schema↔model, route↔schema, import chains, duplicate subsystems).
+    - _parse_consistency_report(), _format_consistency_defects_for_claude() for parsing/formatting.
+    - _run_ai_consistency_check_standalone() for --ai-check CLI mode.
+    - New template: directives/prompts/build_ai_consistency.md (5-check prompt, PASS/REPORT contract).
+    - PromptTemplates.ai_consistency_prompt(file_contents: dict): renders template with artifact contents.
+    - --ai-check <artifacts_dir>: standalone AI check, requires ANTHROPIC_API_KEY, exits 0/1.
+    - --resume-mode consistency: skip static, run AI check only; fall through to main loop if fails.
+    - --resume-mode static: updated to run both static + AI consistency; early exit if all pass.
+    - Removed: _run_static_fix_loop(), Config.MAX_STATIC_ITERATIONS, --max-static-iterations.
+    - Post-loop: _qa_accepted_at_iter gates polish; _loop_success sets return value.
+    ⬜ TODO for FO codebase
+
 29. Bugfix: _run_static_fix_loop wrong extraction method ✅ DONE (2026-03-05)
     - self.artifacts.extract_artifacts() does not exist. Use save_build_output(extract_from=...)
       then extract_file_paths_from_output() for merge_forward path list. Same pattern as main loop.
