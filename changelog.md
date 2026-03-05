@@ -2,6 +2,30 @@
 
 ## 2026-03-05
 
+### Fix A: Rebuild recurring_tracker on resume (prohibition knowledge survives restart)
+Root cause: `--resume-run` started a fresh process with `recurring_tracker = {}` —
+12 iterations of accumulated prohibitions were silently discarded. Claude had no
+constraints on iter 13 → regenerated workforce_data.py, analytics.py, etc. → 1 defect
+exploded back to 6.
+
+Fix: After the warm-start setup block, if `--resume-run` is given, scan all
+`qa/iteration_*_qa_report.txt` files in the run dir and reconstruct `recurring_tracker`
+(and `prohibitions_block`) before the loop starts. Console: "Warm-start tracker rebuilt:
+N defect(s) tracked, M prohibition(s) active."
+
+### Fix B: Truncate build output at PATCH_SET_COMPLETE before extraction
+Root cause: Claude correctly outputs the defect-target file then `PATCH_SET_COMPLETE`,
+then appends a `<!-- CONTINUATION -->` block with 10+ extra files. The harness extracted
+ALL `**FILE:**` headers from the full output, overwriting good files with hallucinated
+collateral. This is the collateral regression problem in its most severe form.
+
+Fix: On patch iterations (iter > 1 with previous_defects), if `PATCH_SET_COMPLETE` is
+present, build `build_output_for_extraction` = everything up to and including the marker.
+Files appearing after the marker are logged as `[PATCH_SET_COMPLETE] Truncated N collateral
+file(s)` and discarded. Full raw output still saved to disk for audit. `save_build_output`
+gains an optional `extract_from` param. `merge_forward` and `pending_resolution` extraction
+also use the truncated string so merge-forward doesn't re-import the collateral.
+
 ### Resolved defects tracker: senior dev anti-ping-pong mechanism
 Root cause of Auth0 and other ping-pong defects: Claude fixes a defect, QA re-flags it next
 iteration without verbatim evidence — wasting 4-6 extra iterations on already-resolved issues.

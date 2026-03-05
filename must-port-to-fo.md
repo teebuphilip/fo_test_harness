@@ -40,6 +40,23 @@
 ## Governance Alignment
 - Keep default iteration cap aligned to locked policy (`5`) but allow CLI override for controlled exception runs.
 
+26. Fix B: Truncate build output at PATCH_SET_COMPLETE before artifact extraction ✅ DONE (2026-03-05)
+    - PATCH_SET_COMPLETE_MARKER constant added at module level.
+    - save_build_output(): new optional extract_from param — saves full raw output to disk,
+      runs extraction on extract_from if provided.
+    - Main loop: on patch iterations, if PATCH_SET_COMPLETE is in build_output, truncate to
+      build_output_for_extraction = text up to and including marker. Extra files after marker
+      logged as [PATCH_SET_COMPLETE] warning and discarded. merge_forward and pending_resolution
+      also use build_output_for_extraction, not full build_output.
+    ⬜ TODO for FO codebase
+
+25. Fix A: Rebuild recurring_tracker on resume ✅ DONE (2026-03-05)
+    - After warm-start setup block: if _ws_run_dir.is_dir(), scan qa/iteration_*_qa_report.txt
+      and reconstruct recurring_tracker + prohibitions_block before loop starts.
+    - Console: "Warm-start tracker rebuilt: N defect(s) tracked, M prohibition(s) active"
+    - Prevents prohibition knowledge loss across --resume-run restarts.
+    ⬜ TODO for FO codebase
+
 24. Resolved defects tracker (anti-ping-pong) ✅ DONE (2026-03-05)
     - Harness: _extract_fixed_from_patch(), _confirm_resolutions(), _build_resolved_defects_block()
       Three new static methods on FOHarness. Loop wired: pending_resolution set + resolved_tracker dict

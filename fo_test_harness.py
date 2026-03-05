@@ -157,6 +157,7 @@ QUESTION_MARKERS = [
 ]
 
 BUILD_COMPLETE_MARKER = 'BUILD STATE: COMPLETED_CLOSED'
+PATCH_SET_COMPLETE_MARKER = 'PATCH_SET_COMPLETE'
 
 def should_use_platform_boilerplate(intake_data: dict, block: str) -> bool:
     """
@@ -764,15 +765,21 @@ class ArtifactManager:
         for d in [self.build_dir, self.qa_dir, self.deploy_dir, self.logs_dir]:
             d.mkdir(parents=True, exist_ok=True)
 
-    def save_build_output(self, iteration: int, output: str):
-        """Save BUILD output from Claude and extract artifacts"""
-        # Save raw output
+    def save_build_output(self, iteration: int, output: str, extract_from: str = None):
+        """Save BUILD output from Claude and extract artifacts.
+
+        output      — full raw Claude response (always saved to disk for audit)
+        extract_from — if provided, extract artifacts from this string instead of output.
+                       Used on patch iterations to ignore anything after PATCH_SET_COMPLETE.
+        """
+        # Save raw output (always the full response)
         path = self.build_dir / f'iteration_{iteration:02d}_build.txt'
         path.write_text(output)
         print_success(f"Saved BUILD output: build/iteration_{iteration:02d}_build.txt")
 
         # Extract and save code artifacts
-        extracted_count = self._extract_artifacts_from_output(output, iteration)
+        extraction_source = extract_from if extract_from is not None else output
+        extracted_count = self._extract_artifacts_from_output(extraction_source, iteration)
         if extracted_count > 0:
             print_success(f"Extracted {extracted_count} artifact(s) from BUILD output")
 
@@ -4031,6 +4038,29 @@ class FOHarness:
             iteration = _ws_iteration
             print_success(f"Warm-start (qa): starting loop at iter {iteration} — Claude BUILD will be skipped")
 
+        # Fix A: On resume, reconstruct recurring_tracker from all previous QA reports so that
+        # prohibition knowledge accumulated over prior iterations is NOT lost on restart.
+        # Without this, the tracker resets to empty → no prohibitions → Claude re-introduces
+        # scope violations it had already been trained out of.
+        if _ws_run_dir.is_dir():
+            _prior_qa_files = sorted(_ws_run_dir.glob('qa/iteration_*_qa_report.txt'))
+            if _prior_qa_files:
+                print_info(f"Warm-start: rebuilding prohibition tracker from {len(_prior_qa_files)} prior QA report(s)...")
+                for _qf in _prior_qa_files:
+                    for d in self._extract_defects_for_tracking(_qf.read_text()):
+                        key = (d['location'], d['classification'])
+                        if key not in recurring_tracker:
+                            recurring_tracker[key] = {'count': 0, 'last_problem': '', 'last_fix': ''}
+                        recurring_tracker[key]['count'] += 1
+                        recurring_tracker[key]['last_problem'] = d['problem']
+                        recurring_tracker[key]['last_fix']     = d['fix']
+                prohibitions_block = self._build_prohibitions_block(recurring_tracker)
+                promoted = sum(1 for v in recurring_tracker.values() if v['count'] >= 2)
+                print_success(
+                    f"Warm-start tracker rebuilt: {len(recurring_tracker)} defect(s) tracked, "
+                    f"{promoted} prohibition(s) active"
+                )
+
         try:
             while iteration <= self.max_qa_iterations:
                 print_header(f"ITERATION {iteration}/{self.max_qa_iterations}")
@@ -4283,11 +4313,33 @@ class FOHarness:
                             all_files = extract_file_paths_from_output(build_output)
                             print_success(f"Build complete — {len(all_files)} files extracted")
     
-                        self.artifacts.save_build_output(iteration, build_output)
+                        # Fix B: On patch iterations, truncate build_output at PATCH_SET_COMPLETE
+                        # before extraction. Claude sometimes appends continuation files after the
+                        # marker — those collateral files cause regressions and must be ignored.
+                        # The full raw output is still saved to disk for audit via save_build_output.
+                        is_patch_iteration = iteration > 1 and previous_defects
+                        if is_patch_iteration and PATCH_SET_COMPLETE_MARKER in build_output:
+                            marker_pos = build_output.index(PATCH_SET_COMPLETE_MARKER)
+                            build_output_for_extraction = build_output[:marker_pos + len(PATCH_SET_COMPLETE_MARKER)]
+                            extra_files = extract_file_paths_from_output(
+                                build_output[marker_pos + len(PATCH_SET_COMPLETE_MARKER):]
+                            )
+                            if extra_files:
+                                print_warning(
+                                    f"  [PATCH_SET_COMPLETE] Truncated {len(extra_files)} collateral file(s) "
+                                    f"Claude output after marker — ignored: {', '.join(extra_files)}"
+                                )
+                        else:
+                            build_output_for_extraction = build_output
+
+                        self.artifacts.save_build_output(
+                            iteration, build_output,
+                            extract_from=build_output_for_extraction if build_output_for_extraction is not build_output else None
+                        )
 
                         # Track which defects Claude claimed as FIXED in this patch iteration.
                         # We'll confirm resolution after QA (if they don't reappear → resolved).
-                        if iteration > 1 and previous_defects:
+                        if is_patch_iteration:
                             pending_resolution = self._extract_fixed_from_patch(
                                 build_output, previous_defects
                             )
@@ -4303,15 +4355,17 @@ class FOHarness:
                         # Post-build pruning for boilerplate mode: keep business/** only
                         if self.use_boilerplate:
                             self.artifacts.prune_non_business_artifacts(iteration)
-    
+
                         # Defect iteration: carry forward all non-defect files from previous iteration.
                         # Claude outputs only defect-target files; harness fills in the rest.
-                        if self.use_boilerplate and iteration > 1 and previous_defects:
-                            claude_output_paths = extract_file_paths_from_output(build_output)
+                        # Use the extraction-scoped output so merge_forward sees only the files
+                        # Claude intentionally output (not collateral past PATCH_SET_COMPLETE).
+                        if self.use_boilerplate and is_patch_iteration:
+                            claude_output_paths = extract_file_paths_from_output(build_output_for_extraction)
                             self.artifacts.merge_forward_from_previous_iteration(iteration, claude_output_paths)
-    
+
                         # FIX #6: save defect fix artifact on iterations 2+
-                        if iteration > 1 and previous_defects:
+                        if is_patch_iteration:
                             self.artifacts.save_defect_fix(iteration, build_output)
     
                     except Exception as e:
