@@ -4657,7 +4657,8 @@ class FOHarness:
                 elif "QA STATUS: REJECTED" in qa_report:
                     print_warning("QA REJECTED — defects found")
 
-                    defect_match = re.search(r'(\d+) defects? require', qa_report)
+                    # Brackets in QA verdict e.g. "[4] defects require" — handle both formats
+                    defect_match = re.search(r'\[?(\d+)\]? defects? require', qa_report)
                     current_defect_count = 0
                     if defect_match:
                         current_defect_count = int(defect_match.group(1))
@@ -4669,14 +4670,16 @@ class FOHarness:
                     # Track defect count for convergence detection
                     defect_history.append(current_defect_count)
 
-                    # Check for convergence after several iterations
-                    if iteration >= convergence_check_after:
+                    # Check for convergence after several iterations.
+                    # Use len(defect_history) — not the absolute iteration number — so that
+                    # resumed runs aren't penalised for iterations from a previous process.
+                    if len(defect_history) >= convergence_check_after:
                         # Check if defects are oscillating or not decreasing
                         recent_defects = defect_history[-5:]  # Last 5 iterations
                         avg_recent = sum(recent_defects) / len(recent_defects)
 
                         # If average defects in last 5 iterations is >= first 5 iterations, not converging
-                        if iteration >= 15:
+                        if len(defect_history) >= 15:
                             early_defects = defect_history[:5]
                             avg_early = sum(early_defects) / len(early_defects) if early_defects else 0
 
