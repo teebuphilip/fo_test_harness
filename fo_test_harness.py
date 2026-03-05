@@ -1012,9 +1012,14 @@ class ArtifactManager:
         # or has continuation markers embedded in the JSON.
         # ══════════════════════════════════════════════════════════
 
-        # Always generate build_state.json
+        # Always generate build_state.json.
+        # Both BUILD STATE: COMPLETED_CLOSED (full build) and PATCH_SET_COMPLETE
+        # (patch iteration) are valid completion markers.
         build_state_path = artifacts_dir / 'build_state.json'
-        has_complete_marker = BUILD_COMPLETE_MARKER in output
+        has_complete_marker = (
+            BUILD_COMPLETE_MARKER in output
+            or PATCH_SET_COMPLETE_MARKER in output
+        )
         build_state = {
             "state": "COMPLETED_CLOSED" if has_complete_marker else "IN_PROGRESS",
             "timestamp": datetime.now().isoformat(),
