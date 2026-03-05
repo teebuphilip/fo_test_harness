@@ -88,7 +88,6 @@ class Config:
 
     # Iteration Limits
     MAX_QA_ITERATIONS = 5      # Default aligns with locked governance; CLI can override.
-    MAX_STATIC_ITERATIONS = 5  # Max static-check fix rounds after feature QA acceptance.
 
     # API call settings
     # FIX #6: Increased timeout for large builds with prompt caching.
@@ -2240,6 +2239,28 @@ If REJECTED: end with exactly: "QA STATUS: REJECTED - [X] defects require fixing
         )
 
     @staticmethod
+    def ai_consistency_prompt(file_contents: dict) -> str:
+        """
+        Generate AI consistency check prompt for Claude.
+        file_contents: {rel_path: file_text} for all business/ artifacts.
+        Returns a prompt asking Claude to check cross-file consistency.
+        """
+        # Build artifact block
+        artifact_lines = []
+        for path, content in sorted(file_contents.items()):
+            ext = path.rsplit('.', 1)[-1] if '.' in path else 'text'
+            lang_map = {'py': 'python', 'jsx': 'jsx', 'js': 'jsx', 'json': 'json',
+                        'md': 'markdown', 'txt': 'text', 'css': 'css'}
+            lang = lang_map.get(ext, 'text')
+            artifact_lines.append(f"**FILE: {path}**\n```{lang}\n{content}\n```")
+        artifact_contents = "\n\n".join(artifact_lines) if artifact_lines else "(no business/ files found)"
+
+        return DirectiveTemplateLoader.render(
+            'build_ai_consistency.md',
+            artifact_contents=artifact_contents
+        )
+
+    @staticmethod
     def deploy_prompt(build_output: str, deploy_governance: str) -> str:
         """
         Generate DEPLOY prompt for Claude.
@@ -2304,7 +2325,6 @@ class FOHarness:
         self.max_qa_iterations = int(getattr(cli_args, "max_iterations", Config.MAX_QA_ITERATIONS)) if cli_args else Config.MAX_QA_ITERATIONS
         self.max_build_parts = int(getattr(cli_args, "max_parts", Config.MAX_BUILD_PARTS_DEFAULT)) if cli_args else Config.MAX_BUILD_PARTS_DEFAULT
         self.max_build_continuations = int(getattr(cli_args, "max_continuations", Config.MAX_BUILD_CONTINUATIONS_DEFAULT)) if cli_args else Config.MAX_BUILD_CONTINUATIONS_DEFAULT
-        self.max_static_iterations = int(getattr(cli_args, "max_static_iterations", Config.MAX_STATIC_ITERATIONS)) if cli_args else Config.MAX_STATIC_ITERATIONS
 
         # Load intake JSON
         # Handles both pure JSON and marker-wrapped formats
@@ -4214,158 +4234,147 @@ class FOHarness:
             )
         return "\n\n".join(lines)
 
-    def _run_static_fix_loop(
-        self,
-        accepted_iteration: int,
-        governance_section: str,
-        prohibitions_block: str,
-        recurring_tracker: dict,
-        resolved_tracker: dict,
-    ) -> Tuple[bool, int, str]:
+    @staticmethod
+    def _parse_consistency_report(output: str) -> list:
         """
-        Post-QA static check loop.
-
-        Pipeline per pass:
-          1. Run _run_static_check → if clean, return (True, iter, output)
-          2. Call Claude with static_fix_prompt
-          3. Truncate at PATCH_SET_COMPLETE, extract artifacts, merge forward
-          4. Run Feature QA (ChatGPT)
-          5. If QA REJECTED → revert to last-good, return (False, prev_iter, prev_output)
-          6. If QA ACCEPTED → loop back to step 1
-
-        Cap: self.max_static_iterations passes.
-        Returns (passed: bool, final_iteration: int, final_build_output: str)
+        Parse CONSISTENCY REPORT output from Claude into list of issue dicts.
+        Each dict has: id, files, file (first file), evidence, issue, fix, severity.
         """
-        print_info("")
-        print_info("═══════════════════════════════════════════════════════════")
-        print_info("POST-QA STATIC CHECK — Deterministic code quality pass")
-        print_info("═══════════════════════════════════════════════════════════")
+        issues = []
+        blocks = re.split(r'(?=ISSUE-\d+:)', output)
+        for block in blocks:
+            if not block.strip().startswith('ISSUE-'):
+                continue
+            issue = {'id': '', 'files': '', 'file': '', 'evidence': '', 'issue': '', 'fix': '', 'severity': 'MEDIUM'}
+            m = re.match(r'(ISSUE-\d+):', block)
+            if m:
+                issue['id'] = m.group(1)
+            for field, pattern in [
+                ('files',     r'Files:\s*(.+)'),
+                ('evidence',  r'Evidence:\s*(.+)'),
+                ('issue',     r'Problem:\s*(.+)'),
+                ('fix',       r'Fix:\s*(.+)'),
+                ('severity',  r'Severity:\s*(HIGH|MEDIUM|LOW)'),
+            ]:
+                fm = re.search(pattern, block, re.IGNORECASE)
+                if fm:
+                    issue[field] = fm.group(1).strip()
+            # Extract primary file from "files" field
+            files_str = issue.get('files', '')
+            primary = re.split(r'[<>\-,\s]+', files_str)[0].strip() if files_str else ''
+            issue['file'] = primary
+            if issue['id']:
+                issues.append(issue)
+        return issues
 
-        current_iter = accepted_iteration
-        current_artifacts_dir = self.artifacts.build_dir / f'iteration_{current_iter:02d}_artifacts'
-        current_output = self.artifacts.build_synthetic_qa_output(current_iter)
-
-        for static_pass in range(1, self.max_static_iterations + 1):
-            print_info(f"\n  [STATIC] Pass {static_pass}/{self.max_static_iterations} — checking artifacts from iteration {current_iter:02d}")
-            defects = self._run_static_check(current_artifacts_dir)
-
-            if not defects:
-                print_success(f"  [STATIC] PASS — no static defects found (iteration {current_iter:02d})")
-                return True, current_iter, current_output
-
-            print_warning(f"  [STATIC] {len(defects)} defect(s) found:")
-            for d in defects:
-                print_warning(f"    {d['id']} [{d['severity']}] {d['file']}: {d['issue']}")
-
-            # ── Build static fix prompt ──────────────────────────────────────
-            required_file_inventory = self._get_previous_iteration_inventory(current_iter + 1)
-            # Fallback: read current manifest
-            if not required_file_inventory:
-                manifest_path = current_artifacts_dir / 'artifact_manifest.json'
-                if manifest_path.exists():
-                    try:
-                        manifest = json.load(open(manifest_path))
-                        required_file_inventory = sorted({
-                            a['path'] for a in manifest.get('artifacts', [])
-                            if a.get('path', '').startswith('business/')
-                        })
-                    except Exception:
-                        required_file_inventory = []
-
-            defect_target_files = sorted({d['file'] for d in defects if d['file'].startswith('business/')})
-
-            static_defects_text = self._format_static_defects_for_claude(defects)
-            fix_prompt = PromptTemplates.static_fix_prompt(
-                static_defects=static_defects_text,
-                required_file_inventory=required_file_inventory,
-                defect_target_files=defect_target_files,
-                prohibitions_block=prohibitions_block
+    @staticmethod
+    def _format_consistency_defects_for_claude(issues: list) -> str:
+        """
+        Format consistency issue list into a structured block for Claude's static_fix_prompt.
+        Reuses the same targeted-patch prompt; the defect text drives what to fix.
+        """
+        if not issues:
+            return "(no consistency issues)"
+        lines = []
+        for iss in issues:
+            lines.append(
+                f"{iss['id']}: [{iss.get('severity', 'MEDIUM')}] {iss.get('files', iss.get('file', 'unknown'))}\n"
+                f"  Evidence: {iss.get('evidence', 'N/A')}\n"
+                f"  Issue: {iss.get('issue', 'N/A')}\n"
+                f"  Fix: {iss.get('fix', 'N/A')}"
             )
+        return "\n\n".join(lines)
 
-            self.artifacts.save_log(f'iteration_{current_iter + 1:02d}_static_fix_prompt', fix_prompt)
+    def _run_ai_consistency_check(self, iteration: int, governance_section: str) -> list:
+        """
+        Call Claude to check cross-file consistency of business/ artifacts.
+        Returns list of issue dicts (from _parse_consistency_report), or [] on PASS.
+        """
+        artifacts_dir = self.artifacts.build_dir / f'iteration_{iteration:02d}_artifacts'
+        if not artifacts_dir.is_dir():
+            print_warning(f"  [CONSISTENCY] Artifacts dir not found: {artifacts_dir}")
+            return []
 
-            # ── Call Claude ──────────────────────────────────────────────────
-            print_info(f"  [STATIC] Calling Claude for static fix (pass {static_pass})...")
+        # Collect all business/ files
+        file_contents = {}
+        for path in sorted(artifacts_dir.rglob('*')):
+            if not path.is_file():
+                continue
+            rel_str = str(path.relative_to(artifacts_dir))
+            if not rel_str.startswith('business/'):
+                continue
+            # Skip binary / very large files
             try:
-                start_time = time.time()
-                fix_response = self.claude.call(
-                    fix_prompt,
-                    max_tokens=Config.CLAUDE_MAX_TOKENS,
-                    cacheable_prefix=governance_section,
-                    timeout=Config.REQUEST_TIMEOUT_DEFAULT
-                )
-                fix_output = fix_response['content'][0]['text']
-                elapsed = time.time() - start_time
+                text = path.read_text(encoding='utf-8', errors='replace')
+                file_contents[rel_str] = text
+            except Exception:
+                pass
 
-                usage = fix_response.get('usage', {})
-                in_tok  = usage.get('input_tokens', 0)
-                out_tok = usage.get('output_tokens', 0)
-                cost = (in_tok / 1_000_000) * 3.00 + (out_tok / 1_000_000) * 15.00
-                print_success(f"  [STATIC] Claude responded in {elapsed:.1f}s (${cost:.4f})")
+        if not file_contents:
+            print_warning("  [CONSISTENCY] No business/ files found — skipping check")
+            return []
 
-            except Exception as e:
-                print_error(f"  [STATIC] Claude call failed: {e}")
-                return False, current_iter, current_output
+        print_info(f"  [CONSISTENCY] Checking {len(file_contents)} artifact(s) for cross-file consistency...")
+        prompt = PromptTemplates.ai_consistency_prompt(file_contents)
+        self.artifacts.save_log(f'iteration_{iteration:02d}_consistency_prompt', prompt)
 
-            # ── Truncate at PATCH_SET_COMPLETE ───────────────────────────────
-            PATCH_SET_COMPLETE_MARKER = 'PATCH_SET_COMPLETE'
-            if PATCH_SET_COMPLETE_MARKER in fix_output:
-                marker_pos = fix_output.index(PATCH_SET_COMPLETE_MARKER)
-                fix_output_for_extraction = fix_output[:marker_pos + len(PATCH_SET_COMPLETE_MARKER)]
-            else:
-                fix_output_for_extraction = fix_output
-                print_warning("  [STATIC] PATCH_SET_COMPLETE not found in Claude output — using full output")
-
-            next_iter = current_iter + 1
-            # save_build_output saves the raw output AND runs artifact extraction
-            self.artifacts.save_build_output(next_iter, fix_output, extract_from=fix_output_for_extraction)
-
-            # Get the list of paths Claude output (for merge_forward)
-            extracted_paths = extract_file_paths_from_output(fix_output_for_extraction)
-            print_info(f"  [STATIC] Extracted files for iteration_{next_iter:02d}: {len(extracted_paths)} path(s)")
-
-            # ── Merge forward non-defect files ───────────────────────────────
-            self.artifacts.merge_forward_from_previous_iteration(next_iter, extracted_paths)
-
-            # ── Run Feature QA ───────────────────────────────────────────────
-            print_info(f"  [STATIC] Running Feature QA on merged iteration {next_iter:02d} artifacts...")
-            qa_build_output = self.artifacts.build_synthetic_qa_output(next_iter)
-            qa_prompt_text = PromptTemplates.qa_prompt(
-                qa_build_output,
-                self.intake_data,
-                self.block,
-                self.effective_tech_stack,
-                self.qa_override,
-                prohibitions_block=prohibitions_block,
-                defect_history_block=self._build_qa_defect_history(recurring_tracker),
-                resolved_defects_block=self._build_resolved_defects_block(resolved_tracker)
+        try:
+            resp = self.claude.call(
+                prompt,
+                max_tokens=4096,
+                cacheable_prefix=governance_section,
+                timeout=Config.REQUEST_TIMEOUT_DEFAULT
             )
-            self.artifacts.save_log(f'iteration_{next_iter:02d}_static_qa_prompt', qa_prompt_text)
+            output = resp['content'][0]['text']
+            self.artifacts.save_log(f'iteration_{iteration:02d}_consistency_output', output)
 
+            usage = resp.get('usage', {})
+            in_tok  = usage.get('input_tokens', 0)
+            out_tok = usage.get('output_tokens', 0)
+            cost = (in_tok / 1_000_000) * 3.00 + (out_tok / 1_000_000) * 15.00
+            print_info(f"  [CONSISTENCY] Claude responded (${cost:.4f})")
+        except Exception as e:
+            print_error(f"  [CONSISTENCY] Claude call failed: {e}")
+            return []
+
+        if 'CONSISTENCY CHECK: PASS' in output:
+            return []
+
+        issues = self._parse_consistency_report(output)
+        return issues
+
+    @staticmethod
+    def _run_ai_consistency_check_standalone(artifacts_dir: Path, claude_client) -> list:
+        """
+        Standalone version for --ai-check CLI mode (no full FOHarness required).
+        Reads business/ files directly from artifacts_dir, calls Claude, returns issues.
+        """
+        file_contents = {}
+        for path in sorted(artifacts_dir.rglob('*')):
+            if not path.is_file():
+                continue
+            rel_str = str(path.relative_to(artifacts_dir))
+            if not rel_str.startswith('business/'):
+                continue
             try:
-                qa_response = self.chatgpt.call(qa_prompt_text)
-                qa_report   = qa_response['choices'][0]['message']['content']
-                # Filter hallucinated defects
-                qa_report = self._filter_hallucinated_defects(qa_report, qa_build_output)
-                self.artifacts.save_qa_report(next_iter, qa_report)
-                print_success(f"  [STATIC] Feature QA complete for iteration {next_iter:02d}")
-            except Exception as e:
-                print_error(f"  [STATIC] Feature QA call failed: {e}")
-                return False, current_iter, current_output
+                file_contents[rel_str] = path.read_text(encoding='utf-8', errors='replace')
+            except Exception:
+                pass
 
-            if "QA STATUS: ACCEPTED" in qa_report:
-                print_success(f"  [STATIC] Feature QA ACCEPTED on iteration {next_iter:02d}")
-                current_iter = next_iter
-                current_artifacts_dir = self.artifacts.build_dir / f'iteration_{current_iter:02d}_artifacts'
-                current_output = qa_build_output
-                # Loop: run static check again
-            else:
-                print_warning(f"  [STATIC] Feature QA REJECTED on iteration {next_iter:02d} — static fix introduced feature regression")
-                print_warning("  [STATIC] Reverting to last feature-QA-accepted state")
-                return False, current_iter, current_output
+        if not file_contents:
+            return []
 
-        print_warning(f"  [STATIC] Static fix loop exhausted ({self.max_static_iterations} passes) without full clean")
-        return False, current_iter, current_output
+        prompt = PromptTemplates.ai_consistency_prompt(file_contents)
+        try:
+            resp = claude_client.call(prompt, max_tokens=4096)
+            output = resp['content'][0]['text']
+        except Exception as e:
+            print_error(f"  [CONSISTENCY] Claude call failed: {e}")
+            return []
+
+        if 'CONSISTENCY CHECK: PASS' in output:
+            return []
+        return FOHarness._parse_consistency_report(output)
 
     def execute_build_qa_loop(self) -> Tuple[bool, str]:
         """
@@ -4382,6 +4391,13 @@ class FOHarness:
         resolved_tracker   = {}   # (location, classification) → {iteration_resolved, fix_summary}
         pending_resolution = set() # defects Claude claimed FIXED; awaiting QA confirmation
         build_output     = None
+
+        # Unified QA loop state: tracks which check drove the last rejection
+        # 'qa' → Feature QA (ChatGPT)  |  'static' → deterministic checks  |  'consistency' → AI cross-file check
+        defect_source        = 'qa'
+        _raw_pending_defects = []   # raw defect list for static/consistency (for file target extraction)
+        _qa_accepted_at_iter = None # set when Feature QA first accepts; enables polish even on static/consistency max-iter exit
+        _loop_success        = False
 
         # FIX #1: Track cumulative usage for final cost summary (Claude)
         total_calls = 0
@@ -4422,18 +4438,18 @@ class FOHarness:
             # Jump the loop counter to the requested iteration — Claude BUILD will be skipped for it
             iteration = _ws_iteration
             print_success(f"Warm-start (qa): starting loop at iter {iteration} — Claude BUILD will be skipped")
-        elif _ws_run_dir.is_dir() and _ws_mode == 'static':
-            # ── Resume at static check phase ──────────────────────────────
+        elif _ws_run_dir.is_dir() and _ws_mode in ('static', 'consistency'):
+            # ── Resume at static / consistency check phase ────────────────
             # Find which iteration was QA-accepted (explicit or auto-detect)
             accepted_iter = _ws_iteration if _ws_iteration > 1 else self._find_last_accepted_iteration(_ws_run_dir)
             if not accepted_iter:
-                print_error("Warm-start (static): no QA-ACCEPTED iteration found in run dir. "
+                print_error(f"Warm-start ({_ws_mode}): no QA-ACCEPTED iteration found in run dir. "
                             "Pass --resume-iteration N to specify manually.")
                 return False, "RESUME_MISSING_ACCEPTED_ITERATION"
 
-            print_success(f"Warm-start (static): resuming static check loop from iteration {accepted_iter:02d}")
+            print_success(f"Warm-start ({_ws_mode}): resuming from iteration {accepted_iter:02d}")
 
-            # Rebuild recurring_tracker from prior QA reports before static loop
+            # Rebuild recurring_tracker from prior QA reports
             _prior_qa_files = sorted(_ws_run_dir.glob('qa/iteration_*_qa_report.txt'))
             for _qf in _prior_qa_files:
                 for d in self._extract_defects_for_tracking(_qf.read_text()):
@@ -4445,7 +4461,7 @@ class FOHarness:
                     recurring_tracker[key]['last_fix']     = d['fix']
             prohibitions_block = self._build_prohibitions_block(recurring_tracker)
 
-            # Build governance_section (needed for Claude cache in static fix calls)
+            # Build governance_section for Claude cache in fix calls
             governance_section, _ = PromptTemplates.build_prompt(
                 self.block, self.intake_data, self.build_governance,
                 accepted_iter, self.max_qa_iterations, None,
@@ -4453,22 +4469,46 @@ class FOHarness:
                 self.startup_id, self.effective_tech_stack, [], []
             )
 
-            static_passed, final_iter, final_output = self._run_static_fix_loop(
-                accepted_iteration=accepted_iter,
-                governance_section=governance_section,
-                prohibitions_block=prohibitions_block,
-                recurring_tracker=recurring_tracker,
-                resolved_tracker=resolved_tracker,
-            )
-            if not static_passed:
-                print_warning("  [STATIC] Static check loop did not fully resolve — proceeding to polish")
+            _qa_accepted_at_iter = accepted_iter  # QA was already accepted in a previous run
 
-            polish_success, polish_cost = self._post_qa_polish(final_iter, final_output, governance_section)
-            self._print_cost_summary(
-                final_iter, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                run_end_reason='QA_ACCEPTED'
-            )
-            return True, final_output
+            # Run initial checks; if all pass → polish + return; else fall through to main loop
+            _ws_initial_artifacts_dir = self.artifacts.build_dir / f'iteration_{accepted_iter:02d}_artifacts'
+
+            _ws_static_issues = []
+            if _ws_mode == 'static':
+                _ws_static_issues = self._run_static_check(_ws_initial_artifacts_dir)
+                if _ws_static_issues:
+                    high = sum(1 for d in _ws_static_issues if d['severity'] == 'HIGH')
+                    print_warning(f"  [STATIC] {len(_ws_static_issues)} defect(s) found ({high} HIGH)")
+                    defect_source        = 'static'
+                    _raw_pending_defects = _ws_static_issues
+                    previous_defects     = self._format_static_defects_for_claude(_ws_static_issues)
+                    iteration            = accepted_iter + 1
+                    # Fall through to main while loop (do NOT return)
+                else:
+                    print_success(f"  [STATIC] PASS — no static defects")
+
+            if not _ws_static_issues:
+                # Static passed (or skipped for consistency mode) — run AI consistency
+                _ws_consistency_issues = self._run_ai_consistency_check(accepted_iter, governance_section)
+                if _ws_consistency_issues:
+                    print_warning(f"  [CONSISTENCY] {len(_ws_consistency_issues)} issue(s) found")
+                    defect_source        = 'consistency'
+                    _raw_pending_defects = _ws_consistency_issues
+                    previous_defects     = self._format_consistency_defects_for_claude(_ws_consistency_issues)
+                    iteration            = accepted_iter + 1
+                    # Fall through to main while loop (do NOT return)
+                else:
+                    print_success("  [CONSISTENCY] PASS — all checks clean")
+                    # All checks passed — do polish and return now
+                    _ws_final_output = self.artifacts.build_synthetic_qa_output(accepted_iter)
+                    polish_success, polish_cost = self._post_qa_polish(accepted_iter, _ws_final_output, governance_section)
+                    self._print_cost_summary(
+                        accepted_iter, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                        run_end_reason='QA_ACCEPTED'
+                    )
+                    return True, _ws_final_output
+            # If we reach here, at least one check failed → fall through to main while loop
 
         # Fix A: On resume, reconstruct recurring_tracker from all previous QA reports so that
         # prohibition knowledge accumulated over prior iterations is NOT lost on restart.
@@ -4525,25 +4565,66 @@ class FOHarness:
                     still_truncated = False
                     print_success(f"Warm-start QA: loaded iter {iteration} artifacts — skipping Claude BUILD call")
                 if not _warm_skip_build:
-                    required_file_inventory = self._get_previous_iteration_inventory(iteration) if previous_defects else []
-                    defect_target_files = self._extract_defect_target_files(previous_defects) if previous_defects else []
+                    # For static/consistency fix iterations, extract target files from raw defect list
+                    # (more accurate than parsing the formatted text).
+                    if defect_source in ('static', 'consistency') and _raw_pending_defects:
+                        defect_target_files = sorted({
+                            d.get('file', '') for d in _raw_pending_defects
+                            if d.get('file', '').startswith('business/')
+                        })
+                        required_file_inventory = self._get_previous_iteration_inventory(iteration)
+                        if not required_file_inventory:
+                            # Fallback: read manifest from last accepted artifacts dir
+                            _prev_artifacts = self.artifacts.build_dir / f'iteration_{iteration - 1:02d}_artifacts'
+                            _manifest = _prev_artifacts / 'artifact_manifest.json'
+                            if _manifest.exists():
+                                try:
+                                    _m = json.load(open(_manifest))
+                                    required_file_inventory = sorted({
+                                        a['path'] for a in _m.get('artifacts', [])
+                                        if a.get('path', '').startswith('business/')
+                                    })
+                                except Exception:
+                                    required_file_inventory = []
+                    else:
+                        required_file_inventory = self._get_previous_iteration_inventory(iteration) if previous_defects else []
+                        defect_target_files = self._extract_defect_target_files(previous_defects) if previous_defects else []
 
-                    # FIX #1 & #4: Get prompt sections and dynamic token limit
-                    governance_section, dynamic_section = PromptTemplates.build_prompt(
-                        self.block,
-                        self.intake_data,
-                        self.build_governance,
-                        iteration,
-                        self.max_qa_iterations,
-                        previous_defects,
-                        self.tech_stack_override,
-                        self.external_integration_override,
-                        self.startup_id,
-                        self.effective_tech_stack,
-                        required_file_inventory,
-                        defect_target_files,
-                        prohibitions_block
-                    )
+                    # Select prompt: static/consistency fix → targeted patch; feature QA → full build prompt
+                    if defect_source in ('static', 'consistency') and previous_defects:
+                        # Governance section for caching (no defects passed in — defects go in dynamic only)
+                        governance_section, _ = PromptTemplates.build_prompt(
+                            self.block, self.intake_data, self.build_governance,
+                            iteration, self.max_qa_iterations, None,
+                            self.tech_stack_override, self.external_integration_override,
+                            self.startup_id, self.effective_tech_stack, [], []
+                        )
+                        # Targeted patch prompt — output only the defect-target files
+                        dynamic_section = PromptTemplates.static_fix_prompt(
+                            static_defects=previous_defects,
+                            required_file_inventory=required_file_inventory,
+                            defect_target_files=defect_target_files,
+                            prohibitions_block=prohibitions_block
+                        )
+                        _source_label = defect_source.upper()
+                        print_info(f"  [{_source_label}] Using targeted patch prompt for {defect_source} defects")
+                    else:
+                        # FIX #1 & #4: Get prompt sections and dynamic token limit
+                        governance_section, dynamic_section = PromptTemplates.build_prompt(
+                            self.block,
+                            self.intake_data,
+                            self.build_governance,
+                            iteration,
+                            self.max_qa_iterations,
+                            previous_defects,
+                            self.tech_stack_override,
+                            self.external_integration_override,
+                            self.startup_id,
+                            self.effective_tech_stack,
+                            required_file_inventory,
+                            defect_target_files,
+                            prohibitions_block
+                        )
 
                     # FIX #4: Dynamic max tokens based on iteration
                     max_tokens = Config.get_max_tokens(iteration)
@@ -5054,45 +5135,68 @@ class FOHarness:
                 # ================================================
 
                 if "QA STATUS: ACCEPTED" in qa_report:
-                    print_success(f"QA ACCEPTED on iteration {iteration}")
-                    print_success("BUILD → QA loop complete — no defects")
+                    print_success(f"GATE 1 PASSED: Feature QA ACCEPTED on iteration {iteration}")
+                    _qa_accepted_at_iter = iteration
 
-                    # ── Static code quality check (post feature-QA) ──────────
-                    static_passed, iteration, build_output = self._run_static_fix_loop(
-                        accepted_iteration=iteration,
-                        governance_section=governance_section,
-                        prohibitions_block=prohibitions_block,
-                        recurring_tracker=recurring_tracker,
-                        resolved_tracker=resolved_tracker,
-                    )
-                    if not static_passed:
-                        print_warning("  [STATIC] Static check could not be fully resolved — proceeding to polish with best state")
+                    # ── GATE 2: Static deterministic check ──────────────────────
+                    print_info("")
+                    print_info("═══════════════════════════════════════════════════════════")
+                    print_info("GATE 2: STATIC CHECK — Deterministic code quality pass")
+                    print_info("═══════════════════════════════════════════════════════════")
+                    _static_artifacts_dir = self.artifacts.build_dir / f'iteration_{iteration:02d}_artifacts'
+                    static_defects = self._run_static_check(_static_artifacts_dir)
+                    if static_defects:
+                        high = sum(1 for d in static_defects if d['severity'] == 'HIGH')
+                        print_warning(f"  [STATIC] FAIL — {len(static_defects)} defect(s) ({high} HIGH)")
+                        for d in static_defects:
+                            sev_fn = print_error if d['severity'] == 'HIGH' else print_warning
+                            sev_fn(f"    {d['id']} [{d['severity']}] {d['file']}: {d['issue']}")
+                        defect_source        = 'static'
+                        _raw_pending_defects = static_defects
+                        previous_defects     = self._format_static_defects_for_claude(static_defects)
+                        iteration += 1
+                        if iteration > self.max_qa_iterations:
+                            print_error(f"Max iterations ({self.max_qa_iterations}) reached during static check — halting")
+                            break
+                        print_info(f"Starting iteration {iteration} with static fix...")
+                        continue
+                    print_success("  [STATIC] PASS — no static defects")
 
-                    # ── Post-QA polish step: generate missing optional files ──
-                    polish_success, polish_cost = self._post_qa_polish(
-                        iteration, build_output, governance_section
-                    )
-                    if polish_success:
-                        # Update cost tracking with polish costs
-                        total_calls += polish_cost['calls']
-                        total_input_tokens += polish_cost['input_tokens']
-                        total_output_tokens += polish_cost['output_tokens']
-                        if polish_cost['cache_read_tokens'] > 0:
-                            total_cache_hits += 1
-                            total_cache_read_tokens += polish_cost['cache_read_tokens']
+                    # ── GATE 3: AI cross-file consistency check ──────────────────
+                    print_info("")
+                    print_info("═══════════════════════════════════════════════════════════")
+                    print_info("GATE 3: AI CONSISTENCY CHECK — Cross-file analysis")
+                    print_info("═══════════════════════════════════════════════════════════")
+                    consistency_issues = self._run_ai_consistency_check(iteration, governance_section)
+                    if consistency_issues:
+                        print_warning(f"  [CONSISTENCY] FAIL — {len(consistency_issues)} issue(s)")
+                        for iss in consistency_issues:
+                            sev_fn = print_error if iss.get('severity') == 'HIGH' else print_warning
+                            sev_fn(f"    {iss['id']} [{iss.get('severity', 'MEDIUM')}] "
+                                   f"{iss.get('files', iss.get('file', '?'))}: {iss.get('issue', '?')}")
+                        defect_source        = 'consistency'
+                        _raw_pending_defects = consistency_issues
+                        previous_defects     = self._format_consistency_defects_for_claude(consistency_issues)
+                        iteration += 1
+                        if iteration > self.max_qa_iterations:
+                            print_error(f"Max iterations ({self.max_qa_iterations}) reached during consistency check — halting")
+                            break
+                        print_info(f"Starting iteration {iteration} with consistency fix...")
+                        continue
+                    print_success("  [CONSISTENCY] PASS — no cross-file consistency issues")
 
-                    # FIX #1: Print cost summary before returning
-                    self._print_cost_summary(
-                        iteration, total_calls, total_cache_writes, total_cache_hits,
-                        total_cache_write_tokens, total_cache_read_tokens,
-                        total_input_tokens, total_output_tokens,
-                        total_gpt_calls, total_gpt_input_tokens, total_gpt_output_tokens,
-                        run_end_reason='QA_ACCEPTED'
-                    )
-
-                    return True, build_output
+                    # ── All three gates passed ────────────────────────────────────
+                    print_success("")
+                    print_success("══════════════════════════════════════════════════════════")
+                    print_success("ALL QA GATES PASSED: Feature QA + Static + AI Consistency")
+                    print_success("══════════════════════════════════════════════════════════")
+                    _loop_success = True
+                    break
 
                 elif "QA STATUS: REJECTED" in qa_report:
+                    # Feature QA rejected — reset defect source to 'qa' and repair
+                    defect_source        = 'qa'
+                    _raw_pending_defects = []
                     print_warning("QA REJECTED — defects found")
 
                     # Brackets in QA verdict e.g. "[4] defects require" — handle both formats
@@ -5195,6 +5299,30 @@ class FOHarness:
                         run_end_reason='QA_VERDICT_UNCLEAR'
                     )
                     return False, "QA_VERDICT_UNCLEAR"
+
+            # ── Post-loop: called only via break (all gates passed or max-iter during static/consistency) ──
+            if _qa_accepted_at_iter is not None:
+                # ── Post-QA polish step: generate missing optional files ────────────
+                polish_success, polish_cost = self._post_qa_polish(
+                    iteration, build_output, governance_section
+                )
+                if polish_success:
+                    total_calls             += polish_cost['calls']
+                    total_input_tokens      += polish_cost['input_tokens']
+                    total_output_tokens     += polish_cost['output_tokens']
+                    if polish_cost['cache_read_tokens'] > 0:
+                        total_cache_hits        += 1
+                        total_cache_read_tokens += polish_cost['cache_read_tokens']
+
+                end_reason = 'QA_ACCEPTED' if _loop_success else 'MAX_ITERATIONS'
+                self._print_cost_summary(
+                    iteration, total_calls, total_cache_writes, total_cache_hits,
+                    total_cache_write_tokens, total_cache_read_tokens,
+                    total_input_tokens, total_output_tokens,
+                    total_gpt_calls, total_gpt_input_tokens, total_gpt_output_tokens,
+                    run_end_reason=end_reason
+                )
+                return _loop_success, build_output
 
         except KeyboardInterrupt:
             print_error("\n\n⚠️  BUILD INTERRUPTED (Ctrl+C)")
@@ -5359,7 +5487,7 @@ Examples:
         """
     )
 
-    # Positional args — optional so --static-check can run without them
+    # Positional args — optional so --static-check / --ai-check can run without them
     parser.add_argument(
         'intake_file',
         nargs='?',
@@ -5436,12 +5564,6 @@ Examples:
         help='Max BUILD→QA iterations for this run. Default: 5'
     )
     parser.add_argument(
-        '--max-static-iterations',
-        type=int,
-        default=Config.MAX_STATIC_ITERATIONS,
-        help='Max static-check fix rounds after feature QA acceptance. Default: 5'
-    )
-    parser.add_argument(
         '--resume-run',
         type=str,
         default=None,
@@ -5455,12 +5577,13 @@ Examples:
     )
     parser.add_argument(
         '--resume-mode',
-        choices=['qa', 'fix', 'static'],
+        choices=['qa', 'fix', 'static', 'consistency'],
         default=None,
         help=(
-            'qa     — skip Claude BUILD for --resume-iteration, run fresh QA on existing artifacts. '
-            'fix    — load QA report from --resume-iteration as defects, start Claude FIX at iter+1. '
-            'static — find last QA-accepted iter (or use --resume-iteration), run static fix loop + polish.'
+            'qa          — skip Claude BUILD for --resume-iteration, run fresh QA on existing artifacts. '
+            'fix         — load QA report from --resume-iteration as defects, start Claude FIX at iter+1. '
+            'static      — find last QA-accepted iter (or use --resume-iteration), run static + AI consistency checks. '
+            'consistency — find last QA-accepted iter, skip static check, run AI consistency check only.'
         )
     )
     parser.add_argument(
@@ -5484,6 +5607,15 @@ Examples:
              'run the 6 checks, print results, exit. No Claude/OpenAI calls. '
              'Does not require intake or governance args.'
     )
+    parser.add_argument(
+        '--ai-check',
+        type=Path,
+        default=None,
+        metavar='ARTIFACTS_DIR',
+        help='Standalone AI consistency check: point at an iteration_NN_artifacts/ dir, '
+             'call Claude to check cross-file consistency, print results, exit. '
+             'Requires ANTHROPIC_API_KEY. Does not require intake or governance args.'
+    )
 
     args = parser.parse_args()
     if args.max_parts < 1:
@@ -5492,8 +5624,6 @@ Examples:
         parser.error("--max-continuations must be >= 0")
     if args.max_iterations < 1:
         parser.error("--max-iterations must be >= 1")
-    if args.max_static_iterations < 1:
-        parser.error("--max-static-iterations must be >= 1")
 
     # ── Standalone static check mode ─────────────────────────────────────────
     # Run without intake/governance args. Just point at an artifacts dir.
@@ -5523,10 +5653,42 @@ Examples:
                 print_info("")
             sys.exit(1)
 
+    # ── Standalone AI consistency check mode ────────────────────────────────
+    if args.ai_check:
+        artifacts_dir = Path(args.ai_check)
+        if not artifacts_dir.is_dir():
+            print_error(f"--ai-check path not found or not a directory: {artifacts_dir}")
+            sys.exit(1)
+        if not Config.ANTHROPIC_API_KEY:
+            print_error("ANTHROPIC_API_KEY is required for --ai-check")
+            sys.exit(1)
+        print_info("")
+        print_info("═══════════════════════════════════════════════════════════")
+        print_info(f"STANDALONE AI CONSISTENCY CHECK: {artifacts_dir}")
+        print_info("═══════════════════════════════════════════════════════════")
+        _claude = ClaudeClient(Config.ANTHROPIC_API_KEY, Config.CLAUDE_MODEL)
+        issues = FOHarness._run_ai_consistency_check_standalone(artifacts_dir, _claude)
+        if not issues:
+            print_success("CONSISTENCY CHECK: PASS — no cross-file issues found")
+            sys.exit(0)
+        else:
+            high = sum(1 for iss in issues if iss.get('severity') == 'HIGH')
+            med  = sum(1 for iss in issues if iss.get('severity') == 'MEDIUM')
+            print_warning(f"CONSISTENCY CHECK: FAIL — {len(issues)} issue(s)  [HIGH: {high}  MEDIUM: {med}]")
+            print_info("")
+            for iss in issues:
+                sev_fn = print_error if iss.get('severity') == 'HIGH' else print_warning
+                sev_fn(f"  {iss['id']} [{iss.get('severity', 'MEDIUM')}]  {iss.get('files', iss.get('file', '?'))}")
+                print_info(f"    Evidence: {iss.get('evidence', 'N/A')}")
+                print_info(f"    Issue:    {iss.get('issue', 'N/A')}")
+                print_info(f"    Fix:      {iss.get('fix', 'N/A')}")
+                print_info("")
+            sys.exit(1)
+
     # ── Normal run: require intake + governance positional args ──────────────
     if not args.intake_file or not args.build_governance_zip or not args.deploy_governance_zip:
         parser.error("intake_file, build_governance_zip, and deploy_governance_zip are required "
-                     "(unless using --static-check)")
+                     "(unless using --static-check or --ai-check)")
 
     # If --resume-run is given without --resume-mode, default to qa
     if args.resume_run and not args.resume_mode:
