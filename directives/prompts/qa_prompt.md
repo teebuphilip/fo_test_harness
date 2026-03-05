@@ -5,6 +5,7 @@ Validate the build output from Claude against the intake requirements and FO Bui
 {{tech_stack_context}}{{qa_override_context}}
 {{prohibitions_block}}
 {{defect_history_block}}
+{{resolved_defects_block}}
 **INTAKE REQUIREMENTS ({{block}} — key: {{block_key}}):**
 {{block_data_json}}
 

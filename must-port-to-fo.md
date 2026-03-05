@@ -40,6 +40,16 @@
 ## Governance Alignment
 - Keep default iteration cap aligned to locked policy (`5`) but allow CLI override for controlled exception runs.
 
+24. Resolved defects tracker (anti-ping-pong) ✅ DONE (2026-03-05)
+    - Harness: _extract_fixed_from_patch(), _confirm_resolutions(), _build_resolved_defects_block()
+      Three new static methods on FOHarness. Loop wired: pending_resolution set + resolved_tracker dict
+      initialized in execute_build_qa_loop(). After each Claude build: extract pending FIXED.
+      After each QA+filter: confirm or warn PING-PONG. Console: [RESOLVED] / [PING-PONG] / [PENDING].
+    - qa_prompt(): resolved_defects_block param added; passed to DirectiveTemplateLoader.render().
+    - qa_prompt.md: {{resolved_defects_block}} placeholder added after {{defect_history_block}}.
+      Block tells QA: these were senior-dev-confirmed fixed — only re-flag with verbatim evidence.
+    ⬜ TODO for FO codebase
+
 23. QA middle-tier: defect history + prohibition awareness + root cause classification ✅ DONE (2026-03-05)
     - qa_prompt.md: {{prohibitions_block}} and {{defect_history_block}} injected before intake.
       Root cause types (ONE-TIME-BUG | SCOPE-BOUNDARY | RECURRING-PATTERN) added to defect format.

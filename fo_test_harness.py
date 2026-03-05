@@ -1902,7 +1902,7 @@ it will be considered DELETED. QA will flag it as missing and you'll loop foreve
         return (governance_section, dynamic_section)
 
     @staticmethod
-    def qa_prompt(build_output: str, intake_data: dict, block: str, tech_stack: str = 'custom', qa_override: dict = None, prohibitions_block: str = '', defect_history_block: str = '') -> str:
+    def qa_prompt(build_output: str, intake_data: dict, block: str, tech_stack: str = 'custom', qa_override: dict = None, prohibitions_block: str = '', defect_history_block: str = '', resolved_defects_block: str = '') -> str:
         """
         Generate QA prompt for ChatGPT.
 
@@ -2110,6 +2110,7 @@ or is it a reasonable implementation detail to support an existing feature?"
             qa_override_context=qa_override_context,
             prohibitions_block=prohibitions_block,
             defect_history_block=defect_history_block,
+            resolved_defects_block=resolved_defects_block,
             block=block,
             block_key=block_key,
             block_data_json=json.dumps(block_data, indent=2),
@@ -3682,6 +3683,97 @@ class FOHarness:
 
         return '\n'.join(lines) + '\n---\n'
 
+    @staticmethod
+    def _extract_fixed_from_patch(build_output: str, previous_qa_report: str) -> set:
+        """
+        Parse Claude's PATCH_PLAN line to find FIXED defect IDs, then map those
+        IDs to (location, classification) from the previous QA report.
+        Returns a set of (location, classification) tuples pending resolution confirmation.
+        """
+        # Find PATCH_PLAN line
+        patch_match = re.search(r'PATCH_PLAN:\s*(.+?)(?:\n|$)', build_output)
+        if not patch_match:
+            return set()
+
+        patch_line = patch_match.group(1)
+        # Find DEFECT-N: FIXED entries
+        fixed_ids = set(re.findall(r'DEFECT-(\d+)[:\s]+FIXED', patch_line, re.IGNORECASE))
+        if not fixed_ids:
+            return set()
+
+        # Map IDs to (location, classification) from previous QA report
+        pending = set()
+        for block in re.split(r'(?=DEFECT-\d+:)', previous_qa_report):
+            id_match = re.match(r'DEFECT-(\d+):', block.strip())
+            if not id_match or id_match.group(1) not in fixed_ids:
+                continue
+            loc = re.search(r'-\s*Location:\s*(.+?)(?:\n|$)', block)
+            cls = re.search(r'DEFECT-\d+:\s*(\S+)', block)
+            if loc and cls:
+                location = loc.group(1).strip()
+                fm = re.search(r'\*\*FILE:\s*([^*]+)\*\*', location)
+                if fm:
+                    location = fm.group(1).strip()
+                fix_match = re.search(
+                    r'-\s*Fix:\s*(.*?)(?=\n\s*-\s*Severity:|\Z)', block, re.DOTALL
+                )
+                fix_text = fix_match.group(1).strip()[:150] if fix_match else ''
+                pending.add((location, cls.group(1).strip(), fix_text))
+        return pending
+
+    @staticmethod
+    def _confirm_resolutions(pending: set, current_qa_report: str,
+                             resolved_tracker: dict, iteration: int):
+        """
+        Compare pending (location, classification) pairs against the current QA report.
+        Any that do NOT appear in the current report are confirmed resolved — add to tracker.
+        Any that DO reappear are not resolved — leave pending (caller decides next step).
+        Returns (newly_confirmed: list, still_pending: set).
+        """
+        current_defects = FOHarness._extract_defects_for_tracking(current_qa_report)
+        current_keys = {(d['location'], d['classification']) for d in current_defects}
+
+        newly_confirmed = []
+        still_pending = set()
+
+        for location, classification, fix_text in pending:
+            if (location, classification) not in current_keys:
+                resolved_tracker[(location, classification)] = {
+                    'iteration_resolved': iteration,
+                    'fix_summary':        fix_text,
+                }
+                newly_confirmed.append((location, classification))
+            else:
+                still_pending.add((location, classification, fix_text))
+
+        return newly_confirmed, still_pending
+
+    @staticmethod
+    def _build_resolved_defects_block(resolved_tracker: dict) -> str:
+        """
+        Build the {{resolved_defects_block}} string for the QA prompt.
+        Tells QA: these were fixed and confirmed — only re-flag with verbatim evidence.
+        Returns empty string if nothing resolved yet.
+        """
+        if not resolved_tracker:
+            return ''
+
+        lines = [
+            '**RESOLVED DEFECTS (fixed and confirmed in previous iterations — senior dev ruling):**',
+            'These defects were fixed by Claude and confirmed absent in a subsequent QA pass.',
+            'Do NOT re-flag them unless you can quote the EXACT wrong line verbatim from the current build.',
+            'If you cannot paste the specific offending line — DELETE the defect. It has already been resolved.',
+            '',
+        ]
+        for i, ((location, classification), entry) in enumerate(resolved_tracker.items(), 1):
+            lines.append(
+                f'RESOLVED-{i}: {location} ({classification}) — confirmed fixed at iteration {entry["iteration_resolved"]}'
+            )
+            if entry['fix_summary']:
+                lines.append(f'  Fix applied: {entry["fix_summary"]}')
+        lines.append('')
+        return '\n'.join(lines) + '\n---\n'
+
     # Phrases banned from Evidence fields per qa_prompt.md ABSOLUTE RULES.
     # Any defect whose Evidence contains one of these is auto-removed.
     _BANNED_EVIDENCE_PHRASES = [
@@ -3893,8 +3985,10 @@ class FOHarness:
 
         iteration        = 1
         previous_defects = None
-        recurring_tracker = {}   # (location, classification) → {count, last_problem, last_fix}
-        prohibitions_block = ''  # accumulated prohibition text, injected into every patch prompt
+        recurring_tracker  = {}   # (location, classification) → {count, last_problem, last_fix}
+        prohibitions_block = ''   # accumulated prohibition text, injected into every patch prompt
+        resolved_tracker   = {}   # (location, classification) → {iteration_resolved, fix_summary}
+        pending_resolution = set() # defects Claude claimed FIXED; awaiting QA confirmation
         build_output     = None
 
         # FIX #1: Track cumulative usage for final cost summary (Claude)
@@ -4190,7 +4284,22 @@ class FOHarness:
                             print_success(f"Build complete — {len(all_files)} files extracted")
     
                         self.artifacts.save_build_output(iteration, build_output)
-    
+
+                        # Track which defects Claude claimed as FIXED in this patch iteration.
+                        # We'll confirm resolution after QA (if they don't reappear → resolved).
+                        if iteration > 1 and previous_defects:
+                            pending_resolution = self._extract_fixed_from_patch(
+                                build_output, previous_defects
+                            )
+                            if pending_resolution:
+                                print_info(
+                                    f"  [PENDING RESOLUTION] {len(pending_resolution)} defect(s) claimed FIXED — "
+                                    f"awaiting QA confirmation: "
+                                    + ", ".join(f"{loc}" for loc, cls, _ in pending_resolution)
+                                )
+                        else:
+                            pending_resolution = set()
+
                         # Post-build pruning for boilerplate mode: keep business/** only
                         if self.use_boilerplate:
                             self.artifacts.prune_non_business_artifacts(iteration)
@@ -4405,7 +4514,8 @@ class FOHarness:
                     self.effective_tech_stack,
                     self.qa_override,
                     prohibitions_block=prohibitions_block,
-                    defect_history_block=self._build_qa_defect_history(recurring_tracker)
+                    defect_history_block=self._build_qa_defect_history(recurring_tracker),
+                    resolved_defects_block=self._build_resolved_defects_block(resolved_tracker)
                 )
 
                 self.artifacts.save_log(f'iteration_{iteration:02d}_qa_prompt', qa_prompt)
@@ -4430,6 +4540,22 @@ class FOHarness:
                         self.artifacts.save_log(
                             f'iteration_{iteration:02d}_qa_report_raw', raw_qa_report
                         )
+
+                    # Confirm pending resolutions: any FIXED defect absent from this QA → resolved
+                    if pending_resolution:
+                        newly_confirmed, pending_resolution = self._confirm_resolutions(
+                            pending_resolution, qa_report, resolved_tracker, iteration
+                        )
+                        for loc, cls in newly_confirmed:
+                            print_success(
+                                f"  [RESOLVED] {loc} ({cls}) confirmed fixed — added to resolved list"
+                            )
+                        if pending_resolution:
+                            reappeared = [loc for loc, cls, _ in pending_resolution]
+                            print_warning(
+                                f"  [PING-PONG] {len(pending_resolution)} defect(s) Claude claimed FIXED "
+                                f"but QA re-flagged: {', '.join(reappeared)}"
+                            )
 
                     self.artifacts.save_qa_report(iteration, qa_report)
 

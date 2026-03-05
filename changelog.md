@@ -2,6 +2,27 @@
 
 ## 2026-03-05
 
+### Resolved defects tracker: senior dev anti-ping-pong mechanism
+Root cause of Auth0 and other ping-pong defects: Claude fixes a defect, QA re-flags it next
+iteration without verbatim evidence — wasting 4-6 extra iterations on already-resolved issues.
+
+**Mechanism** (harness only, 3 new static methods + loop wiring):
+- `_extract_fixed_from_patch(build_output, previous_qa)`: parses PATCH_PLAN for FIXED defect IDs,
+  maps them to (location, classification, fix_text) from the previous QA report. Returns a `pending`
+  set — defects Claude claims fixed, awaiting confirmation.
+- `_confirm_resolutions(pending, current_qa, resolved_tracker, iteration)`: after QA filter, checks
+  which pending (location, classification) pairs are ABSENT from the new QA report. Absent = confirmed
+  resolved → added to `resolved_tracker`. Present = ping-pong → warns and returns as still-pending.
+- `_build_resolved_defects_block(resolved_tracker)`: formats resolved list for QA injection:
+  "Do NOT re-flag unless you can quote the EXACT wrong line verbatim — senior dev ruling."
+- Main loop: `resolved_tracker = {}` and `pending_resolution = set()` initialized alongside
+  `recurring_tracker`. After each Claude build: `_extract_fixed_from_patch` populates pending.
+  After each QA + filter: `_confirm_resolutions` updates tracker. Console logs: `[RESOLVED]` on
+  confirm, `[PING-PONG]` warning on re-flag, `[PENDING RESOLUTION]` on new FIXED claims.
+- `qa_prompt()` method: `resolved_defects_block: str = ''` param added; passed to render.
+- `qa_prompt.md`: `{{resolved_defects_block}}` placeholder added after `{{defect_history_block}}`.
+  Block appears before intake requirements — QA sees the resolved list before evaluating artifacts.
+
 ### QA middle-tier: defect history, prohibition awareness, root cause classification
 QA (gpt-4o-mini) had no memory — evaluated each build cold with no awareness of previous
 iterations, recurring patterns, or accumulated prohibitions.
