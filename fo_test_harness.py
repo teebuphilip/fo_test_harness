@@ -4017,7 +4017,28 @@ class FOHarness:
         print_info(f"  [FILTER] QA report filtered: {len(removed)} defect(s) removed, {total_kept} remaining")
         return new_report
 
-    def _run_static_check(self, artifacts_dir: Path) -> list:
+    @staticmethod
+    def _find_last_accepted_iteration(run_dir: Path) -> int:
+        """
+        Scan qa/iteration_*_qa_report.txt in run_dir for the highest iteration
+        that contains 'QA STATUS: ACCEPTED'. Returns 0 if none found.
+        """
+        qa_dir = run_dir / 'qa'
+        if not qa_dir.exists():
+            return 0
+        best = 0
+        for qa_file in sorted(qa_dir.glob('iteration_*_qa_report.txt')):
+            try:
+                if 'QA STATUS: ACCEPTED' in qa_file.read_text(encoding='utf-8', errors='replace'):
+                    m = re.search(r'iteration_(\d+)_qa_report', qa_file.name)
+                    if m:
+                        best = max(best, int(m.group(1)))
+            except Exception:
+                continue
+        return best
+
+    @staticmethod
+    def _run_static_check(artifacts_dir: Path) -> list:
         """
         Run deterministic static checks on extracted Python artifacts.
 
@@ -4177,7 +4198,8 @@ class FOHarness:
 
         return defects
 
-    def _format_static_defects_for_claude(self, defects: list) -> str:
+    @staticmethod
+    def _format_static_defects_for_claude(defects: list) -> str:
         """
         Format static defects list into a structured block for Claude's static fix prompt.
         """
@@ -4401,6 +4423,53 @@ class FOHarness:
             # Jump the loop counter to the requested iteration — Claude BUILD will be skipped for it
             iteration = _ws_iteration
             print_success(f"Warm-start (qa): starting loop at iter {iteration} — Claude BUILD will be skipped")
+        elif _ws_run_dir.is_dir() and _ws_mode == 'static':
+            # ── Resume at static check phase ──────────────────────────────
+            # Find which iteration was QA-accepted (explicit or auto-detect)
+            accepted_iter = _ws_iteration if _ws_iteration > 1 else self._find_last_accepted_iteration(_ws_run_dir)
+            if not accepted_iter:
+                print_error("Warm-start (static): no QA-ACCEPTED iteration found in run dir. "
+                            "Pass --resume-iteration N to specify manually.")
+                return False, "RESUME_MISSING_ACCEPTED_ITERATION"
+
+            print_success(f"Warm-start (static): resuming static check loop from iteration {accepted_iter:02d}")
+
+            # Rebuild recurring_tracker from prior QA reports before static loop
+            _prior_qa_files = sorted(_ws_run_dir.glob('qa/iteration_*_qa_report.txt'))
+            for _qf in _prior_qa_files:
+                for d in self._extract_defects_for_tracking(_qf.read_text()):
+                    key = (d['location'], d['classification'])
+                    if key not in recurring_tracker:
+                        recurring_tracker[key] = {'count': 0, 'last_problem': '', 'last_fix': ''}
+                    recurring_tracker[key]['count'] += 1
+                    recurring_tracker[key]['last_problem'] = d['problem']
+                    recurring_tracker[key]['last_fix']     = d['fix']
+            prohibitions_block = self._build_prohibitions_block(recurring_tracker)
+
+            # Build governance_section (needed for Claude cache in static fix calls)
+            governance_section, _ = PromptTemplates.build_prompt(
+                self.block, self.intake_data, self.build_governance,
+                accepted_iter, self.max_qa_iterations, None,
+                self.tech_stack_override, self.external_integration_override,
+                self.startup_id, self.effective_tech_stack, [], []
+            )
+
+            static_passed, final_iter, final_output = self._run_static_fix_loop(
+                accepted_iteration=accepted_iter,
+                governance_section=governance_section,
+                prohibitions_block=prohibitions_block,
+                recurring_tracker=recurring_tracker,
+                resolved_tracker=resolved_tracker,
+            )
+            if not static_passed:
+                print_warning("  [STATIC] Static check loop did not fully resolve — proceeding to polish")
+
+            polish_success, polish_cost = self._post_qa_polish(final_iter, final_output, governance_section)
+            self._print_cost_summary(
+                final_iter, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                run_end_reason='QA_ACCEPTED'
+            )
+            return True, final_output
 
         # Fix A: On resume, reconstruct recurring_tracker from all previous QA reports so that
         # prohibition knowledge accumulated over prior iterations is NOT lost on restart.
@@ -5291,20 +5360,26 @@ Examples:
         """
     )
 
-    # Positional args
+    # Positional args — optional so --static-check can run without them
     parser.add_argument(
         'intake_file',
+        nargs='?',
         type=Path,
+        default=None,
         help='Path to combined intake JSON (output of run_intake_v7.sh)'
     )
     parser.add_argument(
         'build_governance_zip',
+        nargs='?',
         type=Path,
+        default=None,
         help='Path to BUILD governance ZIP (FOBUILFINALLOCKED100.zip)'
     )
     parser.add_argument(
         'deploy_governance_zip',
+        nargs='?',
         type=Path,
+        default=None,
         help='Path to DEPLOY governance ZIP (fo_deploy_governance_v1_2_CLARIFIED.zip)'
     )
 
@@ -5381,11 +5456,12 @@ Examples:
     )
     parser.add_argument(
         '--resume-mode',
-        choices=['qa', 'fix'],
+        choices=['qa', 'fix', 'static'],
         default=None,
         help=(
-            'qa  — skip Claude BUILD for --resume-iteration, run fresh QA on existing artifacts. '
-            'fix — load QA report from --resume-iteration as defects, start Claude FIX at iter+1.'
+            'qa     — skip Claude BUILD for --resume-iteration, run fresh QA on existing artifacts. '
+            'fix    — load QA report from --resume-iteration as defects, start Claude FIX at iter+1. '
+            'static — find last QA-accepted iter (or use --resume-iteration), run static fix loop + polish.'
         )
     )
     parser.add_argument(
@@ -5400,6 +5476,15 @@ Examples:
         metavar='SECONDS',
         help='Seconds to wait before each QA call on iteration 2+ (TPM cooldown). Default: 0.'
     )
+    parser.add_argument(
+        '--static-check',
+        type=Path,
+        default=None,
+        metavar='ARTIFACTS_DIR',
+        help='Standalone static check: point at an iteration_NN_artifacts/ dir, '
+             'run the 6 checks, print results, exit. No Claude/OpenAI calls. '
+             'Does not require intake or governance args.'
+    )
 
     args = parser.parse_args()
     if args.max_parts < 1:
@@ -5410,6 +5495,39 @@ Examples:
         parser.error("--max-iterations must be >= 1")
     if args.max_static_iterations < 1:
         parser.error("--max-static-iterations must be >= 1")
+
+    # ── Standalone static check mode ─────────────────────────────────────────
+    # Run without intake/governance args. Just point at an artifacts dir.
+    if args.static_check:
+        artifacts_dir = Path(args.static_check)
+        if not artifacts_dir.is_dir():
+            print_error(f"--static-check path not found or not a directory: {artifacts_dir}")
+            sys.exit(1)
+        print_info("")
+        print_info("═══════════════════════════════════════════════════════════")
+        print_info(f"STANDALONE STATIC CHECK: {artifacts_dir}")
+        print_info("═══════════════════════════════════════════════════════════")
+        defects = FOHarness._run_static_check(artifacts_dir)
+        if not defects:
+            print_success("STATIC CHECK: PASS — no defects found")
+            sys.exit(0)
+        else:
+            high = sum(1 for d in defects if d['severity'] == 'HIGH')
+            med  = sum(1 for d in defects if d['severity'] == 'MEDIUM')
+            print_warning(f"STATIC CHECK: FAIL — {len(defects)} defect(s)  [HIGH: {high}  MEDIUM: {med}]")
+            print_info("")
+            for d in defects:
+                sev_fn = print_error if d['severity'] == 'HIGH' else print_warning
+                sev_fn(f"  {d['id']} [{d['severity']}]  {d['file']}")
+                print_info(f"    Issue: {d['issue']}")
+                print_info(f"    Fix:   {d['fix']}")
+                print_info("")
+            sys.exit(1)
+
+    # ── Normal run: require intake + governance positional args ──────────────
+    if not args.intake_file or not args.build_governance_zip or not args.deploy_governance_zip:
+        parser.error("intake_file, build_governance_zip, and deploy_governance_zip are required "
+                     "(unless using --static-check)")
 
     # If --resume-run is given without --resume-mode, default to qa
     if args.resume_run and not args.resume_mode:

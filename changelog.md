@@ -2,6 +2,46 @@
 
 ## 2026-03-05
 
+### Static check: standalone CLI mode + resume-mode static
+
+Two new ways to invoke the static check from the command line:
+
+**Standalone check (`--static-check <artifacts_dir>`):**
+```bash
+python fo_test_harness.py --static-check fo_harness_runs/.../build/iteration_26_artifacts
+```
+No intake/governance args needed. Runs all 6 static checks, prints
+coloured pass/fail report, exits 0 (PASS) or 1 (FAIL). No API calls.
+- Positional args made optional (`nargs='?'`) with validation that they're
+  required unless `--static-check` is present.
+- `_run_static_check` and `_format_static_defects_for_claude` made `@staticmethod`
+  so they can be called from main() without a full FOHarness instance.
+
+**Resume at static phase (`--resume-mode static`):**
+```bash
+python fo_test_harness.py intake.json build.zip deploy.zip \
+  --resume-run fo_harness_runs/... \
+  [--resume-iteration N]   # optional: auto-detects last ACCEPTED iter if omitted
+  --resume-mode static
+```
+Auto-detects the last QA-ACCEPTED iteration from the run dir's `qa/` reports
+(or uses `--resume-iteration N` as override). Rebuilds prohibition tracker,
+builds governance_section for prompt caching, then calls `_run_static_fix_loop`
+→ `_post_qa_polish` → returns. Skips the main BUILD-QA loop entirely.
+- New `_find_last_accepted_iteration(run_dir)` static method.
+- `--resume-mode` choices extended to `['qa', 'fix', 'static']`.
+
+**Smoke test result (iteration 26 of ai_workforce_intelligence converged run):**
+```
+STATIC CHECK: FAIL — 5 defect(s)  [HIGH: 2  MEDIUM: 3]
+  STATIC-1 [HIGH] business/backend/routes/client.py — Duplicate __tablename__ = "clients"
+  STATIC-2 [HIGH] business/models/data_source.py — from app.models.base import Base (wrong path)
+  STATIC-3 [MEDIUM] business/backend/routes/assessments.py — unauthenticated routes
+  STATIC-4 [MEDIUM] business/backend/routes/kpis.py — unauthenticated routes
+  STATIC-5 [MEDIUM] business/backend/routes/reports.py — unauthenticated routes
+```
+Confirmed: exactly the ship-blockers identified in manual review.
+
 ### Post-QA static check loop: deterministic code quality pass before polish
 
 Root cause: Feature QA (ChatGPT) is a feature auditor, not a static analyzer. It cannot see

@@ -40,6 +40,14 @@
 ## Governance Alignment
 - Keep default iteration cap aligned to locked policy (`5`) but allow CLI override for controlled exception runs.
 
+28. Static check CLI modes ✅ DONE (2026-03-05)
+    - --static-check <artifacts_dir>: standalone lint, no API calls, exits 0/1.
+    - --resume-mode static: skip main loop, find last accepted iter, run static fix loop + polish.
+    - _find_last_accepted_iteration(run_dir): scans qa/ for highest ACCEPTED report.
+    - _run_static_check + _format_static_defects_for_claude promoted to @staticmethod.
+    - Positional args made optional (nargs='?') with conditional validation.
+    ⬜ TODO for FO codebase
+
 27. Post-QA static check loop ✅ DONE (2026-03-05)
     - Config.MAX_STATIC_ITERATIONS = 5; --max-static-iterations CLI flag.
     - FOHarness._run_static_check(): 6 checks (AST syntax, duplicate __tablename__, missing TenantMixin
