@@ -76,6 +76,14 @@ That's it.
 
 The first three arguments are always required. The flags are optional.
 
+Additional optional polish directive override:
+
+```bash
+--qa-testcase-directive /path/to/qa_testcase_doc_directive.md
+```
+
+This lets you template and evolve post-QA testcase document requirements without code changes.
+
 ### Real example — Wynwood, Block B (default), no deploy (default)
 
 ```bash
@@ -195,6 +203,9 @@ Open it and you have everything Claude built.
 
 ./fo_harness_runs/wynwood_thoroughbreds_BLOCK_B_20250213_143022.zip  ← your deliverable
 ```
+
+Post-QA polish can also generate:
+- `business/docs/TEST_CASES.md` (ChatGPT-generated complete testcase doc using your testcase directive template)
 
 ---
 

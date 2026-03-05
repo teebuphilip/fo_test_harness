@@ -132,6 +132,7 @@ class Config:
     EXTERNAL_INTEGRATION_OVERRIDE_FILE = Path('./fo_external_integration_override.json')
     QA_OVERRIDE_FILE = Path('./fo_qa_override.json')
     QA_POLISH_2_DIRECTIVE_FILE = Path('./directives/qa_polish_2_doc_recovery.md')
+    QA_TESTCASE_DIRECTIVE_FILE = Path('./directives/qa_testcase_doc_directive.md')
     PROMPT_DIRECTIVES_DIR = Path('./directives/prompts')
 
 
@@ -2374,6 +2375,11 @@ class FOHarness:
         self.qa_polish_2_directive = load_text_file(self.qa_polish_2_directive_path)
         print_info(f"QA_POLISH_2 directive: {self.qa_polish_2_directive_path}")
 
+        # Resolve testcase-doc directive path (templated, user-editable)
+        self.qa_testcase_directive_path = self._resolve_qa_testcase_directive_path()
+        self.qa_testcase_directive = load_text_file(self.qa_testcase_directive_path)
+        print_info(f"QA_TESTCASE directive: {self.qa_testcase_directive_path}")
+
         # Only load deploy governance if --deploy was passed
         self.deploy_governance = None
         if self.do_deploy:
@@ -2440,6 +2446,7 @@ class FOHarness:
             "deploy_governance_zip": str(Config.DEPLOY_GOVERNANCE_ZIP) if self.do_deploy else None,
             "platform_boilerplate_dir": str(Config.PLATFORM_BOILERPLATE_DIR),
             "qa_polish_2_directive_path": str(self.qa_polish_2_directive_path),
+            "qa_testcase_directive_path": str(self.qa_testcase_directive_path),
             "cli_args": _coerce_jsonable(vars(self.cli_args)) if self.cli_args else None
         }
 
@@ -2461,6 +2468,22 @@ class FOHarness:
                 "QA_POLISH_2 directive not found. "
                 f"Looked for: {resolved}. "
                 "Provide --qa-polish-2-directive <path> or create the default file."
+            )
+        return resolved
+
+    def _resolve_qa_testcase_directive_path(self) -> Path:
+        """
+        Resolve testcase-doc directive path with precedence:
+        1) CLI override (--qa-testcase-directive)
+        2) Config default (Config.QA_TESTCASE_DIRECTIVE_FILE)
+        """
+        cli_path = getattr(self.cli_args, 'qa_testcase_directive', None) if self.cli_args else None
+        resolved = Path(cli_path) if cli_path else Path(Config.QA_TESTCASE_DIRECTIVE_FILE)
+        if not resolved.exists():
+            raise FileNotFoundError(
+                "QA testcase directive not found. "
+                f"Looked for: {resolved}. "
+                "Provide --qa-testcase-directive <path> or create the default file."
             )
         return resolved
 
@@ -3370,6 +3393,46 @@ class FOHarness:
             cost_stats['cache_read_tokens'] += usage.get('cache_read_input_tokens', 0)
         except Exception as e:
             print_warning(f"Failed to generate docs: {e}")
+
+        # ============================================================
+        # 7. Generate complete testcase doc (ChatGPT, directive-driven)
+        # ============================================================
+        try:
+            docs_dir.mkdir(parents=True, exist_ok=True)
+            testcase_prompt = DirectiveTemplateLoader.render(
+                'polish_testcases_wrapper_prompt.md',
+                qa_testcase_directive=self.qa_testcase_directive,
+                startup_id=self.startup_id,
+                block=self.block,
+                iteration=iteration,
+                iteration_padded=f"{iteration:02d}",
+                intake_json=json.dumps(self.intake_data, indent=2),
+                manifest_sample=chr(10).join(manifest_files[:80]),
+                build_output_sample=build_output[:5000]
+            )
+
+            print_info("→ Calling ChatGPT for testcase doc generation...")
+            tc_response = self.chatgpt.call(testcase_prompt, max_tokens=8192)
+            tc_content = tc_response['choices'][0]['message']['content']
+
+            # Extract markdown if fenced, else keep as-is
+            md_match = re.search(r'```markdown\\n(.*?)\\n```', tc_content, re.DOTALL)
+            if md_match:
+                tc_text = md_match.group(1)
+            else:
+                md_match = re.search(r'```\\n(.*?)\\n```', tc_content, re.DOTALL)
+                tc_text = md_match.group(1) if md_match else tc_content
+
+            tc_path = docs_dir / 'TEST_CASES.md'
+            tc_path.write_text(tc_text, encoding='utf-8')
+            print_success(f"✓ Generated testcase doc: {tc_path}")
+
+            usage = tc_response.get('usage', {})
+            cost_stats['calls'] += 1
+            cost_stats['input_tokens'] += usage.get('prompt_tokens', 0)
+            cost_stats['output_tokens'] += usage.get('completion_tokens', 0)
+        except Exception as e:
+            print_warning(f"Failed to generate testcase doc: {e}")
 
         # ============================================================
         # Summary
@@ -5943,6 +6006,13 @@ Examples:
         type=Path,
         default=None,
         help='Path to external QA_POLISH_2_DOC_RECOVERY directive file. '
+             'Precedence: CLI path -> Config default path.'
+    )
+    parser.add_argument(
+        '--qa-testcase-directive',
+        type=Path,
+        default=None,
+        help='Path to external testcase-doc directive template used by post-QA polish. '
              'Precedence: CLI path -> Config default path.'
     )
     parser.add_argument(

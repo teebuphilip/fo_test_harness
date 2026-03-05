@@ -2,6 +2,30 @@
 
 ## 2026-03-06
 
+### Post-QA polish: ChatGPT testcase doc generation (templated directive)
+
+Added a new post-polish output pass that generates a complete testcase document via ChatGPT:
+
+- New directive file: `directives/qa_testcase_doc_directive.md`
+- New wrapper prompt: `directives/prompts/polish_testcases_wrapper_prompt.md`
+- New polish step writes: `business/docs/TEST_CASES.md`
+- New CLI override:
+  - `--qa-testcase-directive <path>`
+  - Precedence: CLI path -> `Config.QA_TESTCASE_DIRECTIVE_FILE`
+- Harness metadata now records `qa_testcase_directive_path`.
+
+This is designed to be user-editable so scope/format requirements can be added or removed over time
+without changing code.
+
+Follow-up update:
+- Testcase directive extended with explicit **Postman Suite Conversion Plan** requirements:
+  - `PM-ID` mapping to testcase IDs
+  - collection/folder structure guidance
+  - required variables
+  - pre-request auth scripts
+  - test assertion scripts
+  - Newman/CI execution notes
+
 ### Static + QA hardening: false-negative filter narrowed, deterministic checks expanded, gate telemetry added
 
 Implemented multi-part harness hardening to catch real integration/runtime defects earlier and surface terminal consistency issues:

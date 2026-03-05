@@ -12,6 +12,13 @@
   - "downloadable report" must map to explicit export/download capability.
 - Gate telemetry is required for operator trust: always log which gates ran/skipped and why.
 - Final consistency-on-terminal-failure gives actionable post-mortem defects instead of silent exits.
+- Post-QA polish is a good insertion point for testcase documentation generation:
+  - the system already has intake + final manifest + final build context
+  - ChatGPT can generate a complete testcase doc from a directive template
+  - keeping the directive external (template file) makes testcase policy easy to evolve across startups.
+- For API-heavy apps, include a Postman conversion section in the same directive:
+  - this gives a direct path from testcase doc -> collection/newman execution
+  - complements Playwright (UI/E2E) with API contract automation.
 
 ## What Broke Most Often
 - Large lowcode outputs hit token limits and dropped required files.

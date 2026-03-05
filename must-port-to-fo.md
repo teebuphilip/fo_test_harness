@@ -29,6 +29,17 @@
 - Added React hook misuse check guidance.
 ⬜ TODO for FO codebase
 
+6. Post-QA testcase doc generation (ChatGPT, directive-driven)
+- New polish pass generates `business/docs/TEST_CASES.md`.
+- New directive template file: `directives/qa_testcase_doc_directive.md`.
+- New wrapper prompt: `directives/prompts/polish_testcases_wrapper_prompt.md`.
+- New CLI override: `--qa-testcase-directive <path>`.
+- Directive is intended to be edited over time (add/remove testcase requirements without code edits).
+- Directive now includes:
+  - Playwright conversion plan
+  - Postman suite conversion plan (collection/folder layout, vars, auth scripts, Newman/CI notes)
+⬜ TODO for FO codebase
+
 ## Priority 0 (First)
 1. Truncation recovery fix
 - Run fallback continuations whenever output remains truncated, regardless of multipart mode.
