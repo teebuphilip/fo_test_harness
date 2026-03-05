@@ -3875,6 +3875,8 @@ class FOHarness:
         1b. Location is __init__.py                   — Python plumbing, never a defect
         2. Evidence contains a banned absence phrase  — banned per qa_prompt rules
         3. Backtick-quoted evidence not in build output — fabricated code
+        5a. Auth0 contradiction: evidence shows correct destructuring but problem says wrong call
+        5b. Fix == Evidence: fix instructs what evidence already shows — self-invalidating
         4. Presence claim is false — QA says X is missing but X IS in build output
 
         Returns cleaned report with updated counts. Flips to ACCEPTED if 0 remain.
@@ -3964,6 +3966,46 @@ class FOHarness:
                     removed.append((defect_id, block, reason))
                     print_warning(f"  [FILTER] Removed {defect_id}: {reason}")
                     continue
+
+            # --- Check 5: Evidence contradicts Problem (self-invalidating defect) ---
+            # Sub-check A: Auth0 getAccessTokenSilently hallucination.
+            # QA sees `getAccessTokenSilently` in a file and generates a defect claiming
+            # `user.getAccessTokenSilently()` is called — but if the evidence itself shows
+            # it properly destructured from useAuth0(), the code is already correct.
+            _ev_has_correct_auth0 = bool(re.search(
+                r'getAccessTokenSilently.*useAuth0\(\)|useAuth0\(\).*getAccessTokenSilently',
+                evidence_text
+            ))
+            _prob_claims_wrong_auth0 = 'user.getAccessTokenSilently' in problem_text
+            if _ev_has_correct_auth0 and _prob_claims_wrong_auth0:
+                reason = (
+                    "Auth0 contradiction: Evidence shows correct getAccessTokenSilently "
+                    "destructuring from useAuth0() but Problem claims user.getAccessTokenSilently() — "
+                    "code is already correct"
+                )
+                removed.append((defect_id, block, reason))
+                print_warning(f"  [FILTER] Removed {defect_id}: {reason}")
+                continue
+
+            # Sub-check B: Fix == Evidence (defect claims something is wrong
+            # but the Fix says to use exactly what the Evidence already shows).
+            fix_match = re.search(
+                r'-\s*Fix:\s*(.*?)(?=\n\s*-\s*(?:Severity|Root cause):|\Z)',
+                block, re.DOTALL
+            )
+            fix_text = fix_match.group(1).strip() if fix_match else ''
+            # Extract backtick snippets from Fix
+            fix_snippets = re.findall(r'`([^`]+)`', fix_text)
+            fix_meaningful = [s.strip() for s in fix_snippets if len(s.strip()) > 8]
+            # If every Fix snippet already appears in the Evidence, the defect is self-contradicting
+            if fix_meaningful and all(fs in evidence_text for fs in fix_meaningful):
+                reason = (
+                    f"Self-contradicting defect: Fix snippet(s) {fix_meaningful[:1]} "
+                    "already present in Evidence — code is already correct"
+                )
+                removed.append((defect_id, block, reason))
+                print_warning(f"  [FILTER] Removed {defect_id}: {reason}")
+                continue
 
             # --- Check 4: Presence claims — verify against actual build output ---
             combined_claim = (evidence_text + ' ' + problem_text).lower()
