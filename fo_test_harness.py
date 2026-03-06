@@ -88,6 +88,7 @@ class Config:
 
     # Iteration Limits
     MAX_QA_ITERATIONS = 5      # Default aligns with locked governance; CLI can override.
+    MAX_DEFECTS_PER_ITERATION = 6  # Limit fix scope per iteration to reduce churn/regressions.
 
     # API call settings
     # FIX #6: Increased timeout for large builds with prompt caching.
@@ -4812,6 +4813,11 @@ class FOHarness:
         if not defects:
             return "(no static defects)"
         lines = []
+        lines.append(
+            "SCOPE LOCK (NON-NEGOTIABLE): Fix ONLY the defects listed below. "
+            "Do NOT refactor, rename, or add features beyond these fixes."
+        )
+        lines.append("")
         for d in defects:
             lines.append(
                 f"STATIC-{d['id'].replace('STATIC-', '')}: [{d['severity']}] {d['file']}\n"
@@ -4862,6 +4868,11 @@ class FOHarness:
         if not issues:
             return "(no consistency issues)"
         lines = []
+        lines.append(
+            "SCOPE LOCK (NON-NEGOTIABLE): Fix ONLY the defects listed below. "
+            "Do NOT refactor, rename, or add features beyond these fixes."
+        )
+        lines.append("")
         for iss in issues:
             lines.append(
                 f"{iss['id']}: [{iss.get('severity', 'MEDIUM')}] {iss.get('files', iss.get('file', 'unknown'))}\n"
@@ -4870,6 +4881,35 @@ class FOHarness:
                 f"  Fix: {iss.get('fix', 'N/A')}"
             )
         return "\n\n".join(lines)
+
+    @staticmethod
+    def _prioritize_and_cap_defects(defects: list, max_defects: int = Config.MAX_DEFECTS_PER_ITERATION) -> list:
+        """
+        Cap iteration defect load and prioritize highest-impact fixes first.
+        Priority: severity (HIGH->MEDIUM->LOW), then runtime/contract/import blockers.
+        """
+        if not defects or max_defects <= 0:
+            return defects or []
+
+        severity_rank = {'HIGH': 0, 'MEDIUM': 1, 'LOW': 2}
+        critical_markers = (
+            'syntax', 'compile', 'import', 'module', 'does not resolve', 'not defined',
+            'constructor', '__init__', 'missing method', 'route', 'schema', 'model',
+            'fileresponse', 'streamingresponse'
+        )
+
+        def _score(d: dict):
+            sev = str(d.get('severity', 'MEDIUM')).upper()
+            sev_score = severity_rank.get(sev, 3)
+            issue_text = str(d.get('issue', '')).lower()
+            fix_text = str(d.get('fix', '')).lower()
+            has_critical = any(m in issue_text or m in fix_text for m in critical_markers)
+            crit_score = 0 if has_critical else 1
+            file_name = str(d.get('file', ''))
+            return (sev_score, crit_score, file_name)
+
+        prioritized = sorted(defects, key=_score)
+        return prioritized[:max_defects]
 
     def _run_ai_consistency_check(self, iteration: int, governance_section: str) -> list:
         """
@@ -5184,6 +5224,7 @@ class FOHarness:
             if _ws_mode == 'static':
                 _ws_static_issues = self._run_static_check(_ws_initial_artifacts_dir, intake_data=self.intake_data)
                 if _ws_static_issues:
+                    _ws_static_issues = self._prioritize_and_cap_defects(_ws_static_issues)
                     high = sum(1 for d in _ws_static_issues if d['severity'] == 'HIGH')
                     print_warning(f"  [STATIC] {len(_ws_static_issues)} defect(s) found ({high} HIGH)")
                     defect_source        = 'static'
@@ -5198,6 +5239,7 @@ class FOHarness:
                 # Static passed (or skipped for consistency mode) — run AI consistency
                 _ws_consistency_issues = self._run_ai_consistency_check(accepted_iter, governance_section)
                 if _ws_consistency_issues:
+                    _ws_consistency_issues = self._prioritize_and_cap_defects(_ws_consistency_issues)
                     print_warning(f"  [CONSISTENCY] {len(_ws_consistency_issues)} issue(s) found")
                     defect_source        = 'consistency'
                     _raw_pending_defects = _ws_consistency_issues
@@ -5755,6 +5797,12 @@ class FOHarness:
                 _compile_artifacts_dir = self.artifacts.build_dir / f'iteration_{iteration:02d}_artifacts'
                 compile_defects = self._run_compile_gate(_compile_artifacts_dir)
                 if compile_defects:
+                    compile_defects_all = compile_defects
+                    compile_defects = self._prioritize_and_cap_defects(compile_defects_all)
+                    if len(compile_defects_all) > len(compile_defects):
+                        print_warning(
+                            f"  [COMPILE] Prioritized {len(compile_defects)} of {len(compile_defects_all)} defects for this iteration"
+                        )
                     _record_gate('COMPILE', 'FAIL', f'{len(compile_defects)} defect(s)', iteration)
                     high = sum(1 for d in compile_defects if d['severity'] == 'HIGH')
                     print_warning(f"  [COMPILE] FAIL — {len(compile_defects)} defect(s) ({high} HIGH)")
@@ -5792,6 +5840,12 @@ class FOHarness:
                 _static_artifacts_dir = _compile_artifacts_dir
                 static_defects = self._run_static_check(_static_artifacts_dir, intake_data=self.intake_data)
                 if static_defects:
+                    static_defects_all = static_defects
+                    static_defects = self._prioritize_and_cap_defects(static_defects_all)
+                    if len(static_defects_all) > len(static_defects):
+                        print_warning(
+                            f"  [STATIC] Prioritized {len(static_defects)} of {len(static_defects_all)} defects for this iteration"
+                        )
                     _record_gate('STATIC', 'FAIL', f'{len(static_defects)} defect(s)', iteration)
                     high = sum(1 for d in static_defects if d['severity'] == 'HIGH')
                     print_warning(f"  [STATIC] FAIL — {len(static_defects)} defect(s) ({high} HIGH)")
@@ -5828,6 +5882,12 @@ class FOHarness:
                 _record_gate('CONSISTENCY', 'START', 'running AI consistency check', iteration)
                 consistency_issues = self._run_ai_consistency_check(iteration, governance_section)
                 if consistency_issues:
+                    consistency_all = consistency_issues
+                    consistency_issues = self._prioritize_and_cap_defects(consistency_all)
+                    if len(consistency_all) > len(consistency_issues):
+                        print_warning(
+                            f"  [CONSISTENCY] Prioritized {len(consistency_issues)} of {len(consistency_all)} issues for this iteration"
+                        )
                     _record_gate('CONSISTENCY', 'FAIL', f'{len(consistency_issues)} issue(s)', iteration)
                     print_warning(f"  [CONSISTENCY] FAIL — {len(consistency_issues)} issue(s)")
                     for iss in consistency_issues:
@@ -5868,6 +5928,12 @@ class FOHarness:
                 total_gpt_input_tokens += int(quality_usage.get('input_tokens', 0) or 0)
                 total_gpt_output_tokens += int(quality_usage.get('output_tokens', 0) or 0)
                 if quality_issues:
+                    quality_all = quality_issues
+                    quality_issues = self._prioritize_and_cap_defects(quality_all)
+                    if len(quality_all) > len(quality_issues):
+                        print_warning(
+                            f"  [QUALITY] Prioritized {len(quality_issues)} of {len(quality_all)} issues for this iteration"
+                        )
                     _record_gate('QUALITY', 'FAIL', f'{len(quality_issues)} issue(s)', iteration)
                     print_warning(f"  [QUALITY] FAIL — {len(quality_issues)} issue(s)")
                     for iss in quality_issues:

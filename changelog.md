@@ -2,6 +2,17 @@
 
 ## 2026-03-06
 
+### Iteration defect batching (priority-capped fix scope)
+
+- Added per-iteration defect cap:
+  - `Config.MAX_DEFECTS_PER_ITERATION = 6`
+- Added `_prioritize_and_cap_defects()` to rank and trim defects before sending fix targets:
+  - severity-first (`HIGH` -> `MEDIUM` -> `LOW`)
+  - then runtime/contract/import blockers.
+- Applied batching to compile/static/consistency/quality gate failures and warm-start defect paths.
+- Added strict scope-lock header in structured defect payloads sent to Claude:
+  - “Fix ONLY the defects listed below. Do NOT refactor, rename, or add features.”
+
 ### phase_planner.py: lower default threshold to 3
 
 - `FEATURE_COUNT_THRESHOLD` changed from 5 to 3.

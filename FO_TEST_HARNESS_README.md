@@ -30,6 +30,10 @@ If you pass `--deploy`, it deploys instead of zipping. But you probably don't wa
   - `GATE 1` feature QA
 - Static CHECK 10 now excludes SQLAlchemy model classes from constructor/method contract checks
   (`__tablename__` or `Base`/`TenantMixin` inheritance), preventing ORM false positives.
+- Per-iteration defect scope is now capped and prioritized:
+  - max defects sent for fix per iteration: `6`
+  - priority: severity first, then runtime/contract/import blockers
+  - structured fix payloads now include explicit “fix only listed defects” scope lock.
 
 ---
 
