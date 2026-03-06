@@ -2,6 +2,20 @@
 
 ## 2026-03-06
 
+### --no-polish flag + run_phased_build.sh wrapper
+
+- `fo_test_harness.py`: new `--no-polish` CLI flag skips `_post_qa_polish` on both
+  exit paths (early consistency return and main-loop post-break). Prints
+  `Polish: SKIP (--no-polish)` in run header for visibility.
+- `run_phased_build.sh`: new wrapper script for phased builds.
+  - Runs Phase 1 with `--no-polish` (data layer, no README/env/test generation).
+  - If Phase 1 fails: stops, prints `--resume-run` instructions, exits non-zero.
+  - Runs Phase 2 without flag (full polish on final intelligence layer).
+  - After both phases accepted: merges Phase 1 + Phase 2 ZIPs (Phase 2 wins conflicts)
+    into `fo_harness_runs/<startup>_BLOCK_<B>_phased_<timestamp>.zip`.
+  - Default gov ZIP baked in from last known path.
+- Usage: `./run_phased_build.sh --intake-base <stem> --startup-id <id>`
+
 ### Iteration defect batching (priority-capped fix scope)
 
 - Added per-iteration defect cap:

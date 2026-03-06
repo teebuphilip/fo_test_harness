@@ -60,6 +60,17 @@
   (SQLAlchemy metaclass generates `__init__` automatically).
 ⬜ TODO for FO codebase
 
+12. --no-polish flag + phased build wrapper
+- New `--no-polish` CLI flag on `fo_test_harness.py`: skips `_post_qa_polish` on all
+  exit paths. Designed for Phase 1 of a phased build where polish on the intermediate
+  data layer is wasteful — README/.env/tests should only be generated once, after the
+  final intelligence layer is accepted.
+- New `run_phased_build.sh`: orchestrates Phase 1 (--no-polish) → Phase 2 (with polish)
+  → ZIP merge. Not a harness change — an operator workflow tool.
+- FO production equivalent: phased build orchestration in the intake pipeline or
+  a CI job that sequences two harness runs and merges their artifacts.
+⬜ TODO for FO codebase
+
 11. phase_planner.py — phased build pre-processor (threshold: 3 features)
 - New standalone tool: `phase_planner.py` in project root.
 - Not a harness change — a pre-run planning tool.

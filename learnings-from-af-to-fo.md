@@ -1,5 +1,17 @@
 # Learnings From AF to FO
 
+## Latest Learnings (2026-03-06, session 3)
+
+- Post-QA polish must be suppressed for intermediate phases. Running README/.env/test
+  generation after Phase 1 (data layer) wastes tokens and produces incomplete docs
+  that will be regenerated or overwritten after Phase 2. `--no-polish` flag addresses this.
+- Phased build ZIP merge is safe: Phase 2 intake `_phase_context` block instructs Claude
+  to generate only intelligence-layer files, so Phase 1 and Phase 2 artifact sets are
+  naturally disjoint. Phase 2 overwrites on top as a safety net — no manual conflict resolution.
+- Wrapper scripts are the right abstraction for multi-step harness workflows. A bash wrapper
+  that sequences two harness invocations and merges artifacts is simpler and more debuggable
+  than embedding phase logic inside the harness itself.
+
 ## Latest Learnings (2026-03-06, session 2)
 
 - Static checks with false positives are worse than no static checks. CHECK 10 (constructor
