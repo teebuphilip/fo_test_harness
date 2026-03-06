@@ -60,7 +60,7 @@
   (SQLAlchemy metaclass generates `__init__` automatically).
 ⬜ TODO for FO codebase
 
-11. phase_planner.py — phased build pre-processor
+11. phase_planner.py — phased build pre-processor (threshold: 3 features)
 - New standalone tool: `phase_planner.py` in project root.
 - Not a harness change — a pre-run planning tool.
 - Produces scoped phase1/phase2 intake JSON files for complex projects.

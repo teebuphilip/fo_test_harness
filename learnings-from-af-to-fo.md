@@ -18,6 +18,8 @@
 - Projects that converged reliably (adversarial_ai_validator, wynwood_thoroughbreds,
   property_manager_maintenance_scheduler, freelance_invoice_tracker) all had ≤5 features
   with no cross-service computation. That is the empirical 1-phase ceiling.
+- Conservative threshold (3) is correct default. 2 phases × 3 iterations = 6 total is
+  always preferable to 1 phase × 30 iterations that fails. Extra setup cost is negligible.
 - The harness is not broken — it is calibrated for a complexity level AWI exceeds. The
   answer is a planning layer (phase_planner.py) upstream, not deeper iteration limits.
 

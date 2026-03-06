@@ -32,7 +32,7 @@ from typing import Any
 
 # ── Thresholds ────────────────────────────────────────────────────────────────
 
-FEATURE_COUNT_THRESHOLD = 5  # features at or below this → candidate for 1-phase
+FEATURE_COUNT_THRESHOLD = 3  # features at or below this → candidate for 1-phase
 
 # ── Classification keyword tables ─────────────────────────────────────────────
 

@@ -2,6 +2,13 @@
 
 ## 2026-03-06
 
+### phase_planner.py: lower default threshold to 3
+
+- `FEATURE_COUNT_THRESHOLD` changed from 5 to 3.
+- Rationale: 2 phases × 3 iterations each is strictly better than 1 phase × 30 iterations
+  that fails. Conservative splitting is cheaper and produces more coherent builds.
+- `--threshold N` flag still available to override per-run.
+
 ### New tool: phase_planner.py
 
 - Standalone pre-processor at project root.
