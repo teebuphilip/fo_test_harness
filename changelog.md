@@ -2,6 +2,25 @@
 
 ## 2026-03-06
 
+### Fix 0 + generalized intake contracts (M/N)
+
+- **Fix 0 (Auth0 hallucination filter)** updated in `_filter_hallucinated_defects()`:
+  - Removed exact-literal dependency on `user.getAccessTokenSilently`.
+  - Now suppresses Auth0 false positives when evidence shows correct `useAuth0()` + `getAccessTokenSilently`
+    destructuring, even if QA paraphrases the problem text.
+
+- **Check 11 (KPI contract) generalized** in `_run_static_check()`:
+  - No longer depends on one intake schema path.
+  - Recursively scans intake for KPI-like keys (`kpi_definitions`, `kpis`, `metrics`, `key_metrics`, etc.).
+  - Flags missing KPI implementations in `business/services`.
+  - Flags KPI duplication across multiple service files (single-source-of-truth drift risk).
+
+- **Check 12 (download/export contract) generalized** in `_run_static_check()`:
+  - No longer tied to `block_b.hero_answers`.
+  - Detects downloadable/exportable requirements from full intake text.
+  - Validates backend route files for both route decorators and download/export markers
+    (`FileResponse`, `StreamingResponse`, `/download`, `/export`, etc.).
+
 ### Post-QA polish: ChatGPT testcase doc generation (templated directive)
 
 Added a new post-polish output pass that generates a complete testcase document via ChatGPT:

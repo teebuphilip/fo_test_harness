@@ -16,6 +16,13 @@ You give it a JSON file and two ZIP files. It does the rest.
 
 If you pass `--deploy`, it deploys instead of zipping. But you probably don't want that yet.
 
+## Latest QA Hardening (2026-03-06)
+
+- Auth0 hallucination filtering now handles paraphrased QA wording when evidence already shows
+  correct `useAuth0()` + `getAccessTokenSilently` destructuring.
+- Static Gate KPI check is intake-schema-agnostic (recursive KPI extraction from intake JSON).
+- Static Gate download/export check is intake-schema-agnostic and verifies explicit backend route support.
+
 ---
 
 ## What You Need Before Running

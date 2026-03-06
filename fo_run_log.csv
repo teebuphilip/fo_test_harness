@@ -66,3 +66,4 @@ date,time,startup,iterations,cost_claude,cost_chatgpt,total_cost,run_end_reason
 2026-03-05,11:10:09,ai_workforce_intelligence,36,1.6684,1.2039,2.8723,MAX_ITERATIONS
 2026-03-05,11:26:14,ai_workforce_intelligence,40,0.7842,0.6393,1.4235,MAX_ITERATIONS
 2026-03-05,16:29:06,ai_workforce_intelligence,46,1.3524,0.8053,2.1577,QA_ACCEPTED
+2026-03-05,18:37:10,ai_workforce_intelligence,30,5.6159,2.2353,7.8513,MAX_ITERATIONS

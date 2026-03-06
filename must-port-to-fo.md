@@ -47,6 +47,18 @@
 - Current policy: gate passes when completeness/code quality/deployability are PASS or LOW.
 ⬜ TODO for FO codebase
 
+8. Auth0 hallucination filter hardening (Fix 0)
+- QA problem text matching is now paraphrase-tolerant for Auth0 false positives.
+- If evidence shows correct `useAuth0()` destructuring of `getAccessTokenSilently`, defect is removed
+  regardless of exact problem wording.
+⬜ TODO for FO codebase
+
+9. Intake-aware contracts generalized (Checks 11/12)
+- KPI contract check now recursively discovers KPI keys/values across intake JSON (not just one schema path).
+- Download/export contract check now derives requirement from intake-wide text and validates backend routes
+  for explicit download/export markers.
+⬜ TODO for FO codebase
+
 ## Priority 0 (First)
 1. Truncation recovery fix
 - Run fallback continuations whenever output remains truncated, regardless of multipart mode.

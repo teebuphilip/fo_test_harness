@@ -4100,12 +4100,16 @@ class FOHarness:
                 r'getAccessTokenSilently.*useAuth0\(\)|useAuth0\(\).*getAccessTokenSilently',
                 evidence_text
             ))
-            _prob_claims_wrong_auth0 = 'user.getAccessTokenSilently' in problem_text
-            if _ev_has_correct_auth0 and _prob_claims_wrong_auth0:
+            # Accept paraphrased Auth0 hallucinations (not only exact literal wording).
+            _defect_is_auth0_related = bool(re.search(
+                r'getAccessTokenSilently|useAuth0|auth0|user object|token.*method|method.*user object',
+                problem_text,
+                re.IGNORECASE
+            ))
+            if _ev_has_correct_auth0 and _defect_is_auth0_related:
                 reason = (
                     "Auth0 contradiction: Evidence shows correct getAccessTokenSilently "
-                    "destructuring from useAuth0() but Problem claims user.getAccessTokenSilently() — "
-                    "code is already correct"
+                    "destructuring from useAuth0(); defect is invalid regardless of problem phrasing"
                 )
                 removed.append((defect_id, block, reason))
                 print_warning(f"  [FILTER] Removed {defect_id}: {reason}")
@@ -4287,6 +4291,22 @@ class FOHarness:
         def _module_rel_from_business_module(module_name: str) -> str:
             # business.services.foo -> business/services/foo.py
             return str(Path(*module_name.split('.'))).replace('\\', '/') + '.py'
+
+        def _collect_values_for_keys(obj, wanted_keys: set) -> list:
+            out = []
+
+            def _walk(v):
+                if isinstance(v, dict):
+                    for k, vv in v.items():
+                        if str(k).lower() in wanted_keys:
+                            out.append(vv)
+                        _walk(vv)
+                elif isinstance(v, list):
+                    for item in v:
+                        _walk(item)
+
+            _walk(obj)
+            return out
 
         def _gather_exported_symbols(mod_ast: ast.AST) -> set:
             out = set()
@@ -4604,61 +4624,165 @@ class FOHarness:
         # ── CHECK 11: Intake-aware KPI contract (optional) ───────────────────
         if intake_data:
             try:
-                block_b = intake_data.get('block_b', {})
-                kpi_defs = block_b.get('kpi_definitions', []) or []
-                kpi_ids = [str(k.get('kpi_id', '')).strip() for k in kpi_defs if k.get('kpi_id')]
+                kpi_keys = {
+                    'kpi_definitions', 'kpis', 'key_metrics', 'metrics',
+                    'kpi_ids', 'kpi_list'
+                }
+                raw_kpi_blocks = _collect_values_for_keys(intake_data, kpi_keys)
+
+                kpi_ids = set()
+                for block in raw_kpi_blocks:
+                    if isinstance(block, str):
+                        if block.strip():
+                            kpi_ids.add(block.strip())
+                    elif isinstance(block, dict):
+                        for key_name in ('kpi_id', 'id', 'name', 'metric', 'metric_id', 'code'):
+                            val = block.get(key_name)
+                            if isinstance(val, str) and val.strip():
+                                kpi_ids.add(val.strip())
+                    elif isinstance(block, list):
+                        for item in block:
+                            if isinstance(item, str) and item.strip():
+                                kpi_ids.add(item.strip())
+                            elif isinstance(item, dict):
+                                for key_name in ('kpi_id', 'id', 'name', 'metric', 'metric_id', 'code'):
+                                    val = item.get(key_name)
+                                    if isinstance(val, str) and val.strip():
+                                        kpi_ids.add(val.strip())
+
+                # Keep likely metric IDs/names; drop noisy long free-text entries.
+                kpi_ids = {k for k in kpi_ids if 1 <= len(k) <= 64}
+
                 if kpi_ids:
                     service_files = sorted((artifacts_dir / 'business' / 'services').glob('*.py'))
-                    service_blob = '\n'.join(_read(p) for p in service_files)
-                    for kid in kpi_ids:
-                        if not re.search(rf'\b{re.escape(kid)}\b', service_blob):
+                    service_text_by_file = {
+                        str(p.relative_to(artifacts_dir)): _read(p).lower()
+                        for p in service_files
+                    }
+                    for kid in sorted(kpi_ids):
+                        kid_l = kid.lower()
+                        hit_files = [
+                            rel_name for rel_name, txt in service_text_by_file.items()
+                            if kid_l in txt
+                        ]
+                        if not hit_files:
                             add_defect(
                                 'business/services',
                                 f'Intake KPI `{kid}` is not represented in business/services KPI logic',
                                 'HIGH',
                                 f'Implement KPI `{kid}` calculation path in the canonical KPI service'
                             )
-                    # single source-of-truth warning if multiple KPI engines found
-                    kpi_service_candidates = []
-                    for p in service_files:
-                        txt = _read(p)
-                        if re.search(r'kpi|calculate_', txt, re.IGNORECASE):
-                            if re.search(r'\b(TTC|PDPT|RPL|BCI|IMV|ESAT)\b', txt):
-                                kpi_service_candidates.append(str(p.relative_to(artifacts_dir)))
-                    if len(kpi_service_candidates) > 1:
-                        add_defect(
-                            'business/services',
-                            f'Multiple KPI service implementations detected: {", ".join(kpi_service_candidates)}',
-                            'MEDIUM',
-                            'Consolidate KPI calculations into one canonical service to avoid divergence'
-                        )
+                        elif len(hit_files) > 1:
+                            add_defect(
+                                'business/services',
+                                f'KPI `{kid}` appears in multiple services: {", ".join(hit_files)}',
+                                'MEDIUM',
+                                'Consolidate KPI calculation into one canonical service to avoid drift'
+                            )
             except Exception:
                 pass
 
         # ── CHECK 12: Intake-aware downloadable-report contract (optional) ───
         if intake_data:
             try:
-                hero = intake_data.get('block_b', {}).get('hero_answers', {})
-                must_have = [str(x).lower() for x in hero.get('Q4_must_have_features', [])]
-                q10 = str(hero.get('Q10_shipping_preference', '')).lower()
-                requires_download = any('downloadable executive report' in x for x in must_have) or ('downloadable report' in q10)
+                intake_blob = json.dumps(intake_data, ensure_ascii=False).lower()
+                requires_download = any(sig in intake_blob for sig in (
+                    'downloadable', 'download report', 'export report', 'pdf report', 'export', 'download'
+                ))
                 if requires_download:
-                    code_files = []
-                    for glob_pat in ('business/backend/routes/*.py', 'business/services/*.py', 'business/frontend/pages/*.jsx', 'business/frontend/components/*.js', 'business/frontend/components/*.jsx'):
-                        code_files.extend(sorted(artifacts_dir.glob(glob_pat)))
-                    blob = '\n'.join(_read(p).lower() for p in code_files)
-                    has_download = any(token in blob for token in (
-                        '/download', 'download_', 'export_', 'pdf', 'fileresponse', 'streamingresponse'
-                    ))
+                    route_files = sorted((artifacts_dir / 'business' / 'backend' / 'routes').glob('*.py'))
+                    has_download = False
+                    for rf in route_files:
+                        src = _read(rf).lower()
+                        has_route = bool(re.search(r'@router\.(get|post|put|delete|patch)\s*\(', src))
+                        has_download_marker = any(token in src for token in (
+                            'fileresponse', 'streamingresponse', '/download', '/export',
+                            'bytesio', '.pdf', 'attachment', 'download', 'export'
+                        ))
+                        if has_route and has_download_marker:
+                            has_download = True
+                            break
                     if not has_download:
                         add_defect(
-                            'business/backend/routes/reports.py',
-                            'Intake requires downloadable executive report, but no explicit download/export implementation was detected',
+                            'business/backend/routes',
+                            'Intake indicates downloadable/exportable output, but no download/export endpoint detected in backend routes',
                             'HIGH',
-                            'Add a report download/export endpoint (e.g., PDF/file response) and frontend trigger'
+                            'Add a route that returns FileResponse/StreamingResponse (or equivalent) for report export/download'
                         )
             except Exception:
                 pass
+
+        return defects
+
+    @staticmethod
+    def _run_compile_gate(artifacts_dir: Path) -> list:
+        """
+        Mandatory Gate 0 compile checks (runs before Feature QA).
+
+        - Python compile check for all business/**/*.py via py_compile
+        - Frontend build check via npm run build when business/frontend/package.json exists
+        """
+        import py_compile
+        import subprocess
+
+        defects = []
+        counter = [0]
+
+        def add_defect(file_path, issue, severity, fix):
+            counter[0] += 1
+            defects.append({
+                'id': f'COMPILE-{counter[0]}',
+                'file': file_path,
+                'issue': issue,
+                'severity': severity,
+                'fix': fix
+            })
+
+        # Python compile checks
+        for py_file in sorted((artifacts_dir / 'business').rglob('*.py')):
+            rel = str(py_file.relative_to(artifacts_dir))
+            try:
+                py_compile.compile(str(py_file), doraise=True)
+            except py_compile.PyCompileError as e:
+                add_defect(
+                    rel,
+                    f'Python compile failed: {e.msg}',
+                    'HIGH',
+                    'Fix Python syntax/indentation/runtime-compile issues in this file'
+                )
+
+        # Frontend build check
+        frontend_dir = artifacts_dir / 'business' / 'frontend'
+        pkg = frontend_dir / 'package.json'
+        if pkg.exists():
+            npm_check = subprocess.run(
+                ['bash', '-lc', 'command -v npm'],
+                capture_output=True, text=True
+            )
+            if npm_check.returncode != 0:
+                add_defect(
+                    'business/frontend/package.json',
+                    'npm is not available in environment; frontend build compile check could not run',
+                    'HIGH',
+                    'Install Node/npm in runtime environment or disable frontend artifacts for this build profile'
+                )
+            else:
+                build_cmd = 'npm run build'
+                build = subprocess.run(
+                    ['bash', '-lc', build_cmd],
+                    cwd=str(frontend_dir),
+                    capture_output=True,
+                    text=True
+                )
+                if build.returncode != 0:
+                    tail = (build.stderr or build.stdout or '').splitlines()[-20:]
+                    tail_text = '\n'.join(tail)
+                    add_defect(
+                        'business/frontend',
+                        f'Frontend compile/build failed (npm run build). Last lines:\n{tail_text}',
+                        'HIGH',
+                        'Fix frontend compile/build errors and ensure configs/dependencies are valid'
+                    )
 
         return defects
 
@@ -4918,8 +5042,9 @@ class FOHarness:
         build_output     = None
 
         # Unified QA loop state: tracks which check drove the last rejection
-        # 'qa' → Feature QA (ChatGPT)  |  'static' → deterministic checks
-        # 'consistency' → AI cross-file check  |  'quality' → optional quality gate
+        # 'compile' → mandatory Gate 0 compile check | 'qa' → Feature QA (ChatGPT)
+        # 'static' → deterministic checks | 'consistency' → AI cross-file check
+        # 'quality' → optional quality gate
         defect_source        = 'qa'
         _raw_pending_defects = []   # raw defect list for static/consistency/quality (for file target extraction)
         _qa_accepted_at_iter = None # set when Feature QA first accepts; enables polish even on static/consistency max-iter exit
@@ -5130,7 +5255,7 @@ class FOHarness:
                 if not _warm_skip_build:
                     # For static/consistency fix iterations, extract target files from raw defect list
                     # (more accurate than parsing the formatted text).
-                    if defect_source in ('static', 'consistency', 'quality') and _raw_pending_defects:
+                    if defect_source in ('static', 'consistency', 'quality', 'compile') and _raw_pending_defects:
                         defect_target_files = sorted({
                             d.get('file', '') for d in _raw_pending_defects
                             if d.get('file', '').startswith('business/')
@@ -5154,7 +5279,7 @@ class FOHarness:
                         defect_target_files = self._extract_defect_target_files(previous_defects) if previous_defects else []
 
                     # Select prompt: static/consistency fix → targeted patch; feature QA → full build prompt
-                    if defect_source in ('static', 'consistency', 'quality') and previous_defects:
+                    if defect_source in ('static', 'consistency', 'quality', 'compile') and previous_defects:
                         # Governance section for caching (no defects passed in — defects go in dynamic only)
                         governance_section, _ = PromptTemplates.build_prompt(
                             self.block, self.intake_data, self.build_governance,
@@ -5600,6 +5725,43 @@ class FOHarness:
                 consecutive_validation_failures = 0  # Reset counter
                 print_success("✓ Build validation passed - all critical artifacts present")
                 print_info("───────────────────────────────────────────────────────────")
+
+                # ================================================
+                # STEP 1.5: GATE 0 COMPILE (MANDATORY)
+                # ================================================
+                print_info("")
+                print_info("═══════════════════════════════════════════════════════════")
+                print_info("GATE 0: COMPILE CHECK — Mandatory pre-QA compile pass")
+                print_info("═══════════════════════════════════════════════════════════")
+                _record_gate('COMPILE', 'START', 'running mandatory compile checks', iteration)
+                _compile_artifacts_dir = self.artifacts.build_dir / f'iteration_{iteration:02d}_artifacts'
+                compile_defects = self._run_compile_gate(_compile_artifacts_dir)
+                if compile_defects:
+                    _record_gate('COMPILE', 'FAIL', f'{len(compile_defects)} defect(s)', iteration)
+                    high = sum(1 for d in compile_defects if d['severity'] == 'HIGH')
+                    print_warning(f"  [COMPILE] FAIL — {len(compile_defects)} defect(s) ({high} HIGH)")
+                    for d in compile_defects:
+                        sev_fn = print_error if d['severity'] == 'HIGH' else print_warning
+                        sev_fn(f"    {d['id']} [{d['severity']}] {d['file']}: {d['issue']}")
+                    defect_source        = 'compile'
+                    _raw_pending_defects = compile_defects
+                    previous_defects     = self._format_static_defects_for_claude(compile_defects)
+                    iteration += 1
+                    if iteration > self.max_qa_iterations:
+                        print_error(f"Max iterations ({self.max_qa_iterations}) reached during compile gate — halting")
+                        self._print_cost_summary(
+                            iteration - 1, total_calls, total_cache_writes, total_cache_hits,
+                            total_cache_write_tokens, total_cache_read_tokens,
+                            total_input_tokens, total_output_tokens,
+                            total_gpt_calls, total_gpt_input_tokens, total_gpt_output_tokens,
+                            run_end_reason='MAX_ITERATIONS'
+                        )
+                        _flush_gate_trace()
+                        return False, "MAX_ITERATIONS_EXCEEDED"
+                    print_info(f"Starting iteration {iteration} with compile-fix defects...")
+                    continue
+                print_success("  [COMPILE] PASS — compile checks succeeded")
+                _record_gate('COMPILE', 'PASS', 'compile checks clean', iteration)
 
                 # ================================================
                 # STEP 2: QA (ChatGPT)
