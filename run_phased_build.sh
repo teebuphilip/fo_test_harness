@@ -88,10 +88,8 @@ echo "▶ PHASE 1 — Data Layer"
 echo "────────────────────────────────────────────────────────"
 
 python fo_test_harness.py \
-  --intake "$PHASE1_INTAKE" \
-  --startup-id "$P1_ID" \
-  --block "$BLOCK" \
-  --build-gov "$BUILD_GOV" \
+  "$PHASE1_INTAKE" \
+  "$BUILD_GOV" \
   --max-iterations "$MAX_ITER" \
   --no-polish
 
@@ -111,7 +109,7 @@ echo "✓ Phase 1 accepted."
 echo ""
 
 # Find Phase 1 output ZIP (most recent matching startup-id)
-P1_ZIP=$(ls -t fo_harness_runs/${P1_ID}_BLOCK_${BLOCK}_*.zip 2>/dev/null | head -1)
+P1_ZIP=$(ls -t fo_harness_runs/*_p1_BLOCK_B_*.zip 2>/dev/null | head -1)
 
 if [[ -z "$P1_ZIP" ]]; then
   echo "WARNING: Phase 1 ZIP not found — check fo_harness_runs/ manually."
@@ -126,10 +124,8 @@ echo "▶ PHASE 2 — Intelligence Layer"
 echo "────────────────────────────────────────────────────────"
 
 python fo_test_harness.py \
-  --intake "$PHASE2_INTAKE" \
-  --startup-id "$P2_ID" \
-  --block "$BLOCK" \
-  --build-gov "$BUILD_GOV" \
+  "$PHASE2_INTAKE" \
+  "$BUILD_GOV" \
   --max-iterations "$MAX_ITER"
 
 P2_EXIT=$?
@@ -147,7 +143,7 @@ echo ""
 echo "✓ Phase 2 accepted."
 echo ""
 
-P2_ZIP=$(ls -t fo_harness_runs/${P2_ID}_BLOCK_${BLOCK}_*.zip 2>/dev/null | head -1)
+P2_ZIP=$(ls -t fo_harness_runs/*_p2_BLOCK_B_*.zip 2>/dev/null | head -1)
 
 if [[ -z "$P2_ZIP" ]]; then
   echo "WARNING: Phase 2 ZIP not found."
@@ -162,7 +158,7 @@ echo "▶ MERGING Phase 1 + Phase 2 → final ZIP"
 echo "────────────────────────────────────────────────────────"
 
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-FINAL_ZIP="fo_harness_runs/${STARTUP_ID}_BLOCK_${BLOCK}_phased_${TIMESTAMP}.zip"
+FINAL_ZIP="fo_harness_runs/${STARTUP_ID}_BLOCK_B_phased_${TIMESTAMP}.zip"
 MERGE_TMP=$(mktemp -d)
 
 echo "  Extracting Phase 1..."

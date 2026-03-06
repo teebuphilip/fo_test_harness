@@ -358,6 +358,9 @@ def build_phase1_intake(intake: dict, assessment: dict) -> dict:
         return obj
 
     p1 = walk(p1)
+    # Suffix startup_idea_id so Phase 1 and Phase 2 run dirs/ZIPs are distinct
+    if 'startup_idea_id' in p1:
+        p1['startup_idea_id'] = p1['startup_idea_id'].rstrip('_') + '_p1'
     p1['_phase_context'] = {
         'phase': 1,
         'of_phases': 2,
@@ -395,6 +398,9 @@ def build_phase2_intake(intake: dict, assessment: dict) -> dict:
             p1_model_files.append(f'business/models/{slug.capitalize()}.py')
             p1_page_files.append(f'business/frontend/pages/{slug.capitalize()}.jsx')
 
+    # Suffix startup_idea_id so Phase 1 and Phase 2 run dirs/ZIPs are distinct
+    if 'startup_idea_id' in p2:
+        p2['startup_idea_id'] = p2['startup_idea_id'].rstrip('_') + '_p2'
     p2['_phase_context'] = {
         'phase': 2,
         'of_phases': 2,
