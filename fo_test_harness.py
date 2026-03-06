@@ -2349,6 +2349,8 @@ class FOHarness:
         self.max_build_continuations = int(getattr(cli_args, "max_continuations", Config.MAX_BUILD_CONTINUATIONS_DEFAULT)) if cli_args else Config.MAX_BUILD_CONTINUATIONS_DEFAULT
         # Gate 4 is now mandatory (always ON).
         self.enable_quality_gate = True
+        # --no-polish: skip post-QA polish step (use for Phase 1 of a phased build)
+        self.skip_polish = bool(getattr(cli_args, 'no_polish', False)) if cli_args else False
 
         # Load intake JSON
         # Handles both pure JSON and marker-wrapped formats
@@ -2447,6 +2449,7 @@ class FOHarness:
         print_info(f"Max iterations:{self.max_qa_iterations}")
         print_info(f"Build caps:    max_parts={self.max_build_parts}, max_continuations={self.max_build_continuations}")
         print_info(f"Quality gate:  {'ON' if self.enable_quality_gate else 'OFF'}")
+        print_info(f"Polish:        {'SKIP (--no-polish)' if self.skip_polish else 'ON'}")
         print_info(f"Deploy:        {'YES' if self.do_deploy else 'NO — ZIP output only'}")
         print_info(f"Run directory: {self.run_dir}")
 
@@ -5250,7 +5253,10 @@ class FOHarness:
                     print_success("  [CONSISTENCY] PASS — all checks clean")
                     # All checks passed — do polish and return now
                     _ws_final_output = self.artifacts.build_synthetic_qa_output(accepted_iter)
-                    polish_success, polish_cost = self._post_qa_polish(accepted_iter, _ws_final_output, governance_section)
+                    if self.skip_polish:
+                        print_info("  [POLISH] Skipped (--no-polish)")
+                    else:
+                        polish_success, polish_cost = self._post_qa_polish(accepted_iter, _ws_final_output, governance_section)
                     self._print_cost_summary(
                         accepted_iter, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                         run_end_reason='QA_ACCEPTED'
@@ -6186,9 +6192,14 @@ class FOHarness:
             # ── Post-loop: called only via break (all gates passed or max-iter during static/consistency) ──
             if _qa_accepted_at_iter is not None:
                 # ── Post-QA polish step: generate missing optional files ────────────
-                polish_success, polish_cost = self._post_qa_polish(
-                    iteration, build_output, governance_section
-                )
+                if self.skip_polish:
+                    print_info("  [POLISH] Skipped (--no-polish)")
+                    polish_success = False
+                    polish_cost = {}
+                else:
+                    polish_success, polish_cost = self._post_qa_polish(
+                        iteration, build_output, governance_section
+                    )
                 if polish_success:
                     total_calls             += polish_cost['calls']
                     total_input_tokens      += polish_cost['input_tokens']
@@ -6516,6 +6527,13 @@ Examples:
         action='store_true',
         default=False,
         help='Deprecated flag (Gate 4 quality is now mandatory and always ON).'
+    )
+    parser.add_argument(
+        '--no-polish',
+        action='store_true',
+        default=False,
+        dest='no_polish',
+        help='Skip post-QA polish step (README, .env.example, tests). Use for Phase 1 of a phased build.'
     )
 
     args = parser.parse_args()
