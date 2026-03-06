@@ -2264,7 +2264,7 @@ If REJECTED: end with exactly: "QA STATUS: REJECTED - [X] defects require fixing
     @staticmethod
     def quality_gate_prompt(file_contents: dict, intake_data: dict) -> str:
         """
-        Generate optional quality gate prompt for ChatGPT.
+        Generate mandatory quality gate prompt for ChatGPT.
         Evaluates: completeness vs intake, code quality, enhanceability, deployability.
         """
         artifact_lines = []
@@ -2346,7 +2346,8 @@ class FOHarness:
         self.max_qa_iterations = int(getattr(cli_args, "max_iterations", Config.MAX_QA_ITERATIONS)) if cli_args else Config.MAX_QA_ITERATIONS
         self.max_build_parts = int(getattr(cli_args, "max_parts", Config.MAX_BUILD_PARTS_DEFAULT)) if cli_args else Config.MAX_BUILD_PARTS_DEFAULT
         self.max_build_continuations = int(getattr(cli_args, "max_continuations", Config.MAX_BUILD_CONTINUATIONS_DEFAULT)) if cli_args else Config.MAX_BUILD_CONTINUATIONS_DEFAULT
-        self.enable_quality_gate = bool(getattr(cli_args, "quality_gate", False)) if cli_args else False
+        # Gate 4 is now mandatory (always ON).
+        self.enable_quality_gate = True
 
         # Load intake JSON
         # Handles both pure JSON and marker-wrapped formats
@@ -5044,7 +5045,7 @@ class FOHarness:
         # Unified QA loop state: tracks which check drove the last rejection
         # 'compile' → mandatory Gate 0 compile check | 'qa' → Feature QA (ChatGPT)
         # 'static' → deterministic checks | 'consistency' → AI cross-file check
-        # 'quality' → optional quality gate
+        # 'quality' → mandatory quality gate
         defect_source        = 'qa'
         _raw_pending_defects = []   # raw defect list for static/consistency/quality (for file target extraction)
         _qa_accepted_at_iter = None # set when Feature QA first accepts; enables polish even on static/consistency max-iter exit
@@ -5837,7 +5838,47 @@ class FOHarness:
                 _record_gate('CONSISTENCY', 'PASS', 'no consistency issues', iteration)
 
                 # ================================================
-                # STEP 4: GATE 1 FEATURE QA (ChatGPT)
+                # STEP 4: GATE 4 QUALITY (MANDATORY)
+                # ================================================
+                print_info("")
+                print_info("═══════════════════════════════════════════════════════════")
+                print_info("GATE 4: QUALITY GATE — Completeness/Quality/Enhanceability/Deployability")
+                print_info("═══════════════════════════════════════════════════════════")
+                _record_gate('QUALITY', 'START', 'running mandatory quality gate', iteration)
+                quality_issues, quality_usage = self._run_quality_gate(iteration)
+                # account for extra ChatGPT call in cost summary
+                total_gpt_calls += 1
+                total_gpt_input_tokens += int(quality_usage.get('input_tokens', 0) or 0)
+                total_gpt_output_tokens += int(quality_usage.get('output_tokens', 0) or 0)
+                if quality_issues:
+                    _record_gate('QUALITY', 'FAIL', f'{len(quality_issues)} issue(s)', iteration)
+                    print_warning(f"  [QUALITY] FAIL — {len(quality_issues)} issue(s)")
+                    for iss in quality_issues:
+                        sev_fn = print_error if iss.get('severity') == 'HIGH' else print_warning
+                        sev_fn(f"    {iss['id']} [{iss.get('severity', 'MEDIUM')}] "
+                               f"{iss.get('files', iss.get('file', '?'))}: {iss.get('issue', '?')}")
+                    defect_source        = 'quality'
+                    _raw_pending_defects = quality_issues
+                    previous_defects     = self._format_consistency_defects_for_claude(quality_issues)
+                    iteration += 1
+                    if iteration > self.max_qa_iterations:
+                        print_error(f"Max iterations ({self.max_qa_iterations}) reached during quality gate — halting")
+                        self._print_cost_summary(
+                            iteration - 1, total_calls, total_cache_writes, total_cache_hits,
+                            total_cache_write_tokens, total_cache_read_tokens,
+                            total_input_tokens, total_output_tokens,
+                            total_gpt_calls, total_gpt_input_tokens, total_gpt_output_tokens,
+                            run_end_reason='MAX_ITERATIONS'
+                        )
+                        _flush_gate_trace()
+                        return False, "MAX_ITERATIONS_EXCEEDED"
+                    print_info(f"Starting iteration {iteration} with quality-gate fixes...")
+                    continue
+                print_success("  [QUALITY] PASS — all 4 dimensions acceptable")
+                _record_gate('QUALITY', 'PASS', 'all dimensions pass', iteration)
+
+                # ================================================
+                # STEP 5: GATE 1 FEATURE QA (ChatGPT)
                 # ================================================
 
                 # On iteration 2+, optionally wait for the OpenAI TPM window to reset.
@@ -5938,44 +5979,10 @@ class FOHarness:
                     print_success(f"GATE 1 PASSED: Feature QA ACCEPTED on iteration {iteration}")
                     _qa_accepted_at_iter = iteration
 
-                    # ── GATE 4 (Optional): Quality gate ───────────────────────────
-                    if self.enable_quality_gate:
-                        print_info("")
-                        print_info("═══════════════════════════════════════════════════════════")
-                        print_info("GATE 4: QUALITY GATE — Completeness/Quality/Enhanceability/Deployability")
-                        print_info("═══════════════════════════════════════════════════════════")
-                        _record_gate('QUALITY', 'START', 'running optional quality gate', iteration)
-                        quality_issues, quality_usage = self._run_quality_gate(iteration)
-                        # account for extra ChatGPT call in cost summary
-                        total_gpt_calls += 1
-                        total_gpt_input_tokens += int(quality_usage.get('input_tokens', 0) or 0)
-                        total_gpt_output_tokens += int(quality_usage.get('output_tokens', 0) or 0)
-                        if quality_issues:
-                            _record_gate('QUALITY', 'FAIL', f'{len(quality_issues)} issue(s)', iteration)
-                            print_warning(f"  [QUALITY] FAIL — {len(quality_issues)} issue(s)")
-                            for iss in quality_issues:
-                                sev_fn = print_error if iss.get('severity') == 'HIGH' else print_warning
-                                sev_fn(f"    {iss['id']} [{iss.get('severity', 'MEDIUM')}] "
-                                       f"{iss.get('files', iss.get('file', '?'))}: {iss.get('issue', '?')}")
-                            defect_source        = 'quality'
-                            _raw_pending_defects = quality_issues
-                            previous_defects     = self._format_consistency_defects_for_claude(quality_issues)
-                            iteration += 1
-                            if iteration > self.max_qa_iterations:
-                                print_error(f"Max iterations ({self.max_qa_iterations}) reached during quality gate — halting")
-                                break
-                            print_info(f"Starting iteration {iteration} with quality-gate fixes...")
-                            continue
-                        print_success("  [QUALITY] PASS — all 4 dimensions acceptable")
-                        _record_gate('QUALITY', 'PASS', 'all dimensions pass', iteration)
-
-                    # ── All three gates passed ────────────────────────────────────
+                    # ── All gates passed ──────────────────────────────────────────
                     print_success("")
                     print_success("══════════════════════════════════════════════════════════")
-                    if self.enable_quality_gate:
-                        print_success("ALL QA GATES PASSED: Feature QA + Static + AI Consistency + Quality")
-                    else:
-                        print_success("ALL QA GATES PASSED: Feature QA + Static + AI Consistency")
+                    print_success("ALL QA GATES PASSED: Compile + Static + AI Consistency + Quality + Feature QA")
                     print_success("══════════════════════════════════════════════════════════")
                     _loop_success = True
                     break
@@ -6425,8 +6432,7 @@ Examples:
         '--quality-gate',
         action='store_true',
         default=False,
-        help='Enable optional Gate 4 after consistency: ChatGPT quality evaluation '
-             '(completeness vs intake, code quality, enhanceability, deployability). Default: OFF.'
+        help='Deprecated flag (Gate 4 quality is now mandatory and always ON).'
     )
 
     args = parser.parse_args()

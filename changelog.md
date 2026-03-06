@@ -2,6 +2,17 @@
 
 ## 2026-03-06
 
+### Gate order update: `0 -> 2 -> 3 -> 4 -> 1` (Quality mandatory)
+
+- Updated main gate flow in `execute_build_qa_loop()`:
+  - `GATE 0` Compile
+  - `GATE 2` Static deterministic checks
+  - `GATE 3` AI consistency
+  - `GATE 4` Quality (**mandatory**)
+  - `GATE 1` Feature QA (final gate before success)
+- Quality gate is now always ON in harness runtime.
+- `--quality-gate` CLI option is retained as deprecated/no-op compatibility flag.
+
 ### Gate order change: `0 -> 2 -> 3 -> 1 -> 4`
 
 - Reordered main loop gates in `execute_build_qa_loop()`:

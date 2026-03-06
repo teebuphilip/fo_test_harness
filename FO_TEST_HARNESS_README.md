@@ -26,8 +26,8 @@ If you pass `--deploy`, it deploys instead of zipping. But you probably don't wa
   - `GATE 0` compile
   - `GATE 2` static
   - `GATE 3` AI consistency
+  - `GATE 4` quality (mandatory)
   - `GATE 1` feature QA
-  - `GATE 4` quality (optional)
 
 ---
 
