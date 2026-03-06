@@ -107,11 +107,12 @@
     - Removes stub-comment defects like: clients.py, workforce_data.py, engagements.py scope complaints.
     ⬜ TODO for FO codebase
 
-30. Unified QA loop: Feature QA → Static → AI Consistency ✅ DONE (2026-03-06)
-    - Single unified while loop; no nested sub-loops. All three gates must pass in sequence.
+30. Unified QA loop: Compile → Static → AI Consistency → Feature QA ✅ DONE (2026-03-06)
+    - Updated gate order: `0 -> 2 -> 3 -> 1 -> 4` (`compile -> static -> consistency -> feature QA -> quality`).
+    - Single unified while loop; no nested sub-loops. Mandatory gates pass in sequence before success.
     - defect_source ('qa'|'static'|'consistency') selects build prompt type for Claude.
-    - GATE 2: _run_static_check() on accepted iteration's artifacts dir (same 6 checks).
-    - GATE 3: _run_ai_consistency_check() — Claude reads all business/ files, checks cross-file
+    - GATE 2: _run_static_check() runs pre-QA each iteration.
+    - GATE 3: _run_ai_consistency_check() runs pre-QA each iteration; Claude reads all business/ files, checks cross-file
       consistency (model↔service, schema↔model, route↔schema, import chains, duplicate subsystems).
     - _parse_consistency_report(), _format_consistency_defects_for_claude() for parsing/formatting.
     - _run_ai_consistency_check_standalone() for --ai-check CLI mode.

@@ -22,6 +22,12 @@ If you pass `--deploy`, it deploys instead of zipping. But you probably don't wa
   correct `useAuth0()` + `getAccessTokenSilently` destructuring.
 - Static Gate KPI check is intake-schema-agnostic (recursive KPI extraction from intake JSON).
 - Static Gate download/export check is intake-schema-agnostic and verifies explicit backend route support.
+- Gate execution order is now:
+  - `GATE 0` compile
+  - `GATE 2` static
+  - `GATE 3` AI consistency
+  - `GATE 1` feature QA
+  - `GATE 4` quality (optional)
 
 ---
 

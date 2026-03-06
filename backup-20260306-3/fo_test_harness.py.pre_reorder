@@ -5764,80 +5764,7 @@ class FOHarness:
                 _record_gate('COMPILE', 'PASS', 'compile checks clean', iteration)
 
                 # ================================================
-                # STEP 2: GATE 2 STATIC CHECK (MANDATORY)
-                # ================================================
-                print_info("")
-                print_info("═══════════════════════════════════════════════════════════")
-                print_info("GATE 2: STATIC CHECK — Deterministic code quality pass")
-                print_info("═══════════════════════════════════════════════════════════")
-                _record_gate('STATIC', 'START', 'running deterministic static checks', iteration)
-                _static_artifacts_dir = _compile_artifacts_dir
-                static_defects = self._run_static_check(_static_artifacts_dir, intake_data=self.intake_data)
-                if static_defects:
-                    _record_gate('STATIC', 'FAIL', f'{len(static_defects)} defect(s)', iteration)
-                    high = sum(1 for d in static_defects if d['severity'] == 'HIGH')
-                    print_warning(f"  [STATIC] FAIL — {len(static_defects)} defect(s) ({high} HIGH)")
-                    for d in static_defects:
-                        sev_fn = print_error if d['severity'] == 'HIGH' else print_warning
-                        sev_fn(f"    {d['id']} [{d['severity']}] {d['file']}: {d['issue']}")
-                    defect_source        = 'static'
-                    _raw_pending_defects = static_defects
-                    previous_defects     = self._format_static_defects_for_claude(static_defects)
-                    iteration += 1
-                    if iteration > self.max_qa_iterations:
-                        print_error(f"Max iterations ({self.max_qa_iterations}) reached during static check — halting")
-                        self._print_cost_summary(
-                            iteration - 1, total_calls, total_cache_writes, total_cache_hits,
-                            total_cache_write_tokens, total_cache_read_tokens,
-                            total_input_tokens, total_output_tokens,
-                            total_gpt_calls, total_gpt_input_tokens, total_gpt_output_tokens,
-                            run_end_reason='MAX_ITERATIONS'
-                        )
-                        _flush_gate_trace()
-                        return False, "MAX_ITERATIONS_EXCEEDED"
-                    print_info(f"Starting iteration {iteration} with static fix...")
-                    continue
-                print_success("  [STATIC] PASS — no static defects")
-                _record_gate('STATIC', 'PASS', 'no static defects', iteration)
-
-                # ================================================
-                # STEP 3: GATE 3 AI CONSISTENCY (MANDATORY)
-                # ================================================
-                print_info("")
-                print_info("═══════════════════════════════════════════════════════════")
-                print_info("GATE 3: AI CONSISTENCY CHECK — Cross-file analysis")
-                print_info("═══════════════════════════════════════════════════════════")
-                _record_gate('CONSISTENCY', 'START', 'running AI consistency check', iteration)
-                consistency_issues = self._run_ai_consistency_check(iteration, governance_section)
-                if consistency_issues:
-                    _record_gate('CONSISTENCY', 'FAIL', f'{len(consistency_issues)} issue(s)', iteration)
-                    print_warning(f"  [CONSISTENCY] FAIL — {len(consistency_issues)} issue(s)")
-                    for iss in consistency_issues:
-                        sev_fn = print_error if iss.get('severity') == 'HIGH' else print_warning
-                        sev_fn(f"    {iss['id']} [{iss.get('severity', 'MEDIUM')}] "
-                               f"{iss.get('files', iss.get('file', '?'))}: {iss.get('issue', '?')}")
-                    defect_source        = 'consistency'
-                    _raw_pending_defects = consistency_issues
-                    previous_defects     = self._format_consistency_defects_for_claude(consistency_issues)
-                    iteration += 1
-                    if iteration > self.max_qa_iterations:
-                        print_error(f"Max iterations ({self.max_qa_iterations}) reached during consistency check — halting")
-                        self._print_cost_summary(
-                            iteration - 1, total_calls, total_cache_writes, total_cache_hits,
-                            total_cache_write_tokens, total_cache_read_tokens,
-                            total_input_tokens, total_output_tokens,
-                            total_gpt_calls, total_gpt_input_tokens, total_gpt_output_tokens,
-                            run_end_reason='MAX_ITERATIONS'
-                        )
-                        _flush_gate_trace()
-                        return False, "MAX_ITERATIONS_EXCEEDED"
-                    print_info(f"Starting iteration {iteration} with consistency fix...")
-                    continue
-                print_success("  [CONSISTENCY] PASS — no cross-file consistency issues")
-                _record_gate('CONSISTENCY', 'PASS', 'no consistency issues', iteration)
-
-                # ================================================
-                # STEP 4: GATE 1 FEATURE QA (ChatGPT)
+                # STEP 2: QA (ChatGPT)
                 # ================================================
 
                 # On iteration 2+, optionally wait for the OpenAI TPM window to reset.
@@ -5937,6 +5864,59 @@ class FOHarness:
                     _record_gate('FEATURE_QA', 'PASS', 'QA accepted', iteration)
                     print_success(f"GATE 1 PASSED: Feature QA ACCEPTED on iteration {iteration}")
                     _qa_accepted_at_iter = iteration
+
+                    # ── GATE 2: Static deterministic check ──────────────────────
+                    print_info("")
+                    print_info("═══════════════════════════════════════════════════════════")
+                    print_info("GATE 2: STATIC CHECK — Deterministic code quality pass")
+                    print_info("═══════════════════════════════════════════════════════════")
+                    _record_gate('STATIC', 'START', 'running deterministic static checks', iteration)
+                    _static_artifacts_dir = self.artifacts.build_dir / f'iteration_{iteration:02d}_artifacts'
+                    static_defects = self._run_static_check(_static_artifacts_dir, intake_data=self.intake_data)
+                    if static_defects:
+                        _record_gate('STATIC', 'FAIL', f'{len(static_defects)} defect(s)', iteration)
+                        high = sum(1 for d in static_defects if d['severity'] == 'HIGH')
+                        print_warning(f"  [STATIC] FAIL — {len(static_defects)} defect(s) ({high} HIGH)")
+                        for d in static_defects:
+                            sev_fn = print_error if d['severity'] == 'HIGH' else print_warning
+                            sev_fn(f"    {d['id']} [{d['severity']}] {d['file']}: {d['issue']}")
+                        defect_source        = 'static'
+                        _raw_pending_defects = static_defects
+                        previous_defects     = self._format_static_defects_for_claude(static_defects)
+                        iteration += 1
+                        if iteration > self.max_qa_iterations:
+                            print_error(f"Max iterations ({self.max_qa_iterations}) reached during static check — halting")
+                            break
+                        print_info(f"Starting iteration {iteration} with static fix...")
+                        continue
+                    print_success("  [STATIC] PASS — no static defects")
+                    _record_gate('STATIC', 'PASS', 'no static defects', iteration)
+
+                    # ── GATE 3: AI cross-file consistency check ──────────────────
+                    print_info("")
+                    print_info("═══════════════════════════════════════════════════════════")
+                    print_info("GATE 3: AI CONSISTENCY CHECK — Cross-file analysis")
+                    print_info("═══════════════════════════════════════════════════════════")
+                    _record_gate('CONSISTENCY', 'START', 'running AI consistency check', iteration)
+                    consistency_issues = self._run_ai_consistency_check(iteration, governance_section)
+                    if consistency_issues:
+                        _record_gate('CONSISTENCY', 'FAIL', f'{len(consistency_issues)} issue(s)', iteration)
+                        print_warning(f"  [CONSISTENCY] FAIL — {len(consistency_issues)} issue(s)")
+                        for iss in consistency_issues:
+                            sev_fn = print_error if iss.get('severity') == 'HIGH' else print_warning
+                            sev_fn(f"    {iss['id']} [{iss.get('severity', 'MEDIUM')}] "
+                                   f"{iss.get('files', iss.get('file', '?'))}: {iss.get('issue', '?')}")
+                        defect_source        = 'consistency'
+                        _raw_pending_defects = consistency_issues
+                        previous_defects     = self._format_consistency_defects_for_claude(consistency_issues)
+                        iteration += 1
+                        if iteration > self.max_qa_iterations:
+                            print_error(f"Max iterations ({self.max_qa_iterations}) reached during consistency check — halting")
+                            break
+                        print_info(f"Starting iteration {iteration} with consistency fix...")
+                        continue
+                    print_success("  [CONSISTENCY] PASS — no cross-file consistency issues")
+                    _record_gate('CONSISTENCY', 'PASS', 'no consistency issues', iteration)
 
                     # ── GATE 4 (Optional): Quality gate ───────────────────────────
                     if self.enable_quality_gate:

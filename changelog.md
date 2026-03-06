@@ -2,6 +2,19 @@
 
 ## 2026-03-06
 
+### Gate order change: `0 -> 2 -> 3 -> 1 -> 4`
+
+- Reordered main loop gates in `execute_build_qa_loop()`:
+  - `GATE 0` Compile (mandatory)
+  - `GATE 2` Static deterministic checks (mandatory)
+  - `GATE 3` AI consistency check (mandatory)
+  - `GATE 1` Feature QA (ChatGPT)
+  - `GATE 4` Quality gate (optional)
+- Result: static/consistency defects are surfaced before Feature QA, so structural issues no longer wait for a prior QA acceptance.
+- Added local backup copy for this edit session under `backup-20260306-3/`:
+  - `fo_test_harness.py.pre_reorder`
+  - `fo_test_harness.py.post_reorder`
+
 ### Fix 0 + generalized intake contracts (M/N)
 
 - **Fix 0 (Auth0 hallucination filter)** updated in `_filter_hallucinated_defects()`:
