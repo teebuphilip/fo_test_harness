@@ -53,6 +53,23 @@
   regardless of exact problem wording.
 ⬜ TODO for FO codebase
 
+10. CHECK 10 SQLAlchemy ORM exclusion
+- Constructor arity and method-existence checks now skip ORM model classes
+  (classes with `__tablename__` or inheriting from `Base`/`TenantMixin`).
+- Without this, `ModelClass(**data)` is incorrectly flagged as arity mismatch
+  (SQLAlchemy metaclass generates `__init__` automatically).
+⬜ TODO for FO codebase
+
+11. phase_planner.py — phased build pre-processor
+- New standalone tool: `phase_planner.py` in project root.
+- Not a harness change — a pre-run planning tool.
+- Produces scoped phase1/phase2 intake JSON files for complex projects.
+- FO production equivalent: intake pipeline pre-processor step before BUILD.
+- Port consideration: integrate phase assessment into intake pipeline output
+  so operators are warned before attempting a single-shot build of a
+  complex project (>5 features or 3+ KPIs).
+⬜ TODO for FO codebase
+
 9. Intake-aware contracts generalized (Checks 11/12)
 - KPI contract check now recursively discovers KPI keys/values across intake JSON (not just one schema path).
 - Download/export contract check now derives requirement from intake-wide text and validates backend routes

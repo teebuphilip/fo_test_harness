@@ -2,6 +2,21 @@
 
 ## 2026-03-06
 
+### New tool: phase_planner.py
+
+- Standalone pre-processor at project root.
+- Reads an intake JSON and determines whether to build in 1 or 2 phases.
+- Classification: rule-based keyword matching (DATA_LAYER vs INTELLIGENCE_LAYER);
+  Claude Haiku AI fallback for ambiguous features.
+- Force-2-phase signals: 3+ KPIs, 'downloadable executive report', 'trend analysis',
+  'scoring engine', 'analytics dashboard', etc.
+- Feature count threshold (default 5) as secondary gate.
+- If 2-phase: produces `<stem>_phase1.json` (data layer only) and
+  `<stem>_phase2.json` (full scope + `_phase_context` scoping block).
+- Usage: `python phase_planner.py --intake <file> [--no-ai] [--threshold N]`
+- Root cause: AWI convergence failures traced to single-shot generation of 8+
+  interdependent features exceeding reliable first-pass coherence ceiling.
+
 ### CHECK 10 fix: exclude SQLAlchemy models from route↔service contract checks
 
 - Updated `_run_static_check()` CHECK 10 (`Route↔service contract sanity`) to avoid false positives on ORM model classes.

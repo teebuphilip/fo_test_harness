@@ -1,5 +1,26 @@
 # Learnings From AF to FO
 
+## Latest Learnings (2026-03-06, session 2)
+
+- Static checks with false positives are worse than no static checks. CHECK 10 (constructor
+  arity) created an infinite static-fix loop on AWI by flagging valid SQLAlchemy ORM
+  instantiation. Every new deterministic check must be validated against known-good artifacts
+  before deployment — a false positive HIGH blocks every iteration indefinitely.
+- SQLAlchemy ORM classes must be excluded from constructor arity and method-existence checks.
+  The metaclass generates `__init__(self, **kwargs)` automatically; source showing no explicit
+  `__init__` does not imply arity 0.
+- Single-shot generation has a complexity ceiling. Projects with 8+ features and cross-cutting
+  intelligence layers (KPI calc → scoring → report generation → analytics) exceed reliable
+  first-pass coherence. The right fix is phased builds, not more iterations.
+- The DATA_LAYER / INTELLIGENCE_LAYER split is a natural architectural boundary in most SaaS
+  projects: data collection is always Phase 1, computed intelligence always Phase 2. This
+  maps directly to how human devs scope sprints.
+- Projects that converged reliably (adversarial_ai_validator, wynwood_thoroughbreds,
+  property_manager_maintenance_scheduler, freelance_invoice_tracker) all had ≤5 features
+  with no cross-service computation. That is the empirical 1-phase ceiling.
+- The harness is not broken — it is calibrated for a complexity level AWI exceeds. The
+  answer is a planning layer (phase_planner.py) upstream, not deeper iteration limits.
+
 ## Latest Learnings (2026-03-06)
 - Comment-only QA evidence needs scope-language gating. A blanket "comment-only = ignore" rule hides real misses.
 - Deterministic static checks should validate role contracts, not just syntax:
