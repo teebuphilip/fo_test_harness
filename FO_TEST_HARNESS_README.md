@@ -28,6 +28,8 @@ If you pass `--deploy`, it deploys instead of zipping. But you probably don't wa
   - `GATE 3` AI consistency
   - `GATE 4` quality (mandatory)
   - `GATE 1` feature QA
+- Static CHECK 10 now excludes SQLAlchemy model classes from constructor/method contract checks
+  (`__tablename__` or `Base`/`TenantMixin` inheritance), preventing ORM false positives.
 
 ---
 

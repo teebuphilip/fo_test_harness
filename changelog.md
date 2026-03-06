@@ -2,6 +2,17 @@
 
 ## 2026-03-06
 
+### CHECK 10 fix: exclude SQLAlchemy models from route↔service contract checks
+
+- Updated `_run_static_check()` CHECK 10 (`Route↔service contract sanity`) to avoid false positives on ORM model classes.
+- Classes are now marked as ORM models when they:
+  - define `__tablename__`, or
+  - inherit from `Base` or `TenantMixin`.
+- For ORM model classes, CHECK 10 now skips:
+  - constructor arity validation
+  - method-existence validation
+- This prevents invalid defects on valid SQLAlchemy usage (`ModelClass(**data)` / metaclass constructor behavior).
+
 ### Gate order update: `0 -> 2 -> 3 -> 4 -> 1` (Quality mandatory)
 
 - Updated main gate flow in `execute_build_qa_loop()`:

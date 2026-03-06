@@ -115,6 +115,8 @@
     - GATE 3: _run_ai_consistency_check() runs pre-QA each iteration; Claude reads all business/ files, checks cross-file
       consistency (model↔service, schema↔model, route↔schema, import chains, duplicate subsystems).
     - GATE 4: quality gate is mandatory (no optional runtime behavior).
+    - CHECK 10 guard added: SQLAlchemy ORM model classes (`__tablename__` or `Base`/`TenantMixin`) are excluded
+      from route↔service constructor/method contract validation to prevent false-positive loops.
     - _parse_consistency_report(), _format_consistency_defects_for_claude() for parsing/formatting.
     - _run_ai_consistency_check_standalone() for --ai-check CLI mode.
     - New template: directives/prompts/build_ai_consistency.md (5-check prompt, PASS/REPORT contract).

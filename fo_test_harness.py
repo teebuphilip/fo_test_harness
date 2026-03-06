@@ -4572,7 +4572,7 @@ class FOHarness:
                         )
 
         # ── CHECK 10: Route↔service contract sanity ──────────────────────────
-        class_meta = {}  # class_name -> (rel, init_min, init_max, methods:set)
+        class_meta = {}  # class_name -> (rel, init_min, init_max, methods:set, is_orm_model)
         for rel, tree in module_ast.items():
             if not tree:
                 continue
@@ -4582,6 +4582,21 @@ class FOHarness:
                 init_min = 0
                 init_max = 0
                 methods = set()
+                # SQLAlchemy models have dynamic constructors; static arity/method checks
+                # here create false positives, so mark and skip them later.
+                has_tablename = any(
+                    isinstance(item, ast.Assign)
+                    and any(isinstance(t, ast.Name) and t.id == '__tablename__' for t in item.targets)
+                    for item in node.body
+                )
+                base_names = []
+                for base in node.bases:
+                    if isinstance(base, ast.Name):
+                        base_names.append(base.id)
+                    elif isinstance(base, ast.Attribute):
+                        base_names.append(base.attr)
+                inherits_orm_base = ('Base' in base_names or 'TenantMixin' in base_names)
+                is_orm_model = has_tablename or inherits_orm_base
                 for item in node.body:
                     if isinstance(item, ast.FunctionDef):
                         methods.add(item.name)
@@ -4590,7 +4605,7 @@ class FOHarness:
                             defaults = item.args.defaults or []
                             init_max = len(args)
                             init_min = len(args) - len(defaults)
-                class_meta[node.name] = (rel, init_min, init_max, methods)
+                class_meta[node.name] = (rel, init_min, init_max, methods, is_orm_model)
 
         if routes_dir.exists():
             for py_file in sorted(routes_dir.glob('*.py')):
@@ -4601,7 +4616,9 @@ class FOHarness:
                     var_name, class_name, args_raw = m.group(1), m.group(2), m.group(3).strip()
                     if class_name not in class_meta:
                         continue
-                    _, init_min, init_max, methods = class_meta[class_name]
+                    _, init_min, init_max, methods, is_orm_model = class_meta[class_name]
+                    if is_orm_model:
+                        continue
                     arg_count = 0 if not args_raw else len([a for a in args_raw.split(',') if a.strip()])
                     if arg_count < init_min or arg_count > init_max:
                         add_defect(
