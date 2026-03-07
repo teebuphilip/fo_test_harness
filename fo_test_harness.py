@@ -5180,6 +5180,9 @@ class FOHarness:
         _ws_run_dir   = Path(getattr(self.cli_args, 'resume_run', None) or '')
         _ws_iteration = int(getattr(self.cli_args, 'resume_iteration', 1))
         _ws_mode      = (getattr(self.cli_args, 'resume_mode', None) or '').lower()
+        # --prior-run: seed prohibition tracker from a prior run's QA reports
+        # (used in feature-by-feature builds to carry Phase 1 QA knowledge forward)
+        _prior_run_dir = Path(getattr(self.cli_args, 'prior_run', None) or '')
 
         if _ws_run_dir.is_dir() and _ws_mode == 'fix':
             # Load the existing QA report as defects and jump straight to the fix iteration
@@ -5275,24 +5278,28 @@ class FOHarness:
         # prohibition knowledge accumulated over prior iterations is NOT lost on restart.
         # Without this, the tracker resets to empty → no prohibitions → Claude re-introduces
         # scope violations it had already been trained out of.
-        if _ws_run_dir.is_dir():
-            _prior_qa_files = sorted(_ws_run_dir.glob('qa/iteration_*_qa_report.txt'))
-            if _prior_qa_files:
-                print_info(f"Warm-start: rebuilding prohibition tracker from {len(_prior_qa_files)} prior QA report(s)...")
-                for _qf in _prior_qa_files:
-                    for d in self._extract_defects_for_tracking(_qf.read_text()):
-                        key = (d['location'], d['classification'])
-                        if key not in recurring_tracker:
-                            recurring_tracker[key] = {'count': 0, 'last_problem': '', 'last_fix': ''}
-                        recurring_tracker[key]['count'] += 1
-                        recurring_tracker[key]['last_problem'] = d['problem']
-                        recurring_tracker[key]['last_fix']     = d['fix']
-                prohibitions_block = self._build_prohibitions_block(recurring_tracker)
-                promoted = sum(1 for v in recurring_tracker.values() if v['count'] >= 2)
-                print_success(
-                    f"Warm-start tracker rebuilt: {len(recurring_tracker)} defect(s) tracked, "
-                    f"{promoted} prohibition(s) active"
-                )
+        # Collect QA report files from: resume run dir + optional prior run dir
+        _all_seed_qa_files = []
+        for _seed_dir in [_ws_run_dir, _prior_run_dir]:
+            if _seed_dir.is_dir():
+                _all_seed_qa_files += sorted(_seed_dir.glob('qa/iteration_*_qa_report.txt'))
+        if _all_seed_qa_files:
+            _label = 'prior run(s)' if _prior_run_dir.is_dir() and not _ws_run_dir.is_dir() else 'prior QA report(s)'
+            print_info(f"Warm-start: rebuilding prohibition tracker from {len(_all_seed_qa_files)} {_label}...")
+            for _qf in _all_seed_qa_files:
+                for d in self._extract_defects_for_tracking(_qf.read_text()):
+                    key = (d['location'], d['classification'])
+                    if key not in recurring_tracker:
+                        recurring_tracker[key] = {'count': 0, 'last_problem': '', 'last_fix': ''}
+                    recurring_tracker[key]['count'] += 1
+                    recurring_tracker[key]['last_problem'] = d['problem']
+                    recurring_tracker[key]['last_fix']     = d['fix']
+            prohibitions_block = self._build_prohibitions_block(recurring_tracker)
+            promoted = sum(1 for v in recurring_tracker.values() if v['count'] >= 2)
+            print_success(
+                f"Warm-start tracker rebuilt: {len(recurring_tracker)} defect(s) tracked, "
+                f"{promoted} prohibition(s) active"
+            )
 
         try:
             while iteration <= self.max_qa_iterations:
@@ -6487,6 +6494,14 @@ Examples:
         type=int,
         default=Config.MAX_QA_ITERATIONS,
         help='Max BUILD→QA iterations for this run. Default: 5'
+    )
+    parser.add_argument(
+        '--prior-run',
+        type=str,
+        default=None,
+        dest='prior_run',
+        help='Path to a prior run directory whose QA reports seed the prohibition tracker. '
+             'Use in feature-by-feature builds to carry Phase 1 QA knowledge into feature runs.'
     )
     parser.add_argument(
         '--resume-run',

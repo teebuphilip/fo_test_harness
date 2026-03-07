@@ -135,6 +135,8 @@ if [[ -z "$LATEST_ZIP" ]]; then
 fi
 echo "✓ Phase 1 ZIP: $LATEST_ZIP"
 ALL_ZIPS+=("$LATEST_ZIP")
+# Track run dir for --prior-run (strip .zip suffix)
+LATEST_RUN_DIR="${LATEST_ZIP%.zip}"
 echo ""
 
 # ── Step 3: Build each intelligence feature ────────────────────────────────────
@@ -178,6 +180,7 @@ import re; print(re.sub(r'[^a-z0-9]+','_','$FEATURE'.lower()).strip('_')[:40])
     "$BUILD_GOV" \
     "$DEPLOY_GOV" \
     --max-iterations "$MAX_ITER" \
+    --prior-run "$LATEST_RUN_DIR" \
     $POLISH_FLAG
 
   FEAT_EXIT=$?
@@ -211,6 +214,7 @@ print(d.get('startup_idea_id','unknown'))
   echo "✓ Feature ZIP: $FEATURE_ZIP"
   ALL_ZIPS+=("$FEATURE_ZIP")
   LATEST_ZIP="$FEATURE_ZIP"  # chain: next feature_adder reads this
+  LATEST_RUN_DIR="${FEATURE_ZIP%.zip}"  # chain: next feature inherits QA prohibitions
   echo ""
 
 done <<< "$INTEL_FEATURES"
