@@ -170,10 +170,16 @@ def should_use_platform_boilerplate(intake_data: dict, block: str) -> bool:
     block_data = intake_data.get(block_key, {})
     tech_stack = block_data.get('pass_2', {}).get('tech_stack_selection', 'custom')
 
-    # Only skip boilerplate for explicit lowcode Zapier/Shopify cases
-    if tech_stack == 'lowcode':
-        intake_text = json.dumps(intake_data).lower()
-        if 'zapier' in intake_text or 'shopify' in intake_text:
+    # Only skip boilerplate for explicit Zapier/Shopify-native stacks.
+    # Check tech_stack_selection value directly — NOT a full-text search of the intake,
+    # which would false-positive on projects that merely integrate Shopify as a feature.
+    if tech_stack in ('lowcode', 'nocode'):
+        stack_val = tech_stack.lower()
+        if 'zapier' in stack_val or 'shopify' in stack_val:
+            return False
+        # Also check if pass_2 explicitly names a Zapier/Shopify platform
+        platform = block_data.get('pass_2', {}).get('platform', '').lower()
+        if 'zapier' in platform or 'shopify' in platform:
             return False
 
     return True
