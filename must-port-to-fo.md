@@ -2,6 +2,12 @@
 
 ## New Hardening Bundle (2026-03-07)
 
+22. Polish test generation regex fix
+- Test extraction regex `(?:javascript|js|typescript|ts)?` missed Python fences entirely.
+- 62-second Claude call, $0.09 cost, 0 files saved every run with Python backend.
+- Fixed to `(?:\w+)?` — matches any language tag.
+⬜ TODO for FO codebase
+
 21. Patch iteration token reduction (16384 → 8192) + consistency hard cap
 - `Config.get_max_tokens(iteration, defect_source)` returns 8192 for
   static/consistency/quality/compile patch iterations (only 1-3 files output).

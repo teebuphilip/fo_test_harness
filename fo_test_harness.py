@@ -3330,8 +3330,8 @@ class FOHarness:
                 tests_content = tests_response['content'][0]['text']
                 elapsed = time.time() - start_time
 
-                # Extract test files using FILE: pattern
-                test_pattern = r'\*\*FILE:\s*([^\*]+)\*\*\s*```(?:javascript|js|typescript|ts)?\n(.*?)```'
+                # Extract test files using FILE: pattern — match any language fence (python, js, etc.)
+                test_pattern = r'\*\*FILE:\s*([^\*]+)\*\*\s*```(?:\w+)?\n(.*?)```'
                 test_matches = re.findall(test_pattern, tests_content, re.DOTALL)
 
                 tests_generated = 0

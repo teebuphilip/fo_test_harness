@@ -2,6 +2,13 @@
 
 ## 2026-03-07
 
+### fix: test generation regex — python fences extracted correctly
+
+- Polish step test extraction regex only matched `javascript|js|typescript|ts` fences.
+- Claude generates Python tests with ` ```python` fences → 0 files extracted, $0.09 wasted per run.
+- Fixed: `(?:\w+)?` matches any language tag (python, js, jsx, blank).
+- `fo_test_harness.py` line ~3334.
+
 ### fix: reduce patch iteration token cost + consistency hard cap
 
 **Patch iteration max_tokens 16384 → 8192**

@@ -1,5 +1,12 @@
 # Learnings From AF to FO
 
+## Latest Learnings (2026-03-07, session 6)
+
+- Language-specific regex in extraction code silently discards output. The test generation
+  regex only matched JS/TS fences — Claude always generates Python tests with ```python.
+  Result: 62s Claude call, $0.09 spent, 0 files saved, no error raised. Always use `(?:\w+)?`
+  for language fence matching rather than enumerating specific languages.
+
 ## Latest Learnings (2026-03-07, session 5)
 
 - Patch iterations are being billed at full-build token rates. Static/consistency/quality
