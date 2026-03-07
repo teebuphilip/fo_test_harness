@@ -1,5 +1,17 @@
 # Learnings From AF to FO
 
+## Latest Learnings (2026-03-07, session 7)
+
+- Whitelist entries can be as harmful as missing prune rules. BOILERPLATE_VALID_PATHS
+  explicitly said tailwind/next/postcss configs under business/frontend/ were "valid to keep."
+  This meant Claude could generate broken config files, static Check 8 would flag them every
+  iteration, but the pruner would never remove them — infinite static loop. The whitelist
+  comment even said "Claude-generated, valid to keep" which was wrong.
+- Dashboard/styled features reliably trigger boilerplate config generation. Any feature
+  with "dashboard", "charts", "custom styling", or "theme" in scope will cause Claude to
+  generate tailwind.config.js. The right fix is pruner-level, not prompt-only — Claude
+  will always try, so the harness must silently drop these files before they reach static check.
+
 ## Latest Learnings (2026-03-07, session 6)
 
 - Language-specific regex in extraction code silently discards output. The test generation

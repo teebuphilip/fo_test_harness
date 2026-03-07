@@ -25,6 +25,11 @@
 - NEVER create any `__init__.py` file anywhere under `business/**` — the boilerplate handles Python package structure at the infrastructure level. Any `__init__.py` you output will be pruned by the harness.
 - NEVER create `business/backend/services/**` — services belong in `business/services/` (not inside backend/).
 - NEVER create `business/app/**` — this path is forbidden.
+- NEVER create `business/frontend/tailwind.config.js` — the boilerplate owns Tailwind config at `frontend/tailwind.config.js`. Yours will conflict and break the build.
+- NEVER create `business/frontend/postcss.config.js` — same reason, boilerplate owns it.
+- NEVER create `business/frontend/next.config.js` — same reason, boilerplate owns it.
+- NEVER create `business/frontend/package.json` — use `business/package.json` for extra dependencies.
+- NEVER create ANY config file under `business/frontend/` except `.jsx` page files and `.js` utility files under `business/frontend/lib/` or `business/frontend/utils/`.
 
 **BOILERPLATE BOUNDARY — THE BOILERPLATE IS A BLACK BOX. DO NOT RECREATE ITS INTERNALS.**
 

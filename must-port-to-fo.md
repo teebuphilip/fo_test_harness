@@ -2,6 +2,13 @@
 
 ## New Hardening Bundle (2026-03-07)
 
+23. Prune boilerplate-owned frontend configs
+- `BOILERPLATE_VALID_PATHS` whitelisted tailwind/next/postcss configs under business/frontend/.
+  Claude generates them for dashboard builds → static Check 8 fires → static loop.
+- Fix: `BOILERPLATE_OWNED_FRONTEND_CONFIGS` set; pruner drops them before whitelist check.
+- Also updated `build_boilerplate_path_rules.md` with explicit NEVER rules per filename.
+⬜ TODO for FO codebase
+
 22. Polish test generation regex fix
 - Test extraction regex `(?:javascript|js|typescript|ts)?` missed Python fences entirely.
 - 62-second Claude call, $0.09 cost, 0 files saved every run with Python backend.

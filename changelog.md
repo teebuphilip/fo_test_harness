@@ -2,6 +2,19 @@
 
 ## 2026-03-07
 
+### fix: prune boilerplate-owned frontend config files Claude generates
+
+Root cause: `BOILERPLATE_VALID_PATHS` explicitly whitelisted `tailwind.config.js`,
+`next.config.js`, `postcss.config.js` etc. under `business/frontend/` as "valid to keep."
+Claude generates these for dashboard/styled features. Static Check 8 correctly flags them
+as broken (missing `content:` paths, swapped configs) but the pruner never removes them
+because they're on the whitelist → static loop.
+
+- Removed all boilerplate-owned config files from `BOILERPLATE_VALID_PATHS`
+- Added `BOILERPLATE_OWNED_FRONTEND_CONFIGS` set (tailwind, next, postcss, tsconfig, jest etc.)
+- Pruner now silently drops these before the whitelist check with a clear log message
+- Prompt `build_boilerplate_path_rules.md`: explicit NEVER rules for each config filename
+
 ### fix: test generation regex — python fences extracted correctly
 
 - Polish step test extraction regex only matched `javascript|js|typescript|ts` fences.

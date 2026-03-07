@@ -746,23 +746,26 @@ BOILERPLATE_VALID_PATHS = [
     'business/backend/tests/*.py',
     'business/tests/conftest.py',
     'business/backend/tests/conftest.py',
-    # Frontend config / infrastructure (Claude-generated, valid to keep)
-    'business/frontend/package.json',
-    'business/frontend/next.config.js',
-    'business/frontend/next.config.ts',
-    'business/frontend/postcss.config.js',
-    'business/frontend/postcss.config.ts',
-    'business/frontend/tailwind.config.js',
-    'business/frontend/tailwind.config.ts',
-    'business/frontend/tsconfig.json',
-    'business/frontend/jsconfig.json',
-    'business/frontend/jest.config.js',
-    'business/frontend/jest.config.ts',
-    'business/frontend/jest.setup.js',
-    'business/frontend/jest.setup.ts',
+    # Frontend styles and public assets (valid business additions)
     'business/frontend/styles/*.css',
     'business/frontend/public/*',
+    # NOTE: tailwind.config.js, next.config.js, postcss.config.js, package.json etc.
+    # are BOILERPLATE-OWNED files. Claude must NOT generate them. If Claude does,
+    # they are pruned by BOILERPLATE_OWNED_FRONTEND_CONFIGS below.
 ]
+
+# Config files that belong to the boilerplate, not to business/ artifacts.
+# Claude sometimes generates these for dashboard/styled features.
+# They conflict with the boilerplate's own copies and must be silently pruned.
+BOILERPLATE_OWNED_FRONTEND_CONFIGS = {
+    'tailwind.config.js', 'tailwind.config.ts',
+    'next.config.js', 'next.config.ts',
+    'postcss.config.js', 'postcss.config.ts',
+    'tsconfig.json', 'jsconfig.json',
+    'jest.config.js', 'jest.config.ts',
+    'jest.setup.js', 'jest.setup.ts',
+    'package.json',   # business/frontend/package.json — use business/package.json instead
+}
 
 class ArtifactManager:
     """Manages saving artifacts, QA reports, build outputs, and logs"""
@@ -1249,6 +1252,15 @@ class ArtifactManager:
                 continue
             rel_path = str(file_path.relative_to(artifacts_dir))
             if rel_path in SKIP:
+                continue
+
+            # Prune boilerplate-owned frontend config files wherever Claude puts them
+            import os as _os
+            if _os.path.basename(rel_path) in BOILERPLATE_OWNED_FRONTEND_CONFIGS and \
+                    rel_path.startswith('business/frontend/'):
+                file_path.unlink()
+                removed += 1
+                print_warning(f"  → Pruned boilerplate-owned config: {rel_path} (boilerplate owns this file)")
                 continue
 
             if not rel_path.startswith('business/'):
