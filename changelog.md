@@ -2,6 +2,13 @@
 
 ## 2026-03-07
 
+### feat: default gov ZIPs + --buildzip/--deployzip flags
+
+- Both governance ZIP paths are now baked in as defaults — no more typing them.
+- `--buildzip` and `--deployzip` named flags override when needed.
+- Intake file is the only required positional arg for a normal run.
+- Should have been done on day 1.
+
 ### new: run_feature_build.sh — full feature-by-feature build pipeline
 
 - New wrapper: `run_feature_build.sh` orchestrates the complete build sequence.
