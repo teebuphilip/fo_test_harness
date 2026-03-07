@@ -71,16 +71,20 @@ class Config:
         4: 16384,   # Still need full output (not incremental)
     }
     CLAUDE_MAX_TOKENS_DEFAULT = 16384  # Always use API max - lowcode needs complete output
+    CLAUDE_MAX_TOKENS_PATCH   = 8192   # Patch iters: 1-3 files only; 8192 is ample, saves ~$0.12/iter
 
     @classmethod
-    def get_max_tokens(cls, iteration: int) -> int:
+    def get_max_tokens(cls, iteration: int, defect_source: str = 'qa') -> int:
         """
-        WHY: Return 16384 tokens for all iterations.
+        Return 16384 for full-build iterations (QA-driven or first build).
+        Return 8192 for targeted patch iterations (static/consistency/quality/compile fix)
+        where Claude outputs only 1-3 defect-target files — full 16k is wasteful.
 
-        Lowcode builds regenerate ALL files every iteration, not incremental patches.
-        Complex builds need 10-12k tokens. 8192 caused truncation for TwoFaced AI.
-        16384 ensures complete output including artifact_manifest/build_state.
+        Savings: ~$0.12 per patch iter (output tokens halved: 16384→8192 × $15/M).
+        On a 10-patch build: ~$1.20 saved vs always using max.
         """
+        if defect_source in ('static', 'consistency', 'quality', 'compile'):
+            return cls.CLAUDE_MAX_TOKENS_PATCH
         return cls.CLAUDE_MAX_TOKENS_BY_ITERATION.get(
             iteration,
             cls.CLAUDE_MAX_TOKENS_DEFAULT
@@ -89,6 +93,8 @@ class Config:
     # Iteration Limits
     MAX_QA_ITERATIONS = 5      # Default aligns with locked governance; CLI can override.
     MAX_DEFECTS_PER_ITERATION = 6  # Limit fix scope per iteration to reduce churn/regressions.
+    MAX_STATIC_CONSECUTIVE = 6       # Fix 3: Fall through to Feature QA after N consecutive static-only iters.
+    MAX_CONSISTENCY_CONSECUTIVE = 4  # Fall through to Feature QA after N consecutive consistency-only iters.
 
     # API call settings
     # FIX #6: Increased timeout for large builds with prompt caching.
@@ -4256,6 +4262,7 @@ class FOHarness:
         10. Route↔service contract sanity — missing method or constructor arity mismatch
         11. Intake-aware KPI contract (if intake_data is provided)
         12. Intake-aware downloadable-report contract (if intake_data is provided)
+        13. Missing frontend pages — backend routes exist but no business/frontend/pages/*.jsx
 
         Returns list of defect dicts:
             {'id': 'STATIC-N', 'file': path, 'issue': str, 'severity': HIGH|MEDIUM, 'fix': str}
@@ -4266,15 +4273,18 @@ class FOHarness:
         counter = [0]
         parsed_ast = {}
 
-        def add_defect(file_path, issue, severity, fix):
+        def add_defect(file_path, issue, severity, fix, related_files=None):
             counter[0] += 1
-            defects.append({
+            d = {
                 'id': f'STATIC-{counter[0]}',
                 'file': file_path,
                 'issue': issue,
                 'severity': severity,
                 'fix': fix
-            })
+            }
+            if related_files:
+                d['related_files'] = [f for f in related_files if f and f != file_path]
+            defects.append(d)
 
         def _read(path: Path) -> str:
             try:
@@ -4639,6 +4649,7 @@ class FOHarness:
                             f'Fix constructor call or `__init__` signature for class `{class_name}`'
                         )
                     # var.method(...)
+                    service_file = class_meta[class_name][0]  # file that defines this class
                     for mm in re.finditer(rf'{re.escape(var_name)}\.(\w+)\s*\(', source):
                         meth = mm.group(1)
                         if meth not in methods:
@@ -4646,7 +4657,8 @@ class FOHarness:
                                 rel,
                                 f'Call to missing method `{class_name}.{meth}()`',
                                 'HIGH',
-                                f'Implement `{meth}()` on `{class_name}` or change route call to an existing method'
+                                f'Implement `{meth}()` on `{class_name}` or change route call to an existing method',
+                                related_files=[service_file]  # Fix 2: include service file as joint target
                             )
 
         # ── CHECK 11: Intake-aware KPI contract (optional) ───────────────────
@@ -4739,6 +4751,24 @@ class FOHarness:
                         )
             except Exception:
                 pass
+
+        # ── CHECK 13: Missing frontend pages (boilerplate mode) ──────────────
+        # If Claude generated backend routes but zero business/frontend/pages/*.jsx
+        # files, the dashboard is empty — always a HIGH defect in boilerplate mode.
+        routes_dir_bp = artifacts_dir / 'business' / 'backend' / 'routes'
+        frontend_pages_dir = artifacts_dir / 'business' / 'frontend' / 'pages'
+        has_backend_routes = routes_dir_bp.exists() and bool(list(routes_dir_bp.glob('*.py')))
+        jsx_files = list(frontend_pages_dir.glob('*.jsx')) if frontend_pages_dir.exists() else []
+        if has_backend_routes and not jsx_files:
+            add_defect(
+                'business/frontend/pages',
+                'No frontend pages found: business/frontend/pages/*.jsx is empty but backend routes exist. '
+                'The boilerplate dashboard will be blank.',
+                'HIGH',
+                'Create at least one business/frontend/pages/<Feature>.jsx React page for each user-facing '
+                'feature. Use: const { user, getAccessTokenSilently } = useAuth0() and import api from '
+                "'../utils/api'. Every frontend feature MUST have a corresponding .jsx page."
+            )
 
         return defects
 
@@ -5145,6 +5175,14 @@ class FOHarness:
         # FIX #9: Track consecutive validation failures
         consecutive_validation_failures = 0
 
+        # Fix 1/3: Static anti-repetition + hard cap tracking
+        _static_consecutive_iters  = 0    # consecutive iterations where static was the only gate failing
+        _static_defect_fingerprints = {}  # (file, issue_key) -> consecutive count (Fix 1 escalation)
+        _last_static_fingerprints   = set()  # fingerprints from the previous static iteration
+
+        # Consistency hard cap tracking (mirrors Fix 3 for static)
+        _consistency_consecutive_iters = 0  # consecutive iterations driven by consistency check alone
+
         # Gate telemetry (O): explicit execution trace for QA/STATIC/CONSISTENCY
         gate_trace = []
 
@@ -5346,6 +5384,20 @@ class FOHarness:
                             d.get('file', '') for d in _raw_pending_defects
                             if d.get('file', '').startswith('business/')
                         })
+                        # Fix 2: For stuck or method-mismatch defects, also include related service files
+                        # (route↔service joint rebuild — both sides must agree on method names)
+                        _extra_targets = []
+                        for _d in _raw_pending_defects:
+                            if _d.get('stuck') or _d.get('related_files'):
+                                for _rf in _d.get('related_files', []):
+                                    if _rf.startswith('business/') and _rf not in defect_target_files:
+                                        _extra_targets.append(_rf)
+                        if _extra_targets:
+                            print_info(
+                                f"  [STATIC] Fix 2: adding {len(_extra_targets)} related service file(s) "
+                                f"to targets for joint rebuild: {_extra_targets}"
+                            )
+                            defect_target_files = sorted(set(defect_target_files) | set(_extra_targets))
                         required_file_inventory = self._get_previous_iteration_inventory(iteration)
                         if not required_file_inventory:
                             # Fallback: read manifest from last accepted artifacts dir
@@ -5400,8 +5452,10 @@ class FOHarness:
                             prohibitions_block
                         )
 
-                    # FIX #4: Dynamic max tokens based on iteration
-                    max_tokens = Config.get_max_tokens(iteration)
+                    # FIX #4: Dynamic max tokens based on iteration + defect_source
+                    # Patch iterations (static/consistency/quality/compile fix) only output
+                    # 1-3 files — use 8192 instead of 16384 to save ~$0.12/iter.
+                    max_tokens = Config.get_max_tokens(iteration, defect_source)
 
                     # FIX #6: Dynamic timeout based on iteration (first call needs more time)
                     request_timeout = Config.get_request_timeout(iteration)
@@ -5878,25 +5932,76 @@ class FOHarness:
                     for d in static_defects:
                         sev_fn = print_error if d['severity'] == 'HIGH' else print_warning
                         sev_fn(f"    {d['id']} [{d['severity']}] {d['file']}: {d['issue']}")
-                    defect_source        = 'static'
-                    _raw_pending_defects = static_defects
-                    previous_defects     = self._format_static_defects_for_claude(static_defects)
-                    iteration += 1
-                    if iteration > self.max_qa_iterations:
-                        print_error(f"Max iterations ({self.max_qa_iterations}) reached during static check — halting")
-                        self._print_cost_summary(
-                            iteration - 1, total_calls, total_cache_writes, total_cache_hits,
-                            total_cache_write_tokens, total_cache_read_tokens,
-                            total_input_tokens, total_output_tokens,
-                            total_gpt_calls, total_gpt_input_tokens, total_gpt_output_tokens,
-                            run_end_reason='MAX_ITERATIONS'
+
+                    # Fix 1: Track defect fingerprints to detect stuck defects
+                    _static_consecutive_iters += 1
+                    _cur_static_fingerprints = set()
+                    for d in static_defects:
+                        _fp = (d.get('file', ''), d.get('issue', '')[:80])
+                        _cur_static_fingerprints.add(_fp)
+                        if _fp in _last_static_fingerprints:
+                            _static_defect_fingerprints[_fp] = _static_defect_fingerprints.get(_fp, 1) + 1
+                        else:
+                            _static_defect_fingerprints[_fp] = 1
+                    # Clear counts for fingerprints no longer present
+                    for _fp in list(_static_defect_fingerprints):
+                        if _fp not in _cur_static_fingerprints:
+                            del _static_defect_fingerprints[_fp]
+                    _last_static_fingerprints = _cur_static_fingerprints
+
+                    _stuck_fps = {_fp for _fp, _cnt in _static_defect_fingerprints.items() if _cnt >= 3}
+                    if _stuck_fps:
+                        print_warning(
+                            f"  [STATIC] Fix 1: {len(_stuck_fps)} defect(s) stuck for 3+ iterations — "
+                            "promoting to joint route+service rebuild"
                         )
-                        _flush_gate_trace()
-                        return False, "MAX_ITERATIONS_EXCEEDED"
-                    print_info(f"Starting iteration {iteration} with static fix...")
-                    continue
-                print_success("  [STATIC] PASS — no static defects")
-                _record_gate('STATIC', 'PASS', 'no static defects', iteration)
+                        # Mark stuck defects so target calculation includes related files
+                        for d in static_defects:
+                            _fp = (d.get('file', ''), d.get('issue', '')[:80])
+                            if _fp in _stuck_fps:
+                                d['stuck'] = True
+
+                    # Fix 3: Hard cap — fall through to Feature QA after MAX_STATIC_CONSECUTIVE iters
+                    if _static_consecutive_iters >= Config.MAX_STATIC_CONSECUTIVE:
+                        print_warning(
+                            f"  [STATIC] Fix 3: Hard cap reached ({_static_consecutive_iters} consecutive static iters) "
+                            "— falling through to Feature QA to break deadlock"
+                        )
+                        _record_gate('STATIC', 'FALLTHROUGH',
+                                     f'cap={Config.MAX_STATIC_CONSECUTIVE} reached', iteration)
+                        _static_consecutive_iters  = 0
+                        _static_defect_fingerprints = {}
+                        _last_static_fingerprints   = set()
+                        defect_source        = 'qa'
+                        previous_defects     = None
+                        _raw_pending_defects = []
+                        # Fall through — do NOT continue; run GATE 3, GATE 4, Feature QA this iteration
+                    else:
+                        defect_source        = 'static'
+                        _raw_pending_defects = static_defects
+                        previous_defects     = self._format_static_defects_for_claude(static_defects)
+                        iteration += 1
+                        if iteration > self.max_qa_iterations:
+                            print_error(f"Max iterations ({self.max_qa_iterations}) reached during static check — halting")
+                            self._print_cost_summary(
+                                iteration - 1, total_calls, total_cache_writes, total_cache_hits,
+                                total_cache_write_tokens, total_cache_read_tokens,
+                                total_input_tokens, total_output_tokens,
+                                total_gpt_calls, total_gpt_input_tokens, total_gpt_output_tokens,
+                                run_end_reason='MAX_ITERATIONS'
+                            )
+                            _flush_gate_trace()
+                            return False, "MAX_ITERATIONS_EXCEEDED"
+                        print_info(f"Starting iteration {iteration} with static fix...")
+                        continue
+                else:
+                    _static_consecutive_iters  = 0
+                    _static_defect_fingerprints = {}
+                    _last_static_fingerprints   = set()
+
+                if not static_defects:
+                    print_success("  [STATIC] PASS — no static defects")
+                    _record_gate('STATIC', 'PASS', 'no static defects', iteration)
 
                 # ================================================
                 # STEP 3: GATE 3 AI CONSISTENCY (MANDATORY)
@@ -5920,25 +6025,46 @@ class FOHarness:
                         sev_fn = print_error if iss.get('severity') == 'HIGH' else print_warning
                         sev_fn(f"    {iss['id']} [{iss.get('severity', 'MEDIUM')}] "
                                f"{iss.get('files', iss.get('file', '?'))}: {iss.get('issue', '?')}")
-                    defect_source        = 'consistency'
-                    _raw_pending_defects = consistency_issues
-                    previous_defects     = self._format_consistency_defects_for_claude(consistency_issues)
-                    iteration += 1
-                    if iteration > self.max_qa_iterations:
-                        print_error(f"Max iterations ({self.max_qa_iterations}) reached during consistency check — halting")
-                        self._print_cost_summary(
-                            iteration - 1, total_calls, total_cache_writes, total_cache_hits,
-                            total_cache_write_tokens, total_cache_read_tokens,
-                            total_input_tokens, total_output_tokens,
-                            total_gpt_calls, total_gpt_input_tokens, total_gpt_output_tokens,
-                            run_end_reason='MAX_ITERATIONS'
+
+                    _consistency_consecutive_iters += 1
+
+                    # Consistency hard cap — fall through to Feature QA after N consecutive iters
+                    if _consistency_consecutive_iters >= Config.MAX_CONSISTENCY_CONSECUTIVE:
+                        print_warning(
+                            f"  [CONSISTENCY] Hard cap reached ({_consistency_consecutive_iters} consecutive "
+                            "consistency iters) — falling through to Feature QA to break deadlock"
                         )
-                        _flush_gate_trace()
-                        return False, "MAX_ITERATIONS_EXCEEDED"
-                    print_info(f"Starting iteration {iteration} with consistency fix...")
-                    continue
-                print_success("  [CONSISTENCY] PASS — no cross-file consistency issues")
-                _record_gate('CONSISTENCY', 'PASS', 'no consistency issues', iteration)
+                        _record_gate('CONSISTENCY', 'FALLTHROUGH',
+                                     f'cap={Config.MAX_CONSISTENCY_CONSECUTIVE} reached', iteration)
+                        _consistency_consecutive_iters = 0
+                        defect_source        = 'qa'
+                        previous_defects     = None
+                        _raw_pending_defects = []
+                        # Fall through to GATE 4 + Feature QA this iteration
+                    else:
+                        defect_source        = 'consistency'
+                        _raw_pending_defects = consistency_issues
+                        previous_defects     = self._format_consistency_defects_for_claude(consistency_issues)
+                        iteration += 1
+                        if iteration > self.max_qa_iterations:
+                            print_error(f"Max iterations ({self.max_qa_iterations}) reached during consistency check — halting")
+                            self._print_cost_summary(
+                                iteration - 1, total_calls, total_cache_writes, total_cache_hits,
+                                total_cache_write_tokens, total_cache_read_tokens,
+                                total_input_tokens, total_output_tokens,
+                                total_gpt_calls, total_gpt_input_tokens, total_gpt_output_tokens,
+                                run_end_reason='MAX_ITERATIONS'
+                            )
+                            _flush_gate_trace()
+                            return False, "MAX_ITERATIONS_EXCEEDED"
+                        print_info(f"Starting iteration {iteration} with consistency fix...")
+                        continue
+                else:
+                    _consistency_consecutive_iters = 0
+
+                if not consistency_issues:
+                    print_success("  [CONSISTENCY] PASS — no cross-file consistency issues")
+                    _record_gate('CONSISTENCY', 'PASS', 'no consistency issues', iteration)
 
                 # ================================================
                 # STEP 4: GATE 4 QUALITY (MANDATORY)

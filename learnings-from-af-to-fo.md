@@ -1,5 +1,54 @@
 # Learnings From AF to FO
 
+## Latest Learnings (2026-03-07, session 5)
+
+- Patch iterations are being billed at full-build token rates. Static/consistency/quality
+  fix iterations output 1-3 files but were capped at 16384 tokens — same as a full 20-file
+  initial build. The right token budget for a patch is 8192: plenty for any single file,
+  never causes truncation on the narrow output, halves the per-iter output cost.
+- Every sub-loop needs both a token budget AND an iteration cap. The static loop got both
+  (Fix 3 + 8192 tokens). Consistency was identical in structure but had neither — meaning
+  a consistency deadlock burned full-price iterations indefinitely. Pattern: whenever you
+  add a new sub-loop gate, immediately add MAX_X_CONSECUTIVE and PATCH token sizing.
+- Cost is dominated by Claude output tokens on fix iterations, not API call overhead.
+  GPT quality + QA calls are negligible (<$0.01 each). The $10+ runs came entirely from
+  30 × $0.25 Claude output charges. Reducing output tokens and capping iteration counts
+  is the only lever that moves the number.
+
+## Latest Learnings (2026-03-07, session 4)
+
+- Claude will output backend-only builds and call them complete when the token budget
+  runs out before frontend pages. "COMPLETED_CLOSED" in the output does NOT mean all
+  required files were generated — it just means Claude stopped producing output.
+- The QA filter can mask a skeleton build. When Claude outputs no frontend pages, QA
+  hallucinates defects about `.jsx` files that don't exist, the harness removes them as
+  fabricated evidence, and flips the verdict to ACCEPTED. A clean QA report ≠ complete build.
+- Shopify integration confuses Claude about frontend responsibility. Claude interprets
+  "Shopify integration = Shopify handles the storefront" and skips the React dashboard
+  pages entirely. The prompt must explicitly say "Shopify is the store, the React
+  boilerplate dashboard still needs .jsx pages for admin/member features."
+- Static checks are the right gate for structural completeness. A deterministic check
+  (routes exist but zero .jsx files → HIGH defect) will always fire before QA gets
+  a chance to hallucinate. Never rely on ChatGPT to detect missing file categories.
+
+## Latest Learnings (2026-03-07, session 3)
+
+- Static check infinite loops are the dominant cost driver. Root cause: route calls
+  `calculate_score()` but service defines `calculate_assessment_score()`. Claude fixes
+  arity but not the method name because the targeted patch prompt only shows the route
+  file — it never sees the service file's actual method names. The fix is simple:
+  include the service file in the target list whenever a missing-method defect fires.
+- Method-name mismatches cannot be fixed by single-file patches. The route and its
+  service are a coupled interface — both must be regenerated together in one shot for
+  names to align. Targeted single-file static fix is the wrong tool for contract mismatches.
+- A fallthrough to Feature QA after N static iterations breaks cross-file deadlocks.
+  Feature QA with the full artifact set sees BOTH sides of the interface and can
+  describe the mismatch coherently. A full QA-driven rebuild prompt resolves what 6
+  targeted patches could not.
+- Hard caps on any sub-loop are necessary. Any loop that can iterate independently of
+  the main max-iterations counter will hit the overall limit without any user control.
+  Every sub-loop needs its own explicit ceiling.
+
 ## Latest Learnings (2026-03-07, session 2)
 
 - QA prohibition knowledge must chain across feature builds. The warm-start tracker

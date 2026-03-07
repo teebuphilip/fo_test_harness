@@ -227,8 +227,23 @@ export default function MyPage() {
 **FILE: business/backend/app.py** ← FORBIDDEN (boilerplate internal, do not create)
 **FILE: business/app/routers.py** ← FORBIDDEN (use business/backend/routes/)
 
+**MANDATORY OUTPUT REQUIREMENTS — THESE ARE BUILD FAILURES IF MISSING:**
+
+You MUST output AT LEAST ONE `business/frontend/pages/*.jsx` file for each user-facing feature in the intake.
+
+The boilerplate provides the auth system, the database, and the navigation shell — but it does NOT invent your UI screens. If you output ONLY backend routes with ZERO `.jsx` pages, the dashboard will be completely blank. That is a build failure.
+
+**For every user-facing feature:** one `.jsx` page. Example mapping:
+- Member management → `business/frontend/pages/Members.jsx`
+- Horse management → `business/frontend/pages/Horses.jsx`
+- Content/updates → `business/frontend/pages/Updates.jsx`
+- Breeding records → `business/frontend/pages/Breeding.jsx`
+
+The Shopify integration being present does NOT remove the requirement to output React pages. Shopify handles the storefront store; the member dashboard (built on the boilerplate) still needs `.jsx` pages for your admin/member features.
+
 **PRE-PROMPT CHECKLIST (MUST PASS BEFORE YOU OUTPUT):**
 - All files are under `business/**`.
+- ✅ AT LEAST ONE `business/frontend/pages/*.jsx` file per user-facing feature — MANDATORY.
 - Frontend pages are in `business/frontend/pages/` with `.jsx` extension (NOT app/, NOT .tsx).
 - Backend routes are in `business/backend/routes/`.
 - `business/README-INTEGRATION.md` is included.

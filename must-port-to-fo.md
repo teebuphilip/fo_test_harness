@@ -2,6 +2,40 @@
 
 ## New Hardening Bundle (2026-03-07)
 
+21. Patch iteration token reduction (16384 → 8192) + consistency hard cap
+- `Config.get_max_tokens(iteration, defect_source)` returns 8192 for
+  static/consistency/quality/compile patch iterations (only 1-3 files output).
+  Returns 16384 for QA-driven or first-build iterations (full regeneration).
+- `Config.CLAUDE_MAX_TOKENS_PATCH = 8192`, `Config.MAX_CONSISTENCY_CONSECUTIVE = 4`
+- Consistency hard cap: after 4 consecutive consistency-only iterations, fall through
+  to Feature QA. Same pattern as MAX_STATIC_CONSECUTIVE=6 (Fix 3).
+- FO production equivalent: any AI patch loop needs both a token budget cap
+  (patch ≠ full build) and an iteration hard cap with fallthrough.
+⬜ TODO for FO codebase
+
+19. Static Check 13: missing frontend pages in boilerplate mode
+- If backend routes exist (`business/backend/routes/*.py`) but no
+  `business/frontend/pages/*.jsx` files found → HIGH defect.
+- Catches zero-frontend builds before QA filter removes all evidence-fabricated
+  defects and flips verdict to ACCEPTED on a skeleton.
+- Also added MANDATORY OUTPUT REQUIREMENTS to `build_boilerplate_path_rules.md`
+  explicitly requiring at least 1 .jsx page per user-facing feature, and clarifying
+  that Shopify integration does NOT substitute for React dashboard pages.
+⬜ TODO for FO codebase
+
+18. Static loop anti-repetition: Fix 1/2/3
+- Fix 1: Defect fingerprint tracking — when same (file, issue) appears 3+
+  consecutive static iterations, marks defect `stuck=True` to trigger joint rebuild.
+- Fix 2: `_run_static_check` Check 10 now embeds `related_files=[service_file]` on
+  missing-method defects; `defect_target_files` calculation auto-includes these so
+  Claude regenerates BOTH route and service in one shot.
+- Fix 3: `Config.MAX_STATIC_CONSECUTIVE = 6` hard cap — after 6 consecutive
+  static-only iterations, fall through to Feature QA instead of continuing to burn
+  iterations on targeted patches that can't resolve cross-file method name mismatches.
+- All three implemented in `fo_test_harness.py`: `Config`, `_run_static_check`,
+  `defect_target_files` calculation block, and GATE 2 static check fail block.
+⬜ TODO for FO codebase
+
 17. --prior-run flag: cross-run prohibition tracker seeding
 - New `--prior-run <dir>` flag on `fo_test_harness.py` seeds the warm-start
   recurring_tracker from a prior run's QA reports before the build loop starts.

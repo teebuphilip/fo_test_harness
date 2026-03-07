@@ -2,6 +2,67 @@
 
 ## 2026-03-07
 
+### fix: reduce patch iteration token cost + consistency hard cap
+
+**Patch iteration max_tokens 16384 → 8192**
+- Static/consistency/quality/compile patch iterations only output 1-3 files.
+  Using 16384 tokens was paying for 2× the output we actually needed.
+- `Config.get_max_tokens(iteration, defect_source)` now returns 8192 when
+  `defect_source` is static/consistency/quality/compile; 16384 for QA/full builds.
+- `Config.CLAUDE_MAX_TOKENS_PATCH = 8192`
+- Savings: ~$0.12 per patch iter. On a 10-patch build: ~$1.20.
+
+**Consistency hard cap (mirrors Fix 3 for static)**
+- `Config.MAX_CONSISTENCY_CONSECUTIVE = 4`
+- If AI consistency check hasn't cleared after 4 consecutive iterations, falls through
+  to Feature QA instead of burning more targeted patches.
+- Resets `_consistency_consecutive_iters`, clears defect_source to 'qa'.
+- Gate trace records `CONSISTENCY:FALLTHROUGH`.
+- Root cause: same as static deadlocks — method name / import mismatches that a
+  full-context Feature QA prompt resolves better than targeted consistency patches.
+
+### fix: static Check 13 + prompt — missing frontend pages in boilerplate mode
+
+Root cause: Claude outputs only backend files (routes, models, services) and never
+generates any `business/frontend/pages/*.jsx`. The QA filter correctly removed all
+4 defects (they referenced non-existent `.jsx` files), flipping verdict to ACCEPTED
+on a build with zero frontend. Quality gate also missed the gap.
+
+- **Static Check 13** (`fo_test_harness.py`): if backend routes exist but no
+  `business/frontend/pages/*.jsx` files are found → HIGH defect. Will catch this
+  on the first iteration rather than letting QA hallucinate about files that aren't there.
+- **Prompt** (`directives/prompts/build_boilerplate_path_rules.md`): added explicit
+  MANDATORY OUTPUT REQUIREMENTS block at the pre-prompt checklist — "at least one
+  .jsx page per user-facing feature" + explicit note that Shopify integration does NOT
+  remove the React page requirement. Frontend pages are NOT provided by the boilerplate.
+
+### fix: static check infinite loop — 3 anti-repetition fixes (Fix 1/2/3)
+
+Root cause: route files call e.g. `calculate_score()` but the service defines
+`calculate_assessment_score()`. Claude fixes arity but not the name → same
+defect every iteration → 20+ static-only iterations burning ~$3/run.
+
+**Fix 1 — Repetition detection + joint rebuild escalation**
+- Track defect fingerprints `(file, issue[:80])` across consecutive static iterations.
+- When a fingerprint hits 3+ consecutive occurrences, mark defect as `stuck=True`.
+- Stuck defects trigger `related_files` inclusion, pulling the service file into
+  the target list alongside the route file (joint route+service rebuild).
+
+**Fix 2 — route↔service joint target files**
+- `_run_static_check` Check 10: missing-method defects now carry `related_files=[service_file]`
+  (the file that defines the class with the missing method).
+- `defect_target_files` calculation: if any pending defect has `related_files` or
+  `stuck=True`, the service file is automatically added to the target list.
+- Result: Claude regenerates BOTH sides of the interface in one shot → method names align.
+
+**Fix 3 — Static hard cap + fallthrough to Feature QA**
+- `Config.MAX_STATIC_CONSECUTIVE = 6` — if static check has failed for 6 consecutive
+  iterations without clearing, the harness falls through to Feature QA instead of
+  burning more static fix iterations.
+- Gate trace records `STATIC:FALLTHROUGH`. Resets all static tracking state.
+- Feature QA with full context + coherent cross-file view often resolves method-name
+  mismatches that targeted single-file patches cannot.
+
 ### feat: --prior-run flag seeds prohibition tracker across feature builds
 
 - `fo_test_harness.py`: new `--prior-run <dir>` flag reads
