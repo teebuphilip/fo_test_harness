@@ -1,5 +1,16 @@
 # Must Port to FO
 
+## New Hardening Bundle (2026-03-07)
+
+13. Frontend compile check: npm install before npm run build
+- GATE 0 frontend compile now runs `npm install --prefer-offline --silent`
+  before `npm run build` on the generated artifacts dir.
+- Without this, vite/webpack/next are never installed and the compile check
+  always fails with `sh: vite: command not found` even on correct code.
+- FO production equivalent: same fix needed in any harness or CI pipeline
+  that runs a build check on freshly generated frontend artifacts.
+⬜ TODO for FO codebase
+
 ## New Hardening Bundle (2026-03-06)
 1. Narrowed QA comment-only filter (Check 6)
 - Only suppresses comment-only defects when evidence explicitly states scope exclusion

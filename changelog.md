@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-03-07
+
+### fix: npm install before frontend compile check
+
+- `_run_static_check()` GATE 0 frontend compile: now runs
+  `npm install --prefer-offline --silent` before `npm run build`.
+- Root cause: generated artifacts have no `node_modules` — vite and all
+  other devDependencies are absent, causing `sh: vite: command not found`
+  on every Next.js/Vite project regardless of code correctness.
+- `node_modules` persists in the iteration artifacts dir between iterations
+  so subsequent iterations are fast (`--prefer-offline` uses local npm cache).
+
 ## 2026-03-06
 
 ### --no-polish flag + run_phased_build.sh wrapper
