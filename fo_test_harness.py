@@ -4789,6 +4789,13 @@ class FOHarness:
                     'Install Node/npm in runtime environment or disable frontend artifacts for this build profile'
                 )
             else:
+                # Install deps before building (generated artifacts have no node_modules)
+                subprocess.run(
+                    ['bash', '-lc', 'npm install --prefer-offline --silent'],
+                    cwd=str(frontend_dir),
+                    capture_output=True,
+                    text=True
+                )
                 build_cmd = 'npm run build'
                 build = subprocess.run(
                     ['bash', '-lc', build_cmd],
