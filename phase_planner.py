@@ -120,6 +120,9 @@ FEATURE_KEYS = {
     'must_haves', 'core_features', 'key_features', 'product_features',
 }
 
+# Task-list format intakes (e.g. wynwood): extract build tasks from combined_task_list
+TASK_LIST_KEYS = {'combined_task_list', 'task_list', 'tasks'}
+
 KPI_KEYS = {
     'kpi_definitions', 'kpis', 'key_metrics', 'metrics',
     'kpi_ids', 'kpi_list', 'performance_indicators',
@@ -137,6 +140,16 @@ def extract_features(intake: dict) -> list:
                     item.get('description') or item.get('title') or '')
             if text:
                 features.append(str(text).strip())
+
+    # Fallback: task-list format intakes (combined_task_list with classification=build)
+    if not features:
+        task_raw = recursive_get_lists(intake, TASK_LIST_KEYS)
+        for item in task_raw:
+            if isinstance(item, dict) and item.get('classification') == 'build':
+                desc = item.get('description', '')
+                if desc:
+                    features.append(str(desc).strip())
+
     # deduplicate preserving order
     seen = set()
     result = []
