@@ -6406,14 +6406,26 @@ Examples:
         nargs='?',
         type=Path,
         default=None,
-        help='Path to BUILD governance ZIP (FOBUILFINALLOCKED100.zip)'
+        help='Path to BUILD governance ZIP (FOBUILFINALLOCKED100.zip). Overridden by --buildzip.'
     )
     parser.add_argument(
         'deploy_governance_zip',
         nargs='?',
         type=Path,
         default=None,
-        help='Path to DEPLOY governance ZIP (fo_deploy_governance_v1_2_CLARIFIED.zip)'
+        help='Path to DEPLOY governance ZIP (fo_deploy_governance_v1_2_CLARIFIED.zip). Overridden by --deployzip.'
+    )
+    parser.add_argument(
+        '--buildzip',
+        type=Path,
+        default=Path('/Users/teebuphilip/Documents/work/FounderOps/docs/architecture/BUILD/build_rules/FOBUILFINALLOCKED100.zip'),
+        help='BUILD governance ZIP override (default: FOBUILFINALLOCKED100.zip)'
+    )
+    parser.add_argument(
+        '--deployzip',
+        type=Path,
+        default=Path('/Users/teebuphilip/Documents/work/FounderOps/docs/architecture/BUILD/deployment_rules/fo_deploy_governance_v1_2_CLARIFIED.zip'),
+        help='DEPLOY governance ZIP override (default: fo_deploy_governance_v1_2_CLARIFIED.zip)'
     )
 
     # Optional flags
@@ -6611,10 +6623,14 @@ Examples:
                 print_info("")
             sys.exit(1)
 
-    # ── Normal run: require intake + governance positional args ──────────────
-    if not args.intake_file or not args.build_governance_zip or not args.deploy_governance_zip:
-        parser.error("intake_file, build_governance_zip, and deploy_governance_zip are required "
-                     "(unless using --static-check or --ai-check)")
+    # ── Normal run: require intake; resolve governance ZIPs (named flags win over positional) ──
+    if not args.intake_file:
+        parser.error("intake_file is required (unless using --static-check or --ai-check)")
+    # Named flags (--buildzip / --deployzip) override positional args; positional fallback to defaults
+    if args.build_governance_zip is None:
+        args.build_governance_zip = args.buildzip
+    if args.deploy_governance_zip is None:
+        args.deploy_governance_zip = args.deployzip
 
     # If --resume-run is given without --resume-mode, default to qa
     if args.resume_run and not args.resume_mode:
