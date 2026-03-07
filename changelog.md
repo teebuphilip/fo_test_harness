@@ -2,6 +2,19 @@
 
 ## 2026-03-07
 
+### feat: --prior-run flag seeds prohibition tracker across feature builds
+
+- `fo_test_harness.py`: new `--prior-run <dir>` flag reads
+  `qa/iteration_*_qa_report.txt` from a prior run directory and seeds the
+  recurring_tracker before the build loop starts. Works alongside `--resume-run`
+  — both dirs are scanned if set.
+- `run_feature_build.sh`: tracks `LATEST_RUN_DIR` after each phase/feature and
+  passes `--prior-run` to every subsequent harness call so prohibitions chain:
+  Phase 1 → Feature 1 → Feature 2 → ...
+- Root cause: fresh feature runs start with an empty prohibition tracker even
+  when Phase 1 burned 17 iterations learning what Claude keeps getting wrong.
+  Prior QA knowledge was silently discarded on every new run directory.
+
 ### feat: default gov ZIPs + --buildzip/--deployzip flags
 
 - Both governance ZIP paths are now baked in as defaults — no more typing them.

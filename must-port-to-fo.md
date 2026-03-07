@@ -2,6 +2,15 @@
 
 ## New Hardening Bundle (2026-03-07)
 
+17. --prior-run flag: cross-run prohibition tracker seeding
+- New `--prior-run <dir>` flag on `fo_test_harness.py` seeds the warm-start
+  recurring_tracker from a prior run's QA reports before the build loop starts.
+- Without this, every new feature run starts with an empty prohibition tracker
+  even when prior phases burned many iterations learning Claude's failure modes.
+- FO production equivalent: the build orchestrator should carry prohibition
+  state forward across all sequential builds in a feature pipeline.
+⬜ TODO for FO codebase
+
 16. run_feature_build.sh + feature_adder.py — feature-by-feature build pipeline
 - `feature_adder.py`: scopes a single-feature intake from an existing build ZIP;
   auto-populates do-not-regenerate list; chains sequentially between features.

@@ -1,5 +1,15 @@
 # Learnings From AF to FO
 
+## Latest Learnings (2026-03-07, session 2)
+
+- QA prohibition knowledge must chain across feature builds. The warm-start tracker
+  is per-run-directory by default — switching to a new feature run silently resets it.
+  In a 5-phase feature pipeline, Phase 1's 17 iterations of learning what Claude gets
+  wrong are completely discarded for Feature 1's run. --prior-run solves this.
+- Default CLI args should be established on day 1. Typing 200-character gov ZIP paths
+  for every run is friction that accumulates across hundreds of runs. Any path that
+  never changes belongs in a default, not on the command line.
+
 ## Latest Learnings (2026-03-07)
 
 - Feature-by-feature is the right default for intelligence-heavy projects. The 2-phase
