@@ -25,6 +25,7 @@ set -euo pipefail
 
 # ── Defaults ──────────────────────────────────────────────────────────────────
 BUILD_GOV="/Users/teebuphilip/Documents/work/FounderOps/docs/architecture/BUILD/build_rules/FOBUILFINALLOCKED100.zip"
+DEPLOY_GOV="/Users/teebuphilip/Documents/work/FounderOps/docs/architecture/BUILD/deployment_rules/fo_deploy_governance_v1_2_CLARIFIED.zip"
 BLOCK="B"
 MAX_ITER=5
 STARTUP_ID=""
@@ -36,6 +37,7 @@ while [[ $# -gt 0 ]]; do
     --intake-base)    INTAKE_BASE="$2";    shift 2 ;;
     --startup-id)     STARTUP_ID="$2";     shift 2 ;;
     --build-gov)      BUILD_GOV="$2";      shift 2 ;;
+    --deploy-gov)     DEPLOY_GOV="$2";     shift 2 ;;
     --max-iterations) MAX_ITER="$2";       shift 2 ;;
     --block)          BLOCK="$2";          shift 2 ;;
     *) echo "Unknown flag: $1"; exit 1 ;;
@@ -90,6 +92,7 @@ echo "────────────────────────�
 python fo_test_harness.py \
   "$PHASE1_INTAKE" \
   "$BUILD_GOV" \
+  "$DEPLOY_GOV" \
   --max-iterations "$MAX_ITER" \
   --no-polish
 
@@ -126,6 +129,7 @@ echo "────────────────────────�
 python fo_test_harness.py \
   "$PHASE2_INTAKE" \
   "$BUILD_GOV" \
+  "$DEPLOY_GOV" \
   --max-iterations "$MAX_ITER"
 
 P2_EXIT=$?
