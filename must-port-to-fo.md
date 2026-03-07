@@ -2,6 +2,22 @@
 
 ## New Hardening Bundle (2026-03-07)
 
+16. run_feature_build.sh + feature_adder.py — feature-by-feature build pipeline
+- `feature_adder.py`: scopes a single-feature intake from an existing build ZIP;
+  auto-populates do-not-regenerate list; chains sequentially between features.
+- `run_feature_build.sh`: full pipeline wrapper — phase_planner → Phase 1 →
+  feature loop → final ZIP merge. Default 20 iterations per step.
+- FO production equivalent: a pipeline orchestrator in the intake/build system
+  that sequences phased builds and feature additions automatically.
+  Candidate for a standalone FO build orchestration service.
+⬜ TODO for FO codebase
+
+15. phase_planner: combined_task_list fallback for task-list format intakes
+- phase_planner now reads `pass_4.combined_task_list` (build-classified tasks)
+  when standard FEATURE_KEYS scan returns 0 features.
+- Required for older intake format (wynwood_thoroughbreds style).
+⬜ TODO for FO codebase
+
 13. Frontend compile check: npm install before npm run build
 - GATE 0 frontend compile now runs `npm install --prefer-offline --silent`
   before `npm run build` on the generated artifacts dir.

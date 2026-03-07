@@ -2,6 +2,35 @@
 
 ## 2026-03-07
 
+### new: run_feature_build.sh — full feature-by-feature build pipeline
+
+- New wrapper: `run_feature_build.sh` orchestrates the complete build sequence.
+  1. Runs `phase_planner.py` to split intake into data layer + intelligence features.
+  2. Builds Phase 1 (data layer, `--no-polish`).
+  3. For each intelligence feature: runs `feature_adder.py` then `fo_test_harness.py`.
+     - All but the last feature: `--no-polish`.
+     - Last feature: full polish (README, .env, tests).
+  4. Merges all ZIPs into final deliverable.
+- Default 20 iterations per phase/feature.
+- On any failure: lists all prior ZIPs built + resume instructions.
+- Chains feature_adder: each feature's ZIP becomes `--manifest` for the next.
+
+### new: feature_adder.py — single-feature incremental build tool
+
+- Reads original intake + prior run ZIP manifest.
+- Produces a tightly-scoped intake for ONE feature with do-not-regenerate list.
+- Classifies feature as DATA_LAYER or INTELLIGENCE_LAYER.
+- Includes KPIs only for intelligence-layer features.
+- Stamps `startup_idea_id` with feature slug for unique run dir/ZIP naming.
+- Prints chained run commands for sequential feature builds.
+- Usage: `python feature_adder.py --intake <file> --manifest <zip> --feature "<name>"`
+
+### fix: phase_planner falls back to combined_task_list format
+
+- Some intakes store features as `pass_4.combined_task_list` tasks (e.g. wynwood)
+  instead of `Q4_must_have_features`. phase_planner now extracts build-classified
+  tasks as features when the standard FEATURE_KEYS scan returns empty.
+
 ### fix: npm install before frontend compile check
 
 - `_run_static_check()` GATE 0 frontend compile: now runs

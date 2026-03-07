@@ -1,5 +1,22 @@
 # Learnings From AF to FO
 
+## Latest Learnings (2026-03-07)
+
+- Feature-by-feature is the right default for intelligence-heavy projects. The 2-phase
+  split (data vs intelligence) is still useful as a planning tool, but the intelligence
+  layer should be built one feature at a time to keep Claude's coherence ceiling from being
+  exceeded. Each feature run is 3-7 iterations; a 4-intel-feature project is 4 × 7 = 28
+  max vs 1 × 30 that fails. Same cost ceiling, much higher success rate.
+- Not every project needs the phased pipeline. Wynwood (member portal, payments, content)
+  is pure DATA_LAYER with 0 KPIs — straight harness run is correct. The pipeline adds
+  overhead with no benefit when there are no intelligence features to sequence.
+- Intake format normalization is an ongoing problem. `Q4_must_have_features` vs
+  `combined_task_list` are two known formats; others likely exist. Phase_planner and
+  feature_adder need progressive fallback detection, not hard-coded key assumptions.
+- npm install is required before any frontend build check. Generated artifacts never
+  have node_modules — every frontend compile check will fail without it. This is a
+  universal harness requirement, not project-specific.
+
 ## Latest Learnings (2026-03-06, session 3)
 
 - Post-QA polish must be suppressed for intermediate phases. Running README/.env/test
