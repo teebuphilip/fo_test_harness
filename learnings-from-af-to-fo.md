@@ -16,6 +16,10 @@
 - Integration issues (missing model fields, missing libraries, missing KPI methods) are structurally
   different from static issues (wrong imports, duplicate tablenames) and should not share the same fix
   prompt or defect_source. They need their own route so their fix doesn't collide with the static gate.
+- Consistency fixes have the same need as integration fixes: current file contents in the prompt.
+  Without them, Claude rewrites service/model files from memory and drops existing methods — turning
+  a 1-issue consistency fix into 6 new static defects. The split is: consistency+integration → surgical
+  (file contents passed); static+quality+compile → pattern-based (boilerplate reference only).
 
 ## Latest Learnings (2026-03-08, session 9)
 

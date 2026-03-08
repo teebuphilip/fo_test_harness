@@ -3739,6 +3739,26 @@ class FOHarness:
                 files.append(path)
         return sorted(set(files))
 
+    def _read_target_file_contents(self, iteration: int, target_files: list) -> dict:
+        """
+        Read the current content of defect-target files from the previous iteration's
+        artifacts directory. Returns {rel_path: file_text} for files that exist.
+        Used to pass actual file content to surgical patch prompts so Claude doesn't
+        reconstruct from memory and introduce collateral errors.
+        """
+        if iteration <= 1 or not target_files:
+            return {}
+        prev_artifacts_dir = self.artifacts.build_dir / f'iteration_{iteration - 1:02d}_artifacts'
+        contents = {}
+        for tf in target_files:
+            tf_path = prev_artifacts_dir / tf
+            if tf_path.exists():
+                try:
+                    contents[tf] = tf_path.read_text(encoding='utf-8')
+                except Exception:
+                    pass
+        return contents
+
     def _extract_defect_target_files(self, defects_text: Optional[str]) -> list:
         """
         Extract explicit business file paths mentioned in defect text.
@@ -5510,9 +5530,11 @@ class FOHarness:
                         required_file_inventory = self._get_previous_iteration_inventory(iteration) if previous_defects else []
                         defect_target_files = self._extract_defect_target_files(previous_defects) if previous_defects else []
 
-                    # Select prompt: integration fix → surgical patch with current file contents;
-                    # static/consistency fix → targeted patch; feature QA → full build prompt
-                    if defect_source == 'integration' and previous_defects:
+                    # Select prompt:
+                    #   integration / consistency → surgical patch WITH current file contents
+                    #   static / quality / compile → pattern-based patch (boilerplate reference)
+                    #   feature QA → full build prompt
+                    if defect_source in ('integration', 'consistency') and previous_defects:
                         # Governance section for caching (no defects passed in — defects go in dynamic only)
                         governance_section, _ = PromptTemplates.build_prompt(
                             self.block, self.intake_data, self.build_governance,
@@ -5520,28 +5542,22 @@ class FOHarness:
                             self.tech_stack_override, self.external_integration_override,
                             self.startup_id, self.effective_tech_stack, [], []
                         )
-                        # Read current file contents for target files so Claude patches surgically
-                        _prev_artifacts_dir = self.artifacts.build_dir / f'iteration_{iteration - 1:02d}_artifacts'
-                        _current_file_contents = {}
-                        for _tf in defect_target_files:
-                            _tf_path = _prev_artifacts_dir / _tf
-                            if _tf_path.exists():
-                                try:
-                                    _current_file_contents[_tf] = _tf_path.read_text(encoding='utf-8')
-                                except Exception:
-                                    pass
+                        # Read current file contents so Claude patches surgically rather than
+                        # reconstructing from memory (which drops existing methods/fields)
+                        _current_file_contents = self._read_target_file_contents(iteration, defect_target_files)
+                        _source_label = defect_source.upper()
                         if _current_file_contents:
-                            print_info(f"  [INTEGRATION] Loaded {len(_current_file_contents)} current file(s) for surgical patch")
+                            print_info(f"  [{_source_label}] Loaded {len(_current_file_contents)} current file(s) for surgical patch")
                         else:
-                            print_warning(f"  [INTEGRATION] No current file contents found in {_prev_artifacts_dir} — Claude will reconstruct")
+                            print_warning(f"  [{_source_label}] No current file contents found — Claude will reconstruct")
                         dynamic_section = PromptTemplates.integration_fix_prompt(
                             integration_defects=previous_defects,
                             required_file_inventory=required_file_inventory,
                             defect_target_files=defect_target_files,
                             current_file_contents=_current_file_contents,
                         )
-                        print_info(f"  [INTEGRATION] Using surgical integration fix prompt for {len(defect_target_files)} target file(s)")
-                    elif defect_source in ('static', 'consistency', 'quality', 'compile') and previous_defects:
+                        print_info(f"  [{_source_label}] Using surgical patch prompt for {len(defect_target_files)} target file(s)")
+                    elif defect_source in ('static', 'quality', 'compile') and previous_defects:
                         # Governance section for caching (no defects passed in — defects go in dynamic only)
                         governance_section, _ = PromptTemplates.build_prompt(
                             self.block, self.intake_data, self.build_governance,
@@ -5549,7 +5565,7 @@ class FOHarness:
                             self.tech_stack_override, self.external_integration_override,
                             self.startup_id, self.effective_tech_stack, [], []
                         )
-                        # Targeted patch prompt — output only the defect-target files
+                        # Pattern-based patch — boilerplate import reference, output only target files
                         dynamic_section = PromptTemplates.static_fix_prompt(
                             static_defects=previous_defects,
                             required_file_inventory=required_file_inventory,
@@ -5557,7 +5573,7 @@ class FOHarness:
                             prohibitions_block=prohibitions_block
                         )
                         _source_label = defect_source.upper()
-                        print_info(f"  [{_source_label}] Using targeted patch prompt for {defect_source} defects")
+                        print_info(f"  [{_source_label}] Using pattern-based patch prompt for {defect_source} defects")
                     else:
                         # FIX #1 & #4: Get prompt sections and dynamic token limit
                         governance_section, dynamic_section = PromptTemplates.build_prompt(

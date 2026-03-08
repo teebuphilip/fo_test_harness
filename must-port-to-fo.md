@@ -2,6 +2,16 @@
 
 ## Build Pipeline (2026-03-08)
 
+33. Consistency fix — surgical patch with current file contents (extends item 32)
+- Same root cause as integration: consistency patch had no current file contents → Claude
+  rewrote service files from memory → dropped existing methods → static gate looped.
+- defect_source='consistency' now routes to integration_fix_prompt (surgical) instead of
+  static_fix_prompt. Both consistency and integration use build_integration_fix.md template.
+- static/quality/compile keep static_fix_prompt (pattern-based — their defects are structural).
+- New FOHarness._read_target_file_contents(iteration, target_files) helper shared by both paths.
+- Files: `fo_test_harness.py` (prompt routing, new helper method)
+⬜ TODO for FO codebase
+
 32. Integration fix — surgical patch with current file contents (defect_source='integration')
 - Root cause: integration warm-start used defect_source='static' → static_fix_prompt → Claude
   reconstructs model files from memory → wrong Base import / duplicate __tablename__ → static

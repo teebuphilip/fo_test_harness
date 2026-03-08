@@ -2,6 +2,19 @@
 
 ## 2026-03-08
 
+### fix: surgical patch extended to consistency fixes + _read_target_file_contents helper
+
+Same root cause as integration fix churn: consistency patch prompt had no current file contents
+→ Claude rewrote ReportService.py from memory → dropped get_all_reports/create_report/update_report
+→ static gate caught 6 missing-method defects → wasted static fix cycle.
+
+- `defect_source='consistency'` now routes to `integration_fix_prompt` (surgical, with file contents)
+  alongside `defect_source='integration'` — both use `build_integration_fix.md` template
+- `defect_source='static'/'quality'/'compile'` keep `static_fix_prompt` (pattern-based, no file contents)
+  since their defects are structural (wrong imports, Base class) not method-preservation issues
+- New `FOHarness._read_target_file_contents(iteration, target_files)` helper — reads prev-iteration
+  artifact files from disk; used by both integration and consistency patch paths; no duplication
+
 ### fix: integration fix pass — surgical patch with current file contents (defect_source='integration')
 
 Root cause: `--integration-issues` warm-start set `defect_source='static'`, routing into `static_fix_prompt`.
