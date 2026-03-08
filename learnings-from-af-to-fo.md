@@ -12,6 +12,10 @@
 - The right deploy sequence for a new app is: Auth0 setup → Railway (with Auth0 vars) →
   Vercel → patch Railway CORS with Vercel URL → patch Auth0 callbacks with Vercel URL.
   All of this can and should be automated in the pipeline — any step left manual will be forgotten.
+- When Railway GraphQL API is unauthorized for env var setting, the CLI (`railway variables --set`)
+  works fine with the same `RAILWAY_TOKEN` env var. Always check if the CLI is installed before
+  giving up on programmatic var setting. The CLI is installed by default in most Node environments
+  and respects RAILWAY_TOKEN without any browser login.
 - Railway's `variableUpsert` GraphQL mutation validates GitHub repo access even though
   setting env vars has nothing to do with GitHub. This causes "Repository not accessible"
   errors for tokens that can deploy but don't have GitHub integration permissions. The

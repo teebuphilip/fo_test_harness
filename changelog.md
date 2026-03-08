@@ -2,6 +2,43 @@
 
 ## 2026-03-08
 
+### feat: integration_check.py + --integration-issues harness flag
+
+New standalone post-build integration validator with 4 deterministic checks (no AI):
+1. **Route inventory** — frontend fetch()/api calls vs backend @router decorators
+2. **Model field refs** — service model.field accesses vs SQLAlchemy Column definitions
+3. **Spec compliance** — intake keywords (PDF, email, KPI names) vs artifacts
+4. **Import chains** — from business.X import Y vs actual files in artifact set
+
+Outputs `integration_issues.json` in harness-compatible format.
+
+`fo_test_harness.py`: added `--integration-issues JSON_FILE` flag.
+- Loads issues, converts to static defect format, seeds Claude targeted fix pass
+- After fix pass, full QA loop runs normally (GATE 0 → GATE 1)
+- Use with `--resume-run` + `--resume-iteration` to target the accepted iteration
+
+Usage:
+```bash
+python integration_check.py --zip fo_harness_runs/foo.zip --intake intake/foo.json
+python fo_test_harness.py <intake> --resume-run <run_dir> --resume-iteration 19 --integration-issues integration_issues.json
+```
+
+Validated on AWI downloadable report ZIP — caught all 4 bugs found by manual review:
+missing assessments route, client.email field gap, assessment.title field gap, missing PDF library.
+
+### fix: Railway CLI fallback for env var setting + console paste fallback
+
+Railway GraphQL API (`variableUpsert`) is unauthorized for project tokens and some
+personal tokens. Added two fallback layers:
+
+1. **Railway CLI** (`railway variables --set`) — already installed, uses `RAILWAY_TOKEN`
+   env var, called via subprocess when API fails
+2. **Console paste** — if CLI also fails, prints all failed vars + dashboard URL
+   in a clean block ready to copy-paste into Railway Variables tab
+
+Both `railway_deploy.py` (initial env vars) and `pipeline_deploy.py` (CORS/ENVIRONMENT
+post-Vercel) now use the same three-tier pattern: API → CLI → print.
+
 ### fix: Railway variableCollectionUpsert fallback for env var setting
 
 Railway's `variableUpsert` GraphQL mutation fails with "Repository not accessible"

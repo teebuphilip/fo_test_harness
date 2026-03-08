@@ -1,5 +1,16 @@
 # Must Port to FO
 
+## Build Pipeline (2026-03-08)
+
+31. integration_check.py — post-build integration validator
+- Standalone script: 4 deterministic checks (no AI), outputs integration_issues.json
+- Checks: route inventory, model field refs, spec compliance, import chains
+- fo_test_harness.py: --integration-issues flag seeds Claude fix pass from JSON
+- Catches missing routes, model field gaps, spec mismatches AFTER QA accepts
+- Validated: caught 4 real bugs manually missed in AWI final build
+- Files: `integration_check.py` (new), `fo_test_harness.py` (--integration-issues arg + warm-start block)
+⬜ TODO for FO codebase
+
 ## Deploy Pipeline (2026-03-08)
 
 27. Full pipeline auto-wiring: Auth0 + CORS + ENVIRONMENT
@@ -9,6 +20,14 @@
   - After Vercel: patches Auth0 SPA callback URLs (if AUTH0_MGMT_TOKEN set)
 - One-time per app: `python deploy/auth0_setup.py --app-name <name>`
 - All 40 apps share one Auth0 tenant; each gets its own Application + API
+⬜ TODO for FO codebase
+
+29. Railway env var three-tier fallback: API → CLI → console paste
+- GraphQL `variableUpsert` fails for project tokens and some personal tokens.
+- Tier 1: `variableCollectionUpsert` (bulk GraphQL)
+- Tier 2: `railway variables --set` CLI via subprocess with RAILWAY_TOKEN env var
+- Tier 3: print failed vars + dashboard URL to console for manual paste
+- Applies to both initial .env vars (railway_deploy.py) and post-Vercel CORS/ENVIRONMENT (pipeline_deploy.py)
 ⬜ TODO for FO codebase
 
 28. Railway variableCollectionUpsert fallback
