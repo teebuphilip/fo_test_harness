@@ -445,6 +445,7 @@ def push_to_github(
     _ensure_gitignore(repo_path)
     _ensure_frontend_business_config(repo_path)
     _ensure_business_pages_in_src(repo_path)
+    _ensure_railway_toml(repo_path)
 
     # ── Commit and push ──────────────────────────────────────
     _git(repo_path, "add -A")
@@ -517,6 +518,26 @@ def _ensure_frontend_business_config(repo_path: Path):
     # Force-add in case frontend/.gitignore excludes it.
     _git(repo_path, f"add -f -- {cfg_rel.as_posix()}", required=False)
     print("  [pipeline] Ensured frontend business_config.json is staged for push")
+
+
+def _ensure_railway_toml(repo_path: Path):
+    """
+    Write railway.toml at repo root pointing Railway at business/backend.
+    WHY: Railpack scans repo root and can't find Python app without this.
+    Overwrites every time so it stays correct even if manually edited.
+    """
+    toml_path = repo_path / "railway.toml"
+    content = (
+        '[build]\n'
+        'builder = "nixpacks"\n'
+        '\n'
+        '[deploy]\n'
+        'startCommand = "cd business/backend && uvicorn main:app --host 0.0.0.0 --port $PORT"\n'
+        'restartPolicyType = "ON_FAILURE"\n'
+        'restartPolicyMaxRetries = 10\n'
+    )
+    toml_path.write_text(content)
+    print("  [pipeline] railway.toml written (root → business/backend)")
 
 
 def _ensure_business_pages_in_src(repo_path: Path):
