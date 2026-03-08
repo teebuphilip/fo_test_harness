@@ -1100,9 +1100,25 @@ def main():
                     except Exception:
                         failed[k] = v
                 if failed:
-                    dashboard_url = f"https://railway.app/project/{r_proj_id}"
-                    print(f"  [Railway] Could not set via API — paste into Railway dashboard:")
-                    print(f"  [Railway] {dashboard_url}")
+                    import subprocess as _sp, shutil as _sh
+                    cli = _sh.which("railway")
+                    if cli:
+                        still_failed = {}
+                        for k, v in failed.items():
+                            res = _sp.run(
+                                [cli, "variables", "--set", f"{k}={v}",
+                                 "--project", r_proj_id, "--service", r_svc_id],
+                                capture_output=True, text=True, timeout=30,
+                                env={**os.environ, "RAILWAY_TOKEN": railway_token}
+                            )
+                            if res.returncode == 0:
+                                print(f"  [Railway] CLI set: {k}")
+                            else:
+                                still_failed[k] = v
+                        failed = still_failed
+                if failed:
+                    print(f"  [Railway] Could not set via API or CLI — paste into Railway dashboard:")
+                    print(f"  [Railway] https://railway.app/project/{r_proj_id}")
                     for k, v in failed.items():
                         print(f"  {k}={v}")
                 else:

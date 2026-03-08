@@ -450,10 +450,33 @@ def deploy_backend(
                 api.set_variable(project_id, service_id, key, value, environment_id=env_id)
             except Exception:
                 failed_vars[key] = value
+
+        # Fallback: try Railway CLI for any vars that failed via API
+        if failed_vars:
+            import subprocess, shutil
+            cli = shutil.which("railway")
+            if cli:
+                print(f"  [Railway] API failed — trying Railway CLI for {len(failed_vars)} var(s)...")
+                cli_failed = {}
+                for key, value in failed_vars.items():
+                    try:
+                        result = subprocess.run(
+                            [cli, "variables", "--set", f"{key}={value}",
+                             "--project", project_id, "--service", service_id],
+                            capture_output=True, text=True, timeout=30,
+                            env={**__import__("os").environ, "RAILWAY_TOKEN": api.token}
+                        )
+                        if result.returncode != 0:
+                            cli_failed[key] = value
+                        else:
+                            print(f"  [Railway] CLI set: {key}")
+                    except Exception:
+                        cli_failed[key] = value
+                failed_vars = cli_failed
+
         if failed_vars:
             dashboard_url = f"https://railway.app/project/{project_id}"
-            print(f"\n  [Railway] ⚠️  Could not set {len(failed_vars)} variable(s) via API.")
-            print(f"  [Railway] Paste these into the Railway dashboard → Variables tab:")
+            print(f"\n  [Railway] Could not set {len(failed_vars)} var(s) — paste into Railway dashboard:")
             print(f"  [Railway] {dashboard_url}")
             print(f"  {'─'*56}")
             for k, v in failed_vars.items():
