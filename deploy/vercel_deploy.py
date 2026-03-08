@@ -130,7 +130,8 @@ class VercelAPI:
         target: list = None,
     ) -> dict:
         """
-        Set an environment variable on a Vercel project.
+        Upsert an environment variable on a Vercel project.
+        Creates if new, patches existing if already present (handles 400/409).
 
         Args:
             target: List of environments: ["production", "preview", "development"]
@@ -148,10 +149,26 @@ class VercelAPI:
             json=payload,
             params=self._params()
         )
-        # 409 = already exists, that's fine
-        if resp.status_code not in (200, 201, 409):
-            resp.raise_for_status()
-        return resp.json() if resp.status_code != 409 else {"skipped": True}
+        if resp.status_code in (200, 201):
+            return resp.json()
+        # 400 or 409 = already exists — fetch the env var ID and PATCH it
+        if resp.status_code in (400, 409):
+            existing = self.session.get(
+                f"{VERCEL_API}/v9/projects/{project_id}/env",
+                params=self._params()
+            )
+            if existing.ok:
+                for env in existing.json().get("envs", []):
+                    if env.get("key") == key:
+                        env_id = env["id"]
+                        patch = self.session.patch(
+                            f"{VERCEL_API}/v9/projects/{project_id}/env/{env_id}",
+                            json=payload,
+                            params=self._params()
+                        )
+                        return patch.json() if patch.ok else {"skipped": True}
+            return {"skipped": True}
+        resp.raise_for_status()
 
     def trigger_deploy(self, project_name: str, github_repo: str, branch: str = "main") -> dict:
         """
