@@ -25,8 +25,10 @@
 30. repo_setup.py — grant Railway + Vercel GitHub App access to a repo
 - Railway errors "Repository not found or not accessible" because Railway's GitHub App
   isn't granted access to the repo. Must be done before pipeline_deploy runs.
-- `deploy/repo_setup.py`: calls GitHub API to grant Railway + Vercel app access.
-  Reads from ACCESSKEYS automatically. Run once per new repo.
+- `GET /user/installations` API fails with 403 for PATs (requires special OAuth scope).
+- `deploy/repo_setup.py`: verifies repo exists via GitHub API, then opens
+  github.com/settings/installations in browser with printed step-by-step instructions.
+- Reads GITHUB_USERNAME + token from ACCESSKEYS automatically. Run once per new repo.
 ⬜ TODO for FO codebase
 
 29. Railway env var three-tier fallback: API → CLI → console paste

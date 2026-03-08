@@ -93,39 +93,25 @@ def main():
         print(f"  [GitHub] ERROR: could not find repo — {e}")
         sys.exit(1)
 
-    # List installed GitHub Apps
-    print(f"  [GitHub] Fetching GitHub App installations...")
-    try:
-        installations = get_installations(token)
-    except Exception as e:
-        print(f"  [GitHub] ERROR: could not list installations — {e}")
-        sys.exit(1)
+    # GitHub API can't list installations with a PAT — open browser instead
+    import subprocess, platform
+    print(f"\n  [GitHub] Opening Railway + Vercel settings in your browser...")
+    print(f"  [GitHub] For each app — click Configure → add '{repo}' → Save\n")
 
-    if not installations:
-        print("  [GitHub] No GitHub App installations found on your account.")
-        sys.exit(1)
+    urls = [
+        f"https://github.com/settings/installations",
+    ]
+    for url in urls:
+        if platform.system() == "Darwin":
+            subprocess.run(["open", url])
+        else:
+            print(f"  Open this URL: {url}")
 
-    found = {i["app_slug"]: i for i in installations}
-    print(f"  [GitHub] Found {len(installations)} installation(s): {', '.join(found.keys())}")
-
-    # Grant access for each target app
-    for app in APPS_TO_GRANT:
-        if app not in found:
-            print(f"  [GitHub] {app}: not installed on your account — skipping")
-            continue
-        installation_id = found[app]["id"]
-        print(f"  [GitHub] Granting {app} (installation {installation_id}) access to {repo}...")
-        try:
-            ok = grant_repo_to_installation(token, installation_id, repo_id)
-            if ok:
-                print(f"  [GitHub] {app}: access granted ✓")
-            else:
-                print(f"  [GitHub] {app}: already has access or no change needed")
-        except Exception as e:
-            print(f"  [GitHub] {app}: ERROR — {e}")
-
-    print(f"\n{'='*60}")
-    print(f"Done. Railway and Vercel can now access {username}/{repo}.")
+    print(f"{'='*60}")
+    print(f"Steps:")
+    print(f"  1. Find 'Railway App' → click Configure → add '{repo}'")
+    print(f"  2. Find 'Vercel'      → click Configure → add '{repo}'")
+    print(f"  3. Save both, then re-run pipeline_deploy.py")
     print(f"{'='*60}\n")
 
 
