@@ -64,22 +64,22 @@ def grant_repo_to_installation(token: str, installation_id: int, repo_id: int) -
 
 def main():
     parser = argparse.ArgumentParser(description="Grant Railway + Vercel GitHub App access to a repo")
-    parser.add_argument("--repo",     required=True, help="Repo name e.g. wynwood-thoroughbreds")
-    parser.add_argument("--username", default=None,  help="GitHub username (or set GITHUB_USERNAME)")
-    parser.add_argument("--token",    default=None,  help="GitHub token (or set GITHUB_TOKEN)")
+    parser.add_argument("--repo",  required=True, help="Repo name or full local path e.g. ~/Documents/work/wynwood-thoroughbreds")
+    parser.add_argument("--token", default=None,  help="GitHub token (or set GITHUB_TOKEN)")
     args = parser.parse_args()
 
-    token    = args.token    or load_credential("GITHUB_TOKEN",    "TEEBUGITHUBPERSONALACCESSTOKEN")
-    username = args.username or load_credential("GITHUB_USERNAME", "GITHUB_USERNAME")
+    token    = args.token or load_credential("GITHUB_TOKEN", "TEEBUGITHUBPERSONALACCESSTOKEN")
+    username = load_credential("GITHUB_USERNAME", "GITHUB_USERNAME")
 
     if not token:
         print("ERROR: set GITHUB_TOKEN or put token in ~/Downloads/ACCESSKEYS/TEEBUGITHUBPERSONALACCESSTOKEN")
         sys.exit(1)
     if not username:
-        print("ERROR: set GITHUB_USERNAME or provide --username")
+        print("ERROR: set GITHUB_USERNAME env var or add GITHUB_USERNAME file to ACCESSKEYS")
         sys.exit(1)
 
-    repo = args.repo.strip()
+    # Accept full local path or bare repo name
+    repo = Path(args.repo.strip()).expanduser().resolve().name
     print(f"\n{'='*60}")
     print(f"Repo Setup: {username}/{repo}")
     print(f"{'='*60}\n")
