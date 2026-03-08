@@ -198,6 +198,18 @@ class RailwayAPI:
         })
         return True
 
+    def set_root_directory(self, service_id: str, root_directory: str) -> bool:
+        """Set the root directory for a service (e.g. 'business/backend')."""
+        q = """
+        mutation ServiceUpdate($id: String!, $input: ServiceUpdateInput!) {
+            serviceUpdate(id: $id, input: $input) {
+                id
+            }
+        }
+        """
+        self._query(q, {"id": service_id, "input": {"rootDirectory": root_directory}})
+        return True
+
     def get_environment_id(self, project_id: str) -> str:
         """
         Resolve a deployable environment ID for a project.
@@ -426,6 +438,14 @@ def deploy_backend(
         print(f"  [Railway] Service created: {service_id}")
     else:
         print(f"  [Railway] Reusing service: {service_id}")
+
+    # ── Step 3b: Set root directory to business/backend ────
+    print("  [Railway] Setting root directory: business/backend...")
+    try:
+        api.set_root_directory(service_id, "business/backend")
+        print("  [Railway] Root directory set.")
+    except Exception as e:
+        print(f"  [Railway] Root directory note: {e}")
 
     # ── Step 4: Add PostgreSQL ──────────────────────────────
     if add_postgres and not (railway_config or {}).get("postgres_added"):

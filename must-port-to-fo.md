@@ -1,5 +1,14 @@
 # Must Port to FO
 
+## Deploy Pipeline (additions 2026-03-08)
+
+37. railway_deploy.py — set root directory to business/backend
+- Railway Railpack scans repo root → can't find Python app → build fails with "could not determine how to build".
+- Fix: `RailwayAPI.set_root_directory(service_id, "business/backend")` via `serviceUpdate` GraphQL mutation.
+- Called as Step 3b in deploy_backend(), after service create/reuse, before env vars.
+- Files: `deploy/railway_deploy.py` (new method + call)
+⬜ TODO for FO codebase
+
 ## Build Pipeline (2026-03-08)
 
 36. Consistency fallthrough with HIGH issues → full-build fix, not QA passthrough

@@ -2,6 +2,15 @@
 
 ## 2026-03-08
 
+### fix: railway_deploy.py — set root directory to business/backend
+
+Railway's Railpack scans repo root and can't find the Python app because
+the backend lives in `business/backend/`. Added `serviceUpdate` mutation
+call after service create/reuse to set `rootDirectory = "business/backend"`.
+
+- `RailwayAPI.set_root_directory(service_id, root_directory)` — new method
+- Called in `deploy_backend()` as Step 3b, before env vars and deploy trigger
+
 ### fix: consistency fallthrough with HIGH issues escalates to full-build fix (not QA passthrough)
 
 Root cause: on consistency hard cap (4 iters), harness cleared all defect context and fell
