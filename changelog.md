@@ -2,6 +2,16 @@
 
 ## 2026-03-08
 
+### feat: auth0_setup.py + auto Auth0 URL patch in pipeline_deploy
+
+- `deploy/auth0_setup.py`: creates Auth0 SPA Application + API via Management API,
+  saves credentials to `~/Downloads/ACCESSKEYS/auth0_<app-name>.env`
+- `deploy/pipeline_deploy.py`: after Vercel URL is resolved, automatically patches
+  Auth0 callback/logout/web_origins if `AUTH0_MGMT_TOKEN` env var is set and the
+  ACCESSKEYS file exists for the app — no second manual command needed
+- One-time setup per app: `python deploy/auth0_setup.py --domain ... --mgmt-token ... --app-name ...`
+- Ongoing: set `AUTH0_MGMT_TOKEN` in env, pipeline handles the rest
+
 ### fix: set CI=false in Vercel deploy to prevent ESLint warnings failing build
 
 Vercel sets `CI=true` by default, which causes `react-scripts build` to treat all ESLint
