@@ -22,6 +22,13 @@
 - All 40 apps share one Auth0 tenant; each gets its own Application + API
 ⬜ TODO for FO codebase
 
+30. repo_setup.py — grant Railway + Vercel GitHub App access to a repo
+- Railway errors "Repository not found or not accessible" because Railway's GitHub App
+  isn't granted access to the repo. Must be done before pipeline_deploy runs.
+- `deploy/repo_setup.py`: calls GitHub API to grant Railway + Vercel app access.
+  Reads from ACCESSKEYS automatically. Run once per new repo.
+⬜ TODO for FO codebase
+
 29. Railway env var three-tier fallback: API → CLI → console paste
 - GraphQL `variableUpsert` fails for project tokens and some personal tokens.
 - Tier 1: `variableCollectionUpsert` (bulk GraphQL)

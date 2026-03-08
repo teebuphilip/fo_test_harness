@@ -12,6 +12,11 @@
 - The right deploy sequence for a new app is: Auth0 setup → Railway (with Auth0 vars) →
   Vercel → patch Railway CORS with Vercel URL → patch Auth0 callbacks with Vercel URL.
   All of this can and should be automated in the pipeline — any step left manual will be forgotten.
+- "Repository not found or not accessible" in Railway is a GitHub App permission issue, not
+  a code or token issue. Railway's GitHub App must be explicitly granted access to each repo
+  via GitHub Settings → Applications → Railway → Configure. This can be done via GitHub API:
+  `PUT /user/installations/{installation_id}/repositories/{repo_id}`. Run repo_setup.py once
+  per new repo before pipeline_deploy, otherwise Railway cannot pull code OR set env vars.
 - When Railway GraphQL API is unauthorized for env var setting, the CLI (`railway variables --set`)
   works fine with the same `RAILWAY_TOKEN` env var. Always check if the CLI is installed before
   giving up on programmatic var setting. The CLI is installed by default in most Node environments

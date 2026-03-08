@@ -26,6 +26,18 @@ python fo_test_harness.py <intake> --resume-run <run_dir> --resume-iteration 19 
 Validated on AWI downloadable report ZIP — caught all 4 bugs found by manual review:
 missing assessments route, client.email field gap, assessment.title field gap, missing PDF library.
 
+### feat: repo_setup.py — grant Railway + Vercel GitHub App access via API
+
+Root cause of "Repository not found or not accessible" errors in Railway:
+Railway's GitHub App wasn't granted access to the repo. Previously required
+clicking through GitHub Settings → Applications → Railway → Configure.
+
+- `deploy/repo_setup.py`: new script that grants Railway + Vercel GitHub App
+  access to a repo via GitHub API (`PUT /user/installations/{id}/repositories/{repo_id}`)
+- Reads token from `ACCESSKEYS/TEEBUGITHUBPERSONALACCESSTOKEN` automatically
+- Usage: `python deploy/repo_setup.py --repo wynwood-thoroughbreds --username teebuphilip`
+- Should be run once per new repo before pipeline_deploy
+
 ### fix: Railway CLI fallback for env var setting + console paste fallback
 
 Railway GraphQL API (`variableUpsert`) is unauthorized for project tokens and some
