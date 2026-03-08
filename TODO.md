@@ -16,6 +16,14 @@
   - Refactor `_run_static_check()` to load rules by profile and fall back safely to current defaults when rules are missing/invalid.
   - Keep intake-aware checks (KPI/download-export) in Python logic for now; only policy/toggles move to config.
   - Validate against known-good and known-bad artifact runs before enabling additional profiles.
+- Continue false-positive static-check hardening (Item #1):
+  - Add targeted exclusions for dynamic framework behavior beyond CHECK 10 (ORM constructors).
+  - Require every new static rule to be validated against known-good artifacts before enabling.
+  - Add quick per-check kill-switch/toggle support to isolate regressions fast.
+- Quality-gate redundancy tuning (Item #4):
+  - Keep Gate 4 enabled, but avoid duplicate defect classes already covered by static/consistency.
+  - Add quality-issue de-duplication against Gate 2/3 issue fingerprints before creating fix payloads.
+  - Consider running Gate 4 only on "stable" iterations (e.g., after first clean 2+3 pass), while preserving final strict pass requirement.
 
 - feature_adder.py — incremental feature build tool:
   - Companion to phase_planner.py for adding a single new feature to an already-deployed project.
