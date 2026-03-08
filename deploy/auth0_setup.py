@@ -145,8 +145,8 @@ def main():
     parser.add_argument("--client-id",    default=None,  help="Existing client ID (required with --update-urls)")
     args = parser.parse_args()
 
-    domain = (args.domain or os.getenv("AUTH0_DOMAIN", "")).strip()
-    token  = (args.mgmt_token or os.getenv("AUTH0_KEY", "")).strip()
+    domain = "".join((args.domain or os.getenv("AUTH0_DOMAIN", "")).split())
+    token  = "".join((args.mgmt_token or os.getenv("AUTH0_KEY", "")).split())
     app_name = args.app_name.strip()
 
     if not domain:
