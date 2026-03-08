@@ -5531,10 +5531,12 @@ class FOHarness:
                         defect_target_files = self._extract_defect_target_files(previous_defects) if previous_defects else []
 
                     # Select prompt:
-                    #   integration / consistency → surgical patch WITH current file contents
-                    #   static / quality / compile → pattern-based patch (boilerplate reference)
+                    #   all targeted fix sources → surgical patch WITH current file contents
                     #   feature QA → full build prompt
-                    if defect_source in ('integration', 'consistency') and previous_defects:
+                    # Surgical patch is always strictly better: Claude sees the exact file and
+                    # patches only what the defect specifies. Without file contents Claude
+                    # reconstructs from memory → drops methods/fields → cascades new defects.
+                    if defect_source in ('static', 'consistency', 'quality', 'compile', 'integration') and previous_defects:
                         # Governance section for caching (no defects passed in — defects go in dynamic only)
                         governance_section, _ = PromptTemplates.build_prompt(
                             self.block, self.intake_data, self.build_governance,
@@ -5557,23 +5559,6 @@ class FOHarness:
                             current_file_contents=_current_file_contents,
                         )
                         print_info(f"  [{_source_label}] Using surgical patch prompt for {len(defect_target_files)} target file(s)")
-                    elif defect_source in ('static', 'quality', 'compile') and previous_defects:
-                        # Governance section for caching (no defects passed in — defects go in dynamic only)
-                        governance_section, _ = PromptTemplates.build_prompt(
-                            self.block, self.intake_data, self.build_governance,
-                            iteration, self.max_qa_iterations, None,
-                            self.tech_stack_override, self.external_integration_override,
-                            self.startup_id, self.effective_tech_stack, [], []
-                        )
-                        # Pattern-based patch — boilerplate import reference, output only target files
-                        dynamic_section = PromptTemplates.static_fix_prompt(
-                            static_defects=previous_defects,
-                            required_file_inventory=required_file_inventory,
-                            defect_target_files=defect_target_files,
-                            prohibitions_block=prohibitions_block
-                        )
-                        _source_label = defect_source.upper()
-                        print_info(f"  [{_source_label}] Using pattern-based patch prompt for {defect_source} defects")
                     else:
                         # FIX #1 & #4: Get prompt sections and dynamic token limit
                         governance_section, dynamic_section = PromptTemplates.build_prompt(

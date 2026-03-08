@@ -2,6 +2,20 @@
 
 ## 2026-03-08
 
+### fix: surgical patch applied to ALL targeted fix types (static/consistency/quality/compile/integration)
+
+All non-QA defect sources now use the same surgical patch approach — current file contents
+passed to Claude for every targeted fix, regardless of defect type. Previous split
+(consistency+integration → surgical, static+quality+compile → pattern-based) was wrong:
+even for wrong-import or missing-method static defects, seeing the actual file prevents
+accidental restructuring. The boilerplate reference in the governance section already
+covers pattern guidance — the file content is the missing piece for ALL patch types.
+
+- Single prompt branch for all defect sources: `integration_fix_prompt()` with `_read_target_file_contents()`
+- `build_integration_fix.md` renamed conceptually to generic "SURGICAL PATCH" — header updated,
+  added Tenancy import reference + `Depends(get_current_user)` rule from old static_fix template
+- `_read_target_file_contents(iteration, target_files)` helper shared across all sources
+
 ### fix: surgical patch extended to consistency fixes + _read_target_file_contents helper
 
 Same root cause as integration fix churn: consistency patch prompt had no current file contents

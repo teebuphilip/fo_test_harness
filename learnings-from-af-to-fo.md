@@ -18,8 +18,11 @@
   prompt or defect_source. They need their own route so their fix doesn't collide with the static gate.
 - Consistency fixes have the same need as integration fixes: current file contents in the prompt.
   Without them, Claude rewrites service/model files from memory and drops existing methods — turning
-  a 1-issue consistency fix into 6 new static defects. The split is: consistency+integration → surgical
-  (file contents passed); static+quality+compile → pattern-based (boilerplate reference only).
+  a 1-issue consistency fix into 6 new static defects.
+- There is no defect type for which showing Claude the current file content is wrong. The boilerplate
+  reference (which import to use, which Base class) is already in the governance section — that covers
+  pattern guidance. The file content covers method/field preservation. ALL targeted patch types need both.
+  The final correct split: ALL non-QA sources → surgical (file contents); feature QA → full build prompt.
 
 ## Latest Learnings (2026-03-08, session 9)
 

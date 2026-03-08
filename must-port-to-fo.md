@@ -2,6 +2,15 @@
 
 ## Build Pipeline (2026-03-08)
 
+34. Surgical patch for ALL targeted fix types (static/consistency/quality/compile/integration)
+- All non-QA defect sources now use the same surgical patch: current file contents passed
+  to Claude for every targeted fix. The previous static→pattern-based split was wrong.
+- Single branch, single prompt (integration_fix_prompt / build_integration_fix.md).
+- build_integration_fix.md header updated to generic "SURGICAL PATCH", added Tenancy + auth
+  import rules from old static_fix template so nothing is lost.
+- Files: `fo_test_harness.py` (collapsed to single branch), `directives/prompts/build_integration_fix.md`
+⬜ TODO for FO codebase
+
 33. Consistency fix — surgical patch with current file contents (extends item 32)
 - Same root cause as integration: consistency patch had no current file contents → Claude
   rewrote service files from memory → dropped existing methods → static gate looped.
