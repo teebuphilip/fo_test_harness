@@ -444,12 +444,23 @@ def deploy_backend(
         env_id = (railway_config or {}).get("environment_id") or api.get_environment_id(project_id)
         if not env_id:
             print("  [Railway] WARNING: could not resolve environment_id — vars may not be set")
+        failed_vars = {}
         for key, value in env_vars.items():
             try:
                 api.set_variable(project_id, service_id, key, value, environment_id=env_id)
-            except Exception as e:
-                print(f"  [Railway] WARNING: could not set {key}: {e}")
-        print(f"  [Railway] Variables set.")
+            except Exception:
+                failed_vars[key] = value
+        if failed_vars:
+            dashboard_url = f"https://railway.app/project/{project_id}"
+            print(f"\n  [Railway] ⚠️  Could not set {len(failed_vars)} variable(s) via API.")
+            print(f"  [Railway] Paste these into the Railway dashboard → Variables tab:")
+            print(f"  [Railway] {dashboard_url}")
+            print(f"  {'─'*56}")
+            for k, v in failed_vars.items():
+                print(f"  {k}={v}")
+            print(f"  {'─'*56}\n")
+        else:
+            print(f"  [Railway] Variables set.")
     else:
         print("  [Railway] No .env file or no filled variables - skipping")
 

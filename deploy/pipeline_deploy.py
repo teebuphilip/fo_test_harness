@@ -1092,9 +1092,21 @@ def main():
             r_env_id   = railway_cfg.get("environment_id") or r_api.get_environment_id(r_proj_id)
             if r_proj_id and r_svc_id:
                 print("\n  [Railway] Setting CORS_ORIGINS + ENVIRONMENT=production...")
-                r_api.set_variable(r_proj_id, r_svc_id, "CORS_ORIGINS", final_frontend_url, environment_id=r_env_id)
-                r_api.set_variable(r_proj_id, r_svc_id, "ENVIRONMENT", "production", environment_id=r_env_id)
-                print("  [Railway] CORS + ENVIRONMENT set.")
+                post_vars = {"CORS_ORIGINS": final_frontend_url, "ENVIRONMENT": "production"}
+                failed = {}
+                for k, v in post_vars.items():
+                    try:
+                        r_api.set_variable(r_proj_id, r_svc_id, k, v, environment_id=r_env_id)
+                    except Exception:
+                        failed[k] = v
+                if failed:
+                    dashboard_url = f"https://railway.app/project/{r_proj_id}"
+                    print(f"  [Railway] Could not set via API — paste into Railway dashboard:")
+                    print(f"  [Railway] {dashboard_url}")
+                    for k, v in failed.items():
+                        print(f"  {k}={v}")
+                else:
+                    print("  [Railway] CORS + ENVIRONMENT set.")
         except Exception as e:
             print(f"  [Railway] WARNING: could not set CORS/ENVIRONMENT: {e}")
 
