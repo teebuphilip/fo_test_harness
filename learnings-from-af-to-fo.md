@@ -23,6 +23,11 @@
   reference (which import to use, which Base class) is already in the governance section — that covers
   pattern guidance. The file content covers method/field preservation. ALL targeted patch types need both.
   The final correct split: ALL non-QA sources → surgical (file contents); feature QA → full build prompt.
+- The 8192 patch token cap breaks down as soon as ≥2 files need to be output. With current file contents
+  now in the prompt (necessary for surgical patches), each output file is full-size — Claude cannot
+  compress all of them into 8192 tokens without dropping content. Observed: ReportService 4731→2256 chars,
+  assessments.py 2285→1060 chars after a "fix". The token cap must scale with target file count:
+  1 file → 8192 (safe), ≥2 files → 16384 (necessary).
 
 ## Latest Learnings (2026-03-08, session 9)
 

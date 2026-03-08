@@ -74,17 +74,19 @@ class Config:
     CLAUDE_MAX_TOKENS_PATCH   = 8192   # Patch iters: 1-3 files only; 8192 is ample, saves ~$0.12/iter
 
     @classmethod
-    def get_max_tokens(cls, iteration: int, defect_source: str = 'qa') -> int:
+    def get_max_tokens(cls, iteration: int, defect_source: str = 'qa',
+                       n_target_files: int = 1) -> int:
         """
         Return 16384 for full-build iterations (QA-driven or first build).
-        Return 8192 for targeted patch iterations (static/consistency/quality/compile fix)
-        where Claude outputs only 1-3 defect-target files — full 16k is wasteful.
-
-        Savings: ~$0.12 per patch iter (output tokens halved: 16384→8192 × $15/M).
-        On a 10-patch build: ~$1.20 saved vs always using max.
+        Return 8192 for single-file targeted patch iterations.
+        Return 16384 for multi-file patch iterations (≥2 target files) — surgical patches
+        now include current file contents in the prompt, so each output file is full-size.
+        Truncating to 8192 on multi-file patches causes Claude to compress/drop content.
         """
         if defect_source in ('static', 'consistency', 'quality', 'compile', 'integration'):
-            return cls.CLAUDE_MAX_TOKENS_PATCH
+            if n_target_files >= 2:
+                return cls.CLAUDE_MAX_TOKENS_DEFAULT  # 16384 — multi-file needs full room
+            return cls.CLAUDE_MAX_TOKENS_PATCH         # 8192 — single file, safe to cap
         return cls.CLAUDE_MAX_TOKENS_BY_ITERATION.get(
             iteration,
             cls.CLAUDE_MAX_TOKENS_DEFAULT
@@ -5580,7 +5582,7 @@ class FOHarness:
                     # FIX #4: Dynamic max tokens based on iteration + defect_source
                     # Patch iterations (static/consistency/quality/compile fix) only output
                     # 1-3 files — use 8192 instead of 16384 to save ~$0.12/iter.
-                    max_tokens = Config.get_max_tokens(iteration, defect_source)
+                    max_tokens = Config.get_max_tokens(iteration, defect_source, len(defect_target_files))
 
                     # FIX #6: Dynamic timeout based on iteration (first call needs more time)
                     request_timeout = Config.get_request_timeout(iteration)

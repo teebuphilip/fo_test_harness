@@ -2,6 +2,17 @@
 
 ## 2026-03-08
 
+### fix: dynamic token limit for multi-file surgical patches (8192→16384 when ≥2 target files)
+
+With surgical patches now including current file contents in the prompt, 8192 output tokens
+is insufficient when fixing ≥2 files simultaneously. Claude compresses/drops methods to fit
+(ReportService.py shrank 4731→2256 chars, assessments.py 2285→1060) — creating new defects
+instead of fixing old ones.
+
+`Config.get_max_tokens(iteration, defect_source, n_target_files)` now accepts file count:
+- 1 target file → 8192 tokens (single file, safe to cap, saves ~$0.12/iter)
+- ≥2 target files → 16384 tokens (each file needs full room, can't compress)
+
 ### fix: surgical patch applied to ALL targeted fix types (static/consistency/quality/compile/integration)
 
 All non-QA defect sources now use the same surgical patch approach — current file contents

@@ -2,6 +2,13 @@
 
 ## Build Pipeline (2026-03-08)
 
+35. Dynamic token limit for multi-file surgical patches
+- get_max_tokens() now takes n_target_files: 1 file → 8192, ≥2 files → 16384.
+- With current file contents in the prompt, 8192 output tokens forces Claude to compress
+  complete files to fit — dropping methods/logic and creating new defects.
+- Files: `fo_test_harness.py` (Config.get_max_tokens signature + call site)
+⬜ TODO for FO codebase
+
 34. Surgical patch for ALL targeted fix types (static/consistency/quality/compile/integration)
 - All non-QA defect sources now use the same surgical patch: current file contents passed
   to Claude for every targeted fix. The previous static→pattern-based split was wrong.
