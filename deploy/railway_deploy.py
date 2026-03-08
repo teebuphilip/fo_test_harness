@@ -161,13 +161,33 @@ class RailwayAPI:
         return data["pluginCreate"]
 
     def set_variable(self, project_id: str, service_id: str, name: str, value: str, environment_id: str = None) -> bool:
-        """Set a single environment variable on a service."""
+        """Set a single environment variable on a service. Tries bulk upsert first, falls back to single."""
+        # Try variableCollectionUpsert (bulk) — avoids GitHub repo validation in some token types
+        if environment_id:
+            q_bulk = """
+            mutation VariableCollectionUpsert($input: VariableCollectionUpsertInput!) {
+                variableCollectionUpsert(input: $input)
+            }
+            """
+            try:
+                self._query(q_bulk, {
+                    "input": {
+                        "projectId": project_id,
+                        "serviceId": service_id,
+                        "environmentId": environment_id,
+                        "variables": {name: value},
+                    }
+                })
+                return True
+            except Exception:
+                pass  # fall through to single upsert
+
         q = """
         mutation VariableUpsert($input: VariableUpsertInput!) {
             variableUpsert(input: $input)
         }
         """
-        variables = {
+        self._query(q, {
             "input": {
                 "projectId": project_id,
                 "serviceId": service_id,
@@ -175,8 +195,7 @@ class RailwayAPI:
                 "name": name,
                 "value": value,
             }
-        }
-        self._query(q, variables)
+        })
         return True
 
     def get_environment_id(self, project_id: str) -> str:
