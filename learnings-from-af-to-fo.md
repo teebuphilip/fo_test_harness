@@ -12,6 +12,10 @@
 - The right deploy sequence for a new app is: Auth0 setup → Railway (with Auth0 vars) →
   Vercel → patch Railway CORS with Vercel URL → patch Auth0 callbacks with Vercel URL.
   All of this can and should be automated in the pipeline — any step left manual will be forgotten.
+- Railway's `variableUpsert` GraphQL mutation validates GitHub repo access even though
+  setting env vars has nothing to do with GitHub. This causes "Repository not accessible"
+  errors for tokens that can deploy but don't have GitHub integration permissions. The
+  `variableCollectionUpsert` bulk mutation bypasses this check. Always try bulk first.
 - Railway env vars set via API do NOT immediately trigger a redeploy in all account types.
   Setting CORS_ORIGINS after Vercel is up is safe but may require a manual redeploy in Railway
   dashboard to take effect if the service doesn't auto-restart on var changes.

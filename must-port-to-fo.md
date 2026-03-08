@@ -11,6 +11,13 @@
 - All 40 apps share one Auth0 tenant; each gets its own Application + API
 ⬜ TODO for FO codebase
 
+28. Railway variableCollectionUpsert fallback
+- `variableUpsert` fails with "Repository not accessible" for some Railway token types
+  even when deploy/trigger works. The mutation validates GitHub repo access unnecessarily.
+- Fix: try `variableCollectionUpsert` (bulk mutation) first — bypasses GitHub validation.
+  Falls back to `variableUpsert` if bulk also fails.
+⬜ TODO for FO codebase
+
 26. railway.deploy.json stores environment_id
 - Railway GraphQL `get_environment_id` silently fails for some account types.
 - Fix: store `environment_id` in `railway.deploy.json` after first deploy.

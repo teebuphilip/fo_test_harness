@@ -2,6 +2,16 @@
 
 ## 2026-03-08
 
+### fix: Railway variableCollectionUpsert fallback for env var setting
+
+Railway's `variableUpsert` GraphQL mutation fails with "Repository not accessible"
+for some token types even when deploy/trigger works fine. Root cause: the mutation
+validates GitHub repo access which isn't required for variable setting.
+
+- `railway_deploy.py` `set_variable()`: tries `variableCollectionUpsert` (bulk) first
+  when `environment_id` is available — this bypasses the GitHub repo validation
+- Falls back to `variableUpsert` if bulk fails
+
 ### feat: full pipeline_deploy auto-wiring — Auth0, CORS, ENVIRONMENT
 
 **How the pipeline works now (end-to-end):**
