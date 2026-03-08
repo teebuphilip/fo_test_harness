@@ -1081,8 +1081,24 @@ def main():
             merged_vercel_cfg["project_id"] = vercel_result.get("project_id")
         final_frontend_url = get_existing_frontend_url(vercel_token, merged_vercel_cfg, team_id=vercel_team_id or None)
 
-    # ── Step 4: Update Auth0 callback URLs with Vercel frontend URL ──────────
+    # ── Step 4a: Push CORS_ORIGINS + ENVIRONMENT to Railway once Vercel URL known ──
     vercel_succeeded = args.backend_only or (vercel_result and vercel_result.get("success"))
+    railway_succeeded = args.frontend_only or (railway_result and railway_result.get("success"))
+    if final_frontend_url and vercel_succeeded and railway_succeeded and not args.frontend_only:
+        try:
+            r_api      = RailwayAPI(railway_token)
+            r_proj_id  = railway_cfg.get("project_id")
+            r_svc_id   = railway_cfg.get("service_id")
+            r_env_id   = railway_cfg.get("environment_id") or r_api.get_environment_id(r_proj_id)
+            if r_proj_id and r_svc_id:
+                print("\n  [Railway] Setting CORS_ORIGINS + ENVIRONMENT=production...")
+                r_api.set_variable(r_proj_id, r_svc_id, "CORS_ORIGINS", final_frontend_url, environment_id=r_env_id)
+                r_api.set_variable(r_proj_id, r_svc_id, "ENVIRONMENT", "production", environment_id=r_env_id)
+                print("  [Railway] CORS + ENVIRONMENT set.")
+        except Exception as e:
+            print(f"  [Railway] WARNING: could not set CORS/ENVIRONMENT: {e}")
+
+    # ── Step 4b: Update Auth0 callback URLs with Vercel frontend URL ──────────
     if final_frontend_url and vercel_succeeded:
         app_name    = repo_path.name
         mgmt_token  = os.getenv("AUTH0_MGMT_TOKEN")
