@@ -83,7 +83,7 @@ class Config:
         Savings: ~$0.12 per patch iter (output tokens halved: 16384→8192 × $15/M).
         On a 10-patch build: ~$1.20 saved vs always using max.
         """
-        if defect_source in ('static', 'consistency', 'quality', 'compile'):
+        if defect_source in ('static', 'consistency', 'quality', 'compile', 'integration'):
             return cls.CLAUDE_MAX_TOKENS_PATCH
         return cls.CLAUDE_MAX_TOKENS_BY_ITERATION.get(
             iteration,
@@ -2262,6 +2262,46 @@ If REJECTED: end with exactly: "QA STATUS: REJECTED - [X] defects require fixing
             required_file_inventory_bullets=required_inventory_bullets,
             defect_target_files_bullets=defect_target_bullets,
             prohibitions_block=prohibitions_block
+        )
+
+    @staticmethod
+    def integration_fix_prompt(
+        integration_defects: str,
+        required_file_inventory: list,
+        defect_target_files: list,
+        current_file_contents: dict,
+    ) -> str:
+        """
+        Generate integration fix prompt for Claude.
+        Passes CURRENT file contents so Claude patches surgically rather than
+        reconstructing from memory (which causes __tablename__/Base import regressions).
+        current_file_contents: {rel_path: file_text} for each target file.
+        """
+        required_inventory_bullets = "\n".join(f"- {p}" for p in (required_file_inventory or []))
+        if not required_inventory_bullets:
+            required_inventory_bullets = "- (no prior manifest inventory available)"
+
+        defect_target_bullets = "\n".join(f"- {p}" for p in (defect_target_files or []))
+        if not defect_target_bullets:
+            defect_target_bullets = "- (no explicit file paths found in defects; infer minimal targets)"
+
+        # Build current file content block
+        lang_map = {'py': 'python', 'jsx': 'jsx', 'js': 'jsx', 'json': 'json',
+                    'md': 'markdown', 'txt': 'text', 'css': 'css'}
+        file_blocks = []
+        for path in sorted(current_file_contents.keys()):
+            content = current_file_contents[path]
+            ext = path.rsplit('.', 1)[-1] if '.' in path else 'text'
+            lang = lang_map.get(ext, 'text')
+            file_blocks.append(f"**FILE: {path}**\n```{lang}\n{content}\n```")
+        current_file_contents_block = "\n\n".join(file_blocks) if file_blocks else "(no current file contents found — regenerate from scratch using boilerplate patterns)"
+
+        return DirectiveTemplateLoader.render(
+            'build_integration_fix.md',
+            integration_defects=integration_defects,
+            required_file_inventory_bullets=required_inventory_bullets,
+            defect_target_files_bullets=defect_target_bullets,
+            current_file_contents=current_file_contents_block,
         )
 
     @staticmethod
@@ -5240,6 +5280,48 @@ class FOHarness:
         # (used in feature-by-feature builds to carry Phase 1 QA knowledge forward)
         _prior_run_dir = Path(getattr(self.cli_args, 'prior_run', None) or '')
 
+        # ── Integration issues warm-start ──────────────────────────────────────
+        # --integration-issues seeds the first Claude fix pass with deterministic
+        # integration defects (missing routes, model field gaps, spec mismatches).
+        # After the fix pass the full QA loop runs normally.
+        _integration_issues_path = Path(getattr(self.cli_args, 'integration_issues', None) or '')
+        _integration_loaded = False
+        if _integration_issues_path.is_file():
+            try:
+                _int_data = json.loads(_integration_issues_path.read_text())
+            except Exception as e:
+                print_error(f"--integration-issues: could not parse JSON: {e}")
+                return False, "INTEGRATION_ISSUES_PARSE_ERROR"
+            _int_raw = _int_data.get('issues', [])
+            if not _int_raw:
+                print_info("  [INTEGRATION] No issues in file — skipping integration warm-start")
+            else:
+                # Convert to harness static defect format
+                _int_harness_defects = []
+                for _i, _d in enumerate(_int_raw):
+                    _int_harness_defects.append({
+                        'id':       _d.get('id', f'STATIC-INT-{_i+1}'),
+                        'severity': _d.get('severity', 'HIGH'),
+                        'file':     _d.get('file', ''),
+                        'issue':    _d.get('issue', _d.get('evidence', '')),
+                        'fix':      _d.get('fix', ''),
+                        'related_files': [f for f in _d.get('files', []) if f != _d.get('file', '')],
+                    })
+                high_n = sum(1 for d in _int_harness_defects if d['severity'] == 'HIGH')
+                print_warning(
+                    f"  [INTEGRATION] Loaded {len(_int_harness_defects)} issue(s) "
+                    f"({high_n} HIGH) from {_integration_issues_path.name}"
+                )
+                defect_source        = 'integration'
+                _raw_pending_defects = _int_harness_defects
+                previous_defects     = self._format_static_defects_for_claude(_int_harness_defects)
+                iteration            = _ws_iteration + 1
+                _integration_loaded  = True
+                print_success(
+                    f"  [INTEGRATION] Fix pass at iter {iteration} — "
+                    f"other resume-mode warm-starts suppressed"
+                )
+
         if _ws_run_dir.is_dir() and _ws_mode == 'fix':
             # Load the existing QA report as defects and jump straight to the fix iteration
             _qa_report_path = _ws_run_dir / 'qa' / f'iteration_{_ws_iteration:02d}_qa_report.txt'
@@ -5249,7 +5331,7 @@ class FOHarness:
             previous_defects = _qa_report_path.read_text()
             iteration        = _ws_iteration + 1
             print_success(f"Warm-start (fix): loaded QA report from iter {_ws_iteration} — resuming at iter {iteration}")
-        elif _ws_run_dir.is_dir() and _ws_mode == 'qa':
+        elif _ws_run_dir.is_dir() and _ws_mode == 'qa' and not _integration_loaded:
             # Jump the loop counter to the requested iteration — Claude BUILD will be skipped for it
             iteration = _ws_iteration
             print_success(f"Warm-start (qa): starting loop at iter {iteration} — Claude BUILD will be skipped")
@@ -5389,9 +5471,9 @@ class FOHarness:
                     still_truncated = False
                     print_success(f"Warm-start QA: loaded iter {iteration} artifacts — skipping Claude BUILD call")
                 if not _warm_skip_build:
-                    # For static/consistency fix iterations, extract target files from raw defect list
+                    # For static/consistency/integration fix iterations, extract target files from raw defect list
                     # (more accurate than parsing the formatted text).
-                    if defect_source in ('static', 'consistency', 'quality', 'compile') and _raw_pending_defects:
+                    if defect_source in ('static', 'consistency', 'quality', 'compile', 'integration') and _raw_pending_defects:
                         defect_target_files = sorted({
                             d.get('file', '') for d in _raw_pending_defects
                             if d.get('file', '').startswith('business/')
@@ -5428,8 +5510,38 @@ class FOHarness:
                         required_file_inventory = self._get_previous_iteration_inventory(iteration) if previous_defects else []
                         defect_target_files = self._extract_defect_target_files(previous_defects) if previous_defects else []
 
-                    # Select prompt: static/consistency fix → targeted patch; feature QA → full build prompt
-                    if defect_source in ('static', 'consistency', 'quality', 'compile') and previous_defects:
+                    # Select prompt: integration fix → surgical patch with current file contents;
+                    # static/consistency fix → targeted patch; feature QA → full build prompt
+                    if defect_source == 'integration' and previous_defects:
+                        # Governance section for caching (no defects passed in — defects go in dynamic only)
+                        governance_section, _ = PromptTemplates.build_prompt(
+                            self.block, self.intake_data, self.build_governance,
+                            iteration, self.max_qa_iterations, None,
+                            self.tech_stack_override, self.external_integration_override,
+                            self.startup_id, self.effective_tech_stack, [], []
+                        )
+                        # Read current file contents for target files so Claude patches surgically
+                        _prev_artifacts_dir = self.artifacts.build_dir / f'iteration_{iteration - 1:02d}_artifacts'
+                        _current_file_contents = {}
+                        for _tf in defect_target_files:
+                            _tf_path = _prev_artifacts_dir / _tf
+                            if _tf_path.exists():
+                                try:
+                                    _current_file_contents[_tf] = _tf_path.read_text(encoding='utf-8')
+                                except Exception:
+                                    pass
+                        if _current_file_contents:
+                            print_info(f"  [INTEGRATION] Loaded {len(_current_file_contents)} current file(s) for surgical patch")
+                        else:
+                            print_warning(f"  [INTEGRATION] No current file contents found in {_prev_artifacts_dir} — Claude will reconstruct")
+                        dynamic_section = PromptTemplates.integration_fix_prompt(
+                            integration_defects=previous_defects,
+                            required_file_inventory=required_file_inventory,
+                            defect_target_files=defect_target_files,
+                            current_file_contents=_current_file_contents,
+                        )
+                        print_info(f"  [INTEGRATION] Using surgical integration fix prompt for {len(defect_target_files)} target file(s)")
+                    elif defect_source in ('static', 'consistency', 'quality', 'compile') and previous_defects:
                         # Governance section for caching (no defects passed in — defects go in dynamic only)
                         governance_section, _ = PromptTemplates.build_prompt(
                             self.block, self.intake_data, self.build_governance,
@@ -6668,6 +6780,18 @@ Examples:
             'fix         — load QA report from --resume-iteration as defects, start Claude FIX at iter+1. '
             'static      — find last QA-accepted iter (or use --resume-iteration), run static + AI consistency checks. '
             'consistency — find last QA-accepted iter, skip static check, run AI consistency check only.'
+        )
+    )
+    parser.add_argument(
+        '--integration-issues',
+        type=str,
+        default=None,
+        metavar='JSON_FILE',
+        help=(
+            'Path to integration_issues.json produced by integration_check.py. '
+            'Seeds a targeted Claude fix pass with integration defects (missing routes, '
+            'model field gaps, spec mismatches) then runs the full QA loop. '
+            'Use with --resume-run + --resume-iteration to target the accepted iteration.'
         )
     )
     parser.add_argument(

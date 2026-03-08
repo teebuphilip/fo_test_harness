@@ -232,6 +232,8 @@ Examples:
     parser.add_argument('--feature',  required=True, help='Feature name or description to add')
     parser.add_argument('--output-dir', default=None,
                         help='Output directory (default: same dir as intake)')
+    parser.add_argument('--output', default=None,
+                        help='Full output file path (overrides --output-dir + auto-name)')
     args = parser.parse_args()
 
     intake_path = Path(args.intake)
@@ -289,26 +291,24 @@ Examples:
     )
 
     # Write output
-    output_dir = Path(args.output_dir) if args.output_dir else intake_path.parent
-    stem = intake_path.stem
-    slug = slugify(args.feature)
-    out_path = output_dir / f'{stem}_feature_{slug}.json'
+    if args.output:
+        out_path = Path(args.output)
+    else:
+        output_dir = Path(args.output_dir) if args.output_dir else intake_path.parent
+        stem = intake_path.stem
+        slug = slugify(args.feature)
+        out_path = output_dir / f'{stem}_feature_{slug}.json'
     with open(out_path, 'w') as f:
         json.dump(scoped, f, indent=2)
 
     startup_id = scoped['startup_idea_id']
+    manifest_zip = f"fo_harness_runs/{startup_id}_BLOCK_B_<timestamp>.zip"
     print(f"\nOutput: {out_path}")
     print(f"startup_idea_id: {startup_id}")
-    print(f"\nRun command:")
-    print(f"  python fo_test_harness.py \\")
-    print(f"    {out_path} \\")
-    print(f"    <build_gov.zip> \\")
-    print(f"    <deploy_gov.zip>")
+    print(f"\nRun harness:")
+    print(f"  python fo_test_harness.py {out_path} --prior-run {Path(manifest_path).with_suffix('')} --max-iterations 30 --no-polish")
     print(f"\nAfter this run succeeds, chain the next feature:")
-    print(f"  python feature_adder.py \\")
-    print(f"    --intake {intake_path} \\")
-    print(f"    --manifest fo_harness_runs/{startup_id}_BLOCK_B_<timestamp>.zip \\")
-    print(f"    --feature \"<next feature name>\"")
+    print(f"  python feature_adder.py --intake {intake_path} --manifest {manifest_zip} --feature \"<next feature name>\"")
 
 
 if __name__ == '__main__':

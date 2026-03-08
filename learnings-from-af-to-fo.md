@@ -1,5 +1,22 @@
 # Learnings From AF to FO
 
+## Latest Learnings (2026-03-08, session 10)
+
+- When a targeted fix prompt doesn't include the current file content, Claude reconstructs from memory
+  and introduces new errors even when trying to make a minimal change. 12+ iterations of static churn
+  on the AWI build were caused entirely by integration fix prompts that asked Claude to "add a column to
+  Assessment.py" without showing it what the file currently contained. Claude rewrote the whole file,
+  getting the Base import wrong each time. The fix: always pass current file text when doing surgical
+  patches. Without it, Claude invents the file and makes mistakes on boilerplate patterns.
+- Model field additions are the riskiest type of prompt for static gate stability. Adding a SQLAlchemy
+  Column to a model causes Claude to regenerate the entire class, which means every existing import,
+  `__tablename__`, and inheritance line is at risk of mutation. Hard-prohibiting those specific elements
+  in the prompt (not just "don't change other files") is essential — and showing Claude the exact current
+  file removes the need to guess.
+- Integration issues (missing model fields, missing libraries, missing KPI methods) are structurally
+  different from static issues (wrong imports, duplicate tablenames) and should not share the same fix
+  prompt or defect_source. They need their own route so their fix doesn't collide with the static gate.
+
 ## Latest Learnings (2026-03-08, session 9)
 
 - Railway's GraphQL `variableUpsert` mutation requires a real `environmentId` — passing null

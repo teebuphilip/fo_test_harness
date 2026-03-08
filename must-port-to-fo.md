@@ -2,6 +2,19 @@
 
 ## Build Pipeline (2026-03-08)
 
+32. Integration fix — surgical patch with current file contents (defect_source='integration')
+- Root cause: integration warm-start used defect_source='static' → static_fix_prompt → Claude
+  reconstructs model files from memory → wrong Base import / duplicate __tablename__ → static
+  gate loops 12+ iterations → integration issues never resolved.
+- Fix: new defect_source='integration' routes to new integration_fix_prompt() which reads actual
+  current file text from prev-iteration artifacts dir and passes it in the prompt.
+- New template: build_integration_fix.md — hard-prohibits touching __tablename__, Base import,
+  existing Columns. Claude only adds the specific fields/lines listed in the defect.
+- Config.get_max_tokens() includes 'integration' in patch group (8192 tokens, not 16384).
+- Files: `fo_test_harness.py` (defect_source, prompt branch, file-content reader),
+  `directives/prompts/build_integration_fix.md` (new template)
+⬜ TODO for FO codebase
+
 31. integration_check.py — post-build integration validator
 - Standalone script: 4 deterministic checks (no AI), outputs integration_issues.json
 - Checks: route inventory, model field refs, spec compliance, import chains

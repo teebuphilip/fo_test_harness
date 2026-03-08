@@ -2,6 +2,22 @@
 
 ## 2026-03-08
 
+### fix: integration fix pass — surgical patch with current file contents (defect_source='integration')
+
+Root cause: `--integration-issues` warm-start set `defect_source='static'`, routing into `static_fix_prompt`.
+That prompt doesn't include current file contents → Claude reconstructs model files from memory → introduces
+wrong `Base` import or duplicate `__tablename__` → static gate loops for 12+ iterations → integration issues
+never actually fixed (observed on AWI iter 20–32).
+
+Fix:
+- New `defect_source='integration'` — separate route, never confused with static churn
+- New `PromptTemplates.integration_fix_prompt()` — reads actual current file content from prev iteration
+  artifacts dir and passes it verbatim in the prompt so Claude patches surgically
+- New `directives/prompts/build_integration_fix.md` — hard-prohibits touching `__tablename__`, Base import,
+  existing Column definitions (the exact triggers of prior static gate failures)
+- `Config.get_max_tokens()` includes `'integration'` in the patch-token group (8192, not 16384)
+- Integration warm-start now prints `[INTEGRATION] Loaded N current file(s) for surgical patch`
+
 ### feat: integration_check.py + --integration-issues harness flag
 
 New standalone post-build integration validator with 4 deterministic checks (no AI):

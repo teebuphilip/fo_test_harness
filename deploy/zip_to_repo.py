@@ -95,56 +95,86 @@ def _preclean_repo_path(repo_path: Path, clean_existing: bool, hard_delete_exist
         print(f"[INFO] Deleted existing repo: {repo_path}")
 
 
+def _find_latest_business_artifacts(run_root: Path) -> Path:
+    """Find the highest-numbered iteration_XX_artifacts/business/ dir under _harness/build/."""
+    import re
+    harness_build = run_root / "_harness" / "build"
+    if not harness_build.exists():
+        return None
+    best_iter = -1
+    best_path = None
+    for d in harness_build.iterdir():
+        m = re.match(r'iteration_(\d+)_artifacts$', d.name)
+        if m:
+            n = int(m.group(1))
+            candidate = d / "business"
+            if candidate.exists() and n > best_iter:
+                best_iter = n
+                best_path = candidate
+    if best_path:
+        print(f"[INFO] Using final artifacts: iteration_{best_iter:02d}_artifacts/business")
+    return best_path
+
+
 def extract_zip(zip_path: Path, dest_root: Path) -> Path:
     """
-    1) Create empty repo folder in ~/Documents/work
-    2) Copy ZIP there
-    3) Unzip inside repo folder
-    4) Copy build/iteration_04_artifacts/business -> ./business
+    1) Extract ZIP into a temp folder inside dest_root
+    2) Locate saas-boilerplate/ and latest _harness/build/iterXX_artifacts/business/
+    3) Copy saas-boilerplate/ → repo_path/saas-boilerplate/
+    4) Copy business/ → repo_path/business/  (repo root, sibling of saas-boilerplate/)
+    5) Copy top-level docs (README etc.) to repo root
+    6) Clean up temp extraction folder
     """
+    import tempfile
     dest_root.mkdir(parents=True, exist_ok=True)
-    top = _zip_top_level_dir(zip_path)
     repo_path = _repo_path_from_zip(zip_path, dest_root)
-
     repo_path.mkdir(parents=True, exist_ok=True)
-    local_zip = repo_path / zip_path.name
-    if not local_zip.exists():
-        shutil.copy2(zip_path, local_zip)
 
-    # unzip inside repo folder
-    with zipfile.ZipFile(local_zip, "r") as z:
-        z.extractall(repo_path)
+    # Extract into a temp dir so we don't pollute the repo folder
+    with tempfile.TemporaryDirectory(dir=dest_root) as tmp:
+        tmp_path = Path(tmp)
+        with zipfile.ZipFile(zip_path, "r") as z:
+            z.extractall(tmp_path)
 
-    # copy boilerplate into repo root
-    if top:
-        run_root = repo_path / top
-    else:
-        # best-effort: find a single extracted folder
-        candidates = [p for p in repo_path.iterdir() if p.is_dir() and p.name != ".git"]
-        run_root = candidates[0] if len(candidates) == 1 else repo_path
+        # Find the top-level run dir inside the temp extraction
+        top = _zip_top_level_dir(zip_path)
+        if top:
+            run_root = tmp_path / top
+        else:
+            candidates = [p for p in tmp_path.iterdir() if p.is_dir()]
+            run_root = candidates[0] if len(candidates) == 1 else tmp_path
 
-    boilerplate_src = run_root / "boilerplate"
-    boilerplate_dest = repo_path / "boilerplate"
-    if boilerplate_src.exists():
-        if boilerplate_dest.exists():
-            shutil.rmtree(boilerplate_dest)
-        shutil.copytree(boilerplate_src, boilerplate_dest)
-    else:
-        print(f"[WARN] Boilerplate not found at: {boilerplate_src}")
+        # --- Copy saas-boilerplate/ → repo_path/saas-boilerplate/ ---
+        bp_src = run_root / "saas-boilerplate"
+        bp_dest = repo_path / "saas-boilerplate"
+        if bp_src.exists():
+            if bp_dest.exists():
+                shutil.rmtree(bp_dest)
+            shutil.copytree(bp_src, bp_dest)
+            print(f"[INFO] Copied saas-boilerplate/ to repo")
+        else:
+            print(f"[WARN] saas-boilerplate/ not found in ZIP at: {bp_src}")
 
-    # copy final artifacts into boilerplate business directory
-    src = run_root / "build" / "iteration_04_artifacts" / "business"
-    dest = repo_path / "boilerplate" / "saas-boilerplate" / "business"
-    if src.exists():
-        if dest.exists():
-            shutil.rmtree(dest)
-        shutil.copytree(src, dest)
-    else:
-        print(f"[WARN] Expected artifacts not found at: {src}")
+        # --- Copy final business/ artifacts → repo_path/business/ (sibling of saas-boilerplate/) ---
+        # The boilerplate's frontend/src/core/loader.js resolves ../../../../business/frontend/pages
+        # from saas-boilerplate/frontend/src/core → repo root → business/
+        # So business/ must sit at the repo root, NOT inside saas-boilerplate/.
+        biz_src = _find_latest_business_artifacts(run_root)
+        if biz_src and biz_src.exists():
+            biz_dest = repo_path / "business"
+            if biz_dest.exists():
+                shutil.rmtree(biz_dest)
+            shutil.copytree(biz_src, biz_dest)
+            print(f"[INFO] Copied business/ artifacts to repo root (sibling of saas-boilerplate/)")
+        else:
+            print(f"[WARN] No business/ artifacts found in ZIP")
 
-    # cleanup extracted run folder (leave boilerplate + zip)
-    if run_root != repo_path and run_root.exists():
-        shutil.rmtree(run_root)
+        # --- Copy top-level docs to repo root (README, .gitignore, etc.) ---
+        for item in run_root.iterdir():
+            if item.is_file() and item.name not in ('saas-boilerplate',):
+                dest_file = repo_path / item.name
+                if not dest_file.exists():
+                    shutil.copy2(item, dest_file)
 
     return repo_path
 
