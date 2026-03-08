@@ -838,6 +838,17 @@ def main():
         print(f"[ERROR] Repo path not found: {repo_path}")
         sys.exit(1)
 
+    # ── Step 0: Check Auth0 credentials exist ────────────────
+    app_name   = repo_path.name
+    keys_file  = Path.home() / "Downloads" / "ACCESSKEYS" / f"auth0_{app_name}.env"
+    if not keys_file.exists():
+        print(f"\n[ERROR] Auth0 credentials not found for '{app_name}'")
+        print(f"  Expected: {keys_file}")
+        print(f"\n  Run this first:")
+        print(f"    python deploy/auth0_setup.py --app-name {app_name}")
+        print()
+        sys.exit(1)
+
     if args.provider == "chatgpt" and not os.getenv("OPENAI_API_KEY"):
         print("[ERROR] OPENAI_API_KEY not set")
         sys.exit(2)
