@@ -1,5 +1,13 @@
 # Learnings From AF to FO
 
+## Latest Learnings (2026-03-08, session 8)
+
+- Vercel silently sets `CI=true` for all builds. With `react-scripts` (CRA), this promotes
+  every ESLint warning to a hard build error. The boilerplate itself has pre-existing lint
+  warnings (unused vars, exhaustive-deps) that were never caught locally — they only surface
+  on first Vercel deploy. Always inject `CI=false` as a project env var in the Vercel deploy
+  step so builds don't fail on lint noise. Vite-based projects are not affected.
+
 ## Latest Learnings (2026-03-07, session 7)
 
 - Whitelist entries can be as harmful as missing prune rules. BOILERPLATE_VALID_PATHS

@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-03-08
+
+### fix: set CI=false in Vercel deploy to prevent ESLint warnings failing build
+
+Vercel sets `CI=true` by default, which causes `react-scripts build` to treat all ESLint
+warnings as hard errors. This broke the wynwood-thoroughbreds frontend deploy with 8 lint
+errors across boilerplate files and Claude-generated pages (unused vars, exhaustive-deps).
+
+- `deploy/vercel_deploy.py`: inject `CI=false` into `env_vars` before setting project env vars
+- All ESLint warnings remain visible but no longer fail the build
+
 ## 2026-03-07
 
 ### fix: prune boilerplate-owned frontend config files Claude generates

@@ -1,5 +1,13 @@
 # Must Port to FO
 
+## Deploy Fix (2026-03-08)
+
+24. Set CI=false in Vercel deploy
+- Vercel sets `CI=true` by default → `react-scripts build` treats ESLint warnings as errors → build fails.
+- Fix: `deploy/vercel_deploy.py` injects `CI=false` into env vars before triggering deploy.
+- Affects any CRA (create-react-app) frontend. Vite frontends are not affected.
+⬜ TODO for FO codebase
+
 ## New Hardening Bundle (2026-03-07)
 
 23. Prune boilerplate-owned frontend configs

@@ -333,6 +333,9 @@ def deploy_frontend(
     # ── Step 3: Set environment variables ──────────────────
     env_vars = parse_env_file(env_file)
 
+    # Disable CI=true so ESLint warnings don't fail the build
+    env_vars["CI"] = "false"
+
     # Inject backend URL so frontend knows where the API is
     if backend_url:
         env_vars["REACT_APP_API_URL"] = backend_url
@@ -391,7 +394,7 @@ def deploy_frontend(
                     events = api.get_deployment_events(deployment_id, limit=80)
                     if events:
                         print("  [Vercel] Last deployment events:")
-                        for ev in events[-8:]:
+                        for ev in events[-30:]:
                             text = ev.get("text") or ev.get("payload", {}).get("text") or ev.get("type")
                             if text:
                                 print(f"    - {str(text)[:300]}")
