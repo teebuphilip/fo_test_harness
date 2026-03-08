@@ -53,6 +53,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from railway_deploy import deploy_backend, RailwayAPI, parse_env_file as railway_parse_env
 from vercel_deploy import deploy_frontend, VercelAPI
+from auth0_setup import update_spa_urls
 
 
 # ============================================================
@@ -443,6 +444,7 @@ def push_to_github(
     # ── Ensure .gitignore has the right entries ──────────────
     _ensure_gitignore(repo_path)
     _ensure_frontend_business_config(repo_path)
+    _ensure_business_pages_in_src(repo_path)
 
     # ── Commit and push ──────────────────────────────────────
     _git(repo_path, "add -A")
@@ -498,8 +500,8 @@ def _ensure_frontend_business_config(repo_path: Path):
 
     Vercel build expects this file. It is often gitignored in frontend repos.
     """
-    cfg_rel = Path("boilerplate/saas-boilerplate/frontend/src/config/business_config.json")
-    example_rel = Path("boilerplate/saas-boilerplate/frontend/src/config/business_config.example.json")
+    cfg_rel = Path("saas-boilerplate/frontend/src/config/business_config.json")
+    example_rel = Path("saas-boilerplate/frontend/src/config/business_config.example.json")
     cfg_path = repo_path / cfg_rel
     example_path = repo_path / example_rel
 
@@ -515,6 +517,46 @@ def _ensure_frontend_business_config(repo_path: Path):
     # Force-add in case frontend/.gitignore excludes it.
     _git(repo_path, f"add -f -- {cfg_rel.as_posix()}", required=False)
     print("  [pipeline] Ensured frontend business_config.json is staged for push")
+
+
+def _ensure_business_pages_in_src(repo_path: Path):
+    """
+    Copy business/frontend/pages/*.jsx into saas-boilerplate/frontend/src/business/pages/
+    and patch loader.js to use the inside-src path.
+
+    WHY: react-scripts (CRA) only applies babel-loader to files inside src/.
+    The boilerplate loader.js uses require.context('../../../../business/frontend/pages')
+    which resolves to repo_root/business/frontend/pages — outside src/ — so webpack
+    can't parse JSX there. Fix: copy pages into src/ and update the loader path.
+    """
+    biz_pages_src = repo_path / "business" / "frontend" / "pages"
+    if not biz_pages_src.exists():
+        print("  [pipeline] No business/frontend/pages/ found — skipping src copy")
+        return
+
+    # Destination: inside src/ so babel-loader processes it
+    biz_pages_dest = repo_path / "saas-boilerplate" / "frontend" / "src" / "business" / "pages"
+    if biz_pages_dest.exists():
+        shutil.rmtree(biz_pages_dest)
+    shutil.copytree(biz_pages_src, biz_pages_dest)
+    print(f"  [pipeline] Copied business pages into frontend/src/business/pages/ ({len(list(biz_pages_dest.glob('*.jsx')))} .jsx files)")
+
+    # Patch loader.js: update require.context path to in-src location
+    loader_path = repo_path / "saas-boilerplate" / "frontend" / "src" / "core" / "loader.js"
+    if loader_path.exists():
+        content = loader_path.read_text()
+        OLD_PATH = "../../../../business/frontend/pages"
+        NEW_PATH = "../business/pages"
+        if OLD_PATH in content:
+            patched = content.replace(OLD_PATH, NEW_PATH)
+            loader_path.write_text(patched)
+            print("  [pipeline] Patched loader.js: require.context path → ../business/pages")
+        elif NEW_PATH in content:
+            print("  [pipeline] loader.js already patched")
+        else:
+            print("  [pipeline] WARNING: loader.js path not recognized — skipping patch")
+    else:
+        print("  [pipeline] WARNING: loader.js not found — skipping patch")
 
 
 def _git(repo_path: Path, cmd: str, capture: bool = False, required: bool = True):
@@ -1006,6 +1048,29 @@ def main():
         if vercel_result and vercel_result.get("project_id"):
             merged_vercel_cfg["project_id"] = vercel_result.get("project_id")
         final_frontend_url = get_existing_frontend_url(vercel_token, merged_vercel_cfg, team_id=vercel_team_id or None)
+
+    # ── Step 4: Update Auth0 callback URLs with Vercel frontend URL ──────────
+    if final_frontend_url:
+        app_name    = repo_path.name
+        mgmt_token  = os.getenv("AUTH0_MGMT_TOKEN")
+        keys_file   = Path.home() / "Downloads" / "ACCESSKEYS" / f"auth0_{app_name}.env"
+        if mgmt_token and keys_file.exists():
+            auth0_vars = {}
+            for line in keys_file.read_text().splitlines():
+                if "=" in line and not line.startswith("#"):
+                    k, _, v = line.partition("=")
+                    auth0_vars[k.strip()] = v.strip()
+            auth0_domain    = auth0_vars.get("AUTH0_DOMAIN")
+            auth0_client_id = auth0_vars.get("AUTH0_CLIENT_ID")
+            if auth0_domain and auth0_client_id:
+                print("\n  [Auth0] Updating callback URLs with Vercel frontend URL...")
+                try:
+                    update_spa_urls(auth0_domain, mgmt_token, auth0_client_id, final_frontend_url)
+                except Exception as e:
+                    print(f"  [Auth0] WARNING: URL update failed — {e}")
+                    print(f"  [Auth0] Run manually: python deploy/auth0_setup.py --update-urls ...")
+        elif keys_file.exists() and not mgmt_token:
+            print(f"\n  [Auth0] Skipping URL update — set AUTH0_MGMT_TOKEN env var to enable")
 
     # ── Print summary ────────────────────────────────────────
     print_summary(
