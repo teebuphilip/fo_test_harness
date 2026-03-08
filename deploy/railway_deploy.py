@@ -422,7 +422,9 @@ def deploy_backend(
     env_vars = parse_env_file(env_file)
     if env_vars:
         print(f"  [Railway] Pushing {len(env_vars)} environment variables...")
-        env_id = api.get_environment_id(project_id)
+        env_id = (railway_config or {}).get("environment_id") or api.get_environment_id(project_id)
+        if not env_id:
+            print("  [Railway] WARNING: could not resolve environment_id — vars may not be set")
         for key, value in env_vars.items():
             try:
                 api.set_variable(project_id, service_id, key, value, environment_id=env_id)
