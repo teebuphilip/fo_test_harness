@@ -24,6 +24,7 @@ To update callback URLs after Vercel deploy:
 """
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -136,17 +137,24 @@ def save_credentials(app_name, domain, client, api):
 
 def main():
     parser = argparse.ArgumentParser(description="Auth0 app + API setup")
-    parser.add_argument("--domain",       required=True, help="Auth0 domain e.g. dev-xxx.us.auth0.com")
-    parser.add_argument("--mgmt-token",   required=True, help="Auth0 Management API token")
+    parser.add_argument("--domain",       default=None, help="Auth0 domain (or set AUTH0_DOMAIN env var)")
+    parser.add_argument("--mgmt-token",   default=None, help="Auth0 Management API token (or set AUTH0_KEY env var)")
     parser.add_argument("--app-name",     required=True, help="App slug e.g. wynwood-thoroughbreds")
     parser.add_argument("--frontend-url", default=None,  help="Vercel URL (optional, add later)")
     parser.add_argument("--update-urls",  action="store_true", help="Only patch callback URLs on existing app")
     parser.add_argument("--client-id",    default=None,  help="Existing client ID (required with --update-urls)")
     args = parser.parse_args()
 
-    domain   = args.domain.strip()
-    token    = args.mgmt_token.strip()
+    domain = (args.domain or os.getenv("AUTH0_DOMAIN", "")).strip()
+    token  = (args.mgmt_token or os.getenv("AUTH0_KEY", "")).strip()
     app_name = args.app_name.strip()
+
+    if not domain:
+        print("ERROR: provide --domain or export AUTH0_DOMAIN")
+        sys.exit(1)
+    if not token:
+        print("ERROR: provide --mgmt-token or export AUTH0_KEY")
+        sys.exit(1)
 
     print(f"\n{'='*60}")
     print(f"Auth0 Setup: {app_name}")
