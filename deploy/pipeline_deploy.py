@@ -1082,7 +1082,8 @@ def main():
         final_frontend_url = get_existing_frontend_url(vercel_token, merged_vercel_cfg, team_id=vercel_team_id or None)
 
     # ── Step 4: Update Auth0 callback URLs with Vercel frontend URL ──────────
-    if final_frontend_url:
+    vercel_succeeded = args.backend_only or (vercel_result and vercel_result.get("success"))
+    if final_frontend_url and vercel_succeeded:
         app_name    = repo_path.name
         mgmt_token  = os.getenv("AUTH0_MGMT_TOKEN")
         keys_file   = Path.home() / "Downloads" / "ACCESSKEYS" / f"auth0_{app_name}.env"

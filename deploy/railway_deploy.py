@@ -160,7 +160,7 @@ class RailwayAPI:
         data = self._query(q, variables)
         return data["pluginCreate"]
 
-    def set_variable(self, project_id: str, service_id: str, name: str, value: str) -> bool:
+    def set_variable(self, project_id: str, service_id: str, name: str, value: str, environment_id: str = None) -> bool:
         """Set a single environment variable on a service."""
         q = """
         mutation VariableUpsert($input: VariableUpsertInput!) {
@@ -171,7 +171,7 @@ class RailwayAPI:
             "input": {
                 "projectId": project_id,
                 "serviceId": service_id,
-                "environmentId": None,
+                "environmentId": environment_id,
                 "name": name,
                 "value": value,
             }
@@ -422,8 +422,12 @@ def deploy_backend(
     env_vars = parse_env_file(env_file)
     if env_vars:
         print(f"  [Railway] Pushing {len(env_vars)} environment variables...")
+        env_id = api.get_environment_id(project_id)
         for key, value in env_vars.items():
-            api.set_variable(project_id, service_id, key, value)
+            try:
+                api.set_variable(project_id, service_id, key, value, environment_id=env_id)
+            except Exception as e:
+                print(f"  [Railway] WARNING: could not set {key}: {e}")
         print(f"  [Railway] Variables set.")
     else:
         print("  [Railway] No .env file or no filled variables - skipping")
