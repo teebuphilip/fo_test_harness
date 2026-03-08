@@ -2,6 +2,34 @@
 
 ## 2026-03-08
 
+### feat: full pipeline_deploy auto-wiring — Auth0, CORS, ENVIRONMENT
+
+**How the pipeline works now (end-to-end):**
+
+Pre-flight:
+- Checks `~/Downloads/ACCESSKEYS/auth0_<app-name>.env` exists — exits with instructions if not
+- Injects Auth0 vars (DOMAIN, CLIENT_ID, CLIENT_SECRET, AUDIENCE) into repo `.env`
+
+Step 1 — GitHub push
+Step 2 — Railway deploy (backend up with Auth0 vars from .env)
+Step 3 — Vercel deploy (frontend up, CI=false so lint warnings don't fail build)
+
+Post-deploy (once Vercel URL is known):
+- Sets `CORS_ORIGINS=<vercel-url>` on Railway via API
+- Sets `ENVIRONMENT=production` on Railway via API
+- Patches Auth0 SPA callback/logout/web_origins with Vercel URL (if AUTH0_MGMT_TOKEN set)
+
+One-time per app:
+- `python deploy/auth0_setup.py --app-name <name>` → creates Auth0 app+API, saves to ACCESSKEYS
+
+Fixes in this session:
+- `railway_deploy.py`: `set_variable` now accepts `environment_id`; reads from `railway.deploy.json`
+  before falling back to API lookup (Railway GraphQL `get_environment_id` silently fails for some accounts)
+- `railway.deploy.json`: store `environment_id` so Railway env var pushes work reliably
+- `vercel_deploy.py`: upsert env vars (PATCH existing on 400/409) instead of failing on duplicates
+- `pipeline_deploy.py`: Auth0 URL patch only runs if Vercel actually succeeded
+- `auth0_setup.py`: reads `AUTH0_DOMAIN`/`AUTH0_KEY` from env vars; strips all whitespace from token
+
 ### feat: auth0_setup.py + auto Auth0 URL patch in pipeline_deploy
 
 - `deploy/auth0_setup.py`: creates Auth0 SPA Application + API via Management API,

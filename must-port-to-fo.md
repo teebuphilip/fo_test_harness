@@ -1,6 +1,26 @@
 # Must Port to FO
 
-## Deploy Fix (2026-03-08)
+## Deploy Pipeline (2026-03-08)
+
+27. Full pipeline auto-wiring: Auth0 + CORS + ENVIRONMENT
+- `pipeline_deploy.py` now handles the full post-deploy wiring automatically:
+  - Pre-flight: checks ACCESSKEYS for auth0_<app>.env, injects into repo .env
+  - After Vercel: pushes CORS_ORIGINS + ENVIRONMENT=production to Railway via API
+  - After Vercel: patches Auth0 SPA callback URLs (if AUTH0_MGMT_TOKEN set)
+- One-time per app: `python deploy/auth0_setup.py --app-name <name>`
+- All 40 apps share one Auth0 tenant; each gets its own Application + API
+⬜ TODO for FO codebase
+
+26. railway.deploy.json stores environment_id
+- Railway GraphQL `get_environment_id` silently fails for some account types.
+- Fix: store `environment_id` in `railway.deploy.json` after first deploy.
+  Script reads it directly, skipping the unreliable API lookup.
+⬜ TODO for FO codebase
+
+25. Vercel set_env_var upserts (PATCH on 400/409)
+- Vercel returns 400 (not 409) for duplicate env vars on some API versions.
+- Fix: on 400/409, fetch existing env var ID and PATCH instead of failing.
+⬜ TODO for FO codebase
 
 24. Set CI=false in Vercel deploy
 - Vercel sets `CI=true` by default → `react-scripts build` treats ESLint warnings as errors → build fails.

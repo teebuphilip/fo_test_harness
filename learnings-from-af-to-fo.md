@@ -1,5 +1,21 @@
 # Learnings From AF to FO
 
+## Latest Learnings (2026-03-08, session 9)
+
+- Railway's GraphQL `variableUpsert` mutation requires a real `environmentId` — passing null
+  causes it to try resolving via GitHub repo URL, which fails on private repos. Always store
+  the environment_id in `railway.deploy.json` after first deploy and read it back. Don't rely
+  on the API lookup — it silently fails for many account types.
+- Vercel returns 400 (not 409) for duplicate env var POSTs on newer API versions. The
+  set_env_var method must upsert: GET existing ID on 400/409, then PATCH. A simple 409
+  skip is not enough.
+- The right deploy sequence for a new app is: Auth0 setup → Railway (with Auth0 vars) →
+  Vercel → patch Railway CORS with Vercel URL → patch Auth0 callbacks with Vercel URL.
+  All of this can and should be automated in the pipeline — any step left manual will be forgotten.
+- Railway env vars set via API do NOT immediately trigger a redeploy in all account types.
+  Setting CORS_ORIGINS after Vercel is up is safe but may require a manual redeploy in Railway
+  dashboard to take effect if the service doesn't auto-restart on var changes.
+
 ## Latest Learnings (2026-03-08, session 8)
 
 - Vercel silently sets `CI=true` for all builds. With `react-scripts` (CRA), this promotes
