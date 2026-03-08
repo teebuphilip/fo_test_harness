@@ -6155,19 +6155,56 @@ class FOHarness:
 
                     _consistency_consecutive_iters += 1
 
-                    # Consistency hard cap — fall through to Feature QA after N consecutive iters
+                    # Consistency hard cap
                     if _consistency_consecutive_iters >= Config.MAX_CONSISTENCY_CONSECUTIVE:
-                        print_warning(
-                            f"  [CONSISTENCY] Hard cap reached ({_consistency_consecutive_iters} consecutive "
-                            "consistency iters) — falling through to Feature QA to break deadlock"
-                        )
-                        _record_gate('CONSISTENCY', 'FALLTHROUGH',
-                                     f'cap={Config.MAX_CONSISTENCY_CONSECUTIVE} reached', iteration)
-                        _consistency_consecutive_iters = 0
-                        defect_source        = 'qa'
-                        previous_defects     = None
-                        _raw_pending_defects = []
-                        # Fall through to GATE 4 + Feature QA this iteration
+                        _high_consistency = [i for i in consistency_issues
+                                             if i.get('severity', 'HIGH') == 'HIGH']
+                        if _high_consistency:
+                            # HIGH issues remain — escalate to full-build fix pass.
+                            # Do NOT fall through to QA: QA will accept a build with real
+                            # AttributeError bugs and our filter will remove its evidence.
+                            # Instead, give Claude a full-build pass (16384 tokens, full
+                            # governance context) so it can fix all cross-file issues holistically.
+                            print_warning(
+                                f"  [CONSISTENCY] Hard cap reached with {len(_high_consistency)} HIGH "
+                                f"issue(s) — escalating to full-build fix pass (not falling through to QA)"
+                            )
+                            _record_gate('CONSISTENCY', 'FALLTHROUGH',
+                                         f'cap={Config.MAX_CONSISTENCY_CONSECUTIVE} reached — escalating to full build',
+                                         iteration)
+                            _consistency_consecutive_iters = 0
+                            # Format as QA-style defects — Claude gets full build prompt + 16384 tokens
+                            previous_defects     = self._format_consistency_defects_for_claude(consistency_issues)
+                            defect_source        = 'qa'
+                            _raw_pending_defects = []
+                            iteration += 1
+                            if iteration > self.max_qa_iterations:
+                                print_error(f"Max iterations ({self.max_qa_iterations}) reached during consistency escalation — halting")
+                                self._print_cost_summary(
+                                    iteration - 1, total_calls, total_cache_writes, total_cache_hits,
+                                    total_cache_write_tokens, total_cache_read_tokens,
+                                    total_input_tokens, total_output_tokens,
+                                    total_gpt_calls, total_gpt_input_tokens, total_gpt_output_tokens,
+                                    run_end_reason='MAX_ITERATIONS'
+                                )
+                                _flush_gate_trace()
+                                return False, "MAX_ITERATIONS_EXCEEDED"
+                            print_info(f"  [CONSISTENCY] Full-build fix pass at iteration {iteration}")
+                            continue
+                        else:
+                            # Only LOW/MEDIUM issues — safe to fall through to Feature QA
+                            print_warning(
+                                f"  [CONSISTENCY] Hard cap reached (no HIGH issues remaining) "
+                                "— falling through to Feature QA"
+                            )
+                            _record_gate('CONSISTENCY', 'FALLTHROUGH',
+                                         f'cap={Config.MAX_CONSISTENCY_CONSECUTIVE} reached, no HIGH issues',
+                                         iteration)
+                            _consistency_consecutive_iters = 0
+                            defect_source        = 'qa'
+                            previous_defects     = None
+                            _raw_pending_defects = []
+                            # Fall through to GATE 4 + Feature QA this iteration
                     else:
                         defect_source        = 'consistency'
                         _raw_pending_defects = consistency_issues

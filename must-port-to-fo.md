@@ -2,6 +2,13 @@
 
 ## Build Pipeline (2026-03-08)
 
+36. Consistency fallthrough with HIGH issues → full-build fix, not QA passthrough
+- Fallthrough with HIGH issues cleared all defect context → QA accepted broken builds.
+- Fix: HIGH issues at fallthrough → full-build Claude pass (defect_source='qa', 16384 tokens)
+  with consistency issues as QA defects. Only LOW/MEDIUM → fall through to QA as before.
+- Files: `fo_test_harness.py` (consistency fallthrough block in execute_build_qa_loop)
+⬜ TODO for FO codebase
+
 35. Dynamic token limit for multi-file surgical patches
 - get_max_tokens() now takes n_target_files: 1 file → 8192, ≥2 files → 16384.
 - With current file contents in the prompt, 8192 output tokens forces Claude to compress

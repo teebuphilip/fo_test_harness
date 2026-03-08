@@ -2,6 +2,18 @@
 
 ## 2026-03-08
 
+### fix: consistency fallthrough with HIGH issues escalates to full-build fix (not QA passthrough)
+
+Root cause: on consistency hard cap (4 iters), harness cleared all defect context and fell
+through to ChatGPT QA. QA evaluated cold, its defects got filtered as fabricated evidence,
+build "accepted" with real AttributeError bugs (contact_email vs email, assessment.title, etc.).
+
+New behavior on fallthrough:
+- HIGH issues remain → full-build Claude fix pass (defect_source='qa', 16384 tokens, full
+  governance context, consistency issues formatted as QA defects). Claude fixes holistically
+  across all files. Consistency consecutive counter reset → 4 more surgical attempts after.
+- Only LOW/MEDIUM issues remain → fall through to Feature QA as before (safe to accept).
+
 ### fix: dynamic token limit for multi-file surgical patches (8192→16384 when ≥2 target files)
 
 With surgical patches now including current file contents in the prompt, 8192 output tokens

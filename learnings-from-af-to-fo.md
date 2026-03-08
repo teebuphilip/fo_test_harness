@@ -23,6 +23,12 @@
   reference (which import to use, which Base class) is already in the governance section — that covers
   pattern guidance. The file content covers method/field preservation. ALL targeted patch types need both.
   The final correct split: ALL non-QA sources → surgical (file contents); feature QA → full build prompt.
+- Consistency fallthrough is not a neutral exit — it's an active failure path. When the harness
+  clears all defect context and hands off to QA after N failed consistency attempts, QA evaluates
+  cold and the harness filter removes its evidence-based defects. Result: a "clean" build with real
+  AttributeError bugs at runtime. The fix: only fall through to QA when remaining issues are LOW/MEDIUM.
+  HIGH issues at fallthrough must trigger a full-build Claude pass (16384 tokens, full governance
+  context) so the model can fix all cross-file mismatches holistically in one shot.
 - The 8192 patch token cap breaks down as soon as ≥2 files need to be output. With current file contents
   now in the prompt (necessary for surgical patches), each output file is full-size — Claude cannot
   compress all of them into 8192 tokens without dropping content. Observed: ReportService 4731→2256 chars,
