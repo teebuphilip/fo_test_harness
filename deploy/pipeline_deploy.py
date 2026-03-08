@@ -838,7 +838,7 @@ def main():
         print(f"[ERROR] Repo path not found: {repo_path}")
         sys.exit(1)
 
-    # ── Step 0: Check Auth0 credentials exist ────────────────
+    # ── Step 0: Check Auth0 credentials exist + merge into .env ─────────────
     app_name   = repo_path.name
     keys_file  = Path.home() / "Downloads" / "ACCESSKEYS" / f"auth0_{app_name}.env"
     if not keys_file.exists():
@@ -848,6 +848,27 @@ def main():
         print(f"    python deploy/auth0_setup.py --app-name {app_name}")
         print()
         sys.exit(1)
+
+    # Merge Auth0 creds into repo .env so Railway picks them up
+    repo_env   = repo_path / ".env"
+    auth0_vars = {}
+    for line in keys_file.read_text().splitlines():
+        if "=" in line and not line.startswith("#"):
+            k, _, v = line.partition("=")
+            auth0_vars[k.strip()] = v.strip()
+
+    existing_env = repo_env.read_text() if repo_env.exists() else ""
+    additions = []
+    for k, v in auth0_vars.items():
+        if k not in existing_env:
+            additions.append(f"{k}={v}")
+    if additions:
+        with open(repo_env, "a") as f:
+            f.write("\n# Auth0 (injected by pipeline_deploy)\n")
+            f.write("\n".join(additions) + "\n")
+        print(f"  [pipeline] Injected {len(additions)} Auth0 vars into .env")
+    else:
+        print(f"  [pipeline] Auth0 vars already in .env — skipping")
 
     if args.provider == "chatgpt" and not os.getenv("OPENAI_API_KEY"):
         print("[ERROR] OPENAI_API_KEY not set")
