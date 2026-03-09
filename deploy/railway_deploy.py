@@ -415,6 +415,17 @@ def deploy_backend(
         print(f"  [Railway] whoami check skipped: {e}")
         print("  [Railway] Continuing with deploy operations...")
 
+    # ── Step 1b: Refresh Railway's GitHub repo list ─────────
+    # New repos pushed to GitHub aren't visible to Railway until it re-syncs.
+    # githubReposRefresh forces that sync — must run before project/service create.
+    print("  [Railway] Refreshing GitHub repo list...")
+    try:
+        api._query("mutation { githubReposRefresh }")
+        time.sleep(3)  # give Railway a moment to sync
+        print("  [Railway] GitHub repos refreshed.")
+    except Exception as e:
+        print(f"  [Railway] Refresh note: {e} (continuing)")
+
     # ── Step 2: Create or reuse project ────────────────────
     project_id = railway_config.get("project_id") if railway_config else None
     service_id = railway_config.get("service_id") if railway_config else None
