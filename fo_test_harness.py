@@ -5561,8 +5561,30 @@ class FOHarness:
                             current_file_contents=_current_file_contents,
                         )
                         print_info(f"  [{_source_label}] Using surgical patch prompt for {len(defect_target_files)} target file(s)")
+                    elif defect_source == 'qa' and previous_defects and defect_target_files and len(defect_target_files) <= 5:
+                        # Targeted QA fix: few defects with clear file locations → surgical patch.
+                        # Full build prompt causes Claude to regenerate all files, introducing new
+                        # consistency defects for a 1-2 line fix (e.g. Auth0 token pattern).
+                        governance_section, _ = PromptTemplates.build_prompt(
+                            self.block, self.intake_data, self.build_governance,
+                            iteration, self.max_qa_iterations, None,
+                            self.tech_stack_override, self.external_integration_override,
+                            self.startup_id, self.effective_tech_stack, [], []
+                        )
+                        _current_file_contents = self._read_target_file_contents(iteration, defect_target_files)
+                        if _current_file_contents:
+                            print_info(f"  [QA] Loaded {len(_current_file_contents)} current file(s) for surgical QA patch")
+                        else:
+                            print_warning(f"  [QA] No current file contents found — Claude will reconstruct")
+                        dynamic_section = PromptTemplates.integration_fix_prompt(
+                            integration_defects=previous_defects,
+                            required_file_inventory=required_file_inventory,
+                            defect_target_files=defect_target_files,
+                            current_file_contents=_current_file_contents,
+                        )
+                        print_info(f"  [QA] Using surgical patch for {len(defect_target_files)} targeted QA defect file(s)")
                     else:
-                        # FIX #1 & #4: Get prompt sections and dynamic token limit
+                        # Broad QA failure or no clear file targets → full build prompt
                         governance_section, dynamic_section = PromptTemplates.build_prompt(
                             self.block,
                             self.intake_data,

@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-03-09
+
+### fix: QA defect fix — surgical patch for targeted QA fixes (≤5 defect files)
+
+Root cause: a single-file QA defect (Auth0 `user.getAccessTokenSilently()` in Assessments.jsx)
+triggered a full build prompt → Claude regenerated all files from memory → 3 new consistency
+defects appeared at the next iteration, undoing a clean consistency pass.
+
+New behavior: when `defect_source='qa'` and defect_target_files are known and ≤5 files,
+the harness uses the surgical patch prompt (`integration_fix_prompt` / `build_integration_fix.md`)
+instead of the full build prompt. Current file contents loaded from prev-iteration artifacts.
+
+- Threshold: ≤5 target files → surgical; >5 or no known targets → full build (unchanged)
+- Logs: `[QA] Using surgical patch for N targeted QA defect file(s)` vs full-build fallback
+- Files: `fo_test_harness.py` (new QA surgical branch in prompt selection logic)
+
 ## 2026-03-08
 
 ### fix: railway_deploy.py — set root directory to business/backend

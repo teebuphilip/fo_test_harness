@@ -9,6 +9,16 @@
 - Files: `deploy/railway_deploy.py` (new method + call)
 ⬜ TODO for FO codebase
 
+## Build Pipeline (2026-03-09)
+
+38. QA defect fix — surgical patch for targeted QA fixes (≤5 defect files)
+- Single-file QA defect triggered full build prompt → Claude regenerated all files from memory
+  → new consistency defects undid a clean consistency pass.
+- Fix: defect_source='qa' with ≤5 known target files → surgical patch (integration_fix_prompt)
+  with current file contents. >5 files or no known targets → full build (unchanged).
+- Files: `fo_test_harness.py` (new QA surgical branch in prompt selection logic)
+⬜ TODO for FO codebase
+
 ## Build Pipeline (2026-03-08)
 
 36. Consistency fallthrough with HIGH issues → full-build fix, not QA passthrough
