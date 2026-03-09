@@ -2,6 +2,22 @@
 
 ## 2026-03-09
 
+### feat: pre-QA triage for static + consistency gates (SURGICAL vs SYSTEMIC)
+
+Static and consistency defect sources always routed to surgical patch, burning 6+ iterations
+on missing-file defects, no-frontend-pages, and multi-file coupling before ever reaching
+Feature QA. Same pattern that broke Feature QA is now fixed at the pre-QA layer.
+
+New `_triage_pre_qa_strategy()` method — rule-based, no extra API call:
+- `consecutive_iters >= 2` → SYSTEMIC (surgical already failed twice)
+- `≥4 distinct target files` → SYSTEMIC (too many moving parts)
+- Missing-file patterns in defect text ("no frontend pages", "does not resolve",
+  "does not exist in artifacts", etc.) → SYSTEMIC
+
+SYSTEMIC → full build prompt with all defects + full governance context (16384 tokens).
+SURGICAL → existing surgical patch path (unchanged).
+quality/compile/integration always remain surgical (their defects are narrow by nature).
+
 ### fix: triage content extraction — wrong key on ChatGPTClient response
 
 Triage was calling `result.get('content', '')` but `ChatGPTClient.call()` returns the raw

@@ -11,6 +11,16 @@
 
 ## Build Pipeline (2026-03-09)
 
+41. Pre-QA triage for static + consistency gates (SURGICAL vs SYSTEMIC)
+- Static/consistency always used surgical patch → missing-file + multi-file defects burned 6+
+  iterations before reaching Feature QA (no-frontend-pages, schema missing, coupled imports).
+- New _triage_pre_qa_strategy(): rule-based, no AI call. SYSTEMIC when: consecutive_iters>=2,
+  ≥4 target files, or missing-file pattern in defect text.
+- SYSTEMIC → full build prompt (16384 tokens). SURGICAL → existing surgical patch.
+- quality/compile/integration always surgical (narrow defects, no change).
+- Files: fo_test_harness.py (_triage_pre_qa_strategy + routing block + max_tokens override)
+⬜ TODO for FO codebase
+
 40. Triage content extraction bug — wrong key on ChatGPTClient response
 - `_triage_and_sharpen_defects()` called `result.get('content','')` but ChatGPTClient returns
   raw OpenAI dict: content is at `choices[0].message.content`. Triage silently returned empty
