@@ -2,6 +2,16 @@
 
 ## 2026-03-09
 
+### fix: SYSTEMIC pre-QA uses wide surgical patch, not cold-start full build
+
+Full build prompt for SYSTEMIC static/consistency escalations was 89K chars — included all
+historical prohibitions from warm-start + full intake. Too much noise, risks regression of
+already-correct files, overwhelms Claude on a pre-QA fix.
+
+Wide surgical patch: surgical prompt template but with ALL current artifact files as context
+(not just 2-3 defect targets). Claude sees every existing file + all defects → fixes missing
+methods, adds missing files, preserves correct files. Prompt stays ~20K chars not 89K.
+
 ### feat: pre-QA triage for static + consistency gates (SURGICAL vs SYSTEMIC)
 
 Static and consistency defect sources always routed to surgical patch, burning 6+ iterations

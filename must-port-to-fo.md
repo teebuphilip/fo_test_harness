@@ -11,6 +11,14 @@
 
 ## Build Pipeline (2026-03-09)
 
+42. SYSTEMIC pre-QA uses wide surgical patch, not cold-start full build
+- Full build for SYSTEMIC static/consistency was 89K chars (historical prohibitions + full intake)
+  → too much noise, overwhelms Claude, risks regression of correct files.
+- Wide surgical patch: surgical template + ALL current artifact files as context. ~20K chars.
+  Claude sees every existing file + all defects → fixes coupled issues without cold-start noise.
+- Files: fo_test_harness.py (SYSTEMIC branch in prompt routing block)
+⬜ TODO for FO codebase
+
 41. Pre-QA triage for static + consistency gates (SURGICAL vs SYSTEMIC)
 - Static/consistency always used surgical patch → missing-file + multi-file defects burned 6+
   iterations before reaching Feature QA (no-frontend-pages, schema missing, coupled imports).
