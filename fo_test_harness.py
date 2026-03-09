@@ -4403,7 +4403,7 @@ End your response with: TRIAGE_COMPLETE"""
         try:
             gpt_client = ChatGPTClient()
             result = gpt_client.call(prompt, max_tokens=2048)
-            triage_output = result.get('content', '')
+            triage_output = result.get('choices', [{}])[0].get('message', {}).get('content', '')
             self.artifacts.save_log(f'iteration_{iteration:02d}_triage_output', triage_output)
         except Exception as e:
             print_warning(f"  [TRIAGE] Triage call failed ({e}) — proceeding with unsharpened defects")
