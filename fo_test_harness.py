@@ -5814,24 +5814,32 @@ End your response with: TRIAGE_COMPLETE"""
                             )
 
                         if _pre_qa_strat == 'systemic':
-                            # Full build with defects injected — Claude sees full spec + all
-                            # defects and can fix missing files, missing classes, coupled issues
-                            # in one pass rather than one-file-at-a-time surgical patches.
-                            print_info(f"  [{_source_label}] SYSTEMIC → full build prompt (all defects + governance)")
-                            governance_section, dynamic_section = PromptTemplates.build_prompt(
-                                self.block,
-                                self.intake_data,
-                                self.build_governance,
-                                iteration,
-                                self.max_qa_iterations,
-                                previous_defects,
-                                self.tech_stack_override,
-                                self.external_integration_override,
-                                self.startup_id,
-                                self.effective_tech_stack,
-                                required_file_inventory,
-                                defect_target_files,
-                                prohibitions_block,
+                            # Wide surgical patch: surgical patch template but with ALL current
+                            # artifact files as context (not just the 2-3 defect targets).
+                            # Claude sees every existing file + all defects → can fix missing
+                            # methods, add missing files, and preserve correct files in one pass.
+                            # Avoids the 89K char cold-start build prompt that includes all
+                            # historical prohibitions and confuses Claude on pre-QA fixes.
+                            governance_section, _ = PromptTemplates.build_prompt(
+                                self.block, self.intake_data, self.build_governance,
+                                iteration, self.max_qa_iterations, None,
+                                self.tech_stack_override, self.external_integration_override,
+                                self.startup_id, self.effective_tech_stack, [], []
+                            )
+                            # Load ALL current artifacts as context (not just defect targets)
+                            _all_current_files = self._get_previous_iteration_inventory(iteration)
+                            _current_file_contents = self._read_target_file_contents(
+                                iteration, _all_current_files
+                            )
+                            print_info(
+                                f"  [{_source_label}] SYSTEMIC → wide surgical patch "
+                                f"({len(_current_file_contents)} current file(s) as context)"
+                            )
+                            dynamic_section = PromptTemplates.integration_fix_prompt(
+                                integration_defects=previous_defects,
+                                required_file_inventory=required_file_inventory,
+                                defect_target_files=defect_target_files,
+                                current_file_contents=_current_file_contents,
                             )
                         else:
                             # Surgical: read current file contents so Claude patches only what
