@@ -11,6 +11,17 @@
 
 ## Build Pipeline (2026-03-09)
 
+43. Consistency fix sharpening before Claude patch
+- Consistency A↔B oscillation: Fix field said "align X with Y" — no indication of which
+  side changes, which function, or exact new code. Claude guessed and oscillated indefinitely.
+- New _sharpen_consistency_issues(): reads current file contents for each issue file pair,
+  calls gpt-4o-mini with SHARP-N format (FILE_TO_CHANGE, FUNCTION, exact CHANGE line).
+  Replaces vague Fix with precise one-sided instruction. Saves to logs/iteration_N_consistency_sharpen.log.
+- Same sharpening pattern as QA triage, applied at the consistency gate.
+- New methods: _sharpen_consistency_issues()
+- Files: fo_test_harness.py
+⬜ TODO for FO codebase
+
 42. SYSTEMIC pre-QA uses wide surgical patch, not cold-start full build
 - Full build for SYSTEMIC static/consistency was 89K chars (historical prohibitions + full intake)
   → too much noise, overwhelms Claude, risks regression of correct files.

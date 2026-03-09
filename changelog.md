@@ -2,6 +2,23 @@
 
 ## 2026-03-09
 
+### feat: consistency fix sharpening before Claude patch
+
+Consistency A↔B oscillation: Claude kept shifting mismatches between files because the
+Fix field only said "align ReportService with ScoringService" — no indication of which side
+changes, which function, or what the exact new code looks like.
+
+New `_sharpen_consistency_issues()` method — called after `_parse_consistency_report()` and
+before `_format_consistency_defects_for_claude()`:
+- Reads current file contents for every file pair involved in each consistency issue
+- Calls gpt-4o-mini with SHARP-N format: `FILE_TO_CHANGE`, `FUNCTION`, `CHANGE` (exact line)
+- Replaces vague Fix field with precise one-sided instruction → Claude touches one file only
+- Saves sharpened output to `logs/iteration_N_consistency_sharpen.log`
+
+Same pattern as QA triage sharpening, applied at the consistency gate.
+
+New methods: `_sharpen_consistency_issues()`
+
 ### fix: SYSTEMIC pre-QA uses wide surgical patch, not cold-start full build
 
 Full build prompt for SYSTEMIC static/consistency escalations was 89K chars — included all
