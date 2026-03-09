@@ -4551,6 +4551,117 @@ End your response with: TRIAGE_COMPLETE"""
         )
         return 'surgical'
 
+    def _sharpen_consistency_issues(self, issues: list, iteration: int) -> list:
+        """
+        Sharpen Fix fields in consistency issues before passing to Claude.
+
+        For each A <-> B mismatch, specifies:
+        - Which file to change (the caller/smaller-change side)
+        - Exact function name
+        - Exact line change (from X to Y)
+
+        Without sharpening, Claude picks the wrong side of the mismatch or makes
+        an ambiguous change that shifts the problem to the other file next iteration.
+
+        Uses gpt-4o-mini (cheap, fast). Falls back silently if call fails.
+        """
+        if not issues:
+            return issues
+
+        # Extract all involved files from issues
+        involved_files = []
+        for iss in issues:
+            files_str = iss.get('files', iss.get('file', ''))
+            for f in re.split(r'\s*<->\s*|\s*,\s*|\s+', files_str):
+                f = f.strip()
+                if f.startswith('business/'):
+                    involved_files.append(f)
+        involved_files = list(set(involved_files))
+
+        file_contents = self._read_target_file_contents(iteration, involved_files)
+        if not file_contents:
+            print_warning("  [CONSISTENCY SHARPEN] No file contents available — proceeding unsharpened")
+            return issues
+
+        file_section = '\n\n'.join(
+            f"**FILE: {path}**\n```python\n{content}\n```"
+            for path, content in file_contents.items()
+        )
+
+        issues_text = '\n\n'.join(
+            f"ISSUE-{iss['id'].replace('ISSUE-', '')}:\n"
+            f"  Files: {iss.get('files', iss.get('file', ''))}\n"
+            f"  Evidence: {iss.get('evidence', '')}\n"
+            f"  Problem: {iss.get('issue', '')}\n"
+            f"  Current Fix: {iss.get('fix', '')}"
+            for iss in issues
+        )
+
+        prompt = f"""You are a senior engineer sharpening fix instructions for cross-file consistency issues.
+For each issue, specify EXACTLY which file to change, which function, and what the code changes to.
+Pick the side that requires the smaller, safer change (prefer caller changes over callee redesign).
+
+**CURRENT FILE CONTENTS:**
+{file_section}
+
+**CONSISTENCY ISSUES TO SHARPEN:**
+{issues_text}
+
+---
+
+For each issue respond in EXACTLY this format:
+
+SHARP-N:
+  FILE_TO_CHANGE: <exact file path e.g. business/services/ReportService.py>
+  FUNCTION: <exact function/method name>
+  CHANGE: <current expression or line> → <what it must become>
+
+Rules:
+- CHANGE must show concrete code, not a description ("calculate_scores(data)" → "calculate_kpis(assessment.id, db)")
+- If the callee needs a new method, add it AND update the caller — list both as separate SHARP-N entries
+- Do NOT change __tablename__, Base imports, or Column definitions
+- Do NOT restructure files beyond the specific mismatch
+
+End with: SHARPEN_COMPLETE"""
+
+        try:
+            gpt_client = ChatGPTClient()
+            result = gpt_client.call(prompt, max_tokens=1024)
+            sharp_output = result.get('choices', [{}])[0].get('message', {}).get('content', '')
+            self.artifacts.save_log(
+                f'iteration_{iteration:02d}_consistency_sharpen', sharp_output
+            )
+            if not sharp_output:
+                print_warning("  [CONSISTENCY SHARPEN] Empty response — proceeding unsharpened")
+                return issues
+        except Exception as e:
+            print_warning(f"  [CONSISTENCY SHARPEN] Call failed ({e}) — proceeding unsharpened")
+            return issues
+
+        # Parse SHARP-N blocks and update fix fields in a copy of the issues list
+        sharpened = [dict(iss) for iss in issues]  # shallow copy each dict
+        for match in re.finditer(
+            r'SHARP-(\d+):\s*\n(.*?)(?=SHARP-\d+:|SHARPEN_COMPLETE|\Z)',
+            sharp_output, re.DOTALL
+        ):
+            n = int(match.group(1))
+            block = match.group(2)
+            file_m   = re.search(r'FILE_TO_CHANGE:\s*(.+?)(?=\n|$)', block)
+            func_m   = re.search(r'FUNCTION:\s*(.+?)(?=\n|$)', block)
+            change_m = re.search(r'CHANGE:\s*(.*?)(?=\n\s*SHARP-|\n\s*SHARPEN_COMPLETE|\Z)', block, re.DOTALL)
+            if not (file_m and func_m and change_m):
+                continue
+            sharpened_fix = (
+                f"In `{file_m.group(1).strip()}`, "
+                f"function `{func_m.group(1).strip()}`: "
+                f"{change_m.group(1).strip()}"
+            )
+            if 1 <= n <= len(sharpened):
+                sharpened[n - 1]['fix'] = sharpened_fix
+                print_info(f"  [CONSISTENCY SHARPEN] ISSUE-{n} fix sharpened: {sharpened_fix[:110]}")
+
+        return sharpened
+
     @staticmethod
     def _find_last_accepted_iteration(run_dir: Path) -> int:
         """
@@ -6536,7 +6647,13 @@ End your response with: TRIAGE_COMPLETE"""
                     else:
                         defect_source        = 'consistency'
                         _raw_pending_defects = consistency_issues
-                        previous_defects     = self._format_consistency_defects_for_claude(consistency_issues)
+                        # Sharpen fix fields before formatting: specifies which file changes,
+                        # exact function, exact line change. Prevents Claude picking the wrong
+                        # side of the A <-> B mismatch or making an ambiguous change.
+                        _sharpened_consistency = self._sharpen_consistency_issues(
+                            consistency_issues, iteration
+                        )
+                        previous_defects     = self._format_consistency_defects_for_claude(_sharpened_consistency)
                         iteration += 1
                         if iteration > self.max_qa_iterations:
                             print_error(f"Max iterations ({self.max_qa_iterations}) reached during consistency check — halting")
