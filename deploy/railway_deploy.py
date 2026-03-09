@@ -401,6 +401,7 @@ def deploy_backend(
     """
     api = RailwayAPI(token)
     project_name = project_name or repo_path.name.lower().replace("_", "-")
+    project_name = project_name[:50]  # Railway rejects names > ~50 chars
     env_file = env_file or (repo_path / ".env")
 
     # ── Step 1: Verify token (non-blocking) ─────────────────
