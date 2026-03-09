@@ -4486,6 +4486,71 @@ End your response with: TRIAGE_COMPLETE"""
         )
         return sharpened_report, strategy, contested
 
+    # Patterns that indicate a SYSTEMIC static defect (missing files / empty dirs)
+    _SYSTEMIC_STATIC_PATTERNS = [
+        r'no frontend pages',
+        r'no \.jsx files',
+        r'pages.*is empty',
+        r'does not resolve',
+        r'does not exist in artifacts',
+        r'missing file',
+        r'no such file',
+        r'file not found',
+        r'create.*\.py.*or fix the import',
+        r'does not match.*arity',
+    ]
+
+    def _triage_pre_qa_strategy(
+        self,
+        defect_source: str,
+        defect_target_files: list,
+        previous_defects: str,
+        consecutive_iters: int,
+    ) -> str:
+        """
+        Rule-based SURGICAL / SYSTEMIC classification for static and consistency defects,
+        applied before triggering a build. No AI call — mechanical signals only.
+
+        SYSTEMIC (→ full build with defects as context) when:
+        - consecutive_iters >= 2: surgical patch has already failed twice in a row
+        - ≥4 distinct target files: too many moving parts for a targeted patch
+        - Any "missing file" / "no frontend pages" / "does not resolve" pattern:
+          creating a new file from scratch needs the full governance + spec context
+
+        Returns 'surgical' or 'systemic'.
+        """
+        # Rule 1: surgical has already failed twice consecutively → try full build
+        if consecutive_iters >= 2:
+            print_info(
+                f"  [{defect_source.upper()} TRIAGE] SYSTEMIC — surgical failed "
+                f"{consecutive_iters} consecutive time(s)"
+            )
+            return 'systemic'
+
+        # Rule 2: too many distinct files for targeted patch
+        if len(defect_target_files) >= 4:
+            print_info(
+                f"  [{defect_source.upper()} TRIAGE] SYSTEMIC — {len(defect_target_files)} "
+                f"target files (≥4 → full build)"
+            )
+            return 'systemic'
+
+        # Rule 3: defect text signals missing/non-existent files
+        defect_text_lower = (previous_defects or '').lower()
+        for pattern in self._SYSTEMIC_STATIC_PATTERNS:
+            if re.search(pattern, defect_text_lower):
+                print_info(
+                    f"  [{defect_source.upper()} TRIAGE] SYSTEMIC — missing-file pattern "
+                    f"detected: '{pattern}'"
+                )
+                return 'systemic'
+
+        print_info(
+            f"  [{defect_source.upper()} TRIAGE] SURGICAL — {len(defect_target_files)} "
+            f"file(s), no missing-file pattern, first/second consecutive"
+        )
+        return 'surgical'
+
     @staticmethod
     def _find_last_accepted_iteration(run_dir: Path) -> int:
         """
@@ -5730,31 +5795,65 @@ End your response with: TRIAGE_COMPLETE"""
                     # Surgical patch is always strictly better: Claude sees the exact file and
                     # patches only what the defect specifies. Without file contents Claude
                     # reconstructs from memory → drops methods/fields → cascades new defects.
+                    _pre_qa_strat = 'surgical'  # default; overridden for static/consistency below
                     if defect_source in ('static', 'consistency', 'quality', 'compile', 'integration') and previous_defects:
                         # Non-QA gate driving this iteration — triage strategy doesn't apply.
                         _triage_strategy = 'surgical'
-                        # Governance section for caching (no defects passed in — defects go in dynamic only)
-                        governance_section, _ = PromptTemplates.build_prompt(
-                            self.block, self.intake_data, self.build_governance,
-                            iteration, self.max_qa_iterations, None,
-                            self.tech_stack_override, self.external_integration_override,
-                            self.startup_id, self.effective_tech_stack, [], []
-                        )
-                        # Read current file contents so Claude patches surgically rather than
-                        # reconstructing from memory (which drops existing methods/fields)
-                        _current_file_contents = self._read_target_file_contents(iteration, defect_target_files)
                         _source_label = defect_source.upper()
-                        if _current_file_contents:
-                            print_info(f"  [{_source_label}] Loaded {len(_current_file_contents)} current file(s) for surgical patch")
+
+                        # Static + consistency: triage before routing to surgical vs full build.
+                        # quality/compile/integration always surgical (their defects are narrow).
+                        _pre_qa_strat = 'surgical'
+                        if defect_source in ('static', 'consistency'):
+                            _consec = (
+                                _static_consecutive_iters if defect_source == 'static'
+                                else _consistency_consecutive_iters
+                            )
+                            _pre_qa_strat = self._triage_pre_qa_strategy(
+                                defect_source, defect_target_files, previous_defects, _consec
+                            )
+
+                        if _pre_qa_strat == 'systemic':
+                            # Full build with defects injected — Claude sees full spec + all
+                            # defects and can fix missing files, missing classes, coupled issues
+                            # in one pass rather than one-file-at-a-time surgical patches.
+                            print_info(f"  [{_source_label}] SYSTEMIC → full build prompt (all defects + governance)")
+                            governance_section, dynamic_section = PromptTemplates.build_prompt(
+                                self.block,
+                                self.intake_data,
+                                self.build_governance,
+                                iteration,
+                                self.max_qa_iterations,
+                                previous_defects,
+                                self.tech_stack_override,
+                                self.external_integration_override,
+                                self.startup_id,
+                                self.effective_tech_stack,
+                                required_file_inventory,
+                                defect_target_files,
+                                prohibitions_block,
+                            )
                         else:
-                            print_warning(f"  [{_source_label}] No current file contents found — Claude will reconstruct")
-                        dynamic_section = PromptTemplates.integration_fix_prompt(
-                            integration_defects=previous_defects,
-                            required_file_inventory=required_file_inventory,
-                            defect_target_files=defect_target_files,
-                            current_file_contents=_current_file_contents,
-                        )
-                        print_info(f"  [{_source_label}] Using surgical patch prompt for {len(defect_target_files)} target file(s)")
+                            # Surgical: read current file contents so Claude patches only what
+                            # the defect specifies rather than reconstructing from memory.
+                            governance_section, _ = PromptTemplates.build_prompt(
+                                self.block, self.intake_data, self.build_governance,
+                                iteration, self.max_qa_iterations, None,
+                                self.tech_stack_override, self.external_integration_override,
+                                self.startup_id, self.effective_tech_stack, [], []
+                            )
+                            _current_file_contents = self._read_target_file_contents(iteration, defect_target_files)
+                            if _current_file_contents:
+                                print_info(f"  [{_source_label}] Loaded {len(_current_file_contents)} current file(s) for surgical patch")
+                            else:
+                                print_warning(f"  [{_source_label}] No current file contents found — Claude will reconstruct")
+                            dynamic_section = PromptTemplates.integration_fix_prompt(
+                                integration_defects=previous_defects,
+                                required_file_inventory=required_file_inventory,
+                                defect_target_files=defect_target_files,
+                                current_file_contents=_current_file_contents,
+                            )
+                            print_info(f"  [{_source_label}] Using surgical patch prompt for {len(defect_target_files)} target file(s)")
                     elif defect_source == 'qa' and previous_defects and defect_target_files and len(defect_target_files) <= 5 and _triage_strategy != 'systemic':
                         # Targeted QA fix: few defects with clear file locations → surgical patch.
                         # Full build prompt causes Claude to regenerate all files, introducing new
@@ -5797,10 +5896,13 @@ End your response with: TRIAGE_COMPLETE"""
                             prohibitions_block
                         )
 
-                    # FIX #4: Dynamic max tokens based on iteration + defect_source
-                    # Patch iterations (static/consistency/quality/compile fix) only output
-                    # 1-3 files — use 8192 instead of 16384 to save ~$0.12/iter.
-                    max_tokens = Config.get_max_tokens(iteration, defect_source, len(defect_target_files))
+                    # FIX #4: Dynamic max tokens based on iteration + defect_source.
+                    # Systemic pre-QA builds (full build prompt) → always 16384.
+                    # Patch iterations → 8192 (1 file) or 16384 (≥2 files).
+                    if defect_source in ('static', 'consistency') and _pre_qa_strat == 'systemic':
+                        max_tokens = Config.CLAUDE_MAX_TOKENS_DEFAULT  # full build needs full room
+                    else:
+                        max_tokens = Config.get_max_tokens(iteration, defect_source, len(defect_target_files))
 
                     # FIX #6: Dynamic timeout based on iteration (first call needs more time)
                     request_timeout = Config.get_request_timeout(iteration)
