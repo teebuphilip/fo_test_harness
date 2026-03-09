@@ -415,17 +415,6 @@ def deploy_backend(
         print(f"  [Railway] whoami check skipped: {e}")
         print("  [Railway] Continuing with deploy operations...")
 
-    # ── Step 1b: Refresh Railway's GitHub repo list ─────────
-    # New repos pushed to GitHub aren't visible to Railway until it re-syncs.
-    # githubReposRefresh forces that sync — must run before project/service create.
-    print("  [Railway] Refreshing GitHub repo list...")
-    try:
-        api._query("mutation { githubReposRefresh }")
-        time.sleep(3)  # give Railway a moment to sync
-        print("  [Railway] GitHub repos refreshed.")
-    except Exception as e:
-        print(f"  [Railway] Refresh note: {e} (continuing)")
-
     # ── Step 2: Create or reuse project ────────────────────
     project_id = railway_config.get("project_id") if railway_config else None
     service_id = railway_config.get("service_id") if railway_config else None
@@ -450,14 +439,6 @@ def deploy_backend(
         print(f"  [Railway] Service created: {service_id}")
     else:
         print(f"  [Railway] Reusing service: {service_id}")
-
-    # ── Step 3b: Set root directory to business/backend ────
-    print("  [Railway] Setting root directory: business/backend...")
-    try:
-        api.set_root_directory(service_id, "business/backend")
-        print("  [Railway] Root directory set.")
-    except Exception as e:
-        print(f"  [Railway] Root directory note: {e}")
 
     # ── Step 4: Add PostgreSQL ──────────────────────────────
     if add_postgres and not (railway_config or {}).get("postgres_added"):
