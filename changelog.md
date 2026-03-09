@@ -2,6 +2,34 @@
 
 ## 2026-03-09
 
+### feat: defect triage + fix sharpening after Feature QA rejection
+
+Root cause of oscillation: QA returns a vague Fix field ("update the validation logic") → Claude
+interprets it differently each time → defect ping-pongs for 10+ iterations without resolving.
+Even with surgical patch, if the Fix instruction is ambiguous, Claude guesses and may make things
+worse or touch the wrong thing.
+
+New step: after `_filter_hallucinated_defects()` and before triggering any build, run
+`_triage_and_sharpen_defects()` which calls gpt-4o-mini on all surviving defects to:
+
+1. **SURGICAL**: isolated 1-5 line fix. Replaces vague Fix field with exact function name, current
+   line, and what it must change to. No interpretation needed — Claude reads and applies.
+2. **SYSTEMIC**: defect is architectural, OR has appeared 3+ times (surgical approach failed) →
+   forces full build with architectural direction, not a line-level patch.
+3. **INVALID**: scope creep or not in intake spec → drops defect. If ALL drop → verdict flips to
+   ACCEPTED without triggering another build.
+
+`_triage_strategy` loop variable carries the decision into prompt routing:
+- SURGICAL + ≤5 files → existing surgical patch path
+- SYSTEMIC → forces full build prompt regardless of file count
+- ACCEPTED → no build triggered, loop exits cleanly
+
+Triage output saved to `logs/iteration_N_triage_output.log`.
+INVALID dropped defects saved to `logs/iteration_N_triage_contested.log`.
+
+New methods: `_triage_and_sharpen_defects()`, `_parse_triage_output()`,
+`_build_intake_summary_for_triage()`
+
 ### fix: QA defect fix — surgical patch for targeted QA fixes (≤5 defect files)
 
 Root cause: a single-file QA defect (Auth0 `user.getAccessTokenSilently()` in Assessments.jsx)

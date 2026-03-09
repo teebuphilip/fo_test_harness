@@ -4298,6 +4298,194 @@ class FOHarness:
         print_info(f"  [FILTER] QA report filtered: {len(removed)} defect(s) removed, {total_kept} remaining")
         return new_report
 
+    def _build_intake_summary_for_triage(self) -> str:
+        """Compact intake summary for the defect triage prompt."""
+        if not self.intake_data:
+            return '(No intake data available)'
+        lines = []
+        for key in ('feature_name', 'feature_description', 'core_features',
+                    'user_stories', 'data_model', 'success_metrics'):
+            val = self.intake_data.get(key)
+            if val:
+                lines.append(f"{key}: {str(val)[:400]}")
+        return '\n'.join(lines) if lines else str(self.intake_data)[:600]
+
+    def _triage_and_sharpen_defects(
+        self,
+        qa_report: str,
+        iteration: int,
+        recurring_tracker: dict,
+        current_file_contents: dict,
+    ) -> tuple:
+        """
+        After hallucination filter, assess remaining QA defects before triggering a build.
+
+        For each defect:
+        - SURGICAL: isolated 1-5 line fix. Sharpens Fix field to exact function+line+change.
+        - SYSTEMIC: architectural or 3+ oscillations. Describes flow problem + direction.
+        - INVALID: scope creep / not in intake spec → drop.
+
+        Returns:
+            sharpened_report (str): qa_report with Fix fields replaced by specific instructions
+            strategy (str): 'surgical' | 'systemic' | 'accepted' (all invalid → flip to pass)
+            contested (list): dicts with defect number, location, reason for each INVALID
+        """
+        defects = self._extract_defects_for_tracking(qa_report)
+        if not defects:
+            return qa_report, 'surgical', []
+
+        # Build recurrence summary
+        recurrence_lines = []
+        for d in defects:
+            key = (d['location'], d['classification'])
+            count = recurring_tracker.get(key, {}).get('count', 0)
+            last_fix = recurring_tracker.get(key, {}).get('last_fix', '')
+            recurrence_lines.append(
+                f"- {d['location']} ({d['classification']}): "
+                f"appeared {count} time(s) previously"
+                + (f" | last attempted fix: {last_fix[:120]}" if last_fix else "")
+            )
+        recurrence_summary = '\n'.join(recurrence_lines) if recurrence_lines else 'None — first appearance of all defects.'
+
+        # Build file contents section (only files we have)
+        if current_file_contents:
+            file_parts = []
+            for path, content in current_file_contents.items():
+                file_parts.append(f"**FILE: {path}**\n```\n{content}\n```")
+            file_section = '\n\n'.join(file_parts)
+        else:
+            file_section = '(No current file contents available for these defects.)'
+
+        # Extract raw defect blocks from qa_report
+        blocks = re.split(r'(?=DEFECT-\d+:)', qa_report)
+        defect_blocks = [b.strip() for b in blocks if re.match(r'DEFECT-\d+:', b.strip())]
+        defects_section = '\n\n'.join(defect_blocks)
+
+        intake_summary = self._build_intake_summary_for_triage()
+
+        prompt = f"""You are a senior engineer triaging QA defects before sending them to a developer.
+Your job: classify each defect and sharpen its Fix field into a specific, unambiguous instruction.
+
+**WHAT IS ACTUALLY REQUIRED (intake spec — this is the source of truth):**
+{intake_summary}
+
+**RECURRENCE HISTORY (how many times each defect has appeared before):**
+{recurrence_summary}
+
+**CURRENT FILE CONTENTS (the actual code being fixed):**
+{file_section}
+
+**DEFECTS TO TRIAGE:**
+{defects_section}
+
+---
+
+For each defect, respond in EXACTLY this format (no extra text):
+
+TRIAGE-N:
+  CLASSIFICATION: SURGICAL | SYSTEMIC | INVALID
+  REASON: <one sentence — why this classification>
+  SHARPENED_FIX: <see rules below>
+
+CLASSIFICATION rules:
+- SURGICAL: isolated bug, 1-5 line change, fix is deterministic. Any developer reads the sharpened fix and makes the same change.
+- SYSTEMIC: the fix requires changing how multiple components interact, OR this defect has appeared 3+ times (surgical approach is not working — escalate), OR the current implementation approach is fundamentally wrong.
+- INVALID: the intake spec does not require this behavior, or the defect is asking for something beyond what was specified.
+
+SHARPENED_FIX rules:
+- SURGICAL: Name the exact function, what the current line says, and what it must change to. Example: "In handleSubmit(), change `axios.post('/api/reports')` to `axios.post('/api/reports/generate')`". No phrases like "update the logic" or "ensure validation".
+- SYSTEMIC: Describe what the flow problem is and what architectural change is needed. Be specific about which files and which interaction is wrong.
+- INVALID: N/A
+
+Do NOT change the meaning of real bugs — only make the fix instruction more precise.
+End your response with: TRIAGE_COMPLETE"""
+
+        try:
+            gpt_client = ChatGPTClient()
+            result = gpt_client.call(prompt, max_tokens=2048)
+            triage_output = result.get('content', '')
+            self.artifacts.save_log(f'iteration_{iteration:02d}_triage_output', triage_output)
+        except Exception as e:
+            print_warning(f"  [TRIAGE] Triage call failed ({e}) — proceeding with unsharpened defects")
+            return qa_report, 'surgical', []
+
+        return self._parse_triage_output(triage_output, qa_report, recurring_tracker, defects, iteration)
+
+    def _parse_triage_output(
+        self,
+        triage_output: str,
+        qa_report: str,
+        recurring_tracker: dict,
+        defects: list,
+        iteration: int,
+    ) -> tuple:
+        """
+        Parse triage output. Replaces Fix fields in qa_report with sharpened versions.
+        Returns (sharpened_report, strategy, contested).
+        """
+        # Parse TRIAGE-N blocks
+        triage_blocks = {}
+        for match in re.finditer(
+            r'TRIAGE-(\d+):\s*\n(.*?)(?=TRIAGE-\d+:|TRIAGE_COMPLETE|\Z)',
+            triage_output, re.DOTALL
+        ):
+            n = int(match.group(1))
+            block = match.group(2)
+            cls_match   = re.search(r'CLASSIFICATION:\s*(SURGICAL|SYSTEMIC|INVALID)', block)
+            reason_match = re.search(r'REASON:\s*(.+?)(?=\n\s*SHARPENED_FIX:|\Z)', block, re.DOTALL)
+            fix_match    = re.search(r'SHARPENED_FIX:\s*(.*?)(?=\n\s*TRIAGE-|\n\s*TRIAGE_COMPLETE|\Z)', block, re.DOTALL)
+            triage_blocks[n] = {
+                'classification': cls_match.group(1).strip()   if cls_match   else 'SURGICAL',
+                'reason':         reason_match.group(1).strip() if reason_match else '',
+                'sharpened_fix':  fix_match.group(1).strip()   if fix_match   else '',
+            }
+
+        if not triage_blocks:
+            print_warning("  [TRIAGE] Could not parse triage output — proceeding with unsharpened defects")
+            return qa_report, 'surgical', []
+
+        classifications = [t['classification'] for t in triage_blocks.values()]
+        all_invalid  = all(c == 'INVALID'  for c in classifications)
+        any_systemic = any(c == 'SYSTEMIC' for c in classifications)
+        contested    = []
+
+        # Log each decision
+        labels = {'SURGICAL': '[SURGICAL]', 'SYSTEMIC': '[SYSTEMIC]', 'INVALID': '[INVALID ]'}
+        for i, (n, t) in enumerate(sorted(triage_blocks.items())):
+            loc = defects[i]['location'] if i < len(defects) else f'DEFECT-{n}'
+            label = labels.get(t['classification'], '[?]')
+            print_info(f"  [TRIAGE] DEFECT-{n} {label} {loc} — {t['reason'][:90]}")
+            if t['classification'] == 'INVALID':
+                contested.append({'defect': n, 'location': loc, 'reason': t['reason']})
+
+        if all_invalid:
+            print_success("  [TRIAGE] All defects classified INVALID — accepting build without fix pass")
+            return qa_report, 'accepted', contested
+
+        # Replace Fix: fields in qa_report with sharpened versions (SURGICAL and SYSTEMIC only)
+        sharpened_report = qa_report
+        for n, t in sorted(triage_blocks.items()):
+            if t['classification'] == 'INVALID':
+                continue
+            if not t['sharpened_fix'] or t['sharpened_fix'].upper() == 'N/A':
+                continue
+            # Match Fix: field inside DEFECT-N block, up to next - Severity: or end of block
+            pattern = rf'(DEFECT-{n}:.*?-\s*Fix:\s*)(.*?)(\n\s*-\s*Severity:)'
+            replacement = rf'\g<1>{t["sharpened_fix"]}\g<3>'
+            new_report = re.sub(pattern, replacement, sharpened_report, flags=re.DOTALL)
+            if new_report != sharpened_report:
+                print_info(f"  [TRIAGE] DEFECT-{n} Fix field sharpened")
+                sharpened_report = new_report
+
+        strategy = 'systemic' if any_systemic else 'surgical'
+        systemic_count = sum(1 for c in classifications if c == 'SYSTEMIC')
+        surgical_count = sum(1 for c in classifications if c == 'SURGICAL')
+        print_info(
+            f"  [TRIAGE] Strategy: {strategy.upper()} "
+            f"({surgical_count} surgical, {systemic_count} systemic, {len(contested)} invalid)"
+        )
+        return sharpened_report, strategy, contested
+
     @staticmethod
     def _find_last_accepted_iteration(run_dir: Path) -> int:
         """
@@ -5257,6 +5445,10 @@ class FOHarness:
         # Consistency hard cap tracking (mirrors Fix 3 for static)
         _consistency_consecutive_iters = 0  # consecutive iterations driven by consistency check alone
 
+        # Defect triage strategy set by _triage_and_sharpen_defects() after Feature QA rejection.
+        # 'surgical' → targeted patch (default); 'systemic' → full build with architectural direction
+        _triage_strategy = 'surgical'
+
         # Gate telemetry (O): explicit execution trace for QA/STATIC/CONSISTENCY
         gate_trace = []
 
@@ -5539,6 +5731,8 @@ class FOHarness:
                     # patches only what the defect specifies. Without file contents Claude
                     # reconstructs from memory → drops methods/fields → cascades new defects.
                     if defect_source in ('static', 'consistency', 'quality', 'compile', 'integration') and previous_defects:
+                        # Non-QA gate driving this iteration — triage strategy doesn't apply.
+                        _triage_strategy = 'surgical'
                         # Governance section for caching (no defects passed in — defects go in dynamic only)
                         governance_section, _ = PromptTemplates.build_prompt(
                             self.block, self.intake_data, self.build_governance,
@@ -5561,10 +5755,12 @@ class FOHarness:
                             current_file_contents=_current_file_contents,
                         )
                         print_info(f"  [{_source_label}] Using surgical patch prompt for {len(defect_target_files)} target file(s)")
-                    elif defect_source == 'qa' and previous_defects and defect_target_files and len(defect_target_files) <= 5:
+                    elif defect_source == 'qa' and previous_defects and defect_target_files and len(defect_target_files) <= 5 and _triage_strategy != 'systemic':
                         # Targeted QA fix: few defects with clear file locations → surgical patch.
                         # Full build prompt causes Claude to regenerate all files, introducing new
                         # consistency defects for a 1-2 line fix (e.g. Auth0 token pattern).
+                        # Exception: triage classified defects as SYSTEMIC → fall through to full
+                        # build so Claude gets architectural direction, not a line-level patch.
                         governance_section, _ = PromptTemplates.build_prompt(
                             self.block, self.intake_data, self.build_governance,
                             iteration, self.max_qa_iterations, None,
@@ -6368,6 +6564,36 @@ class FOHarness:
                         self.artifacts.save_log(
                             f'iteration_{iteration:02d}_qa_report_raw', raw_qa_report
                         )
+
+                    # Triage and sharpen surviving defects before triggering a build.
+                    # Classifies each defect as SURGICAL (line-level fix) / SYSTEMIC (architectural
+                    # rethink) / INVALID (scope creep). Sharpens vague Fix fields into exact
+                    # function+line instructions so Claude doesn't have to guess. Stores strategy
+                    # in _triage_strategy for prompt routing on the next iteration.
+                    if "QA STATUS: REJECTED" in qa_report:
+                        _triage_file_contents = self._read_target_file_contents(
+                            iteration,
+                            [d['location'] for d in self._extract_defects_for_tracking(qa_report)]
+                        )
+                        qa_report, _triage_strategy, _triage_contested = self._triage_and_sharpen_defects(
+                            qa_report, iteration, recurring_tracker, _triage_file_contents
+                        )
+                        if _triage_contested:
+                            self.artifacts.save_log(
+                                f'iteration_{iteration:02d}_triage_contested',
+                                '\n'.join(
+                                    f"DEFECT-{c['defect']} @ {c['location']}: {c['reason']}"
+                                    for c in _triage_contested
+                                )
+                            )
+                        if _triage_strategy == 'accepted':
+                            # All remaining defects were invalid — flip verdict without another build
+                            qa_report = qa_report.replace(
+                                'QA STATUS: REJECTED', 'QA STATUS: ACCEPTED [TRIAGE-CLEARED]'
+                            )
+                            print_success(
+                                f"  [TRIAGE] Verdict flipped to ACCEPTED — all defects invalid/out-of-scope"
+                            )
 
                     # Confirm pending resolutions: any FIXED defect absent from this QA → resolved
                     if pending_resolution:

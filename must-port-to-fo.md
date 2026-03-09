@@ -11,6 +11,18 @@
 
 ## Build Pipeline (2026-03-09)
 
+39. Defect triage + fix sharpening after Feature QA rejection
+- Root cause: vague Fix fields ("update the validation logic") → Claude guesses differently each
+  time → defect oscillates 10+ iterations. Even surgical patch can't help if the Fix is ambiguous.
+- New step after hallucination filter: _triage_and_sharpen_defects() calls gpt-4o-mini on all
+  surviving defects. Classifies each as SURGICAL (line-level, sharpened Fix), SYSTEMIC (architectural
+  rethink, full build), or INVALID (scope creep, drop). ALL invalid → flip verdict to ACCEPTED.
+- _triage_strategy loop variable routes into prompt selection: SYSTEMIC → full build forced.
+- Non-QA gate iterations reset _triage_strategy='surgical' so it doesn't bleed across gate types.
+- New methods: _triage_and_sharpen_defects(), _parse_triage_output(), _build_intake_summary_for_triage()
+- Files: fo_test_harness.py
+⬜ TODO for FO codebase
+
 38. QA defect fix — surgical patch for targeted QA fixes (≤5 defect files)
 - Single-file QA defect triggered full build prompt → Claude regenerated all files from memory
   → new consistency defects undid a clean consistency pass.
