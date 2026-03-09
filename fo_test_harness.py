@@ -5712,8 +5712,9 @@ End with: SHARPEN_COMPLETE"""
                     f"other resume-mode warm-starts suppressed"
                 )
 
-        if _ws_run_dir.is_dir() and _ws_mode == 'fix':
+        if _ws_run_dir.is_dir() and _ws_mode == 'fix' and not _integration_loaded:
             # Load the existing QA report as defects and jump straight to the fix iteration
+            # Skipped when --integration-issues is also present (integration block already set defects)
             _qa_report_path = _ws_run_dir / 'qa' / f'iteration_{_ws_iteration:02d}_qa_report.txt'
             if not _qa_report_path.exists():
                 print_error(f"Warm-start (fix): QA report not found: {_qa_report_path}")

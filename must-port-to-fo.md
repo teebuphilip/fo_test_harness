@@ -11,6 +11,15 @@
 
 ## Build Pipeline (2026-03-09)
 
+44. fix: --resume-mode fix + --integration-issues conflict
+- When both flags passed together: fix warm-start block ran AFTER integration block and
+  overwrote previous_defects with old QA report. Loop started at _ws_iteration+1 which
+  could exceed --max-iterations → while condition immediately false → "Should not reach here".
+- Fix: added `and not _integration_loaded` to fix mode block (same guard qa mode already had).
+  Integration block owns previous_defects/iteration when --integration-issues is loaded.
+- Files: fo_test_harness.py (warm-start fix block condition, line ~5715)
+⬜ TODO for FO codebase
+
 43. Consistency fix sharpening before Claude patch
 - Consistency A↔B oscillation: Fix field said "align X with Y" — no indication of which
   side changes, which function, or exact new code. Claude guessed and oscillated indefinitely.

@@ -2,6 +2,18 @@
 
 ## 2026-03-09
 
+### fix: --resume-mode fix + --integration-issues conflict
+
+When both `--resume-mode fix` and `--integration-issues` were passed together, the `fix`
+warm-start block ran after the integration block and overwrote `previous_defects` with the
+old QA report, discarding the integration issues entirely. The loop then started at
+`_ws_iteration + 1` which could exceed `--max-iterations`, causing zero iterations and
+"Should not reach here" exit.
+
+Fix: added `and not _integration_loaded` guard to the `fix` mode block (same guard the `qa`
+mode block already had). When `--integration-issues` is loaded, the integration block owns
+`previous_defects` and `iteration` — `fix`/`qa` warm-start blocks are suppressed.
+
 ### feat: consistency fix sharpening before Claude patch
 
 Consistency A↔B oscillation: Claude kept shifting mismatches between files because the
