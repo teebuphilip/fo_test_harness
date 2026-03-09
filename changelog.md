@@ -2,6 +2,13 @@
 
 ## 2026-03-09
 
+### fix: triage content extraction — wrong key on ChatGPTClient response
+
+Triage was calling `result.get('content', '')` but `ChatGPTClient.call()` returns the raw
+OpenAI response dict where content is at `choices[0].message.content`. Every triage call
+returned empty string silently — zero sharpening happened across the entire first run with
+the triage feature. Fixed to `result['choices'][0]['message']['content']`.
+
 ### feat: defect triage + fix sharpening after Feature QA rejection
 
 Root cause of oscillation: QA returns a vague Fix field ("update the validation logic") → Claude

@@ -11,6 +11,14 @@
 
 ## Build Pipeline (2026-03-09)
 
+40. Triage content extraction bug — wrong key on ChatGPTClient response
+- `_triage_and_sharpen_defects()` called `result.get('content','')` but ChatGPTClient returns
+  raw OpenAI dict: content is at `choices[0].message.content`. Triage silently returned empty
+  string on every call — zero sharpening for the entire first run with the feature.
+- Fix: `result.get('choices',[{}])[0].get('message',{}).get('content','')`
+- Files: `fo_test_harness.py` (_triage_and_sharpen_defects)
+⬜ TODO for FO codebase
+
 39. Defect triage + fix sharpening after Feature QA rejection
 - Root cause: vague Fix fields ("update the validation logic") → Claude guesses differently each
   time → defect oscillates 10+ iterations. Even surgical patch can't help if the Fix is ambiguous.
