@@ -2,6 +2,33 @@
 
 ## Deploy Pipeline (additions 2026-03-10)
 
+53. feat: harness generates business_config.json from intake at polish step
+- Boilerplate InboxTamer placeholder landed in every ZIP and deployed repo.
+- New _generate_business_config() on FOHarness, called at top of _post_qa_polish().
+- Derives startup name, tagline, pricing, entitlements, branding, SEO from intake_data.
+- Writes to business/frontend/config/ and business/backend/config/ in artifacts dir.
+- Files: fo_test_harness.py (_generate_business_config, _post_qa_polish)
+⬜ TODO for FO codebase
+
+52. pipeline_deploy.py — force-add backend/config/business_config.json before push
+- Railway container fails with FileNotFoundError if backend/config/business_config.json
+  is gitignored and not pushed. Fix in _ensure_frontend_business_config():
+  copy from .example.json if missing, then `git add -f` to force-include.
+- Files: `deploy/pipeline_deploy.py` (_ensure_frontend_business_config)
+⬜ TODO for FO codebase
+
+51. pipeline_deploy.py — railway.toml written to BOTH repo root AND backend/
+- Railway scans from repo root; toml only in backend/ wasn't found → Nixpacks couldn't
+  detect Python. Now writes two files: root (with `cd backend &&` prefix) + backend/ (bare).
+- Files: `deploy/pipeline_deploy.py` (_ensure_railway_toml)
+⬜ TODO for FO codebase
+
+50. new: deploy/repo_setup.py — GitHub repo + App installation helper
+- PAT/gh CLI 403 on /user/installations → falls back to browser for App install.
+- Reads GITHUB_USERNAME from ACCESSKEYS env file automatically.
+- Files: `deploy/repo_setup.py` (new)
+⬜ N/A for FO codebase (deploy tooling only)
+
 50. Railway project creation — workspaceId + CLI logout + name truncation
 - Railway API requires workspaceId on projectCreate → added get_workspace_id() + passes to create_project().
 - Railway CLI session conflicts with API token → pipeline now runs `railway logout` before STEP 2.

@@ -1,5 +1,52 @@
 # Changelog
 
+## 2026-03-10
+
+### feat: harness generates business_config.json from intake at polish step
+
+Boilerplate ships with InboxTamer placeholder in business_config.json.
+Harness never replaced it — every ZIP had wrong branding/pricing/entitlements.
+
+Fix: added `_generate_business_config()` to FOHarness, called unconditionally
+at the start of `_post_qa_polish()`. Derives startup name, tagline, pricing,
+entitlements, and branding from intake_data. Writes to both
+`business/frontend/config/` and `business/backend/config/` in artifacts dir.
+No AI call — pure intake derivation.
+
+### fix: pipeline_deploy.py — force-add backend/config/business_config.json before push
+
+Railway container was failing with `FileNotFoundError: Missing config: /app/config/business_config.json`
+because `backend/config/business_config.json` is gitignored and was never pushed to the repo.
+
+Fix in `_ensure_frontend_business_config()`:
+- If `backend/config/business_config.json` doesn't exist but `.example.json` does → copy it.
+- Force-add via `git add -f` so Railway container gets it even if .gitignore excludes it.
+
+### fix: pipeline_deploy.py — railway.toml written to BOTH repo root AND backend/
+
+Railway scans from repo root. If `railway.toml` was only in `backend/` it wasn't found.
+Now writes two files:
+- Repo root: `startCommand = "cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT"`
+- `backend/railway.toml`: `startCommand = "uvicorn main:app --host 0.0.0.0 --port $PORT"`
+Nixpacks now reliably detects Python (root railway.toml exists + requirements.txt in backend/).
+
+### new: deploy/repo_setup.py — GitHub repo + App installation helper
+
+New script to handle GitHub repo setup outside of the deploy pipeline:
+- Reads `GITHUB_USERNAME` from `~/Downloads/ACCESSKEYS/ACCESSKEYS` env file automatically.
+- Creates GitHub repo via API (if not exists).
+- For App installation (required for Railway): PAT/gh CLI can't hit `/user/installations` (403).
+  Falls back to opening `github.com/settings/installations` in browser and printing instructions.
+- Usage: `python deploy/repo_setup.py --repo <name>`
+
+### new: deploy/auth0_setup.py — Auth0 SPA app + API creation
+
+New script to automate Auth0 app/API setup per deployment:
+- Reads `AUTH0_DOMAIN` and `AUTH0_KEY` (Management API token) from env.
+- Creates SPA application + Resource Server API for the project.
+- Strips whitespace from all values (`"".join(value.split())`).
+- Saves credentials to `~/Downloads/ACCESSKEYS/auth0_<app>.env`.
+
 ## 2026-03-09
 
 ### fix: Railway project creation — workspaceId + CLI logout + name truncation

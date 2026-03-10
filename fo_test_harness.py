@@ -3073,6 +3073,125 @@ class FOHarness:
             print_error(f"Patch call failed: {e}")
             return False, cost_stats
 
+    def _generate_business_config(self, artifacts_dir: Path) -> None:
+        """
+        Generate business_config.json from intake data and write it into the artifact
+        directories for both frontend and backend.  Replaces the boilerplate InboxTamer
+        placeholder so the ZIP is always startup-specific.
+        """
+        intake = self.intake_data
+        block_b = intake.get('block_b', {})
+        hero   = block_b.get('hero_answers', {})
+        econ   = intake.get('block_a', {}).get('pass_1', {}).get('economics_snapshot', {})
+
+        startup_name = intake.get('startup_name', 'My Startup')
+        startup_id   = intake.get('startup_idea_id', 'my_startup')
+        tagline      = hero.get('Q3_success_metric', econ.get('target_customer', ''))[:120]
+        price_raw    = econ.get('starter_price', '$99/month')
+
+        # Parse price — extract first number found
+        import re as _re
+        price_match = _re.search(r'[\d,]+', price_raw.replace(',', ''))
+        price_monthly = int(price_match.group(0)) if price_match else 99
+        price_annual  = round(price_monthly * 10)   # ~2 months free
+
+        # Derive slug for URLs
+        slug = startup_name.lower().replace(' ', '')
+
+        # Build entitlements from must-have features
+        must_haves = hero.get('Q4_must_have_features', [])
+        entitlements = []
+        for f in must_haves:
+            key = _re.sub(r'[^a-z0-9]+', '_', f.lower()).strip('_')[:30]
+            entitlements.append(key)
+        if not entitlements:
+            entitlements = ['dashboard']
+
+        features_block = {}
+        for i, (key, label) in enumerate(zip(entitlements, must_haves)):
+            features_block[key] = {
+                "tier": 1 if i < 5 else 2,
+                "label": label[:50],
+                "description": label
+            }
+
+        config = {
+            "_comment": "business_config.json — auto-generated from intake by FO harness. Hero fills in API keys.",
+            "business": {
+                "name": startup_name,
+                "tagline": tagline,
+                "url": f"https://{slug}.com",
+                "support_email": f"support@{slug}.com"
+            },
+            "stripe": {
+                "publishable_key": "pk_live_YOUR_KEY_HERE",
+                "secret_key": "sk_live_YOUR_KEY_HERE",
+                "webhook_secret": "whsec_YOUR_WEBHOOK_SECRET_HERE"
+            },
+            "stripe_products": {
+                "prod_REPLACE_WITH_STARTER_ID": {
+                    "name": "Starter",
+                    "description": f"Get started with {startup_name}",
+                    "price_monthly": price_monthly,
+                    "price_annual": price_annual,
+                    "annual_savings": f"Save ${price_monthly * 2}/year",
+                    "popular": True,
+                    "cta_text": "Start Free Trial",
+                    "stripe_price_id_monthly": "price_REPLACE_WITH_MONTHLY_PRICE_ID",
+                    "stripe_price_id_annual":  "price_REPLACE_WITH_ANNUAL_PRICE_ID",
+                    "features": must_haves[:6] if must_haves else ["Full access"],
+                    "limitations": [],
+                    "entitlements": entitlements
+                }
+            },
+            "features": features_block,
+            "auth0": {
+                "domain": "YOUR_AUTH0_DOMAIN.auth0.com",
+                "client_id": "YOUR_CLIENT_ID",
+                "client_secret": "YOUR_CLIENT_SECRET",
+                "audience": "https://YOUR_AUTH0_DOMAIN.auth0.com/api/v2/"
+            },
+            "mailerlite": {
+                "api_key": "YOUR_MAILERLITE_API_KEY",
+                "group_id": "YOUR_GROUP_ID"
+            },
+            "branding": {
+                "primary_color": "#1E3A5F",
+                "logo_url": "",
+                "favicon_url": "",
+                "company_name": startup_name
+            },
+            "dashboard": {
+                "theme": "light",
+                "show_upgrade_banner": True,
+                "nav_items": [
+                    {"label": "Dashboard", "path": "/dashboard", "icon": "grid"},
+                    {"label": "Settings",  "path": "/settings",  "icon": "cog"}
+                ],
+                "hero_support_url": "",
+                "hero_docs_url": ""
+            },
+            "metadata": {
+                "analytics": {"google_analytics_id": ""},
+                "seo": {
+                    "title": f"{startup_name}",
+                    "description": tagline
+                }
+            },
+            "marketing": {"enabled": False}
+        }
+
+        config_json = json.dumps(config, indent=2)
+
+        targets = [
+            artifacts_dir / 'business' / 'frontend' / 'config' / 'business_config.json',
+            artifacts_dir / 'business' / 'backend'  / 'config' / 'business_config.json',
+        ]
+        for target in targets:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(config_json)
+            print_success(f"  ✓ business_config.json → {target.relative_to(artifacts_dir)}")
+
     def _post_qa_polish(self, iteration: int, build_output: str, governance_section: str) -> Tuple[bool, dict]:
         """
         FIX #10: Post-QA polish step to generate missing optional files.
@@ -3124,6 +3243,10 @@ class FOHarness:
         test_files = [f for f in manifest_files if 'test' in f.lower() or 'spec' in f.lower()]
         has_minimal_tests = len(test_files) < 3  # Consider < 3 test files as "minimal"
         docs_dir = artifacts_dir / 'business' / 'docs'
+
+        # Always generate business_config.json from intake (replaces boilerplate placeholder)
+        print_info("→ Generating business_config.json from intake...")
+        self._generate_business_config(artifacts_dir)
 
         polish_items = []
         if not readme_found:
