@@ -2,6 +2,13 @@
 
 ## Deploy Pipeline (additions 2026-03-10)
 
+56. fix: email-validator missing from boilerplate requirements.txt
+- main.py uses pydantic EmailStr → requires email-validator package separately.
+- Was not in requirements.txt → ImportError crash at Railway container startup.
+- Files: saas-boilerplate/backend/requirements.txt (in teebu-saas-platform repo)
+⬜ N/A — boilerplate fix already applied locally
+
+
 55. fix: _generate_business_config missing description field
 - main.py hard-requires BUSINESS_CONFIG["business"]["description"] → KeyError on startup.
 - Added "description": tagline to the business block.

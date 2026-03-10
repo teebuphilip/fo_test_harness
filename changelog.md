@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-03-10 (deploy fix #16)
+
+### fix: add email-validator to boilerplate requirements.txt
+
+`main.py` uses `EmailStr` from pydantic which requires the separate `email-validator` package.
+It wasn't in `requirements.txt` → Railway container crashed at import with:
+`ImportError: email-validator is not installed`
+
+Fix: added `email-validator>=2.0.0` to `saas-boilerplate/backend/requirements.txt`.
+Also pushed directly to AWI repo (`b4c82a2`).
+
 ## 2026-03-10 (late)
 
 ### fix: fo_test_harness.py — _generate_business_config missing description field

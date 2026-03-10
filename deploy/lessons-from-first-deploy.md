@@ -201,6 +201,19 @@ ZIP before it's ever extracted.
 
 ---
 
+## 16. email-validator missing from requirements.txt
+
+**Error:** `ImportError: email-validator is not installed, run pip install 'pydantic[email]'`
+
+**Root cause:** `main.py` defines `class SignupRequest(BaseModel)` with an `EmailStr` field (line 184).
+Pydantic's `EmailStr` type requires the separate `email-validator` package — it is NOT included
+when you install `pydantic` alone. The boilerplate `requirements.txt` only listed `pydantic>=2.5.0`.
+
+**Fix:** Added `email-validator>=2.0.0` to `saas-boilerplate/backend/requirements.txt`.
+Also pushed directly to deployed AWI repo.
+
+---
+
 ## Summary: Required manual steps (can't be automated)
 
 1. **Railway personal token** — get from `railway.app/account/tokens`, save to ACCESSKEYS
@@ -225,3 +238,4 @@ ZIP before it's ever extracted.
 | `saas-boilerplate/backend/config/stripe_config.example.json` | fixed key names |
 | `saas-boilerplate/backend/config/mailerlite_config.example.json` | fixed key names |
 | `saas-boilerplate/backend/config/auth0_config.example.json` | fixed key names |
+| `saas-boilerplate/backend/requirements.txt` | added `email-validator>=2.0.0` |
