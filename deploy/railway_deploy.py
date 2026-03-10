@@ -418,9 +418,9 @@ def deploy_backend(
     """
     api = RailwayAPI(token)
     project_name = project_name or repo_path.name.lower().replace("_", "-")
-    # Railway rejects long names — truncate at word boundary before 40 chars
-    if len(project_name) > 40:
-        truncated = project_name[:40]
+    # Railway rejects long names — truncate at word boundary before 30 chars
+    if len(project_name) > 30:
+        truncated = project_name[:30]
         last_hyphen = truncated.rfind("-")
         project_name = truncated[:last_hyphen] if last_hyphen > 0 else truncated
     env_file = env_file or (repo_path / ".env")

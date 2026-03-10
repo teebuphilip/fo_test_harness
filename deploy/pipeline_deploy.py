@@ -521,10 +521,21 @@ def _ensure_frontend_business_config(repo_path: Path):
 
 def _ensure_railway_toml(repo_path: Path):
     """
-    Write railway.toml inside backend/ (flat layout: zip_to_repo puts main.py there).
-    Railway root directory = backend/, so start command is just uvicorn main:app.
+    Write railway.toml at repo root AND inside backend/.
+    - Repo root version: uses 'cd backend &&' prefix (for Railway root = /)
+    - backend/ version: no prefix (for Railway root = backend/)
+    Both written so it works regardless of what root directory Railway has set.
     """
-    content = (
+    content_root = (
+        '[build]\n'
+        'builder = "nixpacks"\n'
+        '\n'
+        '[deploy]\n'
+        'startCommand = "cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT"\n'
+        'restartPolicyType = "ON_FAILURE"\n'
+        'restartPolicyMaxRetries = 10\n'
+    )
+    content_backend = (
         '[build]\n'
         'builder = "nixpacks"\n'
         '\n'
@@ -533,12 +544,11 @@ def _ensure_railway_toml(repo_path: Path):
         'restartPolicyType = "ON_FAILURE"\n'
         'restartPolicyMaxRetries = 10\n'
     )
+    (repo_path / "railway.toml").write_text(content_root)
     backend_dir = repo_path / "backend"
     if backend_dir.exists():
-        (backend_dir / "railway.toml").write_text(content)
-        print("  [pipeline] railway.toml written (backend/)")
-    else:
-        print("  [pipeline] WARNING: backend/ dir not found — railway.toml not written")
+        (backend_dir / "railway.toml").write_text(content_backend)
+    print("  [pipeline] railway.toml written (repo root + backend/)")
 
 
 def _ensure_business_pages_in_src(repo_path: Path):
