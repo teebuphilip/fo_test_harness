@@ -2,6 +2,23 @@
 
 ## 2026-03-09
 
+### fix: pipeline_deploy.py + vercel_deploy.py — updated for flat repo layout
+
+After zip_to_repo.py switched to flat layout (backend/ frontend/ business/ at root),
+the pipeline was still referencing saas-boilerplate/ paths everywhere.
+
+Changes:
+- `_ensure_railway_toml()`: writes to `backend/railway.toml` (not repo root or business/backend/).
+  Start command: `uvicorn main:app --host 0.0.0.0 --port $PORT` (no cd needed, Railway root = backend/).
+- `_ensure_frontend_business_config()`: path updated from `saas-boilerplate/frontend/src/config/` → `frontend/src/config/`
+- `_ensure_business_pages_in_src()`: dest updated from `saas-boilerplate/frontend/src/business/pages/` → `frontend/src/business/pages/`.
+  loader.js patch now supports both old (`../../../../business/frontend/pages`) and new (`../../../business/frontend/pages`) relative paths.
+- `vercel_deploy.py`: default `root_directory` changed from `saas-boilerplate/frontend` → `frontend`.
+  Default env file path changed from `saas-boilerplate/frontend/.env` → `frontend/.env`.
+- Removed broken `serviceUpdate rootDirectory` API call (always 400) and `githubReposRefresh` mutation (doesn't exist).
+  railway.toml inside backend/ is the definitive fix — no API call needed.
+- Railway project name truncated to 50 chars (API rejects longer names).
+
 ### fix: zip_to_repo.py — flat repo layout (backend/ frontend/ business/ at root)
 
 `extract_zip()` was copying `saas-boilerplate/` as a nested directory into the repo.

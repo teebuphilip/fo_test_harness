@@ -1,13 +1,19 @@
 # Must Port to FO
 
-## Deploy Pipeline (additions 2026-03-08)
+## Deploy Pipeline (additions 2026-03-10)
 
-37. railway_deploy.py — set root directory to business/backend
-- Railway Railpack scans repo root → can't find Python app → build fails with "could not determine how to build".
-- Fix: `RailwayAPI.set_root_directory(service_id, "business/backend")` via `serviceUpdate` GraphQL mutation.
-- Called as Step 3b in deploy_backend(), after service create/reuse, before env vars.
-- Files: `deploy/railway_deploy.py` (new method + call)
+48. pipeline_deploy.py + vercel_deploy.py — updated for flat repo layout
+- zip_to_repo switched to flat layout: backend/ frontend/ business/ at repo root.
+  All saas-boilerplate/ paths in pipeline updated to match.
+- railway.toml now written to backend/ (Railway root = backend/, no cd needed).
+- Vercel root_directory = frontend/ (was saas-boilerplate/frontend).
+- business pages copy + loader.js patch support both old and new relative paths.
+- Railway project name truncated to 50 chars (API rejects longer names).
+- Removed broken serviceUpdate rootDirectory API call + non-existent githubReposRefresh mutation.
+- Files: `deploy/pipeline_deploy.py`, `deploy/vercel_deploy.py`, `deploy/railway_deploy.py`
 ⬜ TODO for FO codebase
+
+## Deploy Pipeline (additions 2026-03-08)
 
 ## Build Pipeline (2026-03-09)
 
