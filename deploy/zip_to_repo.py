@@ -160,6 +160,19 @@ def extract_zip(zip_path: Path, dest_root: Path) -> Path:
             else:
                 print(f"[WARN] saas-boilerplate/{folder}/ not found in ZIP")
 
+        # --- Copy teebu-shared-libs/ → repo/teebu-shared-libs/ ---
+        # main.py resolves shared libs relative to itself: ../../teebu-shared-libs/lib
+        # With Railway root = backend/, that path is repo/teebu-shared-libs/lib — must be at repo root.
+        shared_libs_src = run_root / "teebu-shared-libs"
+        shared_libs_dest = repo_path / "teebu-shared-libs"
+        if shared_libs_src.exists():
+            if shared_libs_dest.exists():
+                shutil.rmtree(shared_libs_dest)
+            shutil.copytree(shared_libs_src, shared_libs_dest)
+            print(f"[INFO] Copied teebu-shared-libs/ → repo/teebu-shared-libs/")
+        else:
+            print(f"[WARN] teebu-shared-libs/ not found in ZIP")
+
         # --- Copy final business/ artifacts → repo/business/ ---
         biz_src = _find_latest_business_artifacts(run_root)
         if biz_src and biz_src.exists():
