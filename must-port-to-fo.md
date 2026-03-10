@@ -2,6 +2,20 @@
 
 ## Deploy Pipeline (additions 2026-03-10)
 
+55. fix: _generate_business_config missing description field
+- main.py hard-requires BUSINESS_CONFIG["business"]["description"] → KeyError on startup.
+- Added "description": tagline to the business block.
+- Files: fo_test_harness.py (_generate_business_config, line ~3128)
+⬜ TODO for FO codebase
+
+54. fix: boilerplate backend/config example files — wrong JSON key names
+- stripe_config.example.json: secret_key → stripe_secret_key
+- mailerlite_config.example.json: api_key → mailerlite_api_key
+- auth0_config.example.json: domain/client_id/client_secret/audience → auth0_-prefixed
+- Pipeline copies example → real on first deploy; wrong keys caused hard startup crashes.
+- Files: saas-boilerplate/backend/config/*.example.json (in teebu-saas-platform repo)
+⬜ N/A — boilerplate fix already applied locally
+
 53. feat: harness generates business_config.json from intake at polish step
 - Boilerplate InboxTamer placeholder landed in every ZIP and deployed repo.
 - New _generate_business_config() on FOHarness, called at top of _post_qa_polish().

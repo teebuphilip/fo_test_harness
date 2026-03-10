@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-03-10 (late)
+
+### fix: fo_test_harness.py — _generate_business_config missing description field
+
+`main.py` hard-requires `BUSINESS_CONFIG["business"]["description"]`. The harness-generated
+`business_config.json` was missing this field → Railway crashed on startup with `KeyError: 'description'`.
+
+Fix: added `"description": tagline` to the `business` block in `_generate_business_config()`.
+
+### fix: boilerplate backend/config example files — wrong JSON key names
+
+All `*.example.json` files used short key names that didn't match what the shared libs read:
+- `stripe_config.example.json`: `secret_key` → `stripe_secret_key`
+- `mailerlite_config.example.json`: `api_key` → `mailerlite_api_key`
+- `auth0_config.example.json`: `domain/client_id/client_secret/audience` → `auth0_`-prefixed
+
+Pipeline copies example → real file on first deploy; wrong keys caused hard startup crashes.
+
 ## 2026-03-10
 
 ### feat: harness generates business_config.json from intake at polish step
