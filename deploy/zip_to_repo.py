@@ -118,19 +118,21 @@ def _find_latest_business_artifacts(run_root: Path) -> Path:
 
 def extract_zip(zip_path: Path, dest_root: Path) -> Path:
     """
-    1) Extract ZIP into a temp folder inside dest_root
-    2) Locate saas-boilerplate/ and latest _harness/build/iterXX_artifacts/business/
-    3) Copy saas-boilerplate/ → repo_path/saas-boilerplate/
-    4) Copy business/ → repo_path/business/  (repo root, sibling of saas-boilerplate/)
-    5) Copy top-level docs (README etc.) to repo root
-    6) Clean up temp extraction folder
+    Produces a flat repo layout:
+      repo/
+        backend/     ← saas-boilerplate/backend/   (has main.py, core/, lib/, requirements.txt)
+        frontend/    ← saas-boilerplate/frontend/
+        business/    ← latest _harness/build/iterXX_artifacts/business/
+        README.md    ← top-level docs
+
+    Railway root dir = backend/
+    Vercel root dir  = frontend/
     """
     import tempfile
     dest_root.mkdir(parents=True, exist_ok=True)
     repo_path = _repo_path_from_zip(zip_path, dest_root)
     repo_path.mkdir(parents=True, exist_ok=True)
 
-    # Extract into a temp dir so we don't pollute the repo folder
     with tempfile.TemporaryDirectory(dir=dest_root) as tmp:
         tmp_path = Path(tmp)
         with zipfile.ZipFile(zip_path, "r") as z:
@@ -144,34 +146,43 @@ def extract_zip(zip_path: Path, dest_root: Path) -> Path:
             candidates = [p for p in tmp_path.iterdir() if p.is_dir()]
             run_root = candidates[0] if len(candidates) == 1 else tmp_path
 
-        # --- Copy saas-boilerplate/ → repo_path/saas-boilerplate/ ---
         bp_src = run_root / "saas-boilerplate"
-        bp_dest = repo_path / "saas-boilerplate"
-        if bp_src.exists():
-            if bp_dest.exists():
-                shutil.rmtree(bp_dest)
-            shutil.copytree(bp_src, bp_dest)
-            print(f"[INFO] Copied saas-boilerplate/ to repo")
-        else:
-            print(f"[WARN] saas-boilerplate/ not found in ZIP at: {bp_src}")
 
-        # --- Copy final business/ artifacts → repo_path/business/ (sibling of saas-boilerplate/) ---
-        # The boilerplate's frontend/src/core/loader.js resolves ../../../../business/frontend/pages
-        # from saas-boilerplate/frontend/src/core → repo root → business/
-        # So business/ must sit at the repo root, NOT inside saas-boilerplate/.
+        # --- Copy saas-boilerplate/backend/ → repo/backend/ ---
+        for folder in ("backend", "frontend"):
+            src = bp_src / folder
+            dest = repo_path / folder
+            if src.exists():
+                if dest.exists():
+                    shutil.rmtree(dest)
+                shutil.copytree(src, dest)
+                print(f"[INFO] Copied saas-boilerplate/{folder}/ → repo/{folder}/")
+            else:
+                print(f"[WARN] saas-boilerplate/{folder}/ not found in ZIP")
+
+        # --- Copy final business/ artifacts → repo/business/ ---
         biz_src = _find_latest_business_artifacts(run_root)
         if biz_src and biz_src.exists():
             biz_dest = repo_path / "business"
             if biz_dest.exists():
                 shutil.rmtree(biz_dest)
             shutil.copytree(biz_src, biz_dest)
-            print(f"[INFO] Copied business/ artifacts to repo root (sibling of saas-boilerplate/)")
+            print(f"[INFO] Copied business/ artifacts → repo/business/")
         else:
-            print(f"[WARN] No business/ artifacts found in ZIP")
+            # Fallback: use saas-boilerplate/business/ if no harness artifacts
+            biz_fallback = bp_src / "business"
+            if biz_fallback.exists():
+                biz_dest = repo_path / "business"
+                if biz_dest.exists():
+                    shutil.rmtree(biz_dest)
+                shutil.copytree(biz_fallback, biz_dest)
+                print(f"[INFO] Copied saas-boilerplate/business/ → repo/business/ (fallback)")
+            else:
+                print(f"[WARN] No business/ artifacts found in ZIP")
 
-        # --- Copy top-level docs to repo root (README, .gitignore, etc.) ---
+        # --- Copy top-level docs (README, .gitignore, etc.) to repo root ---
         for item in run_root.iterdir():
-            if item.is_file() and item.name not in ('saas-boilerplate',):
+            if item.is_file():
                 dest_file = repo_path / item.name
                 if not dest_file.exists():
                     shutil.copy2(item, dest_file)

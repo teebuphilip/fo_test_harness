@@ -4,7 +4,7 @@ FO Test Harness v2 - BUILD → QA → DEPLOY Orchestration
 Orchestrates Claude (tech/builder) and ChatGPT (QA/validator)
 
 USAGE:
-  ./fo_test_harness.py <intake_file> <build_governance_zip> <deploy_governance_zip> [--block-a] [--deploy]
+  ./fo_test_harness.py <intake_file> <build_governance_zip> [--block-a] [--deploy]
 
 DEFAULTS:
   Block:    B (Tier 2)   — pass --block-a for Tier 1
@@ -131,7 +131,6 @@ class Config:
 
     # Governance ZIP contents — populated at runtime from CLI paths
     BUILD_GOVERNANCE_ZIP  = None   # Path set by CLI arg
-    DEPLOY_GOVERNANCE_ZIP = None   # Path set by CLI arg
 
     # Default SaaS platform boilerplate (preferred for most builds)
     PLATFORM_BOILERPLATE_DIR = Path('/Users/teebuphilip/Documents/work/teebu-saas-platform')
@@ -2475,12 +2474,7 @@ class FOHarness:
         else:
             print_warning("QA_TESTCASE directive not found — testcase doc polish step will be skipped")
 
-        # Only load deploy governance if --deploy was passed
         self.deploy_governance = None
-        if self.do_deploy:
-            print_info("Loading DEPLOY governance ZIP...")
-            self.deploy_governance = load_governance_zip(Path(Config.DEPLOY_GOVERNANCE_ZIP))
-            print_success("DEPLOY governance loaded")
 
         # Warm-start: reuse an existing run directory if --resume-run was given
         resume_run = Path(getattr(cli_args, 'resume_run', None) or '')
@@ -2540,7 +2534,6 @@ class FOHarness:
             "effective_tech_stack": self.effective_tech_stack,
             "use_boilerplate": self.use_boilerplate,
             "build_governance_zip": str(Config.BUILD_GOVERNANCE_ZIP),
-            "deploy_governance_zip": str(Config.DEPLOY_GOVERNANCE_ZIP) if self.do_deploy else None,
             "platform_boilerplate_dir": str(Config.PLATFORM_BOILERPLATE_DIR),
             "qa_polish_2_directive_path": str(self.qa_polish_2_directive_path),
             "qa_testcase_directive_path": str(self.qa_testcase_directive_path) if self.qa_testcase_directive_path else None,
@@ -7188,25 +7181,11 @@ Examples:
         help='Path to BUILD governance ZIP (FOBUILFINALLOCKED100.zip). Overridden by --buildzip.'
     )
     parser.add_argument(
-        'deploy_governance_zip',
-        nargs='?',
-        type=Path,
-        default=None,
-        help='Path to DEPLOY governance ZIP (fo_deploy_governance_v1_2_CLARIFIED.zip). Overridden by --deployzip.'
-    )
-    parser.add_argument(
         '--buildzip',
         type=Path,
-        default=Path('/Users/teebuphilip/Documents/work/FounderOps/docs/architecture/BUILD/build_rules/FOBUILFINALLOCKED100.zip'),
-        help='BUILD governance ZIP override (default: FOBUILFINALLOCKED100.zip)'
+        default=next((Path(p) for p in sorted(Path('.').glob('FOBUILFINALLOCKED*.zip'))), None),
+        help='BUILD governance ZIP override (default: auto-detect FOBUILFINALLOCKED*.zip in cwd)'
     )
-    parser.add_argument(
-        '--deployzip',
-        type=Path,
-        default=Path('/Users/teebuphilip/Documents/work/FounderOps/docs/architecture/BUILD/deployment_rules/fo_deploy_governance_v1_2_CLARIFIED.zip'),
-        help='DEPLOY governance ZIP override (default: fo_deploy_governance_v1_2_CLARIFIED.zip)'
-    )
-
     # Optional flags
     # FIX #9: --block-a flag, default is Block B
     parser.add_argument(
@@ -7428,8 +7407,6 @@ Examples:
     # Named flags (--buildzip / --deployzip) override positional args; positional fallback to defaults
     if args.build_governance_zip is None:
         args.build_governance_zip = args.buildzip
-    if args.deploy_governance_zip is None:
-        args.deploy_governance_zip = args.deployzip
 
     # If --resume-run is given without --resume-mode, default to qa
     if args.resume_run and not args.resume_mode:
@@ -7465,13 +7442,8 @@ Examples:
         print_error(f"BUILD governance ZIP not found: {args.build_governance_zip}")
         sys.exit(1)
 
-    if not args.deploy_governance_zip.exists():
-        print_error(f"DEPLOY governance ZIP not found: {args.deploy_governance_zip}")
-        sys.exit(1)
-
     # Inject CLI paths into Config
     Config.BUILD_GOVERNANCE_ZIP  = args.build_governance_zip
-    Config.DEPLOY_GOVERNANCE_ZIP = args.deploy_governance_zip
     Config.PLATFORM_BOILERPLATE_DIR = args.platform_boilerplate_dir
 
     # Create base output directory

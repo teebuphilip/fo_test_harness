@@ -2,6 +2,39 @@
 
 ## 2026-03-09
 
+### fix: zip_to_repo.py — flat repo layout (backend/ frontend/ business/ at root)
+
+`extract_zip()` was copying `saas-boilerplate/` as a nested directory into the repo.
+Railway's root was set to `business/backend/` but `main.py` and `requirements.txt` live at
+`saas-boilerplate/backend/` — Railway couldn't detect Python, build failed.
+
+Fix: extract the boilerplate's contents flat into the repo root:
+- `saas-boilerplate/backend/`  → `repo/backend/`   (main.py, core/, lib/, requirements.txt)
+- `saas-boilerplate/frontend/` → `repo/frontend/`
+- harness artifacts `business/` → `repo/business/`
+
+Railway root dir = `backend/`, Vercel root dir = `frontend/`.
+Affects AWI and Wynwood ZIPs (both had same nested structure).
+
+### fix: run_integration_and_feature_build.sh — set -e kills + missing flags + loop
+
+Three bugs fixed in `run_integration_and_feature_build.sh`:
+
+1. **`set -e` kills script before exit-code capture** — `IC_EXIT=$?` (and `P1_EXIT`, `FEAT_EXIT`)
+   never ran because `set -euo pipefail` exits the script the moment the command returns non-zero.
+   Fix: initialize each exit var to 0 before the call, append `|| VAR=$?` to capture without dying.
+   Applies to Phase 1 build, every feature build, and integration_check calls.
+
+2. **Missing `--max-iterations` and `--no-polish` on integration fix pass** — fix pass ran with
+   default iteration cap and polish enabled, causing unnecessary token spend.
+   Fix: pass `--max-iterations "$MAX_ITER" --no-polish` to the fix pass harness call.
+
+3. **Single integration re-check that hard-exits on failure** — after one fix pass the script
+   exited with error if issues persisted (no retry).
+   Fix: converted to `while [[ $IC_EXIT -ne 0 && $FIX_PASS -lt $MAX_FIX_PASSES ]]` loop
+   (MAX_FIX_PASSES=2). Also extracted `_run_integration_check()` helper to deduplicate
+   the two integration_check calls and correctly refresh `ARTIFACTS_DIR` from `LATEST_RUN_DIR`.
+
 ### fix: --resume-mode fix + --integration-issues conflict
 
 When both `--resume-mode fix` and `--integration-issues` were passed together, the `fix`

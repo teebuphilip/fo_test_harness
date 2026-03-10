@@ -419,6 +419,55 @@ def check_spec_compliance(artifacts: dict, intake: dict) -> list:
     return issues
 
 
+# ── Check 4b: Route decorator double-path ─────────────────────────────────────
+
+def check_route_decorator_paths(artifacts: dict) -> list:
+    """
+    Verify that route decorators inside routes/*.py don't repeat the filename stem.
+
+    The boilerplate loader (core/loader.py) mounts each file at prefix /api/<stem>.
+    e.g. routes/reports.py  → mounted at /api/reports
+         @router.get("/reports/{id}") → full path /api/reports/reports/{id}  ← WRONG
+         @router.get("/{id}")         → full path /api/reports/{id}          ← CORRECT
+
+    Any decorator that starts with /<stem>/ or equals /<stem> is double-path.
+    """
+    issues = []
+    for path, content in artifacts.items():
+        if not re.match(r'business/backend/routes/\w+\.py$', path):
+            continue
+        stem = Path(path).stem  # e.g. 'reports'
+        for m in re.finditer(r'@router\.\w+\(["\']([^"\']+)["\']', content):
+            decorator_path = m.group(1)
+            # Flag if decorator starts with /<stem>/ or is exactly /<stem>
+            if decorator_path == f'/{stem}' or decorator_path.startswith(f'/{stem}/'):
+                correct = decorator_path[len(f'/{stem}'):] or '/'
+                issues.append({
+                    'id': f'INT-ROUTE-DBLPATH-{stem}-{decorator_path.replace("/","_").strip("_")}',
+                    'severity': 'HIGH',
+                    'category': 'ROUTE_DOUBLE_PATH',
+                    'file': path,
+                    'files': [path],
+                    'evidence': (
+                        f"`@router.get(\"{decorator_path}\")` in {path} — "
+                        f"boilerplate mounts this file at /api/{stem}, so full path becomes "
+                        f"/api/{stem}{decorator_path} (double /{stem}/)"
+                    ),
+                    'issue': (
+                        f"Double-path routing bug: {path} is mounted at /api/{stem} but "
+                        f"decorator repeats /{stem}. Full path /api/{stem}{decorator_path} "
+                        f"will 404 — frontend calls /api/{stem}{correct}."
+                    ),
+                    'fix': (
+                        f"In {path}, change `@router.*(\"{decorator_path}\")` → "
+                        f"`@router.*(\"{correct}\")`. "
+                        f"All decorators in routes/{stem}.py must be relative to the "
+                        f"/api/{stem} mount point — never repeat the stem."
+                    ),
+                })
+    return issues
+
+
 # ── Check 4: Import chains ────────────────────────────────────────────────────
 
 def check_import_chains(artifacts: dict) -> list:
@@ -486,7 +535,11 @@ def run_all_checks(artifacts: dict, intake: dict) -> list:
     import_issues = check_import_chains(artifacts)
     print(f"    → {len(import_issues)} issue(s)")
 
-    return route_issues + field_issues + spec_issues + import_issues
+    print(f"  Running Check 5: Route decorator double-path...")
+    dblpath_issues = check_route_decorator_paths(artifacts)
+    print(f"    → {len(dblpath_issues)} issue(s)")
+
+    return route_issues + field_issues + spec_issues + import_issues + dblpath_issues
 
 
 def build_output(issues: list, zip_path: str = None, artifacts_dir: str = None,

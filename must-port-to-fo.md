@@ -11,6 +11,26 @@
 
 ## Build Pipeline (2026-03-09)
 
+46. fix: deploy/zip_to_repo.py — flat repo layout for Railway/Vercel compatibility
+- extract_zip() copied saas-boilerplate/ as a nested dir → Railway couldn't find main.py
+  (was at saas-boilerplate/backend/main.py, Railway root was business/backend/).
+- Fix: unpack boilerplate contents flat into repo root:
+    saas-boilerplate/backend/  → repo/backend/   (main.py, core/, lib/, requirements.txt)
+    saas-boilerplate/frontend/ → repo/frontend/
+    harness business/ artifacts → repo/business/
+- Railway root = backend/, Vercel root = frontend/
+- Files: deploy/zip_to_repo.py (extract_zip method)
+⬜ TODO for FO codebase
+
+45. fix: run_integration_and_feature_build.sh — set -e kills + missing flags + loop
+- `IC_EXIT=$?` / `P1_EXIT=$?` / `FEAT_EXIT=$?` never executed under set -euo pipefail
+  because script exits before assignment. Fix: `VAR=0; command || VAR=$?` pattern throughout.
+- Integration fix pass missing `--max-iterations "$MAX_ITER" --no-polish`.
+- Second re-check was a hard exit; replaced with `while` loop (MAX_FIX_PASSES=2).
+- Extracted `_run_integration_check()` helper to deduplicate calls + refresh ARTIFACTS_DIR.
+- Files: run_integration_and_feature_build.sh (Step 2/3/4 sections)
+⬜ N/A — script is harness-only, not in FO production codebase
+
 44. fix: --resume-mode fix + --integration-issues conflict
 - When both flags passed together: fix warm-start block ran AFTER integration block and
   overwrote previous_defects with old QA report. Loop started at _ws_iteration+1 which
