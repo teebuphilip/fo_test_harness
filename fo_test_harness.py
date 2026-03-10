@@ -7245,9 +7245,9 @@ End with: SHARPEN_COMPLETE"""
 
         claude_cost  = getattr(self, '_last_claude_cost',  0.0)
         chatgpt_cost = getattr(self, '_last_chatgpt_cost', 0.0)
-        print(f"Claude cost:    ${claude_cost:.4f}")
-        print(f"ChatGPT cost:   ${chatgpt_cost:.4f}")
-        print(f"Total cost:     ${claude_cost + chatgpt_cost:.4f}")
+        print(f"Claude cost:    ${claude_cost:.2f}")
+        print(f"ChatGPT cost:   ${chatgpt_cost:.2f}")
+        print(f"Total cost:     ${claude_cost + chatgpt_cost:.2f}")
 
         if zip_path:
             print(f"ZIP output:     {zip_path}")
