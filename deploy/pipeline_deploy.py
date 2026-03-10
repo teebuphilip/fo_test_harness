@@ -500,8 +500,8 @@ def _ensure_frontend_business_config(repo_path: Path):
 
     Vercel build expects this file. It is often gitignored in frontend repos.
     """
-    cfg_rel = Path("saas-boilerplate/frontend/src/config/business_config.json")
-    example_rel = Path("saas-boilerplate/frontend/src/config/business_config.example.json")
+    cfg_rel = Path("frontend/src/config/business_config.json")
+    example_rel = Path("frontend/src/config/business_config.example.json")
     cfg_path = repo_path / cfg_rel
     example_path = repo_path / example_rel
 
@@ -521,20 +521,10 @@ def _ensure_frontend_business_config(repo_path: Path):
 
 def _ensure_railway_toml(repo_path: Path):
     """
-    Write railway.toml inside business/backend/ so it works regardless of
-    whether Railway's root directory is set to business/backend or repo root.
-    Also write one at repo root as fallback.
+    Write railway.toml inside backend/ (flat layout: zip_to_repo puts main.py there).
+    Railway root directory = backend/, so start command is just uvicorn main:app.
     """
-    content_root = (
-        '[build]\n'
-        'builder = "nixpacks"\n'
-        '\n'
-        '[deploy]\n'
-        'startCommand = "cd business/backend && uvicorn main:app --host 0.0.0.0 --port $PORT"\n'
-        'restartPolicyType = "ON_FAILURE"\n'
-        'restartPolicyMaxRetries = 10\n'
-    )
-    content_backend = (
+    content = (
         '[build]\n'
         'builder = "nixpacks"\n'
         '\n'
@@ -543,13 +533,12 @@ def _ensure_railway_toml(repo_path: Path):
         'restartPolicyType = "ON_FAILURE"\n'
         'restartPolicyMaxRetries = 10\n'
     )
-    # Write at repo root (for when root directory is cleared/unset)
-    (repo_path / "railway.toml").write_text(content_root)
-    # Write inside business/backend (for when root directory = business/backend)
-    backend_dir = repo_path / "business" / "backend"
+    backend_dir = repo_path / "backend"
     if backend_dir.exists():
-        (backend_dir / "railway.toml").write_text(content_backend)
-    print("  [pipeline] railway.toml written (repo root + business/backend)")
+        (backend_dir / "railway.toml").write_text(content)
+        print("  [pipeline] railway.toml written (backend/)")
+    else:
+        print("  [pipeline] WARNING: backend/ dir not found — railway.toml not written")
 
 
 def _ensure_business_pages_in_src(repo_path: Path):
@@ -568,19 +557,25 @@ def _ensure_business_pages_in_src(repo_path: Path):
         return
 
     # Destination: inside src/ so babel-loader processes it
-    biz_pages_dest = repo_path / "saas-boilerplate" / "frontend" / "src" / "business" / "pages"
+    biz_pages_dest = repo_path / "frontend" / "src" / "business" / "pages"
     if biz_pages_dest.exists():
         shutil.rmtree(biz_pages_dest)
     shutil.copytree(biz_pages_src, biz_pages_dest)
     print(f"  [pipeline] Copied business pages into frontend/src/business/pages/ ({len(list(biz_pages_dest.glob('*.jsx')))} .jsx files)")
 
     # Patch loader.js: update require.context path to in-src location
-    loader_path = repo_path / "saas-boilerplate" / "frontend" / "src" / "core" / "loader.js"
+    loader_path = repo_path / "frontend" / "src" / "core" / "loader.js"
     if loader_path.exists():
         content = loader_path.read_text()
-        OLD_PATH = "../../../../business/frontend/pages"
         NEW_PATH = "../business/pages"
-        if OLD_PATH in content:
+        # Support both old (saas-boilerplate layout) and new (flat layout) paths
+        OLD_PATHS = [
+            "../../../../business/frontend/pages",  # old: saas-boilerplate/frontend/src/core/
+            "../../../business/frontend/pages",      # new: frontend/src/core/
+        ]
+        old_found = next((p for p in OLD_PATHS if p in content), None)
+        OLD_PATH = old_found
+        if OLD_PATH and OLD_PATH in content:
             patched = content.replace(OLD_PATH, NEW_PATH)
             loader_path.write_text(patched)
             print("  [pipeline] Patched loader.js: require.context path → ../business/pages")

@@ -279,7 +279,7 @@ def deploy_frontend(
     github_repo: str,
     project_name: str = None,
     framework: str = "create-react-app",
-    root_directory: str = "saas-boilerplate/frontend",
+    root_directory: str = "frontend",
     output_directory: str = "build",
     branch: str = "main",
     env_file: Path = None,
@@ -314,7 +314,7 @@ def deploy_frontend(
     """
     api = VercelAPI(token, team_id=team_id or None)
     project_name = project_name or (repo_path.name.lower().replace("_", "-") + "-frontend")
-    env_file = env_file or (repo_path / "saas-boilerplate" / "frontend" / ".env")
+    env_file = env_file or (repo_path / "frontend" / ".env")
 
     # ── Step 1: Verify token ────────────────────────────────
     print("  [Vercel] Verifying token...")
