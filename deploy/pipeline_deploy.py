@@ -974,6 +974,12 @@ def main():
         print(f"STEP 2/3: Deploy Backend → Railway")
         print(f"{'='*60}")
 
+        # Railway CLI session can conflict with API token — log out first
+        import subprocess, shutil
+        if shutil.which("railway"):
+            subprocess.run(["railway", "logout"], capture_output=True)
+            print("  [Railway] CLI logged out (token auth takes precedence)")
+
         try:
             railway_result = deploy_backend(
                 token=railway_token,

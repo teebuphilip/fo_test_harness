@@ -72,10 +72,25 @@ class RailwayAPI:
                 id
                 email
                 name
+                workspaces {
+                    id
+                    name
+                }
             }
         }
         """
         return self._query(q)
+
+    def get_workspace_id(self) -> str:
+        """Get the first workspace ID for this account (required for projectCreate)."""
+        try:
+            me = self.whoami()
+            workspaces = me.get("me", {}).get("workspaces", [])
+            if workspaces:
+                return workspaces[0]["id"]
+        except Exception:
+            pass
+        return None
 
     def list_projects(self) -> list:
         """List all projects for this account."""
@@ -102,7 +117,7 @@ class RailwayAPI:
         data = self._query(q)
         return [e["node"] for e in data.get("projects", {}).get("edges", [])]
 
-    def create_project(self, name: str) -> dict:
+    def create_project(self, name: str, workspace_id: str = None) -> dict:
         """Create a new Railway project. Returns project dict."""
         q = """
         mutation CreateProject($input: ProjectCreateInput!) {
@@ -112,8 +127,10 @@ class RailwayAPI:
             }
         }
         """
-        variables = {"input": {"name": name}}
-        data = self._query(q, variables)
+        inp = {"name": name}
+        if workspace_id:
+            inp["workspaceId"] = workspace_id
+        data = self._query(q, {"input": inp})
         return data["projectCreate"]
 
     def create_service(self, project_id: str, name: str, repo_url: str = None) -> dict:
@@ -425,7 +442,10 @@ def deploy_backend(
 
     if not project_id:
         print(f"  [Railway] Creating project: {project_name}")
-        project = api.create_project(project_name)
+        workspace_id = api.get_workspace_id()
+        if workspace_id:
+            print(f"  [Railway] Using workspace: {workspace_id}")
+        project = api.create_project(project_name, workspace_id=workspace_id)
         project_id = project["id"]
         print(f"  [Railway] Project created: {project_id}")
     else:
