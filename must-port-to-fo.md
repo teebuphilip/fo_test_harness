@@ -1,5 +1,28 @@
 # Must Port to FO
 
+## Deploy Pipeline (additions 2026-03-10 evening)
+
+58. fix: require_ajax_header defined after first use in boilerplate main.py
+- NameError: name 'require_ajax_header' is not defined at Railway container startup.
+- Python evaluates Depends() default args at module load — function was at line ~628 but used at line 268.
+- Fix: moved definition above AUTH ENDPOINTS section, removed duplicate.
+- Files: saas-boilerplate/backend/main.py (in teebu-saas-platform repo)
+⬜ N/A — boilerplate fix already applied locally
+
+## Gate Fixes (2026-03-10 late session)
+
+57. fix: static/compile defect file injection broken by business/ prefix filter
+- defect_target_files collection filtered startswith('business/') for all gate sources.
+- Static checker reports file paths relative to artifacts dir → wrong-path files
+  (e.g. models/AnalysisRequest.py) had no prefix → excluded from target list.
+- _read_target_file_contents() got empty list → returned {} → Claude saw
+  "no current file contents found" → reconstructed from memory → identical wrong
+  content → static gate cycled 6 times on same defect (iters 11-16 in adversarial run).
+- Fix: for defect_source in ('static', 'compile'), skip the startswith('business/') filter;
+  collect all non-empty file paths from _raw_pending_defects.
+- Files: fo_test_harness.py (line ~5989, defect_target_files collection block)
+⬜ TODO for FO codebase
+
 ## Deploy Pipeline (additions 2026-03-10)
 
 56. fix: email-validator missing from boilerplate requirements.txt

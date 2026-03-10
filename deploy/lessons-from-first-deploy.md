@@ -214,6 +214,20 @@ Also pushed directly to deployed AWI repo.
 
 ---
 
+## 17. require_ajax_header defined after first use — NameError at startup
+
+**Error:** `NameError: name 'require_ajax_header' is not defined` at `main.py` line 268
+
+**Root cause:** `require_ajax_header` is a local function defined at line ~628 in `main.py`,
+but Python evaluates `Depends(require_ajax_header)` as a default argument at module load time
+(line 268) — before the function exists in the namespace.
+
+**Fix:** Moved `require_ajax_header` definition to just above the `# AUTH ENDPOINTS` section.
+Removed the duplicate definition at the old location.
+Applied to both AWI repo and boilerplate `saas-boilerplate/backend/main.py`.
+
+---
+
 ## Summary: Required manual steps (can't be automated)
 
 1. **Railway personal token** — get from `railway.app/account/tokens`, save to ACCESSKEYS
@@ -239,3 +253,4 @@ Also pushed directly to deployed AWI repo.
 | `saas-boilerplate/backend/config/mailerlite_config.example.json` | fixed key names |
 | `saas-boilerplate/backend/config/auth0_config.example.json` | fixed key names |
 | `saas-boilerplate/backend/requirements.txt` | added `email-validator>=2.0.0` |
+| `saas-boilerplate/backend/main.py` | moved `require_ajax_header` above AUTH ENDPOINTS |
