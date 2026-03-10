@@ -2416,6 +2416,8 @@ class FOHarness:
         self.enable_quality_gate = True
         # --no-polish: skip post-QA polish step (use for Phase 1 of a phased build)
         self.skip_polish = bool(getattr(cli_args, 'no_polish', False)) if cli_args else False
+        self._last_claude_cost  = 0.0
+        self._last_chatgpt_cost = 0.0
 
         # Load intake JSON
         # Handles both pure JSON and marker-wrapped formats
@@ -2878,6 +2880,8 @@ class FOHarness:
         gpt_total_cost = 0
         if total_gpt_calls > 0:
             gpt_total_cost = (total_gpt_input_tokens * 0.0025 / 1000) + (total_gpt_output_tokens * 0.010 / 1000)
+        self._last_claude_cost  = total_cost_with_cache
+        self._last_chatgpt_cost = gpt_total_cost
         self._log_run_csv(iterations, total_cost_with_cache, gpt_total_cost, run_end_reason)
 
     def _log_run_csv(self, iterations: int, claude_cost: float, chatgpt_cost: float, run_end_reason: str = 'UNKNOWN'):
@@ -3120,6 +3124,7 @@ class FOHarness:
             "business": {
                 "name": startup_name,
                 "tagline": tagline,
+                "description": tagline,
                 "url": f"https://{slug}.com",
                 "support_email": f"support@{slug}.com"
             },
@@ -7237,6 +7242,12 @@ End with: SHARPEN_COMPLETE"""
 
         if reason:
             print(f"Reason:         {reason}")
+
+        claude_cost  = getattr(self, '_last_claude_cost',  0.0)
+        chatgpt_cost = getattr(self, '_last_chatgpt_cost', 0.0)
+        print(f"Claude cost:    ${claude_cost:.4f}")
+        print(f"ChatGPT cost:   ${chatgpt_cost:.4f}")
+        print(f"Total cost:     ${claude_cost + chatgpt_cost:.4f}")
 
         if zip_path:
             print(f"ZIP output:     {zip_path}")
