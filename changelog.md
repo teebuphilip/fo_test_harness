@@ -2,6 +2,21 @@
 
 ## 2026-03-09
 
+### fix: Railway project creation — workspaceId + CLI logout + name truncation
+
+Three separate Railway project creation failures fixed:
+
+1. **workspaceId required**: Railway API now requires `workspaceId` on `projectCreate`.
+   Added `RailwayAPI.get_workspace_id()` (reads from `me.workspaces[0].id`) and passes it
+   to `create_project()` automatically.
+
+2. **CLI session conflict**: Railway CLI session token overrides API token → auth failures.
+   `pipeline_deploy.py` now runs `railway logout` before STEP 2 so API token takes precedence.
+
+3. **Name truncation at word boundary**: 50-char hard truncation cut mid-word → Railway
+   rejected the name. Now truncates at last hyphen before 40 chars.
+   e.g. `ai-workforce-intelligence-downloadable-executive-report` → `ai-workforce-intelligence-downloadable`
+
 ### fix: pipeline_deploy.py + vercel_deploy.py — updated for flat repo layout
 
 After zip_to_repo.py switched to flat layout (backend/ frontend/ business/ at root),

@@ -2,7 +2,14 @@
 
 ## Deploy Pipeline (additions 2026-03-10)
 
-48. pipeline_deploy.py + vercel_deploy.py — updated for flat repo layout
+50. Railway project creation — workspaceId + CLI logout + name truncation
+- Railway API requires workspaceId on projectCreate → added get_workspace_id() + passes to create_project().
+- Railway CLI session conflicts with API token → pipeline now runs `railway logout` before STEP 2.
+- Name truncation at word boundary (last hyphen before 40 chars) — hard 50-char cut rejected by Railway.
+- Files: `deploy/railway_deploy.py` (get_workspace_id, create_project), `deploy/pipeline_deploy.py` (logout + truncation)
+⬜ TODO for FO codebase
+
+49. pipeline_deploy.py + vercel_deploy.py — updated for flat repo layout
 - zip_to_repo switched to flat layout: backend/ frontend/ business/ at repo root.
   All saas-boilerplate/ paths in pipeline updated to match.
 - railway.toml now written to backend/ (Railway root = backend/, no cd needed).
