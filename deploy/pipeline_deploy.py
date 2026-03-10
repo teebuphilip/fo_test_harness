@@ -445,7 +445,6 @@ def push_to_github(
     _ensure_gitignore(repo_path)
     _ensure_frontend_business_config(repo_path)
     _ensure_business_pages_in_src(repo_path)
-    _ensure_railway_toml(repo_path)
 
     # ── Commit and push ──────────────────────────────────────
     _git(repo_path, "add -A")
@@ -522,12 +521,11 @@ def _ensure_frontend_business_config(repo_path: Path):
 
 def _ensure_railway_toml(repo_path: Path):
     """
-    Write railway.toml at repo root pointing Railway at business/backend.
-    WHY: Railpack scans repo root and can't find Python app without this.
-    Overwrites every time so it stays correct even if manually edited.
+    Write railway.toml inside business/backend/ so it works regardless of
+    whether Railway's root directory is set to business/backend or repo root.
+    Also write one at repo root as fallback.
     """
-    toml_path = repo_path / "railway.toml"
-    content = (
+    content_root = (
         '[build]\n'
         'builder = "nixpacks"\n'
         '\n'
@@ -536,8 +534,22 @@ def _ensure_railway_toml(repo_path: Path):
         'restartPolicyType = "ON_FAILURE"\n'
         'restartPolicyMaxRetries = 10\n'
     )
-    toml_path.write_text(content)
-    print("  [pipeline] railway.toml written (root → business/backend)")
+    content_backend = (
+        '[build]\n'
+        'builder = "nixpacks"\n'
+        '\n'
+        '[deploy]\n'
+        'startCommand = "uvicorn main:app --host 0.0.0.0 --port $PORT"\n'
+        'restartPolicyType = "ON_FAILURE"\n'
+        'restartPolicyMaxRetries = 10\n'
+    )
+    # Write at repo root (for when root directory is cleared/unset)
+    (repo_path / "railway.toml").write_text(content_root)
+    # Write inside business/backend (for when root directory = business/backend)
+    backend_dir = repo_path / "business" / "backend"
+    if backend_dir.exists():
+        (backend_dir / "railway.toml").write_text(content_backend)
+    print("  [pipeline] railway.toml written (repo root + business/backend)")
 
 
 def _ensure_business_pages_in_src(repo_path: Path):
@@ -941,6 +953,9 @@ def main():
         except Exception as e:
             print(f"[ERROR] Failed to generate deploy configs: {e}")
             sys.exit(1)
+
+    # ── STEP 0b: Write railway.toml ─────────────────────────
+    _ensure_railway_toml(repo_path)
 
     # ── STEP 1: Push to GitHub ───────────────────────────────
     github_url, github_repo = push_to_github(
