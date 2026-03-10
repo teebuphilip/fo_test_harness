@@ -464,6 +464,14 @@ def deploy_backend(
     else:
         print(f"  [Railway] Reusing service: {service_id}")
 
+    # ── Step 3b: Set root directory to backend/ ─────────────
+    print("  [Railway] Setting root directory: backend...")
+    try:
+        api.set_root_directory(service_id, "backend")
+        print("  [Railway] Root directory set to backend/")
+    except Exception as e:
+        print(f"  [Railway] Root directory note: {e} (set manually in dashboard if needed)")
+
     # ── Step 4: Add PostgreSQL ──────────────────────────────
     if add_postgres and not (railway_config or {}).get("postgres_added"):
         print("  [Railway] Adding PostgreSQL...")
