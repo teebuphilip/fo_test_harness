@@ -1,5 +1,54 @@
 # Changelog
 
+## 2026-03-11
+
+### fix: add business-page import preflight + auto-fix helper
+
+Vercel builds failed after moving business pages into `frontend/src/business/pages` because
+those copied files referenced `../utils/api`, which only resolves from their original
+`business/frontend/pages` location. CRA only compiles files inside `frontend/src`, so the
+copy step is required — but it changes relative import paths.
+
+New script: `deploy/check_business_imports.py`
+- Scans `business/frontend/pages/*.jsx` and validates relative imports *as if copied* to
+  `frontend/src/business/pages`.
+- Prints unresolved imports and optionally rewrites `../utils/api` → `../../utils/api`.
+- If you confirm the fix, it auto-commits the changed business pages.
+
+## 2026-03-10 (late session)
+
+### fix: static/compile file contents not injected — business/ prefix filter was too strict
+
+Static gate defects use file paths relative to the artifacts dir (e.g. `models/AnalysisRequest.py`).
+The `defect_target_files` collection at line ~5989 filtered `startswith('business/')`, so wrong-path
+files were excluded → `_read_target_file_contents` returned `{}` → Claude got
+"no current file contents found" → reconstructed from memory → same wrong content each iteration
+→ static gate cycled 6 times on the same defect (iters 11-16 in adversarial_ai_validator_p1).
+
+Fix: removed `startswith('business/')` requirement for `defect_source in ('static', 'compile')`.
+These sources find files wherever the static checker found them; Claude still gets the actual
+file content and can fix the specific issue without memory reconstruction.
+
+## 2026-03-10 (deploy fix #19)
+
+### fix: Railway root_directory "backend" excludes business/ from container
+
+`railway_deploy.py` was calling `set_root_directory(service_id, "backend")` — this scopes
+Railway's deployed container to `backend/` only, so `business/` at repo root never gets
+copied in. Loader correctly resolves the path but the directory doesn't exist.
+Fix: removed the `set_root_directory` call. Root stays at repo root; `railway.toml`
+`startCommand = "cd backend && uvicorn ..."` handles the subdirectory.
+Manual fix required for live AWI: clear Root Directory in Railway dashboard.
+
+## 2026-03-10 (deploy fix #18)
+
+### fix: add missing Session import from sqlalchemy.orm
+
+`main.py` uses `db: Session = Depends(get_db)` as a type annotation evaluated at module load time.
+`Session` was never imported — only `get_db` was pulled from `core.database`.
+Fix: added `from sqlalchemy.orm import Session` after the `core.database` import in both AWI repo
+(`f61a0a8`) and boilerplate (`b54ec0d`).
+
 ## 2026-03-10 (deploy fix #16)
 
 ### fix: add email-validator to boilerplate requirements.txt

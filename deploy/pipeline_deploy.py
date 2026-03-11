@@ -518,6 +518,20 @@ def _ensure_frontend_business_config(repo_path: Path):
     _git(repo_path, f"add -f -- {cfg_rel.as_posix()}", required=False)
     print("  [pipeline] Ensured frontend business_config.json is staged for push")
 
+    # Force-add ALL backend/config/*.json files (Railway container needs them).
+    # For each *.example.json, copy to *.json if the real file doesn't exist yet.
+    backend_cfg_dir = repo_path / "backend" / "config"
+    if backend_cfg_dir.is_dir():
+        for example_path in sorted(backend_cfg_dir.glob("*.example.json")):
+            real_path = example_path.with_name(example_path.name.replace(".example.json", ".json"))
+            if not real_path.exists():
+                shutil.copyfile(example_path, real_path)
+                print(f"  [pipeline] Created {real_path.name} from example")
+        for cfg_path in sorted(backend_cfg_dir.glob("*.json")):
+            rel = cfg_path.relative_to(repo_path)
+            _git(repo_path, f"add -f -- {rel.as_posix()}", required=False)
+        print("  [pipeline] Force-staged all backend/config/*.json for push")
+
 
 def _ensure_railway_toml(repo_path: Path):
     """
@@ -844,8 +858,8 @@ def main():
     )
     parser.add_argument(
         "--frontend-dir",
-        default="saas-boilerplate/frontend",
-        help="Frontend subdirectory in repo (default: saas-boilerplate/frontend)"
+        default="auto",
+        help="Frontend subdirectory in repo (default: auto-detect)"
     )
     parser.add_argument(
         "--output-dir",
@@ -875,6 +889,16 @@ def main():
     if not repo_path.exists():
         print(f"[ERROR] Repo path not found: {repo_path}")
         sys.exit(1)
+
+    # Auto-detect frontend directory if not explicitly provided
+    if args.frontend_dir == "auto":
+        if (repo_path / "saas-boilerplate" / "frontend").exists():
+            args.frontend_dir = "saas-boilerplate/frontend"
+        elif (repo_path / "frontend").exists():
+            args.frontend_dir = "frontend"
+        else:
+            # Fallback to legacy default to preserve behavior
+            args.frontend_dir = "saas-boilerplate/frontend"
 
     # ── Step 0: Check Auth0 credentials exist + merge into .env ─────────────
     app_name   = repo_path.name

@@ -1,6 +1,31 @@
 # Must Port to FO
 
+## Deploy Pipeline (additions 2026-03-11)
+
+61. new: preflight check for business page imports after copy into frontend/src
+- CRA only compiles files in `frontend/src`, so deploy copies `business/frontend/pages`
+  into `frontend/src/business/pages`.
+- Relative imports in those pages must resolve from the *copied* location.
+- New script `deploy/check_business_imports.py` scans the business pages and validates
+  relative imports as if copied; can optionally rewrite `../utils/api` → `../../utils/api`
+  and auto-commit the change.
+- Files: `deploy/check_business_imports.py`
+⬜ TODO for FO codebase
+
 ## Deploy Pipeline (additions 2026-03-10 evening)
+
+60. fix: Railway set_root_directory("backend") excludes business/ from container
+- `railway_deploy.py` was setting root dir to "backend/" — only backend/ gets deployed to /app.
+- business/ lives at repo root → never copied in → 0 business routes loaded.
+- Fix: removed set_root_directory call entirely. railway.toml startCommand handles cd backend.
+- Files: deploy/railway_deploy.py
+⬜ N/A — deploy pipeline fix already applied locally
+
+59. fix: Session not imported — NameError at Railway startup
+- `db: Session = Depends(get_db)` used at line 1556 but `Session` never imported.
+- Fix: added `from sqlalchemy.orm import Session` after `core.database` import.
+- Files: saas-boilerplate/backend/main.py (in teebu-saas-platform repo)
+⬜ N/A — boilerplate fix already applied locally
 
 58. fix: require_ajax_header defined after first use in boilerplate main.py
 - NameError: name 'require_ajax_header' is not defined at Railway container startup.

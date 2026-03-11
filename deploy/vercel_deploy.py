@@ -122,6 +122,38 @@ class VercelAPI:
         resp.raise_for_status()
         return resp.json()
 
+    def update_project(
+        self,
+        project_id: str,
+        framework: str = None,
+        root_directory: str = None,
+        build_command: str = None,
+        output_directory: str = None,
+    ) -> dict:
+        """
+        Update an existing Vercel project (e.g., rootDirectory/outputDirectory).
+        """
+        payload = {}
+        if framework:
+            payload["framework"] = framework
+        if root_directory is not None:
+            payload["rootDirectory"] = root_directory
+        if build_command:
+            payload["buildCommand"] = build_command
+        if output_directory:
+            payload["outputDirectory"] = output_directory
+
+        if not payload:
+            return {"skipped": True}
+
+        resp = self.session.patch(
+            f"{VERCEL_API}/v9/projects/{project_id}",
+            json=payload,
+            params=self._params()
+        )
+        resp.raise_for_status()
+        return resp.json()
+
     def set_env_var(
         self,
         project_id: str,
@@ -346,6 +378,18 @@ def deploy_frontend(
             print(f"  [Vercel] Project created: {project_id}")
     else:
         print(f"  [Vercel] Reusing project from config: {project_id}")
+
+    # ── Step 2b: Ensure project settings match desired config ─────────
+    try:
+        api.update_project(
+            project_id=project_id,
+            framework=framework,
+            root_directory=root_directory,
+            output_directory=output_directory,
+        )
+        print(f"  [Vercel] Project settings updated (rootDirectory={root_directory})")
+    except Exception as e:
+        print(f"  [Vercel] WARNING: could not update project settings: {e}")
 
     # ── Step 3: Set environment variables ──────────────────
     env_vars = parse_env_file(env_file)

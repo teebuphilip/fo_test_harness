@@ -1,5 +1,17 @@
 # Learnings From AF to FO
 
+## Latest Learnings (2026-03-11)
+
+- CRA only compiles files inside `frontend/src`, so business pages must be copied from
+  `business/frontend/pages` into `frontend/src/business/pages` during deploy. That copy
+  step changes the relative import base; any `../utils/api` import that worked in the
+  business folder breaks after the copy (it must be `../../utils/api` from inside `src`).
+  Build failures on Vercel were caused by this mismatch, not by the deployment pipeline.
+- A preflight static check that resolves imports from the **post-copy** location is
+  required to catch these issues early. A targeted auto-fix for known paths (e.g.
+  `../utils/api` → `../../utils/api`) keeps the source-of-truth business pages valid
+  without relying on manual Vercel debugging.
+
 ## Latest Learnings (2026-03-08, session 10)
 
 - When a targeted fix prompt doesn't include the current file content, Claude reconstructs from memory
