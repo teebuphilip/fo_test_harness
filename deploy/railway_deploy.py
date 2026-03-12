@@ -563,6 +563,7 @@ def deploy_backend(
                 latest = deps[0]
                 if latest.get("id") and latest.get("id") != before_latest_id:
                     new_deploy = latest
+                    print(f"  [Railway] New deployment detected: {latest.get('id')} ({latest.get('status')})")
                     url = latest.get("url") or api.get_service_url(project_id, service_id)
                     if url:
                         break
