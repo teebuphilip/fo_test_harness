@@ -320,6 +320,61 @@ class RailwayAPI:
                 return url
         return None
 
+    def get_service_domains(self, service_id: str) -> list:
+        """
+        Try to fetch public domains for a service via the public API.
+        This uses multiple query shapes for compatibility; returns a list of domains.
+        """
+        candidates = [
+            (
+                """
+                query ServiceDomains($serviceId: String!) {
+                    serviceDomains(serviceId: $serviceId) {
+                        edges { node { id domain } }
+                    }
+                }
+                """,
+                lambda d: [
+                    n.get("domain") for n in
+                    [e.get("node", {}) for e in d.get("serviceDomains", {}).get("edges", [])]
+                ],
+            ),
+            (
+                """
+                query ServiceDomainsAlt($serviceId: String!) {
+                    serviceDomains(serviceId: $serviceId) {
+                        id
+                        domain
+                    }
+                }
+                """,
+                lambda d: [n.get("domain") for n in d.get("serviceDomains", [])],
+            ),
+            (
+                """
+                query Service($id: String!) {
+                    service(id: $id) {
+                        domains {
+                            id
+                            domain
+                        }
+                    }
+                }
+                """,
+                lambda d: [n.get("domain") for n in d.get("service", {}).get("domains", [])],
+            ),
+        ]
+
+        for query, extractor in candidates:
+            try:
+                data = self._query(query, {"serviceId": service_id, "id": service_id})
+                domains = [d for d in (extractor(data) or []) if d]
+                if domains:
+                    return domains
+            except Exception:
+                continue
+        return []
+
     def get_deployments(self, service_id: str) -> list:
         """Get recent deployments for a service."""
         q = """
@@ -577,6 +632,15 @@ def deploy_backend(
 
     if not new_deploy:
         print("  [Railway] WARNING: No new deployment detected after trigger.")
+
+    if not url:
+        # Try Public API domains first (some Railway accounts delay deployment.url)
+        try:
+            domains = api.get_service_domains(service_id)
+            if domains:
+                url = domains[0]
+        except Exception:
+            pass
 
     if not url:
         # Try CLI fallback for domain (some Railway accounts delay deployment.url)
