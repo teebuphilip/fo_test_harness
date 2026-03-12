@@ -3185,42 +3185,133 @@ class FOHarness:
             },
             "home": {
                 "hero": {
-                    "headline": f"{startup_name}",
+                    "headline": startup_name,
                     "subheadline": tagline,
                     "cta_primary":  {"label": "Get Started", "href": "/signup"},
                     "cta_secondary": {"label": "Learn More",  "href": "#features"}
                 },
                 "features_heading": "Everything you need",
                 "features": [
-                    {"title": (f[:50] if isinstance(f, str) else f.get("label", "Feature")), "description": ""}
+                    {
+                        "icon": "star",
+                        "title": (f[:50] if isinstance(f, str) else f.get("label", "Feature")),
+                        "description": ""
+                    }
                     for f in (must_haves[:6] if must_haves else [{"label": "Core features"}])
+                ],
+                "social_proof": {
+                    "stats": [
+                        {"value": "500+", "label": "Customers"},
+                        {"value": "99%",  "label": "Uptime"},
+                        {"value": "24/7", "label": "Support"}
+                    ],
+                    "testimonials": [
+                        {
+                            "quote": f"{startup_name} has transformed how we work.",
+                            "author": "Early Customer",
+                            "title": "Founder"
+                        }
+                    ]
+                },
+                "final_cta": {
+                    "headline": f"Ready to get started with {startup_name}?",
+                    "subheadline": tagline,
+                    "button_text": "Start Free Trial"
+                }
+            },
+            "pricing": {
+                "headline": f"{startup_name} Pricing",
+                "subheadline": "Simple, transparent pricing",
+                "faq": [
+                    {"question": "Can I cancel anytime?",      "answer": "Yes, cancel anytime with no penalties."},
+                    {"question": "Is there a free trial?",     "answer": "Yes, 14-day free trial on all plans."},
+                    {"question": "Do you offer refunds?",      "answer": "Yes, 30-day money-back guarantee."},
+                    {"question": "What payment methods?",      "answer": "All major credit cards via Stripe."}
+                ]
+            },
+            "contact": {
+                "headline": "Get in touch",
+                "subheadline": f"We'd love to hear from you.",
+                "methods": [
+                    {"label": "Email", "description": "Send us an email", "value": f"support@{slug}.com"}
+                ],
+                "form": {
+                    "title": "Send a message",
+                    "submit_text": "Send Message",
+                    "success_message": "Thanks! We'll be in touch shortly.",
+                    "fields": [
+                        {"label": "Name",    "name": "name",    "type": "text",     "required": True},
+                        {"label": "Email",   "name": "email",   "type": "email",    "required": True},
+                        {"label": "Message", "name": "message", "type": "textarea", "required": True}
+                    ]
+                }
+            },
+            "faq": {
+                "headline": "Frequently Asked Questions",
+                "categories": [
+                    {
+                        "name": "General",
+                        "questions": [
+                            {"question": f"What is {startup_name}?",    "answer": tagline},
+                            {"question": "How do I get started?",       "answer": "Sign up for a free trial — no credit card required."},
+                            {"question": "Is my data secure?",          "answer": "Yes, all data is encrypted in transit and at rest."}
+                        ]
+                    },
+                    {
+                        "name": "Billing",
+                        "questions": [
+                            {"question": "Can I cancel anytime?",       "answer": "Yes, cancel anytime with no penalties."},
+                            {"question": "Do you offer refunds?",       "answer": "Yes, 30-day money-back guarantee."}
+                        ]
+                    }
+                ]
+            },
+            "terms_of_service": {
+                "last_updated": "2025-01-01",
+                "sections": [
+                    {"title": "Acceptance of Terms",    "content": f"By using {startup_name}, you agree to these terms."},
+                    {"title": "Use of Service",         "content": "You may use the service for lawful purposes only."},
+                    {"title": "Intellectual Property",  "content": f"All content and software is owned by {startup_name}."},
+                    {"title": "Limitation of Liability","content": "We are not liable for indirect or consequential damages."},
+                    {"title": "Contact",                "content": f"Questions? Email support@{slug}.com"}
+                ]
+            },
+            "privacy_policy": {
+                "last_updated": "2025-01-01",
+                "sections": [
+                    {"title": "Information We Collect", "content": "We collect information you provide when creating an account."},
+                    {"title": "How We Use It",          "content": "We use your information to provide and improve the service."},
+                    {"title": "Data Sharing",           "content": "We do not sell your personal data to third parties."},
+                    {"title": "Security",               "content": "We use industry-standard encryption to protect your data."},
+                    {"title": "Contact",                "content": f"Questions? Email support@{slug}.com"}
                 ]
             },
             "marketing": {"enabled": False},
             "footer": {
+                "tagline": tagline,
                 "columns": [
                     {
                         "title": startup_name,
                         "links": [
-                            {"label": "Home",    "href": "/"},
-                            {"label": "Dashboard","href": "/dashboard"},
-                            {"label": "Pricing", "href": "/pricing"}
+                            {"label": "Home",      "url": "/"},
+                            {"label": "Dashboard", "url": "/dashboard"},
+                            {"label": "Pricing",   "url": "/pricing"}
                         ]
                     },
                     {
                         "title": "Product",
                         "links": [
-                            {"label": (f[:40] if isinstance(f, str) else f.get("label", "Feature")), "href": "#"}
+                            {"label": (f[:40] if isinstance(f, str) else f.get("label", "Feature")), "url": "#"}
                             for f in (must_haves[:4] if must_haves else [{"label": "Features"}])
                         ]
                     },
                     {
                         "title": "Company",
                         "links": [
-                            {"label": "About",   "href": "/about"},
-                            {"label": "Contact", "href": f"mailto:support@{slug}.com"},
-                            {"label": "Privacy", "href": "/privacy"},
-                            {"label": "Terms",   "href": "/terms"}
+                            {"label": "About",   "url": "/about"},
+                            {"label": "Contact", "url": "/contact"},
+                            {"label": "Privacy", "url": "/privacy"},
+                            {"label": "Terms",   "url": "/terms"}
                         ]
                     }
                 ],
@@ -5219,7 +5310,7 @@ End with: SHARPEN_COMPLETE"""
                 inherits_orm_base = ('Base' in base_names or 'TenantMixin' in base_names)
                 is_orm_model = has_tablename or inherits_orm_base
                 for item in node.body:
-                    if isinstance(item, ast.FunctionDef):
+                    if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
                         methods.add(item.name)
                         if item.name == '__init__':
                             args = item.args.args[1:]  # drop self
