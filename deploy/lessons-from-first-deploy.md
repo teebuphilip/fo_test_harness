@@ -228,6 +228,20 @@ This is a template bug in `frontend/src/App.js`.
 
 ---
 
+## 18. business_config.json missing `home`/`footer` blocks causes frontend crashes
+
+**Error:** White page with `TypeError: can't access property "hero"` (Home.jsx) or
+`TypeError: can't access property "columns"` (Footer.jsx).
+
+**Root cause:** `business_config.json` shipped with `home: null` and/or `footer: null`.
+Template pages assume these objects exist and immediately dereference nested fields.
+
+**Fix:** Ensure `business_config.json` always includes minimal `home` and `footer`
+sections at build time. For existing repos, add safe defaults in
+`frontend/src/config/business_config.json` (and keep the source-of-truth config in sync).
+
+---
+
 ## 16. email-validator missing from requirements.txt
 
 **Error:** `ImportError: email-validator is not installed, run pip install 'pydantic[email]'`
