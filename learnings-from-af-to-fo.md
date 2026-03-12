@@ -58,6 +58,9 @@
   delegates to `backend/requirements.txt`.
 - Redeploys don't always need a Git push; separating "push" from "deploy" avoids multiple
   overlapping builds. Adding a `--skip-git-push` flag makes redeploy-only runs cheaper and faster.
+- Railway deploys can take longer than 2 minutes for larger repos or cold starts. The default
+  polling window should be longer (10 minutes) and overrideable so the pipeline doesn't report
+  false negatives while a deploy is still building.
 
 ## Latest Learnings (2026-03-08, session 10)
 

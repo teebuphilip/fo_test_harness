@@ -107,6 +107,11 @@ and fails fast if `backend/requirements.txt` is missing.
 `pipeline_deploy.py` now supports `--skip-git-push` to bypass git add/commit/push
 when you only want to redeploy from existing commits.
 
+### feat: configurable Railway wait time (default 10 minutes)
+
+Railway deploy URL polling now defaults to 10 minutes and can be overridden with
+`--railway-wait-minutes N` when running `pipeline_deploy.py`.
+
 ## 2026-03-10 (late session)
 
 ### fix: static/compile file contents not injected — business/ prefix filter was too strict
