@@ -1,5 +1,16 @@
 # Must Port to FO
 
+## Static Gate Fix (additions 2026-03-12)
+
+66. fix: CHECK 10 — async def methods not counted → permanent false-positive missing-method loop
+- `_run_static_check()` CHECK 10 only handled `ast.FunctionDef`; `async def` creates
+  `ast.AsyncFunctionDef` — those methods were never added to the `methods` set, so every
+  `async def` service method was always flagged as "Call to missing method".
+- Root cause of 13-iteration static oscillation on adversarial_ai_validator.
+- Fix: `isinstance(item, ast.FunctionDef)` → `isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef))` at line ~5222.
+- Files: `fo_test_harness.py` (`_run_static_check()` CHECK 10)
+⬜ TODO for FO codebase
+
 ## Harness Config Generation (additions 2026-03-12)
 
 65. fix: full business_config.json schema coverage — all boilerplate keys populated
@@ -40,6 +51,13 @@
 - `deploy/check_business_imports.py` now supports `--report-all` and `--include-assets`
   (plus `--ext` for extra file types) so post-copy resolution issues are visible before deploy.
 - Files: `deploy/check_business_imports.py`
+⬜ TODO for FO codebase
+
+63. fix: add root requirements.txt for Railway/Nixpacks detection
+- Nixpacks scans the repo root; without a root `requirements.txt`, Python detection fails.
+- Pipeline now writes root `requirements.txt` with `-r backend/requirements.txt` and fails fast
+  if `backend/requirements.txt` is missing.
+- Files: `deploy/pipeline_deploy.py`
 ⬜ TODO for FO codebase
 
 ## Deploy Pipeline (additions 2026-03-10 evening)

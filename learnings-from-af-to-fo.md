@@ -2,6 +2,20 @@
 
 ## Latest Learnings (2026-03-12)
 
+- Python's AST has two separate node types for function definitions: `ast.FunctionDef` (regular `def`)
+  and `ast.AsyncFunctionDef` (`async def`). They are NOT related by inheritance. Any static check that
+  uses `isinstance(x, ast.FunctionDef)` silently ignores all async methods. In the adversarial_ai_validator
+  feature run, CHECK 10 built a `methods` set that excluded every `async def` service method —
+  so `process_adversarial_analysis()` was permanently flagged as "missing" for 13 iterations even
+  after being correctly implemented. The surgical fix added the method each iteration; CHECK 10 could
+  never see it. Any AST-based check that walks class bodies must use
+  `isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef))`.
+- A static check false positive that fires every iteration is worse than no static check at all.
+  It burns all iteration budget on phantom fixes, blocks QA from running, and masks real issues.
+  When a static defect fires 3+ consecutive times on the same file with the same "fix" applied each
+  time, that is a signal the check is wrong — not Claude. The right response is to audit the check
+  logic, not to sharpen the fix prompt.
+
 - Two consecutive white-screen crashes (footer, home) from the same root cause: boilerplate
   components read top-level config keys unconditionally at render time. Every key the boilerplate
   reads at startup must be present in the generated config. The right audit is to read every
@@ -38,6 +52,10 @@
 - The import preflight should optionally report *all* relative imports (not just failures)
   and include asset references (CSS/images/fonts), because these files are also resolved
   relative to the post-copy location. This avoids build-only surprises on Vercel.
+- Railway/Nixpacks language detection fails if the repo root doesn't contain a language
+  signal. With a flat layout, `backend/requirements.txt` lives in a subdir, so Nixpacks
+  reports "unable to generate a build plan." The fix is a root `requirements.txt` that
+  delegates to `backend/requirements.txt`.
 
 ## Latest Learnings (2026-03-08, session 10)
 

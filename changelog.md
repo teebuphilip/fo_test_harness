@@ -2,6 +2,25 @@
 
 ## 2026-03-12
 
+### fix: CHECK 10 static gate — async def methods not counted, causing permanent false-positive loops
+
+`_run_static_check()` CHECK 10 (route↔service contract) built the `methods` set for each
+class using `isinstance(item, ast.FunctionDef)` only. In Python's AST, `async def` creates
+`ast.AsyncFunctionDef` — a completely different node type. So any service method declared
+`async def` was never added to `methods`, and every call to it was flagged as
+"Call to missing method `X.method()`" regardless of whether the method actually existed.
+
+Observed: `process_adversarial_analysis()` correctly defined as `async def` on
+`AIOrchestrationService`, yet the static gate fired the same defect 13 consecutive iterations
+(iters 8-11, 14-17, 19, 20 on adversarial_ai_validator feature run). The surgical fix added
+the method each time, but CHECK 10 could never see it because it only saw `def`, not `async def`.
+
+Fix: `isinstance(item, ast.FunctionDef)` → `isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef))`
+at `fo_test_harness.py` line ~5222.
+
+Impact: Any project whose services use `async def` was permanently stuck in a static loop.
+This is the root cause of the 13-iteration adversarial_ai_validator oscillation.
+
 ### fix: full business_config.json schema coverage — all boilerplate keys populated
 
 Full schema audit of every boilerplate frontend component that reads `business_config.json`
@@ -71,6 +90,17 @@ New script: `deploy/check_business_imports.py`
 - `--report-all` to list *all* relative imports and their post-copy resolution
 - `--include-assets` to validate css/images/fonts
 - `--ext .mjs` (repeatable) to include extra extensions
+
+### fix: ensure Railway/Nixpacks sees Python by adding root requirements.txt
+
+Railway/Nixpacks failed to detect Python when the repo root had no `requirements.txt`.
+The backend lives in `backend/`, so Nixpacks had no language signal and aborted.
+
+Pipeline now writes a root `requirements.txt` containing:
+```
+-r backend/requirements.txt
+```
+and fails fast if `backend/requirements.txt` is missing.
 
 ## 2026-03-10 (late session)
 
