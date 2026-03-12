@@ -1,5 +1,17 @@
 # Learnings From AF to FO
 
+## Latest Learnings (2026-03-12)
+
+- A missing top-level config key crashes the entire React app, not just one component.
+  `Footer.jsx` calls `footer.columns.map(...)` at render time — if `footer` is absent from
+  `business_config.json`, the TypeError propagates up and white-screens the whole app before
+  any page loads. Every config key the boilerplate reads at startup must be present in the
+  generated config, even if the harness doesn't explicitly use it.
+- `_generate_business_config()` must stay in sync with the boilerplate's config schema.
+  When the boilerplate adds a new top-level key that it reads unconditionally (footer, nav, etc.),
+  the harness must generate a safe default for it. The fix is always Option A (populate the config)
+  not Option B (defensive null-checks in JSX) — config is the source of truth, not component code.
+
 ## Latest Learnings (2026-03-11)
 
 - CRA only compiles files inside `frontend/src`, so business pages must be copied from

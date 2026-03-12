@@ -1,5 +1,14 @@
 # Must Port to FO
 
+## Harness Config Generation (additions 2026-03-12)
+
+63. fix: footer block missing from business_config.json — white-screen crash on every deploy
+- `_generate_business_config()` never set a `footer` key. `Footer.jsx` calls `footer.columns.map()`
+  on load — null footer crashes the entire app with TypeError before any page renders.
+- Fix: added `footer.columns` (3 columns derived from intake) and `copyright` to the generated config.
+- Files: `fo_test_harness.py` (`_generate_business_config()` ~line 3187)
+⬜ TODO for FO codebase
+
 ## Deploy Pipeline (additions 2026-03-11)
 
 61. new: preflight check for business page imports after copy into frontend/src

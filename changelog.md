@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-03-12
+
+### fix: add footer block to business_config.json generation
+
+`Footer.jsx` in the boilerplate calls `footer.columns.map(...)` on startup. The harness
+`_generate_business_config()` never set a `footer` key — it was absent/null in every
+generated ZIP — causing a runtime TypeError that white-screened the entire app.
+
+Fix: added `footer` block to the config dict in `_generate_business_config()` (line ~3187):
+- Column 1 — startup name, links: Home / Dashboard / Pricing
+- Column 2 — "Product" with first 4 must-have features from intake (as `{label, href}` objects)
+- Column 3 — "Company" with About / Contact (support email) / Privacy / Terms
+- `copyright` — derived from startup name
+
+No AI call — pure intake derivation, same pattern as the rest of `_generate_business_config()`.
+Root cause found via post-deploy QA on AWI build.
+
 ## 2026-03-11
 
 ### fix: add business-page import preflight + auto-fix helper
