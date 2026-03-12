@@ -3183,6 +3183,19 @@ class FOHarness:
                     "description": tagline
                 }
             },
+            "home": {
+                "hero": {
+                    "headline": f"{startup_name}",
+                    "subheadline": tagline,
+                    "cta_primary":  {"label": "Get Started", "href": "/signup"},
+                    "cta_secondary": {"label": "Learn More",  "href": "#features"}
+                },
+                "features_heading": "Everything you need",
+                "features": [
+                    {"title": (f[:50] if isinstance(f, str) else f.get("label", "Feature")), "description": ""}
+                    for f in (must_haves[:6] if must_haves else [{"label": "Core features"}])
+                ]
+            },
             "marketing": {"enabled": False},
             "footer": {
                 "columns": [
