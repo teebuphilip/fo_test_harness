@@ -3183,7 +3183,36 @@ class FOHarness:
                     "description": tagline
                 }
             },
-            "marketing": {"enabled": False}
+            "marketing": {"enabled": False},
+            "footer": {
+                "columns": [
+                    {
+                        "title": startup_name,
+                        "links": [
+                            {"label": "Home",    "href": "/"},
+                            {"label": "Dashboard","href": "/dashboard"},
+                            {"label": "Pricing", "href": "/pricing"}
+                        ]
+                    },
+                    {
+                        "title": "Product",
+                        "links": [
+                            {"label": (f[:40] if isinstance(f, str) else f.get("label", "Feature")), "href": "#"}
+                            for f in (must_haves[:4] if must_haves else [{"label": "Features"}])
+                        ]
+                    },
+                    {
+                        "title": "Company",
+                        "links": [
+                            {"label": "About",   "href": "/about"},
+                            {"label": "Contact", "href": f"mailto:support@{slug}.com"},
+                            {"label": "Privacy", "href": "/privacy"},
+                            {"label": "Terms",   "href": "/terms"}
+                        ]
+                    }
+                ],
+                "copyright": f"© 2025 {startup_name}. All rights reserved."
+            }
         }
 
         config_json = json.dumps(config, indent=2)
@@ -5986,9 +6015,15 @@ End with: SHARPEN_COMPLETE"""
                     # For static/consistency/integration fix iterations, extract target files from raw defect list
                     # (more accurate than parsing the formatted text).
                     if defect_source in ('static', 'consistency', 'quality', 'compile', 'integration') and _raw_pending_defects:
+                        # static/compile: don't require business/ prefix — files found by the checker are
+                        # relative to the artifacts dir and may be at wrong paths (e.g. models/Foo.py).
+                        # Without the file content, Claude reconstructs from memory → same wrong path again.
+                        _require_biz_prefix = defect_source not in ('static', 'compile')
                         defect_target_files = sorted({
                             d.get('file', '') for d in _raw_pending_defects
-                            if d.get('file', '').startswith('business/')
+                            if d.get('file', '') and (
+                                not _require_biz_prefix or d.get('file', '').startswith('business/')
+                            )
                         })
                         # Fix 2: For stuck or method-mismatch defects, also include related service files
                         # (route↔service joint rebuild — both sides must agree on method names)
