@@ -395,6 +395,7 @@ def deploy_backend(
     add_postgres: bool = True,
     env_file: Path = None,
     railway_config: dict = None,
+    wait_minutes: int = 10,
 ) -> dict:
     """
     Deploy backend repo to Railway via API.
@@ -552,7 +553,8 @@ def deploy_backend(
     print("  [Railway] Waiting for deploy to come up", end="", flush=True)
     url = None
     new_deploy = None
-    for _ in range(24):  # 2 minutes max
+    max_iters = max(1, int(wait_minutes * 60 / 5))
+    for _ in range(max_iters):
         time.sleep(5)
         print(".", end="", flush=True)
         try:

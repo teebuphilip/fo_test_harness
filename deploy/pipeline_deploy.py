@@ -871,6 +871,12 @@ def main():
         help="Git branch to deploy (default: main)"
     )
     parser.add_argument(
+        "--railway-wait-minutes",
+        type=int,
+        default=10,
+        help="Minutes to wait for Railway deploy URL (default: 10)"
+    )
+    parser.add_argument(
         "--framework",
         default="create-react-app",
         help="Vercel framework preset (default: create-react-app). Use 'vite' for Vite projects."
@@ -1050,6 +1056,7 @@ def main():
                 project_name=project_name,
                 add_postgres=not railway_cfg.get("postgres_added"),
                 railway_config=railway_cfg,
+                wait_minutes=args.railway_wait_minutes,
             )
 
             if railway_result["success"]:
