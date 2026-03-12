@@ -576,6 +576,25 @@ def deploy_backend(
         print("  [Railway] WARNING: No new deployment detected after trigger.")
 
     if not url:
+        # Try CLI fallback for domain (some Railway accounts delay deployment.url)
+        try:
+            import subprocess, shutil
+            cli = shutil.which("railway")
+            if cli:
+                res = subprocess.run(
+                    [cli, "domain"],
+                    capture_output=True,
+                    text=True,
+                    timeout=20,
+                )
+                if res.returncode == 0:
+                    for line in res.stdout.splitlines():
+                        if "http" in line:
+                            url = line.strip()
+                            break
+        except Exception:
+            pass
+
         print("  [Railway] Deploy triggered but URL not available yet.")
         print("  [Railway] Check Railway dashboard for status.")
 
