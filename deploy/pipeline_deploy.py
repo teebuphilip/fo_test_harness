@@ -805,6 +805,13 @@ def get_existing_backend_url(railway_token: str, railway_cfg: dict) -> str:
         return None
     try:
         api = RailwayAPI(railway_token)
+        # Prefer public domains if available
+        try:
+            domains = api.get_service_domains(service_id)
+            if domains:
+                return domains[0] if domains[0].startswith("http") else f"https://{domains[0]}"
+        except Exception:
+            pass
         domain = api.get_service_url(project_id, service_id)
         if not domain:
             return None
