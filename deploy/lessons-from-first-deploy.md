@@ -201,6 +201,33 @@ ZIP before it's ever extracted.
 
 ---
 
+## 16. Business pages copied into frontend/src — relative import paths break
+
+**Error:** Vercel build fails: `Module not found: Can't resolve '../utils/api'`
+
+**Root cause:** CRA only compiles files inside `frontend/src`. The deploy pipeline copies
+`business/frontend/pages` into `frontend/src/business/pages`, which changes the relative
+import base. Imports that worked in the original location (`../utils/api`) break after copy.
+
+**Fix:**
+- Added `deploy/check_business_imports.py` to validate relative imports *as if copied*.
+- Auto-fix can rewrite known patterns (e.g. `../utils/api` → `../../utils/api`) and commit.
+- After fixing source pages, re-copy into `frontend/src/business/pages` (deploy pipeline or manual).
+
+---
+
+## 17. React Router: Suspense inside Routes causes runtime crash (blank page)
+
+**Error:** White screen with runtime error from `history.ts` / React Router.
+
+**Root cause:** React Router v6 does not allow `<Suspense>` as a direct child inside `<Routes>`.
+Placing `<Suspense>` around the dynamic business routes inside `<Routes>` causes a runtime throw.
+
+**Fix:** Move `<Suspense>` *outside* `<Routes>` or wrap each route element with `<Suspense>`.
+This is a template bug in `frontend/src/App.js`.
+
+---
+
 ## 16. email-validator missing from requirements.txt
 
 **Error:** `ImportError: email-validator is not installed, run pip install 'pydantic[email]'`
@@ -225,6 +252,36 @@ but Python evaluates `Depends(require_ajax_header)` as a default argument at mod
 **Fix:** Moved `require_ajax_header` definition to just above the `# AUTH ENDPOINTS` section.
 Removed the duplicate definition at the old location.
 Applied to both AWI repo and boilerplate `saas-boilerplate/backend/main.py`.
+
+---
+
+## 18. Session not imported — NameError at startup
+
+**Error:** `NameError: name 'Session' is not defined` at `main.py` line 1556
+
+**Root cause:** `main.py` uses `db: Session = Depends(get_db)` as a type annotation in a route
+function signature. Python evaluates this at module load time. `Session` (from `sqlalchemy.orm`)
+was never imported — only `get_db` was imported from `core.database`.
+
+**Fix:** Added `from sqlalchemy.orm import Session` immediately after the `core.database` import line.
+Applied to both AWI repo and boilerplate `saas-boilerplate/backend/main.py`.
+
+---
+
+## 19. Railway root directory set to `backend/` — business/ excluded from container
+
+**Error:** `No business routes directory found at /app/business/backend/routes` — 0 business routes loaded
+
+**Root cause:** `railway_deploy.py` called `api.set_root_directory(service_id, "backend")`.
+When Railway's root directory is set to `backend/`, only the contents of `backend/` are deployed
+to `/app` in the container. The `business/` directory (which lives at repo root) is never copied
+in — so the loader correctly resolves the path but the directory simply doesn't exist.
+
+**Fix:**
+- `railway_deploy.py`: removed `set_root_directory("backend")` call entirely.
+  `railway.toml` startCommand already handles `cd backend && uvicorn ...` — root dir stays at repo root.
+- **Manual fix for live AWI service:** Railway dashboard → AWI service → Settings → Root Directory → clear it.
+  This triggers a redeploy with the full repo (including `business/`) in the container.
 
 ---
 
@@ -253,4 +310,5 @@ Applied to both AWI repo and boilerplate `saas-boilerplate/backend/main.py`.
 | `saas-boilerplate/backend/config/mailerlite_config.example.json` | fixed key names |
 | `saas-boilerplate/backend/config/auth0_config.example.json` | fixed key names |
 | `saas-boilerplate/backend/requirements.txt` | added `email-validator>=2.0.0` |
-| `saas-boilerplate/backend/main.py` | moved `require_ajax_header` above AUTH ENDPOINTS |
+| `saas-boilerplate/backend/main.py` | moved `require_ajax_header` above AUTH ENDPOINTS; added `from sqlalchemy.orm import Session` |
+| `deploy/railway_deploy.py` | removed `set_root_directory("backend")` — root stays at repo root so business/ is included |
