@@ -2,6 +2,20 @@
 
 ## 2026-03-12
 
+### fix: add home block to business_config.json generation
+
+`Home.jsx` crashes with `TypeError: can't access property "hero", a is undefined` at line 30
+because `_generate_business_config()` never set a `home` key — absent/null in every generated ZIP.
+
+Fix: added `home` block to the config dict (~line 3186):
+- `hero.headline` — startup name
+- `hero.subheadline` — tagline from intake
+- `hero.cta_primary` / `hero.cta_secondary` — Get Started / Learn More
+- `features` — first 6 must-have features as `{title, description}` objects
+
+Same root cause as the footer fix (same session): boilerplate reads top-level config keys
+unconditionally at render time; harness must generate a safe default for every one of them.
+
 ### fix: add footer block to business_config.json generation
 
 `Footer.jsx` in the boilerplate calls `footer.columns.map(...)` on startup. The harness

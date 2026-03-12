@@ -2,6 +2,13 @@
 
 ## Latest Learnings (2026-03-12)
 
+- Two consecutive white-screen crashes (footer, home) from the same root cause: boilerplate
+  components read top-level config keys unconditionally at render time. Every key the boilerplate
+  reads at startup must be present in the generated config. The right audit is to read every
+  boilerplate component that touches `business_config.json` and enumerate all keys it accesses —
+  then ensure `_generate_business_config()` covers all of them. Fixing one crash at a time is
+  whack-a-mole; a full schema audit up front closes all of them at once.
+
 - A missing top-level config key crashes the entire React app, not just one component.
   `Footer.jsx` calls `footer.columns.map(...)` at render time — if `footer` is absent from
   `business_config.json`, the TypeError propagates up and white-screens the whole app before

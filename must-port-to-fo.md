@@ -2,6 +2,14 @@
 
 ## Harness Config Generation (additions 2026-03-12)
 
+64. fix: home block missing from business_config.json — white-screen crash on every deploy
+- `_generate_business_config()` never set a `home` key. `Home.jsx` reads `home.hero` at line 30
+  unconditionally — null home crashes the entire app before any page renders.
+- Fix: added `home.hero` (headline, subheadline, cta_primary, cta_secondary) and `home.features`
+  list derived from intake must-have features.
+- Files: `fo_test_harness.py` (`_generate_business_config()` ~line 3186)
+⬜ TODO for FO codebase
+
 63. fix: footer block missing from business_config.json — white-screen crash on every deploy
 - `_generate_business_config()` never set a `footer` key. `Footer.jsx` calls `footer.columns.map()`
   on load — null footer crashes the entire app with TypeError before any page renders.
