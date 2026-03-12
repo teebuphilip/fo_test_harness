@@ -72,6 +72,12 @@
 - Files: `deploy/pipeline_deploy.py`, `deploy/railway_deploy.py`
 ⬜ TODO for FO codebase
 
+66. fix: Railway URL fallback + deployment ID logging
+- If `deployment.url` is delayed, pipeline falls back to `railway domain` (CLI) for a URL.
+- Logs new deployment ID + status as soon as it appears.
+- Files: `deploy/railway_deploy.py`
+⬜ TODO for FO codebase
+
 ## Deploy Pipeline (additions 2026-03-10 evening)
 
 60. fix: Railway set_root_directory("backend") excludes business/ from container

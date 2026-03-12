@@ -112,6 +112,11 @@ when you only want to redeploy from existing commits.
 Railway deploy URL polling now defaults to 10 minutes and can be overridden with
 `--railway-wait-minutes N` when running `pipeline_deploy.py`.
 
+### fix: Railway URL fallback + deployment ID logging
+
+When `deployment.url` is delayed, the pipeline now falls back to `railway domain` (CLI) to
+surface a usable URL and logs the detected deployment ID + status once a new deploy appears.
+
 ## 2026-03-10 (late session)
 
 ### fix: static/compile file contents not injected — business/ prefix filter was too strict

@@ -61,6 +61,8 @@
 - Railway deploys can take longer than 2 minutes for larger repos or cold starts. The default
   polling window should be longer (10 minutes) and overrideable so the pipeline doesn't report
   false negatives while a deploy is still building.
+- Railway often delays `deployment.url`. Falling back to `railway domain` in the CLI provides a
+  stable URL quickly, and logging the deployment ID gives a reliable pointer for debugging.
 
 ## Latest Learnings (2026-03-08, session 10)
 
