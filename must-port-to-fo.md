@@ -2,6 +2,13 @@
 
 ## Harness Config Generation (additions 2026-03-12)
 
+65. fix: full business_config.json schema coverage — all boilerplate keys populated
+- Schema audit of all boilerplate frontend components found 5 top-level keys missing and 2 incomplete.
+- Added: `pricing`, `contact`, `faq`, `terms_of_service`, `privacy_policy`
+- Fixed: `home` (added icon/social_proof/final_cta), `footer` (added tagline, href→url)
+- Files: `fo_test_harness.py` (`_generate_business_config()` ~line 3186)
+⬜ TODO for FO codebase
+
 64. fix: home block missing from business_config.json — white-screen crash on every deploy
 - `_generate_business_config()` never set a `home` key. `Home.jsx` reads `home.hero` at line 30
   unconditionally — null home crashes the entire app before any page renders.

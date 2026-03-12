@@ -8,6 +8,11 @@
   boilerplate component that touches `business_config.json` and enumerate all keys it accesses —
   then ensure `_generate_business_config()` covers all of them. Fixing one crash at a time is
   whack-a-mole; a full schema audit up front closes all of them at once.
+- Full schema audit (2026-03-12) found 5 top-level keys missing entirely: `pricing`, `contact`,
+  `faq`, `terms_of_service`, `privacy_policy`. Also found two structural bugs: `footer.links`
+  used `href` but boilerplate expects `url`; `home.features` was missing the `icon` field and
+  `home` had no `social_proof` or `final_cta` blocks. Lesson: when adding a new config generator,
+  read every boilerplate component that consumes the config — not just the one that just crashed.
 
 - A missing top-level config key crashes the entire React app, not just one component.
   `Footer.jsx` calls `footer.columns.map(...)` at render time — if `footer` is absent from

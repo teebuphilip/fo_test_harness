@@ -2,6 +2,25 @@
 
 ## 2026-03-12
 
+### fix: full business_config.json schema coverage — all boilerplate keys populated
+
+Full schema audit of every boilerplate frontend component that reads `business_config.json`
+revealed 5 top-level keys missing entirely and 2 keys incomplete.
+
+**Added (missing entirely):**
+- `pricing` — headline, subheadline, faq array
+- `contact` — headline, methods, form fields definition
+- `faq` — categorised Q&A (General + Billing)
+- `terms_of_service` — 5 standard legal sections
+- `privacy_policy` — 5 standard legal sections
+
+**Fixed (incomplete):**
+- `home` — added `features[].icon`, `social_proof` (stats + testimonials), `final_cta`
+- `footer` — added `tagline`; changed link key `href` → `url` to match boilerplate schema
+
+All values are derived from intake (startup name, tagline, must-have features) or safe
+generic defaults. No AI call required.
+
 ### fix: add home block to business_config.json generation
 
 `Home.jsx` crashes with `TypeError: can't access property "hero", a is undefined` at line 30
