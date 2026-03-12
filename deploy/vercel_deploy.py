@@ -301,6 +301,30 @@ def parse_env_file(env_path: Path) -> dict:
     return vars
 
 
+def load_auth0_frontend_env(repo_path: Path) -> dict:
+    """
+    Load Auth0 frontend env vars from ~/Downloads/ACCESSKEYS/auth0_<app>.env.
+    Returns a dict with REACT_APP_AUTH0_DOMAIN and REACT_APP_AUTH0_CLIENT_ID if present.
+    """
+    app_name = repo_path.name
+    keys_file = Path.home() / "Downloads" / "ACCESSKEYS" / f"auth0_{app_name}.env"
+    if not keys_file.exists():
+        return {}
+
+    raw = {}
+    for line in keys_file.read_text().splitlines():
+        if "=" in line and not line.startswith("#"):
+            k, _, v = line.partition("=")
+            raw[k.strip()] = v.strip()
+
+    env = {}
+    if raw.get("AUTH0_DOMAIN"):
+        env["REACT_APP_AUTH0_DOMAIN"] = raw["AUTH0_DOMAIN"]
+    if raw.get("AUTH0_CLIENT_ID"):
+        env["REACT_APP_AUTH0_CLIENT_ID"] = raw["AUTH0_CLIENT_ID"]
+    return env
+
+
 # ============================================================
 # MAIN DEPLOY FUNCTION
 # ============================================================
@@ -396,6 +420,12 @@ def deploy_frontend(
 
     # Disable CI=true so ESLint warnings don't fail the build
     env_vars["CI"] = "false"
+
+    # Inject Auth0 frontend env vars if not provided in .env
+    if "REACT_APP_AUTH0_DOMAIN" not in env_vars or "REACT_APP_AUTH0_CLIENT_ID" not in env_vars:
+        auth0_env = load_auth0_frontend_env(repo_path)
+        for k, v in auth0_env.items():
+            env_vars.setdefault(k, v)
 
     # Inject backend URL so frontend knows where the API is
     if backend_url:
