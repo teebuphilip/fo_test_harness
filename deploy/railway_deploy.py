@@ -464,13 +464,9 @@ def deploy_backend(
     else:
         print(f"  [Railway] Reusing service: {service_id}")
 
-    # ── Step 3b: Set root directory to backend/ ─────────────
-    print("  [Railway] Setting root directory: backend...")
-    try:
-        api.set_root_directory(service_id, "backend")
-        print("  [Railway] Root directory set to backend/")
-    except Exception as e:
-        print(f"  [Railway] Root directory note: {e} (set manually in dashboard if needed)")
+    # ── Step 3b: Root directory intentionally NOT set ───────
+    # business/ lives at repo root — setting root to "backend/" excludes it from the container.
+    # railway.toml startCommand handles "cd backend && uvicorn ..." instead.
 
     # ── Step 4: Add PostgreSQL ──────────────────────────────
     if add_postgres and not (railway_config or {}).get("postgres_added"):
@@ -533,6 +529,14 @@ def deploy_backend(
         print("  [Railway] No .env file or no filled variables - skipping")
 
     # ── Step 6: Trigger deploy ──────────────────────────────
+    # Capture current latest deployment to verify a new one is created.
+    before_deps = []
+    try:
+        before_deps = api.get_deployments(service_id)
+    except Exception:
+        before_deps = []
+    before_latest_id = before_deps[0]["id"] if before_deps else None
+
     print("  [Railway] Triggering deploy...")
     try:
         redeploy = api.trigger_deploy(service_id, project_id=project_id)
@@ -544,26 +548,39 @@ def deploy_backend(
         print(f"  [Railway] trigger_deploy skipped: {e}")
         print("  [Railway] Continuing to poll service URL...")
 
-    # ── Step 7: Poll for URL ────────────────────────────────
+    # ── Step 7: Poll for new deployment + URL ───────────────
     print("  [Railway] Waiting for deploy to come up", end="", flush=True)
     url = None
+    new_deploy = None
     for _ in range(24):  # 2 minutes max
         time.sleep(5)
         print(".", end="", flush=True)
         try:
-            url = api.get_service_url(project_id, service_id)
-            if url:
-                break
+            deps = api.get_deployments(service_id)
+            if deps:
+                latest = deps[0]
+                if latest.get("id") and latest.get("id") != before_latest_id:
+                    new_deploy = latest
+                    url = latest.get("url") or api.get_service_url(project_id, service_id)
+                    if url:
+                        break
+            if not url:
+                url = api.get_service_url(project_id, service_id)
         except Exception:
             pass
     print()
+
+    if not new_deploy:
+        print("  [Railway] WARNING: No new deployment detected after trigger.")
 
     if not url:
         print("  [Railway] Deploy triggered but URL not available yet.")
         print("  [Railway] Check Railway dashboard for status.")
 
+    success = new_deploy is not None
+
     return {
-        "success": True,
+        "success": success,
         "project_id": project_id,
         "service_id": service_id,
         "url": f"https://{url}" if url else None,
