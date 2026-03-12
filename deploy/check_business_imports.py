@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import re
 import sys
+import argparse
 from pathlib import Path
 import subprocess
 
@@ -27,28 +28,34 @@ IMPORT_PATTERN = re.compile(
     r"""(?:from\s+['"]([^'"]+)['"]|require\(\s*['"]([^'"]+)['"]\s*\)|import\(\s*['"]([^'"]+)['"]\s*\))"""
 )
 
-EXTS = [".js", ".jsx", ".ts", ".tsx", ".json"]
+DEFAULT_EXTS = [".js", ".jsx", ".ts", ".tsx", ".json"]
+ASSET_EXTS = [
+    ".css", ".scss", ".sass", ".less",
+    ".svg", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico",
+    ".woff", ".woff2", ".ttf", ".eot",
+]
 
 
-def _exists_from(base_file: Path, spec: str) -> bool:
+def _exists_from(base_file: Path, spec: str, exts: list[str]) -> bool:
     base = (base_file.parent / spec).resolve()
     candidates = []
     if base.suffix:
         candidates.append(base)
     else:
         candidates.append(base)
-        candidates.extend(Path(str(base) + ext) for ext in EXTS)
-        candidates.extend(base / f"index{ext}" for ext in EXTS)
+        candidates.extend(Path(str(base) + ext) for ext in exts)
+        candidates.extend(base / f"index{ext}" for ext in exts)
     return any(p.exists() for p in candidates)
 
 
-def _collect_issues(repo_path: Path):
+def _collect_issues(repo_path: Path, exts: list[str], report_all: bool):
     source_dir = repo_path / "business" / "frontend" / "pages"
     dest_dir = repo_path / "frontend" / "src" / "business" / "pages"
     if not source_dir.exists():
         return [], ["Missing business/frontend/pages"]
 
     issues = []
+    all_rel = []
     for src_file in sorted(source_dir.glob("*.jsx")):
         try:
             content = src_file.read_text(encoding="utf-8", errors="ignore")
@@ -59,10 +66,12 @@ def _collect_issues(repo_path: Path):
             spec = next((g for g in match if g), "")
             if not spec.startswith("."):
                 continue
-            if _exists_from(dest_file, spec):
-                continue
-            issues.append((src_file, spec))
-    return issues, []
+            ok = _exists_from(dest_file, spec, exts)
+            if report_all:
+                all_rel.append((src_file, spec, ok))
+            if not ok:
+                issues.append((src_file, spec))
+    return issues, [], all_rel
 
 
 def _fix_known_issues(issues: list[tuple[Path, str]]) -> tuple[int, int]:
@@ -109,20 +118,39 @@ def _git_commit(repo_path: Path, files: list[Path]) -> bool:
 
 
 def main() -> int:
-    if len(sys.argv) != 2:
-        print("Usage: python deploy/check_business_imports.py /path/to/repo")
-        return 2
+    parser = argparse.ArgumentParser(description="Check business page imports after copy into frontend/src.")
+    parser.add_argument("repo", help="Path to repo")
+    parser.add_argument("--report-all", action="store_true", help="Print all relative imports and their resolution.")
+    parser.add_argument("--include-assets", action="store_true", help="Include asset extensions (css/images/fonts) in resolution.")
+    parser.add_argument("--ext", action="append", default=[], help="Add extra extension(s) to check (e.g. --ext .mjs).")
+    args = parser.parse_args()
 
-    repo_path = Path(sys.argv[1]).resolve()
+    repo_path = Path(args.repo).resolve()
     if not repo_path.exists():
         print(f"[ERROR] Repo path not found: {repo_path}")
         return 2
 
-    issues, errors = _collect_issues(repo_path)
+    exts = list(DEFAULT_EXTS)
+    if args.include_assets:
+        exts.extend(ASSET_EXTS)
+    for ext in args.ext:
+        if not ext.startswith("."):
+            ext = "." + ext
+        if ext not in exts:
+            exts.append(ext)
+
+    issues, errors, all_rel = _collect_issues(repo_path, exts, args.report_all)
     if errors:
         for e in errors:
             print(f"[ERROR] {e}")
         return 2
+
+    if args.report_all and all_rel:
+        print("Relative imports (post-copy resolution):")
+        for src_file, spec, ok in all_rel:
+            rel = src_file.relative_to(repo_path)
+            print(f"  {rel}: {spec} -> {'OK' if ok else 'MISSING'}")
+        print()
 
     if not issues:
         print("OK: No unresolved relative imports after copy.")

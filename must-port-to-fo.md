@@ -12,6 +12,12 @@
 - Files: `deploy/check_business_imports.py`
 ⬜ TODO for FO codebase
 
+62. feat: preflight can report all imports and validate assets
+- `deploy/check_business_imports.py` now supports `--report-all` and `--include-assets`
+  (plus `--ext` for extra file types) so post-copy resolution issues are visible before deploy.
+- Files: `deploy/check_business_imports.py`
+⬜ TODO for FO codebase
+
 ## Deploy Pipeline (additions 2026-03-10 evening)
 
 60. fix: Railway set_root_directory("backend") excludes business/ from container

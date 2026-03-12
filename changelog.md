@@ -15,6 +15,13 @@ New script: `deploy/check_business_imports.py`
 - Prints unresolved imports and optionally rewrites `../utils/api` → `../../utils/api`.
 - If you confirm the fix, it auto-commits the changed business pages.
 
+### feat: import preflight can now report all relative imports and check assets
+
+`deploy/check_business_imports.py` now supports:
+- `--report-all` to list *all* relative imports and their post-copy resolution
+- `--include-assets` to validate css/images/fonts
+- `--ext .mjs` (repeatable) to include extra extensions
+
 ## 2026-03-10 (late session)
 
 ### fix: static/compile file contents not injected — business/ prefix filter was too strict

@@ -11,6 +11,9 @@
   required to catch these issues early. A targeted auto-fix for known paths (e.g.
   `../utils/api` → `../../utils/api`) keeps the source-of-truth business pages valid
   without relying on manual Vercel debugging.
+- The import preflight should optionally report *all* relative imports (not just failures)
+  and include asset references (CSS/images/fonts), because these files are also resolved
+  relative to the post-copy location. This avoids build-only surprises on Vercel.
 
 ## Latest Learnings (2026-03-08, session 10)
 
