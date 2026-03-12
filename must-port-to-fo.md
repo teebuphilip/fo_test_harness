@@ -60,6 +60,12 @@
 - Files: `deploy/pipeline_deploy.py`
 ⬜ TODO for FO codebase
 
+64. feat: skip Git push on redeploys
+- `pipeline_deploy.py` now supports `--skip-git-push` to bypass git add/commit/push
+  when you only want to redeploy from the current commit.
+- Files: `deploy/pipeline_deploy.py`
+⬜ TODO for FO codebase
+
 ## Deploy Pipeline (additions 2026-03-10 evening)
 
 60. fix: Railway set_root_directory("backend") excludes business/ from container

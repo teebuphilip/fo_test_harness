@@ -102,6 +102,11 @@ Pipeline now writes a root `requirements.txt` containing:
 ```
 and fails fast if `backend/requirements.txt` is missing.
 
+### feat: add --skip-git-push for redeploys
+
+`pipeline_deploy.py` now supports `--skip-git-push` to bypass git add/commit/push
+when you only want to redeploy from existing commits.
+
 ## 2026-03-10 (late session)
 
 ### fix: static/compile file contents not injected — business/ prefix filter was too strict

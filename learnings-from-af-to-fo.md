@@ -56,6 +56,8 @@
   signal. With a flat layout, `backend/requirements.txt` lives in a subdir, so Nixpacks
   reports "unable to generate a build plan." The fix is a root `requirements.txt` that
   delegates to `backend/requirements.txt`.
+- Redeploys don't always need a Git push; separating "push" from "deploy" avoids multiple
+  overlapping builds. Adding a `--skip-git-push` flag makes redeploy-only runs cheaper and faster.
 
 ## Latest Learnings (2026-03-08, session 10)
 
