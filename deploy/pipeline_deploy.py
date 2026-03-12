@@ -851,6 +851,11 @@ def main():
         help="Force create new Railway/Vercel projects (ignore existing IDs in deploy state files)"
     )
     parser.add_argument(
+        "--skip-git-push",
+        action="store_true",
+        help="Skip git add/commit/push (use when redeploying without code changes)"
+    )
+    parser.add_argument(
         "--backend-only",
         action="store_true",
         help="Only deploy backend to Railway, skip Vercel"
@@ -1002,14 +1007,22 @@ def main():
     _ensure_root_requirements(repo_path)
 
     # ── STEP 1: Push to GitHub ───────────────────────────────
-    github_url, github_repo = push_to_github(
-        repo_path=repo_path,
-        github_token=github_token,
-        github_username=github_username,
-        repo_name=project_name,
-        branch=args.branch,
-        new_repo=args.new_project,
-    )
+    if args.skip_git_push:
+        github_repo = f"{github_username}/{project_name}"
+        github_url = f"https://github.com/{github_repo}"
+        print(f"\n{'='*60}")
+        print(f"STEP 1/3: Skip GitHub push (--skip-git-push)")
+        print(f"{'='*60}")
+        print(f"  Repo: {github_repo}")
+    else:
+        github_url, github_repo = push_to_github(
+            repo_path=repo_path,
+            github_token=github_token,
+            github_username=github_username,
+            repo_name=project_name,
+            branch=args.branch,
+            new_repo=args.new_project,
+        )
 
     # Small pause - let GitHub settle before Railway/Vercel pull
     time.sleep(3)
