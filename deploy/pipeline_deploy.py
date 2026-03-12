@@ -565,6 +565,20 @@ def _ensure_railway_toml(repo_path: Path):
     print("  [pipeline] railway.toml written (repo root + backend/)")
 
 
+def _ensure_root_requirements(repo_path: Path):
+    """
+    Ensure a root requirements.txt exists so Nixpacks can detect Python.
+    If backend/requirements.txt is missing, fail fast.
+    """
+    backend_req = repo_path / "backend" / "requirements.txt"
+    root_req = repo_path / "requirements.txt"
+    if not backend_req.exists():
+        print("  [pipeline] ERROR: backend/requirements.txt missing — cannot create root requirements.txt")
+        sys.exit(1)
+    if not root_req.exists():
+        root_req.write_text("-r backend/requirements.txt\n")
+        print("  [pipeline] Wrote root requirements.txt (delegates to backend/requirements.txt)")
+
 def _ensure_business_pages_in_src(repo_path: Path):
     """
     Copy business/frontend/pages/*.jsx into saas-boilerplate/frontend/src/business/pages/
@@ -985,6 +999,7 @@ def main():
 
     # ── STEP 0b: Write railway.toml ─────────────────────────
     _ensure_railway_toml(repo_path)
+    _ensure_root_requirements(repo_path)
 
     # ── STEP 1: Push to GitHub ───────────────────────────────
     github_url, github_repo = push_to_github(
