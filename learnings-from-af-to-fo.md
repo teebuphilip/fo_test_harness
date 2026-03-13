@@ -63,6 +63,8 @@
   false negatives while a deploy is still building.
 - Railway often delays `deployment.url`. Falling back to `railway domain` in the CLI provides a
   stable URL quickly, and logging the deployment ID gives a reliable pointer for debugging.
+- Manual deploy state setup is error-prone. A small helper that writes `railway.deploy.json` /
+  `vercel.deploy.json` from CLI args makes first-time setup deterministic and auditable.
 
 ## Latest Learnings (2026-03-08, session 10)
 

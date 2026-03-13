@@ -78,6 +78,12 @@
 - Files: `deploy/railway_deploy.py`
 ⬜ TODO for FO codebase
 
+67. new: helper to write deploy state JSON files
+- `deploy/write_deploy_state.py` writes `railway.deploy.json` or `vercel.deploy.json` from CLI args
+  (project IDs, service IDs, service domain).
+- Files: `deploy/write_deploy_state.py`
+⬜ TODO for FO codebase
+
 ## Deploy Pipeline (additions 2026-03-10 evening)
 
 60. fix: Railway set_root_directory("backend") excludes business/ from container
