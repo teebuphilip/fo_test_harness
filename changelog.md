@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-03-14
+
+### feat: run_integration_and_feature_build.sh — auto-resume from prior run state
+
+Script now detects completed phases/features from ZIPs on disk at startup. No flags needed on rerun.
+
+Detection order (filesystem only, no state file):
+1. If `*_BLOCK_B_full_*.zip` exists → exit immediately (already done)
+2. If `<INTAKE_STEM>_p1_BLOCK_B_*.zip` exists → skip Phase 1, set PHASE1_ZIP_OVERRIDE
+3. Walk each intelligence feature in order; for each feature intake JSON that exists, check for
+   its `<startup_slug>_BLOCK_B_*.zip` — stop at the first gap → that's the resume point
+
+On failure, the error message now just says: rerun the same command. The script picks up automatically.
+
+Files: `run_integration_and_feature_build.sh`
+
 ## 2026-03-13
 
 ### fix: run_integration_and_feature_build.sh — sed \0 not valid on macOS, causes \0 artifact dir
@@ -156,6 +172,11 @@ from CLI args (project IDs, service IDs, service domain) to streamline first-tim
 
 Pipeline now derives the stable production domain (`https://<project>.vercel.app`) from
 `vercel.deploy.json` and uses that for downstream CORS instead of ephemeral preview URLs.
+
+### feat: auto-update Auth0 URLs after frontend deploy
+
+New `deploy/auth0_update_urls.py` updates Auth0 callback/logout/origin URLs. The pipeline
+now runs it automatically after a successful frontend deploy when `AUTH0_MGMT_TOKEN` is set.
 
 ## 2026-03-10 (late session)
 

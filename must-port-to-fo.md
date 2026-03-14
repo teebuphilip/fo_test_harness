@@ -109,6 +109,12 @@
 - Files: `deploy/pipeline_deploy.py`
 ⬜ TODO for FO codebase
 
+69. feat: auto-update Auth0 URLs after frontend deploy
+- New `deploy/auth0_update_urls.py` updates callback/logout/origin URLs.
+- Pipeline runs it automatically after successful frontend deploy when `AUTH0_MGMT_TOKEN` is set.
+- Files: `deploy/auth0_update_urls.py`, `deploy/pipeline_deploy.py`
+⬜ TODO for FO codebase
+
 ## Deploy Pipeline (additions 2026-03-10 evening)
 
 60. fix: Railway set_root_directory("backend") excludes business/ from container

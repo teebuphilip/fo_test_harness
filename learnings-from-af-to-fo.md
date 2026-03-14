@@ -89,6 +89,8 @@
   `vercel.deploy.json` from CLI args makes first-time setup deterministic and auditable.
 - Using Vercel preview URLs for CORS causes unnecessary backend redeploys. Prefer the stable
   production domain (`https://<project>.vercel.app`) when setting `CORS_ORIGINS`.
+- Auth0 must explicitly allow the production domain in callbacks/logout/origins. Automating
+  this after frontend deploy (via a helper + `AUTH0_MGMT_TOKEN`) removes a brittle manual step.
 
 ## Latest Learnings (2026-03-08, session 10)
 
