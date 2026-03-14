@@ -419,6 +419,21 @@ _run_integration_check() {
 
 _run_integration_check "$INTEGRATION_ISSUES"
 
+# Only run fix pass if there are HIGH severity issues — MEDIUM-only (e.g. KPI
+# mentions not in code) are not worth burning fix pass iterations on.
+IC_HIGH=0
+if [[ $IC_EXIT -ne 0 && -f "$INTEGRATION_ISSUES" ]]; then
+  IC_HIGH=$(python3 -c "
+import json, sys
+d = json.load(open('$INTEGRATION_ISSUES'))
+print(sum(1 for i in d.get('issues', []) if i.get('severity','').upper() == 'HIGH'))
+" 2>/dev/null || echo 0)
+  if [[ $IC_HIGH -eq 0 ]]; then
+    echo "ℹ Integration issues are MEDIUM-only — skipping fix pass (not worth burning iterations)"
+    IC_EXIT=0
+  fi
+fi
+
 MAX_FIX_PASSES=2
 FIX_PASS=0
 
@@ -437,7 +452,9 @@ while [[ $IC_EXIT -ne 0 && $FIX_PASS -lt $MAX_FIX_PASSES ]]; do
 
   # Allow at least 5 more iterations beyond wherever the run currently is,
   # so the fix pass never hits max-iterations before it can run a single iteration.
-  INT_MAX_ITER=$(( LATEST_ITER + 5 ))
+  # Use 10# prefix to force decimal — LATEST_ITER may be "08"/"09" which bash
+  # would interpret as invalid octal without the prefix.
+  INT_MAX_ITER=$(( 10#${LATEST_ITER} + 5 ))
   if [[ $INT_MAX_ITER -lt $MAX_ITER ]]; then INT_MAX_ITER=$MAX_ITER; fi
 
   FIX_EXIT=0
@@ -445,7 +462,7 @@ while [[ $IC_EXIT -ne 0 && $FIX_PASS -lt $MAX_FIX_PASSES ]]; do
     "$FEATURE_INTAKE" \
     "$BUILD_GOV" \
     --resume-run "$LATEST_RUN_DIR" \
-    --resume-iteration "$LATEST_ITER" \
+    --resume-iteration "$((10#${LATEST_ITER}))" \
     --integration-issues "$INTEGRATION_ISSUES" \
     --max-iterations "$INT_MAX_ITER" \
     --no-polish || FIX_EXIT=$?
