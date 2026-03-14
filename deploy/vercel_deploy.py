@@ -240,6 +240,19 @@ class VercelAPI:
         resp.raise_for_status()
         return resp.json()
 
+    def assign_alias(self, deployment_id: str, alias: str) -> dict:
+        """
+        Assign an alias (domain) to a deployment.
+        """
+        payload = {"alias": alias, "redirect": None}
+        resp = self.session.post(
+            f"{VERCEL_API}/v2/deployments/{deployment_id}/aliases",
+            json=payload,
+            params=self._params()
+        )
+        if resp.status_code >= 400:
+            raise Exception(f"Vercel alias API {resp.status_code}: {resp.text}")
+        return resp.json()
     def get_deployment_events(self, deployment_id: str, limit: int = 50) -> list:
         """Fetch deployment events/log chunks when available."""
         resp = self.session.get(
@@ -511,6 +524,20 @@ def deploy_frontend(
     if not url:
         print(f"  [Vercel] Deploy status: {final_status}")
         print("  [Vercel] URL not available yet - check Vercel dashboard")
+
+    # ── Step 6: Assign production alias if configured ───────
+    prod_domain = None
+    if isinstance(vercel_config, dict):
+        prod_domain = vercel_config.get("production_domain") or vercel_config.get("prod_domain")
+    if not prod_domain and project_name:
+        prod_domain = f"{project_name}.vercel.app"
+
+    if deployment_id and prod_domain:
+        try:
+            api.assign_alias(deployment_id, prod_domain)
+            print(f"  [Vercel] Production alias assigned: {prod_domain}")
+        except Exception as e:
+            print(f"  [Vercel] WARNING: could not assign production alias: {e}")
 
     return {
         "success": True,
