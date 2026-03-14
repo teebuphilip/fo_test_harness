@@ -2283,7 +2283,7 @@ If REJECTED: end with exactly: "QA STATUS: REJECTED - [X] defects require fixing
         Generate integration fix prompt for Claude.
         Passes CURRENT file contents so Claude patches surgically rather than
         reconstructing from memory (which causes __tablename__/Base import regressions).
-        current_file_contents: {rel_path: file_text} for each target file.
+        current_file_contents: {rel_path: file_text} for existing files, or NEW FILE placeholder for files that must be created.
         """
         required_inventory_bullets = "\n".join(f"- {p}" for p in (required_file_inventory or []))
         if not required_inventory_bullets:
@@ -4005,7 +4005,8 @@ class FOHarness:
     def _read_target_file_contents(self, iteration: int, target_files: list) -> dict:
         """
         Read the current content of defect-target files from the previous iteration's
-        artifacts directory. Returns {rel_path: file_text} for files that exist.
+        artifacts directory. Returns {rel_path: file_text} for files that exist, and
+        a NEW FILE placeholder for files that don't exist yet (so Claude knows to create them).
         Used to pass actual file content to surgical patch prompts so Claude doesn't
         reconstruct from memory and introduce collateral errors.
         """
@@ -4014,12 +4015,17 @@ class FOHarness:
         prev_artifacts_dir = self.artifacts.build_dir / f'iteration_{iteration - 1:02d}_artifacts'
         contents = {}
         for tf in target_files:
+            if not tf.startswith('business/'):
+                continue
             tf_path = prev_artifacts_dir / tf
             if tf_path.exists():
                 try:
                     contents[tf] = tf_path.read_text(encoding='utf-8')
                 except Exception:
                     pass
+            else:
+                # File doesn't exist yet — signal Claude to create it from scratch
+                contents[tf] = '# NEW FILE — does not exist yet. Create this file from scratch using the boilerplate patterns above.'
         return contents
 
     def _extract_defect_target_files(self, defects_text: Optional[str]) -> list:

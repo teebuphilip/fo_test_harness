@@ -4,7 +4,8 @@ You are fixing defects detected by automated analysis (static check, consistency
 These are concrete errors: wrong imports, missing model fields, missing methods, missing libraries, method mismatches.
 
 **The CURRENT content of each target file is provided below. You MUST use it as your exact base.**
-Do NOT reconstruct files from memory. Copy the existing content verbatim and change ONLY what the defect specifies.
+- If a file shows real code → copy it verbatim and change ONLY what the defect specifies.
+- If a file shows `# NEW FILE — does not exist yet` → create it from scratch using the boilerplate import reference below. Do NOT skip it — it MUST be in your output.
 
 ---
 
