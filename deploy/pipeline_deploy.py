@@ -839,6 +839,17 @@ def get_existing_frontend_url(vercel_token: str, vercel_cfg: dict, team_id: str 
         return None
 
 
+def get_production_frontend_url(vercel_cfg: dict) -> str:
+    """
+    Derive the stable production URL from the Vercel project name.
+    Example: <project>.vercel.app
+    """
+    project = (vercel_cfg or {}).get("project")
+    if not project:
+        return None
+    return f"https://{project}.vercel.app"
+
+
 # ============================================================
 # MAIN PIPELINE
 # ============================================================
@@ -1193,6 +1204,10 @@ def main():
         if vercel_result and vercel_result.get("project_id"):
             merged_vercel_cfg["project_id"] = vercel_result.get("project_id")
         final_frontend_url = get_existing_frontend_url(vercel_token, merged_vercel_cfg, team_id=vercel_team_id or None)
+    # Prefer stable production URL for CORS and downstream use
+    prod_frontend_url = get_production_frontend_url(vercel_cfg)
+    if prod_frontend_url:
+        final_frontend_url = prod_frontend_url
 
     # ── Step 4a: Push CORS_ORIGINS + ENVIRONMENT to Railway once Vercel URL known ──
     vercel_succeeded = args.backend_only or (vercel_result and vercel_result.get("success"))
