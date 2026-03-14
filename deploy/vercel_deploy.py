@@ -532,6 +532,11 @@ def deploy_frontend(
     if not prod_domain and project_name:
         prod_domain = f"{project_name}.vercel.app"
 
+    if prod_domain:
+        # Normalize: strip scheme and path if user provided full URL
+        prod_domain = prod_domain.replace("https://", "").replace("http://", "")
+        prod_domain = prod_domain.split("/")[0]
+
     if deployment_id and prod_domain:
         try:
             api.assign_alias(deployment_id, prod_domain)
