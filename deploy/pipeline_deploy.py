@@ -54,6 +54,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from railway_deploy import deploy_backend, RailwayAPI, parse_env_file as railway_parse_env
 from vercel_deploy import deploy_frontend, VercelAPI
 from auth0_setup import update_spa_urls
+from auth0_update_urls import main as auth0_update_urls_main
 
 
 # ============================================================
@@ -1260,20 +1261,25 @@ def main():
         mgmt_token  = os.getenv("AUTH0_MGMT_TOKEN")
         keys_file   = Path.home() / "Downloads" / "ACCESSKEYS" / f"auth0_{app_name}.env"
         if mgmt_token and keys_file.exists():
-            auth0_vars = {}
-            for line in keys_file.read_text().splitlines():
-                if "=" in line and not line.startswith("#"):
-                    k, _, v = line.partition("=")
-                    auth0_vars[k.strip()] = v.strip()
-            auth0_domain    = auth0_vars.get("AUTH0_DOMAIN")
-            auth0_client_id = auth0_vars.get("AUTH0_CLIENT_ID")
-            if auth0_domain and auth0_client_id:
-                print("\n  [Auth0] Updating callback URLs with Vercel frontend URL...")
+            print("\n  [Auth0] Updating callback/logout/origin URLs with Vercel production URL...")
+            try:
+                auth0_update_urls_main_args = [
+                    "--app-name", app_name,
+                    "--base-url", final_frontend_url,
+                ]
+                # Call helper main directly
+                auth0_update_urls_main.__globals__['__name__'] = 'auth0_update_urls'
+                auth0_update_urls_main.__globals__['__file__'] = str(Path(__file__).parent / "auth0_update_urls.py")
+                import sys as _sys
+                _old_argv = _sys.argv
+                _sys.argv = ["auth0_update_urls.py"] + auth0_update_urls_main_args
                 try:
-                    update_spa_urls(auth0_domain, mgmt_token, auth0_client_id, final_frontend_url)
-                except Exception as e:
-                    print(f"  [Auth0] WARNING: URL update failed — {e}")
-                    print(f"  [Auth0] Run manually: python deploy/auth0_setup.py --update-urls ...")
+                    auth0_update_urls_main()
+                finally:
+                    _sys.argv = _old_argv
+            except Exception as e:
+                print(f"  [Auth0] WARNING: URL update failed — {e}")
+                print(f"  [Auth0] Run manually: python deploy/auth0_update_urls.py --app-name {app_name} --base-url {final_frontend_url}")
         elif keys_file.exists() and not mgmt_token:
             print(f"\n  [Auth0] Skipping URL update — set AUTH0_MGMT_TOKEN env var to enable")
 
