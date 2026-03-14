@@ -1,5 +1,24 @@
 # Must Port to FO
 
+## QA + Integration Check Improvements (additions 2026-03-14 session 2)
+
+73. feat: integration_check.py — Checks 6-11 (auth contract, async misuse, gather sync args, npm integrity, bare except, unbounded polling)
+- Check 6: routes with Depends(get_current_user) vs frontend fetch Authorization headers
+- Check 7: await on non-async functions (AST)
+- Check 8: asyncio.gather() receiving sync function results (AST, both direct and variable pattern)
+- Check 9: JSX imports vs business/package.json declared dependencies
+- Check 10: bare except / except+pass silent swallow in services
+- Check 11: recursive setTimeout with no attempt counter (CSS-aware guard detection)
+- Files: `integration_check.py`
+⬜ TODO for FO codebase
+
+74. feat: qa_prompt.md — AI API cost calculation verification rule
+- Provides per-1K-token rate table for common models (Haiku, Sonnet, Opus, GPT-3.5, GPT-4o)
+- Flags the double-division bug: (tokens * rate) / 1000 where /1000 is wrong
+- Requires QA to quote exact wrong line before flagging
+- Files: `directives/prompts/qa_prompt.md`
+⬜ TODO for FO codebase
+
 ## Integration Fix Pass Fixes (additions 2026-03-14)
 
 70. fix: _read_target_file_contents — NEW FILE placeholder for missing targets
