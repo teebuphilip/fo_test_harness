@@ -111,6 +111,28 @@ For EVERY defect you write, you MUST complete this checklist FIRST:
   `httpx`, `python-jose`, `passlib`, `python-multipart`, `celery`, `redis`, `boto3`,
   `stripe`, `auth0-python`, `requests`, `aiohttp`, `anyio`. These are real packages, not stdlib.
 
+**AI API COST CALCULATION BUG to FLAG (IMPLEMENTATION_BUG HIGH) — VERIFICATION REQUIRED:**
+If the build contains AI API calls (Anthropic, OpenAI, or similar), verify cost calculations:
+
+Known correct per-token rates (these are per-1K-token rates — do NOT divide by 1000 again):
+| Model | Input (per 1K tokens) | Output (per 1K tokens) |
+|---|---|---|
+| claude-3-haiku | $0.00025 | $0.00125 |
+| claude-3-sonnet | $0.003 | $0.015 |
+| claude-3-opus | $0.015 | $0.075 |
+| gpt-3.5-turbo | $0.001 | $0.002 |
+| gpt-4o | $0.005 | $0.015 |
+| gpt-4o-mini | $0.00015 | $0.0006 |
+
+**The common bug**: `(input_tokens * rate + output_tokens * rate) / 1000` — the `/1000` is WRONG.
+Token counts are already whole numbers; the rates above are already per-1K. Dividing by 1000 again makes costs 1000x too small.
+
+BEFORE writing this defect you MUST:
+1. Find a cost calculation line in the build output that multiplies token counts by a per-token rate
+2. Check if it also divides the result by 1000 — if so, that is the bug
+3. Quote the exact line verbatim as Evidence
+4. If the calculation does NOT divide by 1000 after applying per-token rates — do NOT flag it
+
 **Auth0 BUG to FLAG (IMPLEMENTATION_BUG HIGH) — VERIFICATION REQUIRED:**
 BEFORE writing this defect you MUST complete this verification:
 1. Find a line in the build output that literally contains the text `user.getAccessTokenSilently()`
