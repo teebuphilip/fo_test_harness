@@ -57,6 +57,10 @@ For EVERY defect you write, you MUST complete this checklist FIRST:
 - NEVER write a defect using hedged language: "does not seem to", "may suggest", "could indicate", "appears to", "might be". These phrases mean you are guessing, not citing evidence. If you are not certain because you can quote the wrong line — delete the defect.
 - NEVER write a defect whose Evidence contradicts its own Problem. If your Evidence says files are present but your Problem says they are absent — delete the defect. Read your own Evidence before submitting.
 - NEVER write a SCOPE_CHANGE_REQUEST based on a column name, field name, or default value alone. A database column is not a user-facing feature. Only flag scope violations when the intake spec explicitly excludes the feature and you can quote the wrong line of code that implements it.
+- NEVER flag `status` or `processing_status` columns on a model as scope creep — status tracking is standard infrastructure for any async operation and is always in scope.
+- NEVER flag internal helper methods (e.g. `_extract_strengths`, `_extract_flaws`, `_identify_conflicts`, `_parse_*`, `_format_*`, `_calculate_*`) as scope creep. Private methods starting with `_` are implementation details of a service, not user-facing features. You cannot quote their existence as "wrong" — only quote a broken call or wrong return value.
+- NEVER flag `__pycache__` directories or `.pyc` files — these are Python bytecode, not artifacts.
+- NEVER flag the ordering of destructured variables in JavaScript (e.g. `const { user, isLoading, getAccessTokenSilently } = useAuth0()`) — destructuring order has no effect on behavior.
 - NEVER infer that a function is broken from its call site. If you quote `onClick={() => handleDelete(id)}` but have not read the `handleDelete` function body — you CANNOT write a defect about what handleDelete does. Find the function definition and quote the wrong line in it, or delete the defect.
 
 - DO NOT reference file paths not present as `**FILE:**` headers in the build output

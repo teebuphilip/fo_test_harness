@@ -1,0 +1,69 @@
+{
+  "check_date": "2026-03-08T09:53:08.296170",
+  "source_zip": null,
+  "source_artifacts_dir": "fo_harness_runs/ai_workforce_intelligence_downloadable_executive_report_BLOCK_B_20260308_070302/build/iteration_32_artifacts",
+  "intake_path": "intake/intake_runs/ai_workforce_intelligence/ai_workforce_intelligence.5.json",
+  "total_issues": 4,
+  "high_severity": 3,
+  "medium_severity": 1,
+  "issues": [
+    {
+      "id": "INT-FIELD-Assessment-responses",
+      "severity": "HIGH",
+      "category": "MISSING_MODEL_FIELD",
+      "file": "business/models/Assessment.py",
+      "files": [
+        "business/services/ReportService.py",
+        "business/models/Assessment.py"
+      ],
+      "evidence": "`assessment.responses` accessed in ReportService.py line ~51 but Assessment model has no `responses` Column. Defined columns: ['assessment_data', 'client_id', 'created_at', 'id', 'updated_at']",
+      "issue": "Service ReportService.py accesses Assessment.responses which does not exist on the model \u2014 will raise AttributeError at runtime.",
+      "fix": "Add `responses = Column(String, nullable=True)` to business/models/Assessment.py, OR remove the reference to `assessment.responses` in ReportService.py and use an existing field instead."
+    },
+    {
+      "id": "INT-FIELD-Assessment-score",
+      "severity": "HIGH",
+      "category": "MISSING_MODEL_FIELD",
+      "file": "business/models/Assessment.py",
+      "files": [
+        "business/services/ReportService.py",
+        "business/models/Assessment.py"
+      ],
+      "evidence": "`assessment.score` accessed in ReportService.py line ~52 but Assessment model has no `score` Column. Defined columns: ['assessment_data', 'client_id', 'created_at', 'id', 'updated_at']",
+      "issue": "Service ReportService.py accesses Assessment.score which does not exist on the model \u2014 will raise AttributeError at runtime.",
+      "fix": "Add `score = Column(String, nullable=True)` to business/models/Assessment.py, OR remove the reference to `assessment.score` in ReportService.py and use an existing field instead."
+    },
+    {
+      "id": "INT-SPEC-PDF",
+      "severity": "HIGH",
+      "category": "SPEC_COMPLIANCE",
+      "file": "business/requirements.txt",
+      "files": [
+        "business/requirements.txt",
+        "business/backend/routes/reports.py"
+      ],
+      "evidence": "Intake specifies PDF output but no PDF generation library found. Checked: reportlab, fpdf, weasyprint, pdfkit, pypdf, xhtml2pdf",
+      "issue": "Intake requires downloadable PDF reports but no PDF library is present. Download endpoint returns CSV/JSON only.",
+      "fix": "Add `reportlab` to requirements.txt. In reports.py download endpoint, add a 'pdf' format branch: use reportlab to generate PDF from report_data and return as StreamingResponse with media_type='application/pdf'."
+    },
+    {
+      "id": "INT-SPEC-KPI-MVP",
+      "severity": "MEDIUM",
+      "category": "SPEC_COMPLIANCE",
+      "file": "business/services/ScoringService.py",
+      "files": [
+        "business/services/ScoringService.py",
+        "business/services/ReportService.py"
+      ],
+      "evidence": "KPI 'MVP' defined in intake but not referenced anywhere in artifacts",
+      "issue": "Intake KPI 'MVP' has no implementation in any service or route.",
+      "fix": "Add `_calculate_mvp()` method to ScoringService.py or ReportService.py and include 'MVP' in the KPI output dict."
+    }
+  ],
+  "fix_target_files": [
+    "business/models/Assessment.py",
+    "business/requirements.txt",
+    "business/services/ScoringService.py"
+  ],
+  "verdict": "INTEGRATION_REJECTED"
+}

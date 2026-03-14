@@ -14,12 +14,14 @@ Read ALL artifact files below and check for cross-file consistency defects — r
 
 **DO NOT FLAG:**
 - Missing boilerplate files (`core.*`, `lib.*`) — these are provided by the platform and always present.
+- Imports of `../utils/api`, `../core/useEntitlements`, `../core/EntitlementGate`, `../hooks/useAnalytics` — these are boilerplate frontend utilities, always present at runtime.
 - Style preferences, naming conventions, or code quality suggestions.
 - Missing docstrings, comments, or test coverage.
 - Minor naming differences that do not cause a runtime error.
 - Files outside `business/**` — only evaluate business/ artifacts.
-- Absence of optional optional fields that have defaults in the schema.
+- Absence of optional fields that have defaults in the schema.
 - Pure styling/look-and-feel concerns.
+- Internal helper methods (e.g. `_extract_*`, `_parse_*`, `_format_*`) — these are valid implementation details, not contract violations.
 
 **ARTIFACT FILES:**
 {{artifact_contents}}

@@ -1245,6 +1245,13 @@ class ArtifactManager:
 
         SKIP = {'artifact_manifest.json', 'build_state.json', 'execution_declaration.json'}
 
+        # Prune __pycache__ directories entirely — bytecode is not an artifact
+        import shutil as _shutil
+        for pycache_dir in sorted(artifacts_dir.rglob('__pycache__'), reverse=True):
+            if pycache_dir.is_dir():
+                _shutil.rmtree(pycache_dir, ignore_errors=True)
+                print_warning(f"  → Pruned __pycache__: {pycache_dir.relative_to(artifacts_dir)}")
+
         removed = 0
         remapped = 0
         invalid_business = 0

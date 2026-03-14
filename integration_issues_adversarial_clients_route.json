@@ -1,0 +1,28 @@
+{
+  "check_date": "2026-03-12T00:00:00.000000",
+  "source_zip": null,
+  "source_artifacts_dir": "fo_harness_runs/adversarial_ai_validator_integrate_openai_sdk_for_adversary_role__BLOCK_B_20260310_173106/build/iteration_20_artifacts",
+  "intake_path": "intake/intake_runs/adversarial_ai_validator/adversarial_ai_validator_feature_integrate_openai_sdk_for_adversary_role_.json",
+  "total_issues": 1,
+  "high_severity": 1,
+  "medium_severity": 0,
+  "issues": [
+    {
+      "id": "INT-ROUTE-clients-missing",
+      "severity": "HIGH",
+      "category": "MISSING_ROUTE",
+      "file": "business/backend/routes/analysis.py",
+      "files": [
+        "business/frontend/pages/ClientsNew.jsx",
+        "business/backend/routes/analysis.py"
+      ],
+      "evidence": "ClientsNew.jsx line 59: `await fetch('/clients', { method: 'POST', ... })` — no `@router.post(\"/clients\")` endpoint exists in analysis.py or any other route file.",
+      "issue": "ClientsNew.jsx POSTs to /clients but no backend route handles it — will return 404 at runtime.",
+      "fix": "Add a POST /clients endpoint to business/backend/routes/analysis.py. It should accept a dict of client data, require `Depends(get_current_user)` and `Depends(get_db)`, and return a 201 with the created client record. Keep it minimal: store the data and return it."
+    }
+  ],
+  "fix_target_files": [
+    "business/backend/routes/analysis.py"
+  ],
+  "verdict": "INTEGRATION_REJECTED"
+}

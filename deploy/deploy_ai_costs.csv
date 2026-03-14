@@ -10,3 +10,9 @@ date,time,provider,model,input_tokens,output_tokens,cost
 2026-03-02,15:19:44,chatgpt,gpt-4o-mini,1277,114,0.004332
 2026-03-02,15:25:15,chatgpt,gpt-4o-mini,1287,113,0.004347
 2026-03-02,15:27:34,chatgpt,gpt-4o-mini,1287,128,0.004497
+2026-03-07,14:03:02,chatgpt,gpt-4o-mini,170,97,0.001395
+2026-03-07,14:21:04,chatgpt,gpt-4o-mini,1797,133,0.005822
+2026-03-09,16:33:32,chatgpt,gpt-4o-mini,1779,97,0.005418
+2026-03-10,06:36:26,chatgpt,gpt-4o-mini,934,143,0.003765
+2026-03-10,08:53:40,chatgpt,gpt-4o-mini,1519,109,0.004888
+2026-03-10,10:21:59,chatgpt,gpt-4o-mini,993,109,0.003573

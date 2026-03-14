@@ -57,14 +57,14 @@ latest_artifacts_dir() {
   # Prefer standard build path
   if [[ -d "$run_dir/build" ]]; then
     candidate=$(ls -d "$run_dir/build/iteration_"*"_artifacts" 2>/dev/null | \
-      sed -E 's/.*iteration_([0-9]+)_artifacts/\\1 \\0/' | \
+      sed -E 's/.*iteration_([0-9]+)_artifacts/\1 &/' | \
       sort -n | tail -1 | awk '{print $2}')
   fi
 
   # Fallback to _harness/build
   if [[ -z "$candidate" && -d "$run_dir/_harness/build" ]]; then
     candidate=$(ls -d "$run_dir/_harness/build/iteration_"*"_artifacts" 2>/dev/null | \
-      sed -E 's/.*iteration_([0-9]+)_artifacts/\\1 \\0/' | \
+      sed -E 's/.*iteration_([0-9]+)_artifacts/\1 &/' | \
       sort -n | tail -1 | awk '{print $2}')
   fi
 
@@ -77,7 +77,7 @@ latest_iteration_num() {
     echo ""
     return
   fi
-  echo "$artifacts_dir" | sed -E 's/.*iteration_([0-9]+)_artifacts/\\1/'
+  echo "$artifacts_dir" | sed -E 's/.*iteration_([0-9]+)_artifacts/\1/'
 }
 
 # ── Parse args ─────────────────────────────────────────────────────────────────
@@ -120,6 +120,61 @@ INTAKE_DIR=$(dirname "$INTAKE")
 INTAKE_STEM=$(basename "$INTAKE" .json)
 ASSESSMENT="${INTAKE_DIR}/${INTAKE_STEM}_phase_assessment.json"
 PHASE1_INTAKE="${INTAKE_DIR}/${INTAKE_STEM}_phase1.json"
+
+# ── Auto-resume: detect prior run state from ZIPs on disk ─────────────────────
+# Only engages when user did not pass --phase1-zip or --start-from-feature manually.
+_AUTO_RESUMED=0
+
+# 1. Early-exit if final ZIP already exists
+_FINAL_ZIP_DONE=$(ls -t fo_harness_runs/${STARTUP_ID}_BLOCK_B_full_*.zip 2>/dev/null | head -1 || true)
+if [[ -n "$_FINAL_ZIP_DONE" ]]; then
+  echo "✓ Already complete — final ZIP exists: $_FINAL_ZIP_DONE"
+  echo "  Delete it and rerun to rebuild from scratch."
+  exit 0
+fi
+
+# 2. Auto-detect Phase 1 ZIP
+if [[ -z "$PHASE1_ZIP_OVERRIDE" && $START_FROM_FEATURE -eq 0 ]]; then
+  _AUTO_P1=$(ls -t fo_harness_runs/${INTAKE_STEM}_p1_BLOCK_B_*.zip 2>/dev/null | head -1 || true)
+  if [[ -n "$_AUTO_P1" ]]; then
+    PHASE1_ZIP_OVERRIDE="$_AUTO_P1"
+    START_FROM_FEATURE=1
+    _AUTO_RESUMED=1
+    echo "  ↩ Auto-resume: Phase 1 ZIP found: $_AUTO_P1"
+  fi
+fi
+
+# 3. Auto-scan completed features — find the last one with a ZIP on disk
+if [[ -n "$PHASE1_ZIP_OVERRIDE" && -f "$ASSESSMENT" ]]; then
+  _TMP_FNUM=0
+  _TMP_HIGHEST=0
+  while IFS= read -r _F; do
+    [[ -z "$_F" ]] && continue
+    _TMP_FNUM=$((_TMP_FNUM + 1))
+    _FSLUG=$(python3 -c "import re; print(re.sub(r'[^a-z0-9]+','_','$_F'.lower()).strip('_')[:40])")
+    _FINTAKE="${INTAKE_DIR}/${INTAKE_STEM}_feature_${_FSLUG}.json"
+    if [[ ! -f "$_FINTAKE" ]]; then
+      break  # intake not yet generated → feature was never started
+    fi
+    _FSLUG_ID=$(python3 -c "import json; d=json.load(open('$_FINTAKE')); print(d.get('startup_idea_id','unknown'))")
+    _FZIP=$(ls -t "fo_harness_runs/${_FSLUG_ID}_BLOCK_B_"*.zip 2>/dev/null | grep -v '_full_' | head -1 || true)
+    if [[ -n "$_FZIP" ]]; then
+      _TMP_HIGHEST=$_TMP_FNUM
+    else
+      break  # no ZIP → this is the resume point
+    fi
+  done <<< "$(python3 -c "import json; [print(f) for f in json.load(open('$ASSESSMENT')).get('intelligence_features',[])]")"
+
+  _AUTO_FROM=$((_TMP_HIGHEST + 1))
+  if [[ $_AUTO_FROM -gt $START_FROM_FEATURE ]]; then
+    START_FROM_FEATURE=$_AUTO_FROM
+    _AUTO_RESUMED=1
+    if [[ $_TMP_HIGHEST -gt 0 ]]; then
+      echo "  ↩ Auto-resume: $_TMP_HIGHEST feature(s) already done — resuming from feature $_AUTO_FROM"
+    fi
+  fi
+fi
+# ── End auto-resume detection ──────────────────────────────────────────────────
 
 echo "========================================================"
 echo "  FEATURE + INTEGRATION BUILD PIPELINE"
@@ -210,8 +265,9 @@ else
   if [[ $P1_EXIT -ne 0 ]]; then
     echo ""
     echo "✗ PHASE 1 FAILED (exit $P1_EXIT)"
-    echo "  Resume with: python fo_test_harness.py --resume-run fo_harness_runs/<p1_run_dir> --resume-mode qa"
-    echo "  Then rerun this script with: --phase1-zip fo_harness_runs/<p1_run_dir>.zip"
+    echo "  Phase 1 did not produce a ZIP. Fix the issue then rerun the same command:"
+    echo "  ./run_integration_and_feature_build.sh --intake $INTAKE"
+    echo "  The script will auto-detect the Phase 1 ZIP once it exists."
     exit 1
   fi
 
@@ -305,17 +361,11 @@ import re; print(re.sub(r'[^a-z0-9]+','_','$FEATURE'.lower()).strip('_')[:40])
     echo ""
     echo "✗ FEATURE '$FEATURE' FAILED (exit $FEAT_EXIT)"
     echo ""
+    echo "  Just rerun the same command — the script will pick up where it left off:"
+    echo "  ./run_integration_and_feature_build.sh --intake $INTAKE"
+    echo ""
     echo "  Prior ZIPs built so far:"
     for Z in "${ALL_ZIPS[@]}"; do echo "    $Z"; done
-    echo ""
-    echo "  To resume this feature:"
-    echo "  python fo_test_harness.py --resume-run fo_harness_runs/<run_dir> --resume-mode qa"
-    echo ""
-    echo "  Then rerun this script from the next feature:"
-    echo "  ./run_integration_and_feature_build.sh \\"
-    echo "    --intake $INTAKE \\"
-    echo "    --phase1-zip ${ALL_ZIPS[0]} \\"
-    echo "    --start-from-feature $((FEATURE_NUM + 1))"
     exit 1
   fi
 
@@ -387,6 +437,8 @@ while [[ $IC_EXIT -ne 0 && $FIX_PASS -lt $MAX_FIX_PASSES ]]; do
 
   FIX_EXIT=0
   python fo_test_harness.py \
+    "$FEATURE_INTAKE" \
+    "$BUILD_GOV" \
     --resume-run "$LATEST_RUN_DIR" \
     --resume-iteration "$LATEST_ITER" \
     --integration-issues "$INTEGRATION_ISSUES" \

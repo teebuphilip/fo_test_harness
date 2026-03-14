@@ -1,5 +1,16 @@
 # TODO
 
+## Boilerplate fixes needed (teebu-saas-platform)
+
+- **stripe_lib.py: don't hard-crash on missing stripe_secret_key at startup.**
+  Currently `StripeConfig.__init__` raises `ValueError("stripe_secret_key is required in config")`
+  which kills uvicorn before it can serve any requests. Apps that don't use Stripe (e.g. report tools)
+  crash on deploy.
+  Fix: make `stripe_secret_key` optional — return a disabled/stub Stripe client when key is absent,
+  raise only when a Stripe method is actually called. Pattern: `if not self.stripe_secret_key: return StubStripe()`.
+  Same treatment for any other lib that hard-raises on missing config at import time (mailerlite, etc.).
+  Priority: HIGH — blocks every non-Stripe app from starting.
+
 - Sanitize/normalize filenames extracted from model output to prevent path traversal.
 - Support unlabeled code fences (``` with no language) in artifact extraction.
 - Enforce governance ZIP size limits or selective inclusion to avoid prompt bloat.

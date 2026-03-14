@@ -1,0 +1,57 @@
+{
+  "check_date": "2026-03-09T08:19:27.281448",
+  "source_zip": "fo_harness_runs/ai_workforce_intelligence_downloadable_executive_report_BLOCK_B_20260309_072457.zip",
+  "source_artifacts_dir": null,
+  "intake_path": "intake/intake_runs/ai_workforce_intelligence/ai_workforce_intelligence.5_feature_downloadable_executive_report.json",
+  "total_issues": 3,
+  "high_severity": 3,
+  "medium_severity": 0,
+  "issues": [
+    {
+      "id": "INT-ROUTE-assessments",
+      "severity": "HIGH",
+      "category": "MISSING_ROUTE",
+      "file": "business/backend/routes/assessments.py",
+      "files": [
+        "business/frontend/pages/Dashboard.jsx",
+        "business/frontend/pages/Assessments.jsx",
+        "business/backend/routes/assessments.py"
+      ],
+      "evidence": "api.get('/assessments') called in Dashboard.jsx and Assessments.jsx but no assessments.py route file found in business/backend/routes/",
+      "issue": "Frontend calls /api/assessments but no matching backend route file exists. Will 404 in production. IMPORTANT: The boilerplate loader.py mounts routes/assessments.py at prefix /api/assessments. Route decorators must be relative to that prefix — use @router.get('/') not @router.get('/assessments/'). Using /assessments/ in the decorator creates double-path /api/assessments/assessments/ which 404s.",
+      "fix": "Create business/backend/routes/assessments.py with FastAPI APIRouter. Use these EXACT decorator paths (relative, no stem repeat): @router.get('/') for list, @router.post('/') for create, @router.get('/{assessment_id}') for get-one, @router.put('/{assessment_id}') for update, @router.delete('/{assessment_id}') for delete. Model fields are: id (Integer PK), business_name (String), industry (String), score (String), responses (Text). Import from models.Assessment import Assessment. All endpoints: db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)."
+    },
+    {
+      "id": "INT-ROUTE-DOUBLEPATH-reports",
+      "severity": "HIGH",
+      "category": "ROUTE_PATH_ERROR",
+      "file": "business/backend/routes/reports.py",
+      "files": [
+        "business/backend/routes/reports.py",
+        "business/frontend/pages/Reports.jsx"
+      ],
+      "evidence": "reports.py uses @router.get('/reports/{assessment_id}') and @router.get('/reports/{assessment_id}/download') but loader.py already mounts this file at prefix /api/reports. Full paths become /api/reports/reports/{id} and /api/reports/reports/{id}/download. Frontend calls /api/reports/{id} — will 404.",
+      "issue": "Double-path routing bug: route decorators repeat the stem 'reports' that the boilerplate loader already uses as the mount prefix. Every call from the frontend 404s in production.",
+      "fix": "In business/backend/routes/reports.py, change the two route decorators: @router.get('/reports/{assessment_id}') → @router.get('/{assessment_id}') and @router.get('/reports/{assessment_id}/download') → @router.get('/{assessment_id}/download'). Keep all other code identical — only the decorator path strings change."
+    },
+    {
+      "id": "INT-SPEC-PDF",
+      "severity": "HIGH",
+      "category": "SPEC_COMPLIANCE",
+      "file": "business/requirements.txt",
+      "files": [
+        "business/requirements.txt",
+        "business/backend/routes/reports.py"
+      ],
+      "evidence": "Intake specifies PDF output (T005: 'Create PDF report template and generation', TV003: 'PDF report downloads with proper formatting') but no PDF generation library found and download endpoint returns application/json.",
+      "issue": "Intake requires downloadable PDF reports but no PDF library is present and the download endpoint returns JSON. The must-have feature is 'Downloadable executive report' and the acceptance test is a PDF download.",
+      "fix": "1) Add `reportlab` to business/requirements.txt. 2) In reports.py download_report endpoint: import BytesIO from io and SimpleDocTemplate, Paragraph, Spacer, Table from reportlab.platypus, getSampleStyleSheet from reportlab.lib.styles, A4 from reportlab.lib.pagesizes. Build a PDF with: title 'AI Workforce Intelligence Report', business_name, industry, generated_at, then a table of KPI scores (one row per KPI key/value from report_data['scores']), then recommendations as bullet paragraphs. Return StreamingResponse(BytesIO(pdf_bytes), media_type='application/pdf', headers={'Content-Disposition': f'attachment; filename=report_{assessment_id}.pdf'}). Remove the tempfile JSON approach entirely."
+    }
+  ],
+  "fix_target_files": [
+    "business/backend/routes/assessments.py",
+    "business/backend/routes/reports.py",
+    "business/requirements.txt"
+  ],
+  "verdict": "INTEGRATION_REJECTED"
+}

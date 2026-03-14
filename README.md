@@ -37,14 +37,22 @@ cd intake
 # Step 2: Run build harness
 cd ..
 python fo_test_harness.py \
-  --intake intake/intake_runs/twofaced_ai/twofaced_ai.json \
-  --startup-id twofaced_ai \
-  --block B \
-  --build-gov /tmp/fobuilgov100 \
-  --tech-stack lowcode
+  intake/intake_runs/twofaced_ai/twofaced_ai.json \
+  /Users/teebuphilip/Documents/work/FounderOps/docs/architecture/BUILD/build_rules/FOBUILFINALLOCKED100.zip \
+  /Users/teebuphilip/Documents/work/FounderOps/docs/architecture/BUILD/deployment_rules/fo_deploy_governance_v1_2_CLARIFIED.zip
 
 # Step 3: Check results
 open fo_harness_runs/twofaced_ai_BLOCK_B_*/
+```
+
+### Preferred End-to-End Wrapper
+
+Use the integrated wrapper for feature-by-feature builds with an integration check loop:
+
+```bash
+./run_integration_and_feature_build.sh \
+  --intake intake/intake_runs/ai_workforce_intelligence/ai_workforce_intelligence.5.json \
+  --startup-id awi
 ```
 
 ### Just Build Harness (Existing Intake)
@@ -53,11 +61,9 @@ If you already have an intake JSON:
 
 ```bash
 python fo_test_harness.py \
-  --intake path/to/intake.json \
-  --startup-id your_startup \
-  --block B \
-  --build-gov /tmp/fobuilgov100 \
-  --tech-stack lowcode
+  path/to/intake.json \
+  /path/to/FOBUILFINALLOCKED100.zip \
+  /path/to/fo_deploy_governance_v1_2_CLARIFIED.zip
 ```
 
 ## Prerequisites
@@ -73,14 +79,51 @@ python fo_test_harness.py \
    export OPENAI_API_KEY=sk-xxxxx
    ```
 
-3. **Governance ZIP**: Extract to `/tmp/fobuilgov100/`
-   ```bash
-   unzip fobuilgov100.zip -d /tmp/fobuilgov100/
-   ```
+3. **Governance ZIPs**: Pass ZIP paths directly on the CLI or use `--buildzip` / `--deployzip`.
 
 4. **Boilerplate** (default): Ensure the platform repo exists at
    `/Users/teebuphilip/Documents/work/teebu-saas-platform`
    (used by default unless the intake is an explicit lowcode Zapier/Shopify case).
+
+## Current CLI (fo_test_harness.py)
+
+Positional arguments (preferred):
+- `intake_file` (path to intake JSON)
+- `build_governance_zip` (path to `FOBUILFINALLOCKED100.zip`)
+- `deploy_governance_zip` (path to `fo_deploy_governance_v1_2_CLARIFIED.zip`)
+
+Key flags:
+- `--block-a` (Tier 1; default is Block B)
+- `--deploy` (run deploy after QA acceptance)
+- `--buildzip` / `--deployzip` (override governance ZIPs)
+- `--max-iterations N`
+- `--prior-run <run_dir>` (seed QA prohibition tracker from a previous run)
+- `--resume-run <run_dir>` + `--resume-iteration N` + `--resume-mode qa|fix|static|consistency`
+- `--integration-issues <integration_issues.json>` (targeted fix pass)
+- `--no-polish` (skip README/.env/tests for Phase 1 or intermediate feature runs)
+
+Example (from real history):
+
+```bash
+python ./fo_test_harness.py ./intake/intake_runs/ai_workforce_intelligence/ai_workforce_intelligence.5.json \
+  ~/Documents/work/FounderOps/docs/architecture/BUILD/build_rules/FOBUILFINALLOCKED100.zip \
+  ~/Documents/work/FounderOps/docs/architecture/BUILD/deployment_rules/fo_deploy_governance_v1_2_CLARIFIED.zip \
+  --max-iterations 12
+```
+
+## Sequence Flow Docs
+
+For the staged process and wrapper guidance, see:
+- `sequence-flow-short.md`
+- `sequence-flow-long.md`
+
+## FO Test Harness Details
+
+For a deeper explanation of AI calls, QA gates, resume modes, and feature layering, see:
+- `fo_test_harness_details.md`
+- `ai_call_flow.md`
+- `qa_process_details.md`
+- `prompts.md`
 
 ## Workflow
 
@@ -102,11 +145,9 @@ This evaluates the founder's answers against tier criteria and produces:
 
 ```bash
 python fo_test_harness.py \
-  --intake intake/intake_runs/twofaced_ai/twofaced_ai.json \
-  --startup-id twofaced_ai \
-  --block B \
-  --build-gov /tmp/fobuilgov100 \
-  --tech-stack lowcode
+  intake/intake_runs/twofaced_ai/twofaced_ai.json \
+  /Users/teebuphilip/Documents/work/FounderOps/docs/architecture/BUILD/build_rules/FOBUILFINALLOCKED100.zip \
+  /Users/teebuphilip/Documents/work/FounderOps/docs/architecture/BUILD/deployment_rules/fo_deploy_governance_v1_2_CLARIFIED.zip
 ```
 
 **What happens:**
@@ -115,7 +156,7 @@ python fo_test_harness.py \
 3. Loop continues until QA accepts or max iterations hit
 4. Final ZIP created with all artifacts
 
-**Output:** `fo_harness_runs/twofaced_ai_BLOCK_B_<timestamp>.zip`
+**Output:** `fo_harness_runs/<startup_id>_BLOCK_B_<timestamp>.zip`
 
 ### 3. Review Results
 
@@ -134,7 +175,7 @@ ls fo_harness_runs/twofaced_ai_*/build/iteration_*_artifacts/
 
 ### Token Limits
 
-**Current:** 16384 tokens (increased from 8192)
+**Current:** 16384 tokens (API maximum)
 
 Located in `fo_test_harness.py`:
 ```python

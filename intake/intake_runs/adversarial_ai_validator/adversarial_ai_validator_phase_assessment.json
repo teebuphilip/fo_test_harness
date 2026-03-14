@@ -1,0 +1,38 @@
+{
+  "phases": 2,
+  "reason": "Force signal: intake contains 'ai-powered'",
+  "force_signal": "intake contains 'ai-powered'",
+  "features": {
+    "Create HTML form with textarea for startup idea input": "DATA_LAYER",
+    "Build template matching logic based on keywords": "DATA_LAYER",
+    "Create verdict synthesis engine with structured output": "DATA_LAYER",
+    "Add mock Stripe checkout button and success page": "DATA_LAYER",
+    "Implement Stripe pay-per-analysis checkout": "INTELLIGENCE_LAYER",
+    "Create single-page frontend with input form": "DATA_LAYER",
+    "Write 5 hardcoded advocate response templates": "DATA_LAYER",
+    "Write 5 hardcoded adversary response templates": "DATA_LAYER",
+    "Setup Node.js backend with Express framework": "DATA_LAYER",
+    "Integrate OpenAI SDK for adversary role prompts": "INTELLIGENCE_LAYER",
+    "Integrate Anthropic SDK for advocate role prompts": "INTELLIGENCE_LAYER",
+    "Build synthesis engine for structured verdict output": "INTELLIGENCE_LAYER",
+    "Connect frontend to backend API endpoints": "DATA_LAYER"
+  },
+  "data_features": [
+    "Create HTML form with textarea for startup idea input",
+    "Write 5 hardcoded advocate response templates",
+    "Write 5 hardcoded adversary response templates",
+    "Build template matching logic based on keywords",
+    "Create verdict synthesis engine with structured output",
+    "Add mock Stripe checkout button and success page",
+    "Setup Node.js backend with Express framework",
+    "Create single-page frontend with input form",
+    "Connect frontend to backend API endpoints"
+  ],
+  "intelligence_features": [
+    "Integrate OpenAI SDK for adversary role prompts",
+    "Integrate Anthropic SDK for advocate role prompts",
+    "Build synthesis engine for structured verdict output",
+    "Implement Stripe pay-per-analysis checkout"
+  ],
+  "kpis": []
+}
