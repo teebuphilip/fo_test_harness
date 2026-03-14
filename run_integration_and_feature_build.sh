@@ -435,6 +435,11 @@ while [[ $IC_EXIT -ne 0 && $FIX_PASS -lt $MAX_FIX_PASSES ]]; do
     exit 1
   fi
 
+  # Allow at least 5 more iterations beyond wherever the run currently is,
+  # so the fix pass never hits max-iterations before it can run a single iteration.
+  INT_MAX_ITER=$(( LATEST_ITER + 5 ))
+  if [[ $INT_MAX_ITER -lt $MAX_ITER ]]; then INT_MAX_ITER=$MAX_ITER; fi
+
   FIX_EXIT=0
   python fo_test_harness.py \
     "$FEATURE_INTAKE" \
@@ -442,7 +447,7 @@ while [[ $IC_EXIT -ne 0 && $FIX_PASS -lt $MAX_FIX_PASSES ]]; do
     --resume-run "$LATEST_RUN_DIR" \
     --resume-iteration "$LATEST_ITER" \
     --integration-issues "$INTEGRATION_ISSUES" \
-    --max-iterations "$MAX_ITER" \
+    --max-iterations "$INT_MAX_ITER" \
     --no-polish || FIX_EXIT=$?
 
   if [[ $FIX_EXIT -ne 0 ]]; then
