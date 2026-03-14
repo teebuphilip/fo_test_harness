@@ -6,10 +6,13 @@ Takes a harness ZIP (or artifacts dir) + original intake JSON.
 Runs deterministic cross-file checks — NO AI calls, NO Claude, NO ChatGPT.
 
 Checks:
-  1. Route inventory  — frontend fetch()/api calls vs backend @router decorators
-  2. Model field refs — service model.field accesses vs model Column definitions
-  3. Spec compliance  — intake keywords (PDF, email, KPI names) vs artifacts
-  4. Import chains    — from business.X import Y vs actual files in artifact set
+  1. Route inventory   — frontend fetch()/api calls vs backend @router decorators
+  2. Model field refs  — service model.field accesses vs model Column definitions
+  3. Spec compliance   — intake keywords (PDF, email, KPI names) vs artifacts
+  4. Import chains     — from business.X import Y vs actual files in artifact set
+  5. Route double-path — @router decorators that repeat the filename stem
+  6. Auth contract     — routes with Depends(get_current_user) vs frontend fetch Authorization headers
+  7. Async misuse      — await called on sync (non-async) functions → TypeError at runtime
 
 Output:
   integration_issues.json  (harness-compatible defect format)
@@ -516,6 +519,166 @@ def check_import_chains(artifacts: dict) -> list:
     return deduped
 
 
+# ── Check 6: Auth contract ────────────────────────────────────────────────────
+
+def check_auth_contract(artifacts: dict) -> list:
+    """
+    Find route files that require authentication via Depends(get_current_user).
+    Cross-check each corresponding frontend fetch() call to see if it sends an
+    Authorization header. Flag any mismatch — the call will return 401/403 at runtime.
+
+    Also flags the inverse: if the intake spec says 'no user accounts' but routes
+    require get_current_user, that's a spec contradiction.
+    """
+    issues = []
+
+    # Find route stems that require auth
+    auth_required_stems = {}  # stem → route file path
+    for path, content in artifacts.items():
+        if re.match(r'business/backend/routes/\w+\.py$', path):
+            if re.search(r'Depends\s*\(\s*get_current_user\s*\)', content):
+                stem = Path(path).stem
+                auth_required_stems[stem] = path
+
+    if not auth_required_stems:
+        return issues
+
+    # Check frontend JSX files for Authorization headers on matching fetch calls
+    for path, content in artifacts.items():
+        if not (path.endswith('.jsx') and 'pages/' in path):
+            continue
+
+        for m in re.finditer(r"""fetch\([`'"](/api/([^`'"?\s/]+)[^`'"]*)[`'"]""", content):
+            api_path = m.group(1)
+            stem = m.group(2)
+            if stem not in auth_required_stems:
+                continue
+
+            # Look for Authorization/Bearer/getAccessTokenSilently within 500 chars after fetch
+            window = content[m.start():m.start() + 500]
+            has_auth = bool(re.search(
+                r'[Aa]uthorization|Bearer\s*\$|getAccessTokenSilently',
+                window
+            ))
+
+            if not has_auth:
+                issues.append({
+                    'id': f'INT-AUTH-{stem}-{Path(path).stem}',
+                    'severity': 'HIGH',
+                    'category': 'AUTH_CONTRACT_VIOLATION',
+                    'file': path,
+                    'files': [path, auth_required_stems[stem]],
+                    'evidence': (
+                        f"fetch('{api_path}') in {Path(path).name} sends no Authorization header, "
+                        f"but {auth_required_stems[stem]} requires Depends(get_current_user)"
+                    ),
+                    'issue': (
+                        f"Route /api/{stem} requires authentication but the frontend fetch call "
+                        f"in {Path(path).name} sends no Authorization header — will return 401/403 at runtime."
+                    ),
+                    'fix': (
+                        f"In {Path(path).name}: add `const {{ getAccessTokenSilently }} = useAuth0();` "
+                        f"then `const token = await getAccessTokenSilently();` "
+                        f"then include `headers: {{ Authorization: `Bearer ${{token}}` }}` in the fetch options. "
+                        f"OR if the spec says no auth is required, remove Depends(get_current_user) "
+                        f"from {auth_required_stems[stem]}."
+                    ),
+                })
+
+    return issues
+
+
+# ── Check 7: Async misuse ─────────────────────────────────────────────────────
+
+def check_async_misuse(artifacts: dict) -> list:
+    """
+    Use Python AST to detect `await non_async_function()` calls within async functions.
+    If a function defined as plain `def` (not `async def`) in the same file is awaited,
+    that raises TypeError at runtime: 'coroutine expected, got X'.
+    """
+    issues = []
+
+    for path, content in artifacts.items():
+        if not path.endswith('.py'):
+            continue
+        if not (path.startswith('business/services/') or
+                path.startswith('business/backend/routes/')):
+            continue
+
+        try:
+            tree = ast.parse(content)
+        except SyntaxError:
+            continue
+
+        lines = content.splitlines()
+
+        # Collect all top-level and class-level function definitions: name → is_async
+        func_defs = {}
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                func_defs[node.name] = isinstance(node, ast.AsyncFunctionDef)
+
+        # Walk async function bodies looking for Await nodes
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.AsyncFunctionDef):
+                continue
+            for child in ast.walk(node):
+                if not isinstance(child, ast.Await):
+                    continue
+                expr = child.value
+                if not isinstance(expr, ast.Call):
+                    continue
+
+                # Resolve the called function name
+                func_name = None
+                if isinstance(expr.func, ast.Name):
+                    func_name = expr.func.id
+                elif isinstance(expr.func, ast.Attribute):
+                    func_name = expr.func.attr
+
+                if not func_name:
+                    continue
+
+                # Flag only if function is defined in THIS file as non-async
+                if func_name in func_defs and not func_defs[func_name]:
+                    line_no = getattr(child, 'lineno', '?')
+                    line_text = (
+                        lines[line_no - 1].strip()
+                        if isinstance(line_no, int) and line_no <= len(lines)
+                        else ''
+                    )
+                    issues.append({
+                        'id': f'INT-ASYNC-{Path(path).stem}-{func_name}',
+                        'severity': 'HIGH',
+                        'category': 'ASYNC_MISUSE',
+                        'file': path,
+                        'files': [path],
+                        'evidence': (
+                            f"`await {func_name}(...)` at line {line_no} in {Path(path).name}: "
+                            f"`{line_text}` — but `{func_name}` is defined as `def` not `async def`"
+                        ),
+                        'issue': (
+                            f"`await` applied to non-async function `{func_name}` in {Path(path).name}. "
+                            f"Raises TypeError at runtime: a coroutine was expected."
+                        ),
+                        'fix': (
+                            f"Either change `def {func_name}` → `async def {func_name}` "
+                            f"and use async API client calls inside it, "
+                            f"OR remove `await` and run synchronously: "
+                            f"`loop.run_in_executor(None, {func_name}, ...)` for blocking calls."
+                        ),
+                    })
+
+    # Deduplicate by id
+    seen = set()
+    deduped = []
+    for issue in issues:
+        if issue['id'] not in seen:
+            seen.add(issue['id'])
+            deduped.append(issue)
+    return deduped
+
+
 # ── Runner ────────────────────────────────────────────────────────────────────
 
 def run_all_checks(artifacts: dict, intake: dict) -> list:
@@ -539,7 +702,15 @@ def run_all_checks(artifacts: dict, intake: dict) -> list:
     dblpath_issues = check_route_decorator_paths(artifacts)
     print(f"    → {len(dblpath_issues)} issue(s)")
 
-    return route_issues + field_issues + spec_issues + import_issues + dblpath_issues
+    print(f"  Running Check 6: Auth contract (route auth vs frontend headers)...")
+    auth_issues = check_auth_contract(artifacts)
+    print(f"    → {len(auth_issues)} issue(s)")
+
+    print(f"  Running Check 7: Async misuse (await on non-async functions)...")
+    async_issues = check_async_misuse(artifacts)
+    print(f"    → {len(async_issues)} issue(s)")
+
+    return route_issues + field_issues + spec_issues + import_issues + dblpath_issues + auth_issues + async_issues
 
 
 def build_output(issues: list, zip_path: str = None, artifacts_dir: str = None,
