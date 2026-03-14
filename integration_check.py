@@ -17,6 +17,7 @@ Checks:
   9. npm integrity     — JSX imports vs business/package.json declared dependencies
   10. Bare except      — silent error swallow in services (bare except / except+pass)
   11. Unbounded polling — recursive setTimeout with no attempt cap → infinite loop
+  12. Background timeout — BackgroundTasks.add_task() with no asyncio.wait_for when intake has SLA
 
 Output:
   integration_issues.json  (harness-compatible defect format)
@@ -1043,6 +1044,93 @@ def check_unbounded_polling(artifacts: dict) -> list:
     return deduped
 
 
+# ── Check 12: Background task timeout enforcement ─────────────────────────────
+
+def check_background_task_timeout(artifacts: dict, intake: dict) -> list:
+    """
+    If the intake specifies a turnaround SLA (e.g. '60-second turnaround'),
+    verify that any BackgroundTasks.add_task() usage in routes/services has
+    a corresponding timeout mechanism:
+      - asyncio.wait_for(..., timeout=N)
+      - timeout= kwarg passed to an API client call
+      - signal.alarm(N)
+
+    No SLA in intake → skip this check entirely.
+    """
+    issues = []
+
+    # Extract SLA seconds from intake text
+    intake_text = json.dumps(intake)
+    sla_match = re.search(
+        r'(\d+)\s*-?\s*second(?:\s+turnaround|\s+max|\s+sla|\s+response|\s+limit)?',
+        intake_text,
+        re.IGNORECASE,
+    )
+    if not sla_match:
+        return issues  # No SLA specified — nothing to check
+    sla_seconds = int(sla_match.group(1))
+
+    # Timeout patterns that satisfy the SLA requirement
+    TIMEOUT_PATTERNS = re.compile(
+        r'asyncio\.wait_for|wait_for\s*\(|timeout\s*=\s*\d+|signal\.alarm|'
+        r'\.timeout\s*\(|aiohttp\.ClientTimeout|httpx\.Timeout',
+    )
+
+    # Find files that use BackgroundTasks.add_task()
+    for path, content in artifacts.items():
+        if not path.endswith('.py'):
+            continue
+        if not (path.startswith('business/backend/routes/') or
+                path.startswith('business/services/')):
+            continue
+
+        if 'add_task' not in content:
+            continue
+
+        # File uses background tasks — check for timeout mechanism
+        has_timeout = bool(TIMEOUT_PATTERNS.search(content))
+        if has_timeout:
+            continue
+
+        # Find the line with add_task for the evidence quote
+        lines = content.splitlines()
+        add_task_line = next(
+            (f"`{l.strip()}`" for l in lines if 'add_task' in l),
+            '`background_tasks.add_task(...)`'
+        )
+        add_task_lineno = next(
+            (i + 1 for i, l in enumerate(lines) if 'add_task' in l),
+            '?'
+        )
+
+        issues.append({
+            'id': f'INT-TIMEOUT-{Path(path).stem}',
+            'severity': 'HIGH',
+            'category': 'SLA_VIOLATION',
+            'file': path,
+            'files': [path],
+            'evidence': (
+                f"{add_task_line} at line {add_task_lineno} in {Path(path).name} — "
+                f"intake specifies {sla_seconds}-second turnaround but no timeout "
+                f"mechanism found (no asyncio.wait_for, no timeout= kwarg)"
+            ),
+            'issue': (
+                f"Intake requires {sla_seconds}-second turnaround but background task "
+                f"in {Path(path).name} has no timeout enforcement. "
+                f"If the AI API hangs, the task runs forever — SLA is never met."
+            ),
+            'fix': (
+                f"Wrap the AI API calls inside the background task with "
+                f"`await asyncio.wait_for(coroutine, timeout={sla_seconds})` "
+                f"and catch `asyncio.TimeoutError` to set processing_status='failed' "
+                f"with an error message. "
+                f"Also pass `timeout={sla_seconds}` to the API client if supported."
+            ),
+        })
+
+    return issues
+
+
 # ── Runner ────────────────────────────────────────────────────────────────────
 
 def run_all_checks(artifacts: dict, intake: dict) -> list:
@@ -1090,9 +1178,13 @@ def run_all_checks(artifacts: dict, intake: dict) -> list:
     poll_issues = check_unbounded_polling(artifacts)
     print(f"    → {len(poll_issues)} issue(s)")
 
+    print(f"  Running Check 12: Background task timeout vs intake SLA...")
+    timeout_issues = check_background_task_timeout(artifacts, intake)
+    print(f"    → {len(timeout_issues)} issue(s)")
+
     return (route_issues + field_issues + spec_issues + import_issues + dblpath_issues
             + auth_issues + async_issues + gather_issues + npm_issues + except_issues
-            + poll_issues)
+            + poll_issues + timeout_issues)
 
 
 def build_output(issues: list, zip_path: str = None, artifacts_dir: str = None,
