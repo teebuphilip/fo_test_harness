@@ -1,5 +1,33 @@
 # Changelog
 
+## 2026-03-14 (session 2)
+
+### fix: integration fix pass — 4 bugs fixed, adversarial_ai completes end-to-end
+
+**Bug 1 — NEW FILE skipped in surgical patch**
+`_read_target_file_contents` silently dropped target files that didn't exist yet (e.g. MISSING_ROUTE `analysis.py`). Claude saw the file in TARGET FILES but got no entry in CURRENT FILE CONTENTS → skipped creating it. QA accepted anyway → same MISSING_ROUTE recurred every fix pass.
+Fix: insert `# NEW FILE — does not exist yet` placeholder for missing targets; updated `build_integration_fix.md` directive to say "if NEW FILE → create from scratch, do NOT skip".
+
+**Bug 2 — iter 21 > max 20 → instant fail**
+Integration fix pass resumed at `LATEST_ITER + 1`. When run dir was already at iteration 20 (max), harness started loop at 21 > 20 → "Should not reach here" before doing any work.
+Fix: `INT_MAX_ITER = max(LATEST_ITER + 5, MAX_ITER)` in fix pass call.
+
+**Bug 3 — octal arithmetic crash on iter 08/09**
+`$(( LATEST_ITER + 5 ))` with `LATEST_ITER=08` → bash octal error ("08 invalid in base 8").
+Fix: `$(( 10#${LATEST_ITER} + 5 ))` and `$((10#${LATEST_ITER}))` for `--resume-iteration`.
+
+**Bug 4 — MEDIUM-only integration issues triggered fix pass**
+KPI string mentions ("SDK", "MVP" not in code) are MEDIUM, not actionable. Fix pass wasted iterations on them.
+Fix: count HIGH issues from `integration_issues.json`; skip fix pass entirely if HIGH count = 0.
+
+**Bug 5 — bash 3.2 negative array index**
+`ALL_ZIPS[-1]` unsupported on macOS bash 3.2.
+Fix: `ALL_ZIPS[$(( ${#ALL_ZIPS[@]} - 1 ))]`.
+
+**Result**: adversarial_ai_validator builds end-to-end → `adversarial_ai_validator_BLOCK_B_full_20260314_093048.zip` (5.0MB)
+
+Files: `fo_test_harness.py`, `run_integration_and_feature_build.sh`, `directives/prompts/build_integration_fix.md`
+
 ## 2026-03-14
 
 ### feat: run_integration_and_feature_build.sh — auto-resume from prior run state

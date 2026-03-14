@@ -1,5 +1,24 @@
 # Must Port to FO
 
+## Integration Fix Pass Fixes (additions 2026-03-14)
+
+70. fix: _read_target_file_contents — NEW FILE placeholder for missing targets
+- Missing target files (e.g. MISSING_ROUTE) were silently dropped → Claude skipped creating them
+- Fix: insert `# NEW FILE — does not exist yet` placeholder; updated build_integration_fix.md
+- Files: `fo_test_harness.py`, `directives/prompts/build_integration_fix.md`
+⬜ TODO for FO codebase
+
+71. fix: integration fix pass iter > max → "Should not reach here" instant fail
+- Fix: `INT_MAX_ITER = max(LATEST_ITER + 5, MAX_ITER)` in script fix pass call
+- Files: `run_integration_and_feature_build.sh`
+⬜ TODO for FO codebase (script only — harness itself unchanged)
+
+72. fix: MEDIUM-only integration issues now skip fix pass
+- KPI string checks firing on "SDK"/"MVP" not in code → wasting fix pass iterations
+- Fix: count HIGH issues; skip fix pass if HIGH == 0
+- Files: `run_integration_and_feature_build.sh`
+⬜ TODO for FO codebase (script only)
+
 ## QA/Consistency Prompt Fixes (additions 2026-03-13)
 
 67. fix: prune __pycache__ dirs from artifacts before QA/static/consistency gates
