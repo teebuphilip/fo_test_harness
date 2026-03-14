@@ -13,6 +13,10 @@ Checks:
   5. Route double-path — @router decorators that repeat the filename stem
   6. Auth contract     — routes with Depends(get_current_user) vs frontend fetch Authorization headers
   7. Async misuse      — await called on sync (non-async) functions → TypeError at runtime
+  8. gather sync args  — asyncio.gather(sync_func()) → TypeError (gather needs awaitables)
+  9. npm integrity     — JSX imports vs business/package.json declared dependencies
+  10. Bare except      — silent error swallow in services (bare except / except+pass)
+  11. Unbounded polling — recursive setTimeout with no attempt cap → infinite loop
 
 Output:
   integration_issues.json  (harness-compatible defect format)
@@ -679,6 +683,366 @@ def check_async_misuse(artifacts: dict) -> list:
     return deduped
 
 
+# ── Check 8: asyncio.gather with sync args ────────────────────────────────────
+
+def check_gather_sync_args(artifacts: dict) -> list:
+    """
+    Detect asyncio.gather() called with non-coroutine arguments.
+    Two patterns:
+      A. Direct call: asyncio.gather(sync_func(), sync_func())
+      B. Variable: task = sync_func(); asyncio.gather(task, task2)
+
+    For pattern B: scan assignments in the same async function body — if a
+    variable passed to gather was assigned from a sync function call, flag it.
+    """
+    issues = []
+
+    for path, content in artifacts.items():
+        if not path.endswith('.py'):
+            continue
+        if not (path.startswith('business/services/') or
+                path.startswith('business/backend/routes/')):
+            continue
+
+        try:
+            tree = ast.parse(content)
+        except SyntaxError:
+            continue
+
+        lines = content.splitlines()
+
+        # Collect all function defs: name → is_async
+        func_defs = {}
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                func_defs[node.name] = isinstance(node, ast.AsyncFunctionDef)
+
+        # Walk async function bodies
+        for async_node in ast.walk(tree):
+            if not isinstance(async_node, ast.AsyncFunctionDef):
+                continue
+
+            # Build variable assignment map within this async body:
+            # var_name → function name it was assigned from (if it's a sync call)
+            var_assigned_from_sync = {}
+            for stmt in ast.walk(async_node):
+                if not isinstance(stmt, ast.Assign):
+                    continue
+                if not isinstance(stmt.value, ast.Call):
+                    continue
+                call_func = stmt.value.func
+                called_name = None
+                if isinstance(call_func, ast.Name):
+                    called_name = call_func.id
+                elif isinstance(call_func, ast.Attribute):
+                    called_name = call_func.attr
+                if called_name and called_name in func_defs and not func_defs[called_name]:
+                    for target in stmt.targets:
+                        if isinstance(target, ast.Name):
+                            var_assigned_from_sync[target.id] = called_name
+
+            # Find asyncio.gather calls
+            for node in ast.walk(async_node):
+                if not isinstance(node, ast.Call):
+                    continue
+                func = node.func
+                if not (isinstance(func, ast.Attribute) and func.attr == 'gather'):
+                    continue
+                if not (isinstance(func.value, ast.Name) and func.value.id == 'asyncio'):
+                    continue
+
+                line_no = getattr(node, 'lineno', '?')
+                line_text = (
+                    lines[line_no - 1].strip()
+                    if isinstance(line_no, int) and line_no <= len(lines)
+                    else ''
+                )
+
+                for arg in node.args:
+                    sync_func_name = None
+
+                    # Pattern A: direct call gather(sync_func(), ...)
+                    if isinstance(arg, ast.Call):
+                        n = None
+                        if isinstance(arg.func, ast.Name):
+                            n = arg.func.id
+                        elif isinstance(arg.func, ast.Attribute):
+                            n = arg.func.attr
+                        if n and n in func_defs and not func_defs[n]:
+                            sync_func_name = n
+
+                    # Pattern B: variable gather(task_var, ...) assigned from sync call
+                    elif isinstance(arg, ast.Name):
+                        if arg.id in var_assigned_from_sync:
+                            sync_func_name = var_assigned_from_sync[arg.id]
+
+                    if sync_func_name:
+                        issues.append({
+                            'id': f'INT-GATHER-{Path(path).stem}-{sync_func_name}',
+                            'severity': 'HIGH',
+                            'category': 'ASYNC_MISUSE',
+                            'file': path,
+                            'files': [path],
+                            'evidence': (
+                                f"`asyncio.gather(...)` at line {line_no} in {Path(path).name}: "
+                                f"`{line_text}` — argument sourced from `{sync_func_name}` "
+                                f"which is `def` not `async def` (returns a value, not a coroutine)"
+                            ),
+                            'issue': (
+                                f"`asyncio.gather` receives the return value of sync function "
+                                f"`{sync_func_name}` in {Path(path).name}. "
+                                f"gather expects awaitables — raises TypeError at runtime."
+                            ),
+                            'fix': (
+                                f"Change `def {sync_func_name}` → `async def {sync_func_name}` "
+                                f"and use async API client methods inside it "
+                                f"(e.g. `await client.messages.acreate(...)`). "
+                                f"OR drop gather and run calls sequentially with await."
+                            ),
+                        })
+
+    seen = set()
+    deduped = []
+    for issue in issues:
+        if issue['id'] not in seen:
+            seen.add(issue['id'])
+            deduped.append(issue)
+    return deduped
+
+
+# ── Check 9: npm package integrity ────────────────────────────────────────────
+
+def check_npm_package_integrity(artifacts: dict) -> list:
+    """
+    Scan JSX files for third-party imports (from 'package-name').
+    Cross-reference against business/package.json dependencies.
+    Flag any import whose package is not listed as a dependency.
+
+    Skips: relative imports (./), absolute paths (/), React builtins,
+    and known boilerplate-provided packages (react, react-dom, next, etc.).
+    """
+    issues = []
+
+    # Known boilerplate-provided packages — always present, never need to be declared
+    BOILERPLATE_PACKAGES = {
+        'react', 'react-dom', 'next', 'next/router', 'next/link', 'next/image',
+        'next/head', 'next/navigation', '@auth0/auth0-react', 'axios',
+        'tailwindcss', '@headlessui/react', '@heroicons/react',
+        'react-hook-form', 'zod', 'swr', 'prop-types',
+    }
+
+    # Load package.json
+    pkg_content = artifacts.get('business/package.json', '')
+    declared_deps = set()
+    if pkg_content:
+        try:
+            pkg = json.loads(pkg_content)
+            declared_deps.update(pkg.get('dependencies', {}).keys())
+            declared_deps.update(pkg.get('devDependencies', {}).keys())
+        except Exception:
+            pass
+
+    if not declared_deps:
+        return issues  # Can't check without package.json
+
+    # Scan JSX files for third-party imports
+    for path, content in artifacts.items():
+        if not (path.endswith('.jsx') and 'pages/' in path):
+            continue
+
+        for m in re.finditer(r"""(?:import|from)\s+['""]([^./@'"][^'"]*)['""]""", content):
+            raw_pkg = m.group(1)
+            # Normalise: @scope/pkg → @scope/pkg, plain-pkg → plain-pkg
+            pkg_name = raw_pkg.split('/')[0]
+            if raw_pkg.startswith('@'):
+                pkg_name = '/'.join(raw_pkg.split('/')[:2])
+
+            if pkg_name in BOILERPLATE_PACKAGES:
+                continue
+            if pkg_name in declared_deps:
+                continue
+
+            line_no = content[:m.start()].count('\n') + 1
+            issues.append({
+                'id': f'INT-NPM-{Path(path).stem}-{pkg_name.replace("/", "-").replace("@", "")}',
+                'severity': 'HIGH',
+                'category': 'MISSING_NPM_PACKAGE',
+                'file': 'business/package.json',
+                'files': [path, 'business/package.json'],
+                'evidence': (
+                    f"`import ... from '{raw_pkg}'` at line {line_no} in {Path(path).name} "
+                    f"but '{pkg_name}' is not in business/package.json dependencies"
+                ),
+                'issue': (
+                    f"{Path(path).name} imports '{raw_pkg}' which is not declared in package.json. "
+                    f"Will fail with 'Cannot find module' at runtime."
+                ),
+                'fix': (
+                    f"Add `\"{pkg_name}\": \"latest\"` to the dependencies section of "
+                    f"business/package.json. "
+                    f"OR if this is a Next.js built-in, replace with the equivalent Next.js import "
+                    f"(e.g. react-router-dom → next/router or next/navigation)."
+                ),
+            })
+
+    seen = set()
+    deduped = []
+    for issue in issues:
+        if issue['id'] not in seen:
+            seen.add(issue['id'])
+            deduped.append(issue)
+    return deduped
+
+
+# ── Check 10: Bare except in critical paths ───────────────────────────────────
+
+def check_bare_except(artifacts: dict) -> list:
+    """
+    Detect bare `except:` or `except Exception: pass` in service files.
+    These silently swallow errors in payment, API, and data processing paths —
+    causing silent failures that are impossible to debug in production.
+    """
+    issues = []
+
+    for path, content in artifacts.items():
+        if not path.endswith('.py'):
+            continue
+        if not path.startswith('business/services/'):
+            continue
+
+        lines = content.splitlines()
+        for i, line in enumerate(lines, 1):
+            stripped = line.strip()
+
+            # Bare except with no exception type
+            if re.match(r'^except\s*:', stripped):
+                issues.append({
+                    'id': f'INT-EXCEPT-BARE-{Path(path).stem}-L{i}',
+                    'severity': 'HIGH',
+                    'category': 'SILENT_ERROR_SWALLOW',
+                    'file': path,
+                    'files': [path],
+                    'evidence': f"`{stripped}` at line {i} in {Path(path).name}",
+                    'issue': (
+                        f"Bare `except:` at line {i} in {Path(path).name} catches ALL exceptions "
+                        f"including KeyboardInterrupt and SystemExit — silently swallows errors "
+                        f"in production, making failures impossible to debug."
+                    ),
+                    'fix': (
+                        f"Replace `except:` with `except Exception as e:` and add at minimum "
+                        f"`logger.error(f'{{Path(path).name}} error: {{e}}', exc_info=True)`. "
+                        f"For payment/API paths, re-raise or return a structured error response."
+                    ),
+                })
+
+            # except Exception: pass (or except Exception as e: pass)
+            elif re.match(r'^except\s+Exception(\s+as\s+\w+)?\s*:', stripped):
+                # Look at next non-empty line — if it's just `pass` or `return False/None`, flag it
+                next_lines = [lines[j].strip() for j in range(i, min(i + 2, len(lines)))]
+                if next_lines and next_lines[0] in ('pass', 'return False', 'return None', 'return {}', 'return []'):
+                    issues.append({
+                        'id': f'INT-EXCEPT-SWALLOW-{Path(path).stem}-L{i}',
+                        'severity': 'MEDIUM',
+                        'category': 'SILENT_ERROR_SWALLOW',
+                        'file': path,
+                        'files': [path],
+                        'evidence': (
+                            f"`{stripped}` → `{next_lines[0]}` at line {i}-{i+1} "
+                            f"in {Path(path).name}"
+                        ),
+                        'issue': (
+                            f"Exception silently swallowed at line {i} in {Path(path).name}: "
+                            f"`except Exception` followed by `{next_lines[0]}` discards all error info."
+                        ),
+                        'fix': (
+                            f"Add error logging before `{next_lines[0]}`: "
+                            f"`logger.error(f'{{Path(path).name}} failed: {{e}}', exc_info=True)`. "
+                            f"For payment/Stripe paths, propagate the exception or return a structured error."
+                        ),
+                    })
+
+    return issues
+
+
+# ── Check 11: Unbounded polling loops ─────────────────────────────────────────
+
+def check_unbounded_polling(artifacts: dict) -> list:
+    """
+    Detect recursive setTimeout polling in JSX pages with no iteration cap.
+
+    Strategy: find every `setTimeout(funcName, N)` call. For each, check whether
+    funcName appears as a function definition within ±60 lines. If so, scan that
+    60-line window for attempt/count/max/limit guard words. Flag if none found.
+    """
+    issues = []
+    # Guard words must look like JS identifiers, not Tailwind CSS classes.
+    # Exclude `max` alone (matches max-w-md etc.) — require maxAttempt/MAX_POLL style.
+    GUARD_WORDS = re.compile(
+        r'\b(?:attempts?|maxAttempts?|MAX_ATTEMPTS?|maxPoll|MAX_POLL|'
+        r'maxRetries|MAX_RETRIES|pollCount|pollLimit|retries|iterations?|'
+        r'tries|MAX_TRIES|pollTimeout|POLL_TIMEOUT)\b',
+    )
+
+    for path, content in artifacts.items():
+        if not (path.endswith('.jsx') and 'pages/' in path):
+            continue
+
+        lines = content.splitlines()
+
+        for i, line in enumerate(lines):
+            m = re.search(r'setTimeout\s*\(\s*(\w+)\s*,', line)
+            if not m:
+                continue
+            func_name = m.group(1)
+
+            # Confirm funcName is defined as a function somewhere in the file
+            is_defined = bool(re.search(
+                r'(?:const|function|let|var)\s+' + re.escape(func_name) + r'\s*=?\s*(?:async\s*)?\(',
+                content,
+            ))
+            if not is_defined:
+                continue
+
+            # Scan ±60 lines around the setTimeout call for a guard
+            window_start = max(0, i - 60)
+            window_end = min(len(lines), i + 60)
+            window_text = '\n'.join(lines[window_start:window_end])
+
+            if GUARD_WORDS.search(window_text):
+                continue
+
+            issues.append({
+                'id': f'INT-POLL-{Path(path).stem}-{func_name}',
+                'severity': 'MEDIUM',
+                'category': 'UNBOUNDED_POLLING',
+                'file': path,
+                'files': [path],
+                'evidence': (
+                    f"`setTimeout({func_name}, ...)` at line {i + 1} in {Path(path).name} "
+                    f"with no attempt counter or max-poll guard within ±60 lines"
+                ),
+                'issue': (
+                    f"Polling via `{func_name}` recurses indefinitely if the backend never "
+                    f"returns a terminal status — user sees a loading spinner forever."
+                ),
+                'fix': (
+                    f"Add an attempt counter before the poll loop: "
+                    f"`let attempts = 0; const MAX_ATTEMPTS = 40;` (40 × 3s = 2 min). "
+                    f"At the top of `{func_name}`: "
+                    f"`if (++attempts > MAX_ATTEMPTS) {{ setError('Analysis timed out'); return; }}` "
+                    f"before calling `setTimeout({func_name}, 3000)`."
+                ),
+            })
+
+    seen = set()
+    deduped = []
+    for issue in issues:
+        if issue['id'] not in seen:
+            seen.add(issue['id'])
+            deduped.append(issue)
+    return deduped
+
+
 # ── Runner ────────────────────────────────────────────────────────────────────
 
 def run_all_checks(artifacts: dict, intake: dict) -> list:
@@ -710,7 +1074,25 @@ def run_all_checks(artifacts: dict, intake: dict) -> list:
     async_issues = check_async_misuse(artifacts)
     print(f"    → {len(async_issues)} issue(s)")
 
-    return route_issues + field_issues + spec_issues + import_issues + dblpath_issues + auth_issues + async_issues
+    print(f"  Running Check 8: asyncio.gather with sync function args...")
+    gather_issues = check_gather_sync_args(artifacts)
+    print(f"    → {len(gather_issues)} issue(s)")
+
+    print(f"  Running Check 9: npm package integrity (imports vs package.json)...")
+    npm_issues = check_npm_package_integrity(artifacts)
+    print(f"    → {len(npm_issues)} issue(s)")
+
+    print(f"  Running Check 10: Bare except / silent error swallow in services...")
+    except_issues = check_bare_except(artifacts)
+    print(f"    → {len(except_issues)} issue(s)")
+
+    print(f"  Running Check 11: Unbounded polling loops in frontend...")
+    poll_issues = check_unbounded_polling(artifacts)
+    print(f"    → {len(poll_issues)} issue(s)")
+
+    return (route_issues + field_issues + spec_issues + import_issues + dblpath_issues
+            + auth_issues + async_issues + gather_issues + npm_issues + except_issues
+            + poll_issues)
 
 
 def build_output(issues: list, zip_path: str = None, artifacts_dir: str = None,
