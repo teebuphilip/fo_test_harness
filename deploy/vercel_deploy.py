@@ -421,6 +421,14 @@ def deploy_frontend(
     # Disable CI=true so ESLint warnings don't fail the build
     env_vars["CI"] = "false"
 
+    # Merge env vars from vercel.deploy.json if present
+    if isinstance(vercel_config, dict):
+        cfg_env = vercel_config.get("env")
+        if isinstance(cfg_env, dict):
+            for k, v in cfg_env.items():
+                if k and v is not None:
+                    env_vars.setdefault(k, str(v))
+
     # Inject Auth0 frontend env vars if not provided in .env
     if "REACT_APP_AUTH0_DOMAIN" not in env_vars or "REACT_APP_AUTH0_CLIENT_ID" not in env_vars:
         auth0_env = load_auth0_frontend_env(repo_path)
