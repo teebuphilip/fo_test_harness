@@ -465,7 +465,7 @@ while [[ $IC_EXIT -ne 0 && $FIX_PASS -lt $MAX_FIX_PASSES ]]; do
 
   # Replace the last ZIP in the merge list with the fixed ZIP
   if [[ ${#ALL_ZIPS[@]} -gt 0 ]]; then
-    ALL_ZIPS[-1]="$LATEST_ZIP"
+    ALL_ZIPS[$(( ${#ALL_ZIPS[@]} - 1 ))]="$LATEST_ZIP"
   fi
 
   # Re-run integration check to see if issues are cleared
