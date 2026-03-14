@@ -1,5 +1,24 @@
 # Must Port to FO
 
+## QA/Consistency Prompt Fixes (additions 2026-03-13)
+
+67. fix: prune __pycache__ dirs from artifacts before QA/static/consistency gates
+- Python bytecode was being carried forward by merge_forward, polluting QA with `__pycache__/analysis.py` paths
+- Fix: `shutil.rmtree` all `__pycache__` dirs at start of `prune_non_business_artifacts()`
+- Files: `fo_test_harness.py`
+⬜ TODO for FO codebase
+
+68. fix: qa_prompt.md — status field, internal helpers, pycache, destructuring order DO NOT FLAG
+- QA was flagging `status` column as scope creep → Consistency was re-adding it → infinite loop
+- Files: `directives/prompts/qa_prompt.md`
+⬜ TODO for FO codebase
+
+69. fix: build_ai_consistency.md — boilerplate frontend utils and internal helpers DO NOT FLAG
+- Consistency was flagging `../utils/api` imports as broken (boilerplate file, always present)
+- Also stopped flagging `_extract_*` / `_parse_*` private helper methods as contract violations
+- Files: `directives/prompts/build_ai_consistency.md`
+⬜ TODO for FO codebase
+
 ## Static Gate Fix (additions 2026-03-12)
 
 66. fix: CHECK 10 — async def methods not counted → permanent false-positive missing-method loop
@@ -82,6 +101,12 @@
 - `deploy/write_deploy_state.py` writes `railway.deploy.json` or `vercel.deploy.json` from CLI args
   (project IDs, service IDs, service domain).
 - Files: `deploy/write_deploy_state.py`
+⬜ TODO for FO codebase
+
+68. fix: prefer Vercel production URL for CORS
+- Pipeline derives `https://<project>.vercel.app` from `vercel.deploy.json` and uses it for
+  CORS instead of ephemeral preview URLs.
+- Files: `deploy/pipeline_deploy.py`
 ⬜ TODO for FO codebase
 
 ## Deploy Pipeline (additions 2026-03-10 evening)

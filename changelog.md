@@ -1,5 +1,35 @@
 # Changelog
 
+## 2026-03-13
+
+### fix: run_integration_and_feature_build.sh — sed \0 not valid on macOS, causes \0 artifact dir
+
+`latest_artifacts_dir()` and `latest_iteration_num()` used `\\0` in sed replacement strings,
+intending "whole match". BSD sed (macOS) does not support `\0` — it emitted the literal string `\0`.
+Result: `ARTIFACTS_DIR=\0`, `LATEST_ITER=\0`, then `--resume-iteration '\0'` crashed the harness.
+Fix: replaced `\\0` with `&` (whole match in POSIX/BSD sed) in all three sed calls.
+Files: `run_integration_and_feature_build.sh`
+
+### fix: prune __pycache__ from artifacts; QA/consistency prompt fixes for recurring false positives
+
+**fo_test_harness.py** — `prune_non_business_artifacts()` now removes all `__pycache__` dirs via
+`shutil.rmtree` before the main pruning loop. Python bytecode was being extracted and carried
+forward by merge_forward, causing QA to flag `__pycache__/analysis.py` as a defect.
+
+**qa_prompt.md** — Added to DO NOT FLAG:
+- `status`/`processing_status` columns — standard state tracking, never scope creep
+- Internal helpers (`_extract_*`, `_parse_*`, `_format_*`, `_calculate_*`) — private impl details
+- `__pycache__` / `.pyc` files
+- JavaScript destructuring order (has no effect on behavior)
+
+**build_ai_consistency.md** — Added to DO NOT FLAG:
+- `../utils/api`, `../core/useEntitlements`, `../core/EntitlementGate`, `../hooks/useAnalytics` — boilerplate frontend utils always present at runtime
+- Internal helper methods
+
+Root cause of feature 2 (adversarial_ai Anthropic SDK) 20-iter failure: QA removed `status`
+from Analysis model as "scope creep"; Consistency re-added it as "AttributeError at runtime".
+Direct QA↔Consistency contradiction → infinite loop across 8 QA rejections.
+
 ## 2026-03-12
 
 ### fix: CHECK 10 static gate — async def methods not counted, causing permanent false-positive loops
@@ -121,6 +151,11 @@ surface a usable URL and logs the detected deployment ID + status once a new dep
 
 New `deploy/write_deploy_state.py` writes `railway.deploy.json` or `vercel.deploy.json`
 from CLI args (project IDs, service IDs, service domain) to streamline first-time setup.
+
+### fix: prefer Vercel production URL for CORS
+
+Pipeline now derives the stable production domain (`https://<project>.vercel.app`) from
+`vercel.deploy.json` and uses that for downstream CORS instead of ephemeral preview URLs.
 
 ## 2026-03-10 (late session)
 

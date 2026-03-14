@@ -1,5 +1,27 @@
 # Learnings From AF to FO
 
+## Latest Learnings (2026-03-13)
+
+- QA and the Consistency gate can produce a direct logical contradiction on the same field. QA
+  removes `status` from the Analysis model as "scope creep"; Consistency re-adds it as "AttributeError
+  at runtime". Neither gate knows the other exists. The result is an infinite loop that consumes the
+  entire iteration budget with real money spent. The fix must be in the QA prompt — QA must never flag
+  standard infrastructure columns (`status`, `processing_status`) as scope violations. The rule of thumb:
+  a database column is not a user-facing feature and is never scope creep by itself.
+- Private helper methods (`_extract_*`, `_parse_*`, `_format_*`) are implementation details of a
+  service, not spec-mandated interfaces. Both QA and the Consistency gate were flagging them. QA
+  saw `_extract_strengths()` as an undocumented feature; Consistency tried to align callers and
+  callee signatures for private methods. The fix: both prompts must exclude `_*` methods from their
+  respective checks entirely.
+- `__pycache__` directories were being extracted from Claude output and carried forward by
+  merge_forward into subsequent iterations. This caused QA to flag `__pycache__/analysis.py`
+  (a `.pyc` file!) as a scope violation, wasting an iteration on a phantom defect. Bytecode dirs
+  must be pruned at artifact extraction time, not left for QA to encounter.
+- Boilerplate frontend utilities (`../utils/api`, `../core/useEntitlements`) are not part of the
+  business artifact set but are always present at runtime via the boilerplate. The Consistency gate
+  was flagging `import api from '../utils/api'` as a "broken import" because the file wasn't in
+  the business/ artifact dir. Any import from boilerplate paths must be in the DO NOT FLAG list.
+
 ## Latest Learnings (2026-03-12)
 
 - Python's AST has two separate node types for function definitions: `ast.FunctionDef` (regular `def`)
@@ -65,6 +87,8 @@
   stable URL quickly, and logging the deployment ID gives a reliable pointer for debugging.
 - Manual deploy state setup is error-prone. A small helper that writes `railway.deploy.json` /
   `vercel.deploy.json` from CLI args makes first-time setup deterministic and auditable.
+- Using Vercel preview URLs for CORS causes unnecessary backend redeploys. Prefer the stable
+  production domain (`https://<project>.vercel.app`) when setting `CORS_ORIGINS`.
 
 ## Latest Learnings (2026-03-08, session 10)
 
