@@ -1,170 +1,166 @@
-# FO Intake Generation
+# Intake Generation
 
-This directory contains everything needed to convert founder answers into intake JSON files for the FO build harness.
+Converts founder answers into structured intake JSON files for the FO build harness.
 
-## Complete Pipeline
+---
+
+## Pipeline Position
 
 ```
-Step 0: Raw Answers → Hero JSON (convert_hero_answers.py)
-Step 1: Hero JSON → Intake Evaluation (run_intake_v7.sh)
-Step 2: Intake JSON → Build (fo_test_harness.py)
+Founder answers (text/JSON)
+        ↓
+  convert_hero_answers.py    ← Step 0: raw text → hero JSON (first-time founders)
+        ↓
+  generate_intake.sh         ← Step 1: hero JSON → full intake JSON (block_a + block_b)
+        ↓
+  intake_runs/<startup>/     ← Output consumed by run_integration_and_feature_build.sh
 ```
+
+---
 
 ## Directory Structure
 
 ```
 intake/
-├── convert_hero_answers.py     # STEP 0: Convert raw answers → hero JSON
-├── run_intake_v7.sh           # STEP 1: Generate intake from hero JSON
-├── generate_intake.sh         # Simplified wrapper
-├── STEP_0_TEMPLATE.txt        # Blank questionnaire for founders
-├── claude_directive.txt        # Pass evaluation directive
-├── idea_generation_directive.txt  # Startup idea generation directive
-├── hero_text/                  # Hero answer files (founders' answers)
-│   ├── twofacedai.json        # ← Structured (ready for Step 1)
-│   ├── wynwoodracing.json     # ← Structured (ready for Step 1)
-│   └── jose_hernandez.txt     # ← Raw answers (need Step 0 first)
-├── inputs/                     # Context files (schemas, policies, rules)
+├── generate_intake.sh          # Preferred wrapper — runs run_intake_v7.sh
+├── run_intake_v7.sh            # Core intake generator (calls Claude API)
+├── convert_hero_answers.py     # Step 0: raw text answers → hero JSON
+├── validate_hero_answers.py    # Validates hero JSON structure before intake gen
+├── STEP_0_TEMPLATE.txt         # Blank questionnaire to give new founders
+├── claude_directive.txt        # Pass/fail evaluation directive for Claude
+├── idea_generation_directive.txt  # Directive for generating random startup ideas
+├── generate_proposal_from_blocks.sh  # Generate a narrative proposal from block A/B
+├── post_intake_fix_batch.py    # Batch-fix common intake JSON issues
+├── hero_text/                  # Founder answer files (one per startup)
+├── inputs/                     # Context files Claude uses during evaluation
 │   ├── mc_v6_schema.json
 │   ├── intake_business_rules.json
 │   ├── hero_touchpoint_policy.json
 │   └── scheduling_policy.json
 ├── intake_runs/                # Generated intakes (output)
-│   ├── twofaced_ai/
-│   │   ├── block_a.json
-│   │   ├── block_b.json
-│   │   └── twofaced_ai.json  # ← Use this with test harness
-│   └── ...
+│   └── <startup_id>/
+│       ├── block_a.json        # Tier 1 evaluation
+│       ├── block_b.json        # Tier 2 evaluation
+│       └── <startup_id>.json   # Combined — use this with the harness
 └── failures/                   # Failed runs for debugging
 ```
 
+---
+
 ## Prerequisites
 
-1. **Python 3.8+** with anthropic package:
-   ```bash
-   pip install anthropic
-   ```
+```bash
+pip install anthropic
+export ANTHROPIC_API_KEY=sk-ant-xxxxx
+```
 
-2. **API Key**:
-   ```bash
-   export ANTHROPIC_API_KEY=sk-ant-xxxxx
-   ```
+---
 
-## Usage
+## Step 0 — Raw Answers → Hero JSON (first-time founders)
 
-### Step 0: Convert Raw Answers (First Time Setup)
-
-When a founder gives you their answers in text format:
+Give new founders `STEP_0_TEMPLATE.txt` to fill out. Then convert their answers:
 
 ```bash
 cd intake
 
-# Option 1: Auto-generate output filename
-python convert_hero_answers.py hero_text/jose_hernandez_02_11_2026.txt
+# Auto-generate output filename from input
+python convert_hero_answers.py hero_text/jose_hernandez.txt
 
-# Option 2: Specify output name
-python convert_hero_answers.py hero_text/my_answers.txt hero_text/mystartup.json
+# Or specify output name explicitly
+python convert_hero_answers.py hero_text/my_answers.txt hero_text/my_startup.json
 ```
 
-**What this does:**
-- Uses Claude to intelligently parse the raw text
-- Extracts structured data (problem, customers, features, etc.)
-- Generates a hero JSON file
-- Output: `hero_text/<startup_name>.json`
+Claude parses the raw text and produces a structured hero JSON at `hero_text/<startup>.json`. Review it — minor edits may be needed before Step 1.
 
-**For new founders:**
-1. Give them `STEP_0_TEMPLATE.txt` to fill out
-2. Run the conversion script on their answers
-3. Review the generated JSON (may need minor edits)
-4. Continue to Step 1
+---
 
-### Step 1: Hero Mode (Existing Founder Answers)
-
-Use this when you have a hero JSON file with the founder's answers:
+## Step 1 — Hero JSON → Intake JSON
 
 ```bash
 cd intake
-
-./run_intake_v7.sh \
-  hero_text/twofacedai.json \
-  ./intake_runs \
-  ./claude_directive.txt
+./generate_intake.sh hero_text/my_startup.json
 ```
 
-**Output:** `intake_runs/twofaced_ai/twofaced_ai.json`
+**Output:** `intake_runs/my_startup/my_startup.json`
 
-### Generate Mode (Random Startup Ideas)
+This runs Claude against the hero answers using `claude_directive.txt` and produces:
+- `block_a.json` — Tier 1 evaluation
+- `block_b.json` — Tier 2 evaluation (full scope)
+- `my_startup.json` — Combined intake (pass this to the harness)
 
-Use this to generate N random startup ideas:
+---
+
+## Using the Intake with the Build Pipeline
+
+After generating an intake, pass it to the build pipeline:
+
+```bash
+cd ..   # back to FO_TEST_HARNESS root
+
+./run_integration_and_feature_build.sh \
+  --intake intake/intake_runs/my_startup/my_startup.json \
+  --startup-id my_startup
+```
+
+The pipeline will call `phase_planner.py` to split the intake into:
+- **Phase 1** — data layer (models, auth, core routes)
+- **Intelligence features** — each built and validated separately
+
+The phase planner outputs `<startup_id>_phase_assessment.json` and `<startup_id>_phase1.json` into the same `intake_runs/<startup>/` directory.
+
+---
+
+## Adding a Feature to an Existing Build
+
+If the original build is already deployed and you need to add a new feature not in the original intake, use `feature_adder.py` (called automatically by `add_feature.sh`):
+
+```bash
+cd ..   # back to FO_TEST_HARNESS root
+
+./add_feature.sh \
+  --intake intake/intake_runs/my_startup/my_startup.json \
+  --feature "New feature name" \
+  --existing-repo ~/Documents/work/my_startup
+```
+
+See the root `README.md` for full `add_feature.sh` options.
+
+---
+
+## Generating Random Startup Ideas
+
+For testing the pipeline with synthetic intakes:
 
 ```bash
 cd intake
-
-./run_intake_v7.sh \
-  5 \
-  ./intake_runs \
-  ./claude_directive.txt \
-  ./idea_generation_directive.txt
+./run_intake_v7.sh 5 ./intake_runs ./claude_directive.txt ./idea_generation_directive.txt
 ```
 
-**Output:**
-- `intake_runs/run_1/run_1.json`
-- `intake_runs/run_2/run_2.json`
-- etc.
+Produces `intake_runs/run_1/` through `intake_runs/run_5/`.
 
-## Using with Test Harness
+---
 
-After generating an intake, use it with the build harness:
+## Batch-Fixing Intake Issues
+
+`post_intake_fix_batch.py` applies common fixes to existing intake JSONs (field normalisation, missing keys, schema alignment). Run it against an `intake_runs/` directory if the harness rejects an intake:
 
 ```bash
-cd ..  # Back to FO_TEST_HARNESS
-
-python fo_test_harness.py \
-  --intake intake/intake_runs/twofaced_ai/twofaced_ai.json \
-  --startup-id twofaced_ai \
-  --block B \
-  --build-gov /tmp/fobuilgov100 \
-  --tech-stack lowcode
+python post_intake_fix_batch.py intake/intake_runs/my_startup/my_startup.json
 ```
 
-## Adding New Hero Files
-
-To test a new startup idea:
-
-1. Create `hero_text/your_startup.json` with this format:
-```json
-{
-  "startup_idea_id": "your_startup",
-  "Q1_problem_customer": "...",
-  "Q2_target_user": ["..."],
-  "Q3_success_metric": "...",
-  ...
-}
-```
-
-2. Run the intake generator:
-```bash
-./run_intake_v7.sh hero_text/your_startup.json ./intake_runs ./claude_directive.txt
-```
-
-3. Use the generated intake with the test harness
+---
 
 ## Troubleshooting
 
-**Error: "ANTHROPIC_API_KEY not set"**
-- Solution: `export ANTHROPIC_API_KEY=sk-ant-xxxxx`
-
-**Error: "Pass directive not found"**
-- Solution: Make sure you're running from the `intake/` directory
+**"ANTHROPIC_API_KEY not set"**
+```bash
+export ANTHROPIC_API_KEY=sk-ant-xxxxx
+```
 
 **Generated intake is incomplete (missing block_b)**
-- Check `failures/` directory for error logs
-- Verify all input files are present in `inputs/`
 
-## Files Explained
+Check `failures/` for error logs. Verify all files exist in `inputs/`. If the hero JSON is malformed, re-run `convert_hero_answers.py` and review the output before Step 1.
 
-- **run_intake_v7.sh**: Main script that calls Claude API to generate intakes
-- **claude_directive.txt**: Instructions for how Claude should evaluate pass/fail for tiers
-- **idea_generation_directive.txt**: Instructions for generating random startup ideas
-- **inputs/*.json**: Context files (schemas, business rules) that Claude uses for evaluation
-- **hero_text/*.json**: Founder answer files (one per startup idea)
+**phase_planner.py produces empty intelligence_features list**
+
+The intake's `Q4_must_have_features` may describe only data-layer features (CRUD, forms, auth). Add at least one analytics/reporting/intelligence feature to the hero JSON and regenerate.
