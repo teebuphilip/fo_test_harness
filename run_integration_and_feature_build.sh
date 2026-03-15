@@ -51,33 +51,34 @@ PHASE1_ZIP_OVERRIDE="" # if set, use this ZIP as Phase 1 output (implies --start
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 latest_artifacts_dir() {
+  # Use Python for reliable numeric sort — sed+sort is fragile on macOS BSD.
   local run_dir="$1"
-  local candidate=""
-
-  # Prefer standard build path
-  if [[ -d "$run_dir/build" ]]; then
-    candidate=$(ls -d "$run_dir/build/iteration_"*"_artifacts" 2>/dev/null | \
-      sed -E 's/.*iteration_([0-9]+)_artifacts/\1 &/' | \
-      sort -n | tail -1 | awk '{print $2}')
-  fi
-
-  # Fallback to _harness/build
-  if [[ -z "$candidate" && -d "$run_dir/_harness/build" ]]; then
-    candidate=$(ls -d "$run_dir/_harness/build/iteration_"*"_artifacts" 2>/dev/null | \
-      sed -E 's/.*iteration_([0-9]+)_artifacts/\1 &/' | \
-      sort -n | tail -1 | awk '{print $2}')
-  fi
-
-  echo "$candidate"
+  python3 - "$run_dir" <<'PYEOF'
+import os, re, sys
+run_dir = sys.argv[1]
+for build_sub in ('build', '_harness/build'):
+    build = os.path.join(run_dir, build_sub)
+    if not os.path.isdir(build):
+        continue
+    dirs = [d for d in os.listdir(build)
+            if re.match(r'iteration_\d+_artifacts$', d)
+            and os.path.isdir(os.path.join(build, d))]
+    if dirs:
+        best = max(dirs, key=lambda d: int(re.search(r'(\d+)', d).group(1)))
+        print(os.path.join(build, best))
+        sys.exit(0)
+PYEOF
 }
 
 latest_iteration_num() {
+  # Returns plain integer (no leading zeros) — safe for bash arithmetic.
   local artifacts_dir="$1"
-  if [[ -z "$artifacts_dir" ]]; then
-    echo ""
-    return
-  fi
-  echo "$artifacts_dir" | sed -E 's/.*iteration_([0-9]+)_artifacts/\1/'
+  [[ -z "$artifacts_dir" ]] && echo "" && return
+  python3 -c "
+import re, sys
+m = re.search(r'iteration_(\d+)_artifacts', '$artifacts_dir')
+print(int(m.group(1)) if m else '')
+"
 }
 
 # ── Parse args ─────────────────────────────────────────────────────────────────
@@ -454,7 +455,7 @@ while [[ $IC_EXIT -ne 0 && $FIX_PASS -lt $MAX_FIX_PASSES ]]; do
   # so the fix pass never hits max-iterations before it can run a single iteration.
   # Use 10# prefix to force decimal — LATEST_ITER may be "08"/"09" which bash
   # would interpret as invalid octal without the prefix.
-  INT_MAX_ITER=$(( 10#${LATEST_ITER} + 5 ))
+  INT_MAX_ITER=$(( LATEST_ITER + 5 ))
   if [[ $INT_MAX_ITER -lt $MAX_ITER ]]; then INT_MAX_ITER=$MAX_ITER; fi
 
   FIX_EXIT=0
@@ -462,7 +463,7 @@ while [[ $IC_EXIT -ne 0 && $FIX_PASS -lt $MAX_FIX_PASSES ]]; do
     "$FEATURE_INTAKE" \
     "$BUILD_GOV" \
     --resume-run "$LATEST_RUN_DIR" \
-    --resume-iteration "$((10#${LATEST_ITER}))" \
+    --resume-iteration "$LATEST_ITER" \
     --integration-issues "$INTEGRATION_ISSUES" \
     --max-iterations "$INT_MAX_ITER" \
     --no-polish || FIX_EXIT=$?
