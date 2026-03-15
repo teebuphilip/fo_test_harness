@@ -1,5 +1,59 @@
 # Changelog
 
+## 2026-03-15 (session 4)
+
+### perf: fo_harness_improvements_v2.md — 4 of 5 improvements implemented
+
+**Improvement 1 (Prompt Caching) — SKIPPED.** All three AI gates (CONSISTENCY, QUALITY, FEATURE_QA) now go to ChatGPT. OpenAI's caching is automatic — no `cache_control` required.
+
+**Improvement 2 — Gate Locking (`fo_test_harness.py`)**
+- `gate_locks` dict initialized once before the loop; persists across iterations
+- `_files_changed_in_last_fix()` and `_load_iteration_manifest()` helpers added as closure functions
+- CONSISTENCY gate: locks after PASS; unlocks only if `models/`, `services/`, `routes/`, or `schemas/` files changed
+- QUALITY gate: locks after PASS; unlocks only if any `business/` file changed; cost counters skip when locked
+- FEATURE_QA gate: locks after PASS; unlocks only if any `business/` file changed; when locked sets `qa_report` to ACCEPTED and skips ChatGPT call entirely
+- Each gate logs `[GATE] LOCKED — skipped` or `[GATE] UNLOCKED — relevant files changed`
+
+**Improvement 3 — Repair vs Acceptance Mode Split (`fo_test_harness.py`, `ChatGPTClient`)**
+- `acceptance_threshold = max_iterations - 2` set before loop; `_quality_ran_in_acceptance_mode` tracker added
+- `REPAIR_MODE_RULES` constant added (system message text for focused QA)
+- `build_mode` (`'repair'` or `'acceptance'`) determined each iteration; early acceptance triggers when CONSISTENCY + FEATURE_QA both locked
+- QUALITY gate: skipped entirely in repair mode — logs `QUALITY GATE SKIPPED — repair mode, iteration N of M`
+- FEATURE_QA: passes `REPAIR_MODE_RULES` as ChatGPT system message in repair mode (not inline prepend); acceptance mode uses no system override
+- `ChatGPTClient.call()` gained optional `system_message` param; builds messages list with system role when provided
+- Acceptance check: if QUALITY never ran in acceptance mode, forces one final acceptance-mode run before accepting build; if that run fails, continues fix loop
+
+**Improvement 4 — Artifact Filtering Per Gate (`fo_test_harness.py`)**
+- `GATE_FILE_FILTERS` and `GATE_FILE_EXCLUDES` class-level constants on `FOHarness`
+- `filter_artifacts_for_gate()` static method — falls back to full artifact set if filter yields empty result
+- CONSISTENCY: receives only `models/`, `services/`, `routes/`, `schemas/` files — logs `sending N files (filtered from M total)`
+- QUALITY: receives all `business/` files minus `README-INTEGRATION.md`, `.env.example`, `.gitignore`
+
+**Improvement 5 — Integration Checks Before AI Gates (`integration_check.py`, `fo_test_harness.py`)**
+- `integration_check.py`: added `run_fast_checks()` function (checks 1, 2, 4, 6, 7 only — existing check functions called as-is, no logic modified); added `--fast` CLI flag to `main()`
+- `fo_test_harness.py`: added `_run_integration_fast_gate()` method (calls `integration_check.py --fast` via subprocess, parses output JSON, returns issues list)
+- New GATE 1.5 `INTEGRATION_FAST` inserted between STATIC and CONSISTENCY in main loop
+- Failure path: issues converted to harness defect format, routed to `defect_source='integration'` structural fix, AI gates skipped for that iteration
+- Post-build full 15-check integration run unchanged
+
+**Gate sequence is now:** COMPILE → STATIC → INTEGRATION_FAST → CONSISTENCY → QUALITY → FEATURE_QA (loop) + INTEGRATION full (post-build)
+
+| # | Status | What was done |
+|---|--------|---------------|
+| 1 | SKIPPED | All AI gates are ChatGPT — OpenAI caching is automatic, no `cache_control` needed |
+| 2 | ✅ | Gate locking — CONSISTENCY/QUALITY/FEATURE_QA lock after PASS, unlock only when relevant files change |
+| 3 | ✅ | Repair/acceptance mode split — QUALITY skipped in repair mode; FEATURE_QA gets system-message repair rules; forced acceptance-mode QUALITY run required before final accept |
+| 4 | ✅ | Artifact filtering — CONSISTENCY gets models/services/routes/schemas only; QUALITY gets business/ minus doc files |
+| 5 | ✅ | INTEGRATION_FAST gate (checks 1,2,4,6,7) inserted before CONSISTENCY; failure skips AI gates, routes to structural fix |
+
+Source doc: `fo_harness_improvements_v2.md` (copied into repo)
+
+**Also (earlier this session):**
+- Gate 3 CONSISTENCY moved from Claude Sonnet to ChatGPT/GPT-4o
+- README gate table updated: added Directive column, corrected to 6 gates, correct model assignments
+
+---
+
 ## 2026-03-15 (session 3)
 
 ### feat: generate_feature_spec.py — feature spec before build

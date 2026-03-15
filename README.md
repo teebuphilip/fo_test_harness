@@ -194,15 +194,18 @@ python fo_test_harness.py \
 
 ## QA Gates
 
-Every build iteration passes through **three sequential gates** before post-QA polish:
+Every build iteration passes through **five sequential gates** inside `fo_test_harness.py`, then one post-build gate:
 
-| Gate | Validator | What it checks |
-|------|-----------|----------------|
-| 1. Feature QA | ChatGPT (OpenAI) | Spec compliance, implementation bugs, scope |
-| 2. Static check | Harness (AST) | Syntax, duplicate `__tablename__`, wrong Base import, unauthenticated routes |
-| 3. AI Consistency | Claude Sonnet | Cross-file: model↔service, schema↔model, route↔schema, import chains |
+| # | Gate | Type | Validator | Directive | What it checks |
+|---|------|------|-----------|-----------|----------------|
+| 1 | **COMPILE** | Deterministic | Harness (Python AST parse) | — | Syntax errors — file rejected if unparseable |
+| 2 | **STATIC** | Deterministic | Harness (AST analysis) | — | Duplicate `__tablename__`, wrong Base import, unauthenticated routes, missing methods, `async def` |
+| 3 | **CONSISTENCY** | AI | ChatGPT / GPT-4o | `directives/prompts/build_ai_consistency.md` | Cross-file structural: model↔service, schema↔model, route↔schema, import chains |
+| 4 | **QUALITY** | AI | ChatGPT / GPT-4o | `directives/prompts/build_quality_gate.md` | Deployability, enhanceability, code quality, completeness vs intake |
+| 5 | **FEATURE_QA** | AI | ChatGPT / GPT-4o | `directives/prompts/qa_prompt.md` | Spec compliance, scope, functional bugs |
+| 6 | **INTEGRATION** (post-build) | Deterministic | `integration_check.py` (15 checks) | — | Backend structure/auth/async + frontend config rendering, dead buttons, form state |
 
-Any gate failure → targeted Claude fix → back to Gate 1.
+Gates 1–5 run inside the iterative loop. Gate 6 runs once after the loop exits (via `run_integration_and_feature_build.sh` or `add_feature.sh`). Any gate failure → targeted Claude fix → back to Gate 1.
 
 ---
 

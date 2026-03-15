@@ -1,5 +1,19 @@
 # Learnings From AF to FO
 
+## Latest Learnings (2026-03-15 session 4)
+
+- Running all AI gates on every iteration regardless of what changed is the single largest source of wasted tokens in the loop. CONSISTENCY and FEATURE_QA are expensive ChatGPT calls that produce identical results when no files they care about have changed. Gate locking (comparing artifact manifests between iterations) eliminates these redundant calls with zero impact on QA correctness.
+
+- The QUALITY gate (deployability, enhanceability, code quality) is useless in early repair iterations when the build is structurally broken. Checking enhanceability on code with unresolved AttributeErrors wastes tokens and produces noise. Splitting repair vs acceptance mode — skipping QUALITY in repair mode, running it fully only in the final iterations — reduces cost without losing coverage.
+
+- Sending the full artifact set to every AI gate inflates token counts significantly on frontend-heavy builds. The CONSISTENCY gate only needs backend structural files (models/services/routes/schemas) to check cross-file alignment. Sending JSX pages, config files, and README docs to CONSISTENCY adds ~50-70% extra tokens with zero benefit — the gate cannot act on frontend content.
+
+- REPAIR_MODE_RULES must be passed as a ChatGPT system message, NOT prepended inline to the user prompt. Inline prepend disrupts the prompt's instruction hierarchy and causes the model to partially ignore the repair focus rules. System role content is processed before the user turn and reliably scopes the model's attention.
+
+- Structural bugs (missing routes, broken import chains, auth contract violations, async misuse) caught by deterministic checks early in the loop are invisible to AI gates until they cause runtime failures. Running INTEGRATION_FAST (checks 1,2,4,6,7) before CONSISTENCY catches these cheaply and skips AI gates for that iteration — preventing AI gates from generating defect reports about symptoms of a structural failure they cannot directly see.
+
+- A build must not be marked accepted unless QUALITY explicitly ran in acceptance mode. Without enforcement, a build that only ever hit repair-mode iterations (QUALITY always skipped) could slip through with deployability or completeness gaps. The acceptance check must verify `_quality_ran_in_acceptance_mode = True` and force a final quality run if not.
+
 ## Latest Learnings (2026-03-15)
 
 - Frontend bugs are structurally invisible to all five QA gates when no check reads JSX against config JSON. The AWI build shipped with 8 bugs — config objects rendered as text (`[object Object]`), dead buttons with no onClick, and a form state field silently dropped on submit — none caught by Feature QA, Static check, AI Consistency, or integration_check.py. Root cause: every check was backend-focused. Fix: integration_check.py Checks 13-15 cross-reference JSX expressions against `business_config.json` data shapes, scan for buttons missing onClick, and compare useState keys against config form field definitions.

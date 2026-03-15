@@ -1548,36 +1548,6 @@ def run_all_checks(artifacts: dict, intake: dict) -> list:
             + form_state_issues)
 
 
-def run_fast_checks(artifacts: dict, intake: dict) -> list:
-    """
-    INTEGRATION_FAST — subset of checks run inside the harness loop before AI gates.
-    Runs checks 1, 2, 4, 6, 7 only: the checks most likely to cause AI gate wasted iterations.
-    Checks 3, 5, 8-15 remain in the post-build full run only.
-    Existing check logic is NOT modified — this function simply calls the existing functions.
-    """
-    print(f"  Running Check 1 (fast): Route inventory...")
-    route_issues = check_route_inventory(artifacts)
-    print(f"    → {len(route_issues)} issue(s)")
-
-    print(f"  Running Check 2 (fast): Model field refs...")
-    field_issues = check_model_field_refs(artifacts)
-    print(f"    → {len(field_issues)} issue(s)")
-
-    print(f"  Running Check 4 (fast): Import chains...")
-    import_issues = check_import_chains(artifacts)
-    print(f"    → {len(import_issues)} issue(s)")
-
-    print(f"  Running Check 6 (fast): Auth contract...")
-    auth_issues = check_auth_contract(artifacts)
-    print(f"    → {len(auth_issues)} issue(s)")
-
-    print(f"  Running Check 7 (fast): Async misuse...")
-    async_issues = check_async_misuse(artifacts)
-    print(f"    → {len(async_issues)} issue(s)")
-
-    return route_issues + field_issues + import_issues + auth_issues + async_issues
-
-
 def build_output(issues: list, zip_path: str = None, artifacts_dir: str = None,
                  intake_path: str = None) -> dict:
     from datetime import datetime
@@ -1658,8 +1628,6 @@ Examples:
     parser.add_argument('--intake', type=Path, required=True, help='Original full intake JSON')
     parser.add_argument('--output', type=Path, default=Path('integration_issues.json'),
                         help='Output JSON file (default: integration_issues.json)')
-    parser.add_argument('--fast', action='store_true',
-                        help='Run fast subset only (checks 1, 2, 4, 6, 7) — used by harness loop before AI gates')
     args = parser.parse_args()
 
     # Validate inputs
@@ -1690,11 +1658,7 @@ Examples:
         sys.exit(1)
 
     # Run checks
-    if args.fast:
-        print(f"\n  [FAST MODE] Running checks 1, 2, 4, 6, 7 only...")
-        issues = run_fast_checks(artifacts, intake)
-    else:
-        issues = run_all_checks(artifacts, intake)
+    issues = run_all_checks(artifacts, intake)
 
     # Build output
     output = build_output(

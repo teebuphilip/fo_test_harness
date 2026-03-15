@@ -615,22 +615,15 @@ class ChatGPTClient:
         if not Config.OPENAI_API_KEY:
             raise ValueError("OPENAI_API_KEY environment variable not set")
 
-    def call(self, prompt: str, max_tokens: int = None, system_message: str = None) -> Dict:
-        """Call ChatGPT API with timeout and retry.
-        system_message: optional system role content prepended before user message (e.g. repair mode rules).
-        """
+    def call(self, prompt: str, max_tokens: int = None) -> Dict:
+        """Call ChatGPT API with timeout and retry"""
         if max_tokens is None:
             max_tokens = Config.GPT_MAX_TOKENS
-
-        messages = []
-        if system_message:
-            messages.append({"role": "system", "content": system_message})
-        messages.append({"role": "user", "content": prompt})
 
         payload = {
             "model":      Config.GPT_MODEL,
             "max_tokens": max_tokens,
-            "messages":   messages
+            "messages":   [{"role": "user", "content": prompt}]
         }
 
         headers = {
@@ -5669,110 +5662,6 @@ End with: SHARPEN_COMPLETE"""
         prioritized = sorted(defects, key=_score)
         return prioritized[:max_defects]
 
-    # ── Integration fast gate (Improvement 5) ────────────────────────────────────
-    def _run_integration_fast_gate(self, iteration: int) -> list:
-        """
-        Run integration_check.py --fast (checks 1, 2, 4, 6, 7) on the current iteration's
-        artifacts. Returns list of issues dicts (harness-compatible), or [] on PASS.
-        Called between STATIC and CONSISTENCY in the main loop to catch structural failures
-        before spending AI gate tokens on broken code.
-        """
-        import subprocess, json as _json, tempfile
-
-        artifacts_dir = self.artifacts.build_dir / f'iteration_{iteration:02d}_artifacts'
-        if not artifacts_dir.is_dir():
-            print_warning(f"  [INTEGRATION_FAST] Artifacts dir not found: {artifacts_dir}")
-            return []
-
-        intake_path = getattr(self, 'intake_file', None)
-        if not intake_path or not Path(intake_path).exists():
-            print_warning("  [INTEGRATION_FAST] No intake path available — skipping fast check")
-            return []
-
-        with tempfile.NamedTemporaryFile(suffix='.json', delete=False) as tmp:
-            output_path = tmp.name
-
-        try:
-            result = subprocess.run(
-                [
-                    'python3', 'integration_check.py',
-                    '--artifacts', str(artifacts_dir),
-                    '--intake', str(intake_path),
-                    '--output', output_path,
-                    '--fast',
-                ],
-                capture_output=True, text=True, timeout=60,
-                cwd=str(Path(__file__).parent)
-            )
-            try:
-                with open(output_path) as f:
-                    data = _json.load(f)
-            except Exception:
-                print_warning("  [INTEGRATION_FAST] Could not parse output JSON — skipping")
-                return []
-
-            issues = data.get('issues', [])
-            verdict = data.get('verdict', 'INTEGRATION_PASS')
-            if verdict == 'INTEGRATION_PASS':
-                return []
-            high = sum(1 for i in issues if i.get('severity') == 'HIGH')
-            print_warning(f"  [INTEGRATION_FAST] {len(issues)} issue(s) found ({high} HIGH)")
-            for iss in issues:
-                sev_fn = print_error if iss.get('severity') == 'HIGH' else print_warning
-                sev_fn(f"    {iss['id']} [{iss['severity']}] {iss.get('file','?')}: {iss.get('evidence','')[:100]}")
-            return issues
-        except subprocess.TimeoutExpired:
-            print_warning("  [INTEGRATION_FAST] Timed out — skipping")
-            return []
-        except Exception as e:
-            print_warning(f"  [INTEGRATION_FAST] Error: {e} — skipping")
-            return []
-        finally:
-            import os
-            try:
-                os.unlink(output_path)
-            except Exception:
-                pass
-
-    # ── Artifact filtering per gate ──────────────────────────────────────────────
-    # CONSISTENCY only needs backend structural files — frontend/config are noise for this check.
-    # QUALITY and FEATURE_QA need all business/ files but not generated doc/env files.
-    GATE_FILE_FILTERS = {
-        "CONSISTENCY": [
-            "business/models/",
-            "business/services/",
-            "business/routes/",
-            "business/schemas/",
-        ],
-        "QUALITY":     ["business/"],
-        "FEATURE_QA":  ["business/"],
-    }
-    GATE_FILE_EXCLUDES = {
-        "CONSISTENCY": [],
-        "QUALITY":     ["business/README-INTEGRATION.md", ".env.example", ".gitignore"],
-        "FEATURE_QA":  ["business/README-INTEGRATION.md", ".env.example", ".gitignore"],
-    }
-
-    @staticmethod
-    def filter_artifacts_for_gate(all_artifacts: dict, gate_name: str) -> dict:
-        """
-        Return only the artifact files relevant to the given gate.
-        all_artifacts: {rel_path: content}
-        gate_name: "CONSISTENCY" | "QUALITY" | "FEATURE_QA"
-        Falls back to full artifact set if filtered set is empty (e.g. no models/ yet).
-        """
-        includes = FOHarness.GATE_FILE_FILTERS.get(gate_name, [])
-        excludes = FOHarness.GATE_FILE_EXCLUDES.get(gate_name, [])
-        filtered = {
-            path: content
-            for path, content in all_artifacts.items()
-            if any(path.startswith(inc) for inc in includes)
-            and not any(path == exc or path.endswith('/' + exc.lstrip('/')) for exc in excludes)
-        }
-        if not filtered:
-            return all_artifacts  # fallback: pass everything, log handled by caller
-        return filtered
-
     def _run_ai_consistency_check(self, iteration: int, governance_section: str) -> list:
         """
         Call ChatGPT to check cross-file consistency of business/ artifacts.
@@ -5802,13 +5691,7 @@ End with: SHARPEN_COMPLETE"""
             print_warning("  [CONSISTENCY] No business/ files found — skipping check")
             return []
 
-        # Apply gate-specific artifact filter (models/services/routes/schemas only)
-        all_count = len(file_contents)
-        file_contents = FOHarness.filter_artifacts_for_gate(file_contents, "CONSISTENCY")
-        if len(file_contents) == all_count:
-            print_info(f"  [CONSISTENCY] Artifact filter fallback — no structural files found, sending all {all_count} file(s)")
-        else:
-            print_info(f"  [CONSISTENCY] Sending {len(file_contents)} file(s) (filtered from {all_count} total — models/services/routes/schemas only)")
+        print_info(f"  [CONSISTENCY] Checking {len(file_contents)} artifact(s) for cross-file consistency...")
         prompt = PromptTemplates.ai_consistency_prompt(file_contents)
         self.artifacts.save_log(f'iteration_{iteration:02d}_consistency_prompt', prompt)
 
@@ -5905,10 +5788,7 @@ End with: SHARPEN_COMPLETE"""
             print_warning("  [QUALITY] No business/ files found — skipping quality gate")
             return [], usage_stats
 
-        # Apply gate-specific artifact filter (all business/ minus generated doc/env files)
-        all_count = len(file_contents)
-        file_contents = FOHarness.filter_artifacts_for_gate(file_contents, "QUALITY")
-        print_info(f"  [QUALITY] Evaluating {len(file_contents)} artifact(s) (filtered from {all_count} total) across 4 quality dimensions...")
+        print_info(f"  [QUALITY] Evaluating {len(file_contents)} artifact(s) across 4 quality dimensions...")
         prompt = PromptTemplates.quality_gate_prompt(file_contents, self.intake_data)
         self.artifacts.save_log(f'iteration_{iteration:02d}_quality_prompt', prompt)
 
@@ -6009,59 +5889,6 @@ End with: SHARPEN_COMPLETE"""
         # Defect triage strategy set by _triage_and_sharpen_defects() after Feature QA rejection.
         # 'surgical' → targeted patch (default); 'systemic' → full build with architectural direction
         _triage_strategy = 'surgical'
-
-        # Gate locking — locks persist across iterations; unlock only when relevant files changed.
-        # COMPILE and STATIC are never locked (cheap + mandatory).
-        gate_locks = {
-            "CONSISTENCY": False,
-            "QUALITY":     False,
-            "FEATURE_QA":  False,
-        }
-        _prev_artifact_manifest = {}  # checksum dict from prior iteration for files_changed_in_last_fix
-
-        # Repair vs Acceptance mode split.
-        # REPAIR MODE  (iterations < acceptance_threshold): skip QUALITY; focused FEATURE_QA via system msg.
-        # ACCEPTANCE MODE (iterations >= acceptance_threshold, or early trigger): full QUALITY + full FEATURE_QA.
-        # A build cannot be marked accepted unless QUALITY ran explicitly in ACCEPTANCE MODE.
-        acceptance_threshold = max(1, self.max_qa_iterations - 2)
-        _quality_ran_in_acceptance_mode = False  # must be True before build can be accepted
-
-        REPAIR_MODE_RULES = (
-            "REPAIR MODE INSTRUCTIONS:\n"
-            "This is a repair iteration, not a final acceptance check.\n"
-            "Focus ONLY on:\n"
-            "  - IMPLEMENTATION_BUG defects\n"
-            "  - SPEC_COMPLIANCE_ISSUE defects for missing required features\n"
-            "  - HIGH and MEDIUM severity only\n\n"
-            "DO NOT flag in repair mode:\n"
-            "  - Enhanceability issues\n"
-            "  - Deployability issues (unless they cause a runtime crash)\n"
-            "  - Code quality style issues\n"
-            "  - LOW severity defects\n"
-            "  - SCOPE_CHANGE_REQUEST unless it is causing a CONSISTENCY failure\n"
-        )
-
-        def _files_changed_in_last_fix(current_manifest, prev_manifest):
-            """Return list of files added, modified, or deleted between two artifact manifests."""
-            changed = []
-            for path, checksum in current_manifest.items():
-                if prev_manifest.get(path) != checksum:
-                    changed.append(path)
-            for path in prev_manifest:
-                if path not in current_manifest:
-                    changed.append(path)
-            return changed
-
-        def _load_iteration_manifest(iter_num):
-            """Load artifact manifest for a given iteration number, return {} on miss."""
-            manifest_path = self.artifacts.build_dir / f'iteration_{iter_num:02d}_artifacts' / 'artifact_manifest.json'
-            if manifest_path.exists():
-                try:
-                    import json as _json
-                    return _json.loads(manifest_path.read_text())
-                except Exception:
-                    pass
-            return {}
 
         # Gate telemetry (O): explicit execution trace for QA/STATIC/CONSISTENCY
         gate_trace = []
@@ -7014,108 +6841,15 @@ End with: SHARPEN_COMPLETE"""
                     print_success("  [STATIC] PASS — no static defects")
                     _record_gate('STATIC', 'PASS', 'no static defects', iteration)
 
-                # Update manifest snapshot for gate locking
-                _prev_artifact_manifest = _load_iteration_manifest(iteration - 1) if iteration > 1 else {}
-                _cur_artifact_manifest  = _load_iteration_manifest(iteration)
-
-                # Determine repair vs acceptance mode for this iteration.
-                # Acceptance mode triggers when iteration reaches the threshold OR when
-                # CONSISTENCY + FEATURE_QA are both locked (no HIGH defects remain).
-                _early_acceptance = (
-                    gate_locks['CONSISTENCY'] and gate_locks['FEATURE_QA']
-                )
-                build_mode = 'acceptance' if (iteration >= acceptance_threshold or _early_acceptance) else 'repair'
-                if _early_acceptance and build_mode == 'acceptance' and iteration < acceptance_threshold:
-                    print_info(f"  [MODE] Early acceptance mode triggered — all structural gates locked")
-                _record_gate('MODE', build_mode.upper(), f'iter={iteration} threshold={acceptance_threshold}', iteration)
-
                 # ================================================
-                # STEP 2.5: GATE 1.5 INTEGRATION_FAST (DETERMINISTIC)
-                # ================================================
-                print_info("")
-                print_info("═══════════════════════════════════════════════════════════")
-                print_info("GATE 1.5: INTEGRATION_FAST — Structural pre-check (checks 1,2,4,6,7)")
-                print_info("═══════════════════════════════════════════════════════════")
-                _record_gate('INTEGRATION_FAST', 'START', 'running fast integration checks', iteration)
-                integration_fast_issues = self._run_integration_fast_gate(iteration)
-                if integration_fast_issues:
-                    _record_gate('INTEGRATION_FAST', 'FAIL',
-                                 f'{len(integration_fast_issues)} issue(s) — skipping AI gates', iteration)
-                    print_warning(f"  [INTEGRATION_FAST] FAILED — skipping AI gates this iteration, routing to structural fix")
-                    # Write issues to a temp file and load as defects via integration fix path
-                    import tempfile as _tf, json as _jf
-                    _fast_issues_file = self.artifacts.build_dir / f'iteration_{iteration:02d}_integration_fast_issues.json'
-                    _fast_output = {
-                        'total_issues': len(integration_fast_issues),
-                        'high_severity': sum(1 for i in integration_fast_issues if i.get('severity') == 'HIGH'),
-                        'medium_severity': sum(1 for i in integration_fast_issues if i.get('severity') == 'MEDIUM'),
-                        'issues': integration_fast_issues,
-                        'fix_target_files': sorted({
-                            i['file'] for i in integration_fast_issues
-                            if i.get('file', '').startswith('business/')
-                        }),
-                        'verdict': 'INTEGRATION_REJECTED',
-                    }
-                    import json as _json_int
-                    _fast_issues_file.write_text(_json_int.dumps(_fast_output, indent=2))
-                    # Convert integration issues to harness static defect format (same as --integration-issues warm-start)
-                    _fast_harness_defects = []
-                    for _i, _d in enumerate(integration_fast_issues):
-                        _fast_harness_defects.append({
-                            'id':       _d.get('id', f'FAST-INT-{_i+1}'),
-                            'severity': _d.get('severity', 'HIGH'),
-                            'file':     _d.get('file', ''),
-                            'issue':    _d.get('issue', _d.get('evidence', '')),
-                            'fix':      _d.get('fix', ''),
-                            'related_files': [f for f in _d.get('files', []) if f != _d.get('file', '')],
-                        })
-                    previous_defects     = self._format_static_defects_for_claude(_fast_harness_defects)
-                    defect_source        = 'integration'
-                    _raw_pending_defects = _fast_harness_defects
-                    iteration += 1
-                    if iteration > self.max_qa_iterations:
-                        print_error(f"Max iterations ({self.max_qa_iterations}) reached during INTEGRATION_FAST — halting")
-                        self._print_cost_summary(
-                            iteration - 1, total_calls, total_cache_writes, total_cache_hits,
-                            total_cache_write_tokens, total_cache_read_tokens,
-                            total_input_tokens, total_output_tokens,
-                            total_gpt_calls, total_gpt_input_tokens, total_gpt_output_tokens,
-                            run_end_reason='MAX_ITERATIONS'
-                        )
-                        _flush_gate_trace()
-                        return False, "MAX_ITERATIONS_EXCEEDED"
-                    print_info(f"Starting iteration {iteration} with structural fix...")
-                    continue
-                print_success("  [INTEGRATION_FAST] PASS — no structural issues found")
-                _record_gate('INTEGRATION_FAST', 'PASS', 'no structural issues', iteration)
-
-                # ================================================
-                # STEP 3: GATE 3 AI CONSISTENCY (LOCKABLE)
+                # STEP 3: GATE 3 AI CONSISTENCY (MANDATORY)
                 # ================================================
                 print_info("")
                 print_info("═══════════════════════════════════════════════════════════")
                 print_info("GATE 3: AI CONSISTENCY CHECK — Cross-file analysis")
                 print_info("═══════════════════════════════════════════════════════════")
-
-                _run_consistency = True
-                if gate_locks['CONSISTENCY'] and iteration > 1:
-                    _changed = _files_changed_in_last_fix(_cur_artifact_manifest, _prev_artifact_manifest)
-                    _relevant = any(
-                        'models/' in f or 'services/' in f or 'routes/' in f or 'schemas/' in f
-                        for f in _changed
-                    )
-                    if _relevant:
-                        gate_locks['CONSISTENCY'] = False
-                        print_info("  [CONSISTENCY] UNLOCKED — relevant files changed, re-running")
-                        _record_gate('CONSISTENCY', 'UNLOCK', 'relevant files changed', iteration)
-                    else:
-                        print_info("  [CONSISTENCY] LOCKED — skipped, no relevant files changed")
-                        _record_gate('CONSISTENCY', 'LOCKED', 'no relevant files changed', iteration)
-                        _run_consistency = False
-
-                if _run_consistency:
-                    _record_gate('CONSISTENCY', 'START', 'running AI consistency check', iteration)
-                consistency_issues = self._run_ai_consistency_check(iteration, governance_section) if _run_consistency else []
+                _record_gate('CONSISTENCY', 'START', 'running AI consistency check', iteration)
+                consistency_issues = self._run_ai_consistency_check(iteration, governance_section)
                 if consistency_issues:
                     consistency_all = consistency_issues
                     consistency_issues = self._prioritize_and_cap_defects(consistency_all)
@@ -7210,44 +6944,22 @@ End with: SHARPEN_COMPLETE"""
                     _consistency_consecutive_iters = 0
 
                 if not consistency_issues:
-                    if _run_consistency:
-                        print_success("  [CONSISTENCY] PASS — no cross-file consistency issues")
-                        _record_gate('CONSISTENCY', 'PASS', 'no consistency issues', iteration)
-                    gate_locks['CONSISTENCY'] = True
+                    print_success("  [CONSISTENCY] PASS — no cross-file consistency issues")
+                    _record_gate('CONSISTENCY', 'PASS', 'no consistency issues', iteration)
 
                 # ================================================
-                # STEP 4: GATE 4 QUALITY (LOCKABLE)
+                # STEP 4: GATE 4 QUALITY (MANDATORY)
                 # ================================================
                 print_info("")
                 print_info("═══════════════════════════════════════════════════════════")
                 print_info("GATE 4: QUALITY GATE — Completeness/Quality/Enhanceability/Deployability")
                 print_info("═══════════════════════════════════════════════════════════")
-
-                _run_quality = True
-                if build_mode == 'repair':
-                    print_info(f"  [QUALITY] SKIPPED — repair mode, iteration {iteration} of {self.max_qa_iterations}")
-                    _record_gate('QUALITY', 'SKIPPED', f'repair mode iter={iteration}', iteration)
-                    _run_quality = False
-                elif gate_locks['QUALITY'] and iteration > 1:
-                    _changed = _files_changed_in_last_fix(_cur_artifact_manifest, _prev_artifact_manifest)
-                    _relevant = any('business/' in f for f in _changed)
-                    if _relevant:
-                        gate_locks['QUALITY'] = False
-                        print_info("  [QUALITY] UNLOCKED — business files changed, re-running")
-                        _record_gate('QUALITY', 'UNLOCK', 'business files changed', iteration)
-                    else:
-                        print_info("  [QUALITY] LOCKED — skipped, no business files changed")
-                        _record_gate('QUALITY', 'LOCKED', 'no business files changed', iteration)
-                        _run_quality = False
-
-                if _run_quality:
-                    _record_gate('QUALITY', 'START', 'running acceptance-mode quality gate', iteration)
-                quality_issues, quality_usage = self._run_quality_gate(iteration) if _run_quality else ([], {})
-                # account for extra ChatGPT call in cost summary (only when gate actually ran)
-                if _run_quality:
-                    total_gpt_calls += 1
-                    total_gpt_input_tokens += int(quality_usage.get('input_tokens', 0) or 0)
-                    total_gpt_output_tokens += int(quality_usage.get('output_tokens', 0) or 0)
+                _record_gate('QUALITY', 'START', 'running mandatory quality gate', iteration)
+                quality_issues, quality_usage = self._run_quality_gate(iteration)
+                # account for extra ChatGPT call in cost summary
+                total_gpt_calls += 1
+                total_gpt_input_tokens += int(quality_usage.get('input_tokens', 0) or 0)
+                total_gpt_output_tokens += int(quality_usage.get('output_tokens', 0) or 0)
                 if quality_issues:
                     quality_all = quality_issues
                     quality_issues = self._prioritize_and_cap_defects(quality_all)
@@ -7278,155 +6990,131 @@ End with: SHARPEN_COMPLETE"""
                         return False, "MAX_ITERATIONS_EXCEEDED"
                     print_info(f"Starting iteration {iteration} with quality-gate fixes...")
                     continue
-                if _run_quality:
-                    print_success("  [QUALITY] PASS — all 4 dimensions acceptable")
-                    _record_gate('QUALITY', 'PASS', 'all dimensions pass', iteration)
-                    if build_mode == 'acceptance':
-                        _quality_ran_in_acceptance_mode = True
-                gate_locks['QUALITY'] = True
+                print_success("  [QUALITY] PASS — all 4 dimensions acceptable")
+                _record_gate('QUALITY', 'PASS', 'all dimensions pass', iteration)
 
                 # ================================================
-                # STEP 5: GATE 5 FEATURE QA (ChatGPT, LOCKABLE)
+                # STEP 5: GATE 1 FEATURE QA (ChatGPT)
                 # ================================================
 
-                _run_feature_qa = True
-                if gate_locks['FEATURE_QA'] and iteration > 1:
-                    _changed = _files_changed_in_last_fix(_cur_artifact_manifest, _prev_artifact_manifest)
-                    _relevant = any('business/' in f for f in _changed)
-                    if _relevant:
-                        gate_locks['FEATURE_QA'] = False
-                        print_info("  [FEATURE_QA] UNLOCKED — business files changed, re-running")
-                        _record_gate('FEATURE_QA', 'UNLOCK', 'business files changed', iteration)
-                    else:
-                        print_info("  [FEATURE_QA] LOCKED — skipped, no business files changed")
-                        _record_gate('FEATURE_QA', 'LOCKED', 'no business files changed', iteration)
-                        _run_feature_qa = False
+                # On iteration 2+, optionally wait for the OpenAI TPM window to reset.
+                # Use --qa-wait <seconds> if hitting 429s on multi-iteration runs.
+                _qa_wait = int(getattr(self.cli_args, 'qa_wait', 0) or 0)
+                if iteration > 1 and _qa_wait > 0:
+                    print_info(f"Waiting {_qa_wait}s for OpenAI TPM window to reset before QA call...")
+                    time.sleep(_qa_wait)
 
-                if not _run_feature_qa:
-                    # Treat locked FEATURE_QA as ACCEPTED — gates already passed and no files changed
-                    print_success("  [FEATURE_QA] LOCKED — treating as ACCEPTED (no files changed since last pass)")
-                    qa_report = "QA STATUS: ACCEPTED - Ready for deployment (gate locked — no changes)"
+                print_info("Calling ChatGPT for QA...")
+                _record_gate('FEATURE_QA', 'START', 'calling ChatGPT', iteration)
+
+                # For defect iterations in boilerplate mode, QA receives the full merged
+                # artifact set (not Claude's partial defect-only output) so it evaluates
+                # the complete picture rather than just the 1-3 files Claude patched.
+                if self.use_boilerplate and iteration > 1 and previous_defects:
+                    qa_build_output = self.artifacts.build_synthetic_qa_output(iteration)
                 else:
-                    # On iteration 2+, optionally wait for the OpenAI TPM window to reset.
-                    # Use --qa-wait <seconds> if hitting 429s on multi-iteration runs.
-                    _qa_wait = int(getattr(self.cli_args, 'qa_wait', 0) or 0)
-                    if iteration > 1 and _qa_wait > 0:
-                        print_info(f"Waiting {_qa_wait}s for OpenAI TPM window to reset before QA call...")
-                        time.sleep(_qa_wait)
+                    qa_build_output = build_output
 
-                    print_info("Calling ChatGPT for QA...")
-                    _record_gate('FEATURE_QA', 'START', 'calling ChatGPT', iteration)
+                # Prepend any EXPLAINED resolutions from Claude's patch output so QA
+                # can evaluate them before assessing the artifact set (per governance:
+                # fo_build_qa_defect_routing_rules.json > remediate_or_explain).
+                if iteration > 1:
+                    defect_resolutions = self._extract_defect_resolutions(build_output)
+                    if defect_resolutions:
+                        qa_build_output = (
+                            "## CLAUDE DEFECT RESOLUTIONS\n\n"
+                            "Claude resolved some defects via EXPLAINED (governance citation) "
+                            "rather than code changes. Evaluate each before assessing artifacts.\n\n"
+                            + defect_resolutions
+                            + "\n\n---\n\n"
+                            + qa_build_output
+                        )
 
-                    # For defect iterations in boilerplate mode, QA receives the full merged
-                    # artifact set (not Claude's partial defect-only output) so it evaluates
-                    # the complete picture rather than just the 1-3 files Claude patched.
-                    if self.use_boilerplate and iteration > 1 and previous_defects:
-                        qa_build_output = self.artifacts.build_synthetic_qa_output(iteration)
-                    else:
-                        qa_build_output = build_output
+                qa_prompt = PromptTemplates.qa_prompt(
+                    qa_build_output,
+                    self.intake_data,
+                    self.block,
+                    self.effective_tech_stack,
+                    self.qa_override,
+                    prohibitions_block=prohibitions_block,
+                    defect_history_block=self._build_qa_defect_history(recurring_tracker),
+                    resolved_defects_block=self._build_resolved_defects_block(resolved_tracker)
+                )
 
-                    # Prepend any EXPLAINED resolutions from Claude's patch output so QA
-                    # can evaluate them before assessing the artifact set (per governance:
-                    # fo_build_qa_defect_routing_rules.json > remediate_or_explain).
-                    if iteration > 1:
-                        defect_resolutions = self._extract_defect_resolutions(build_output)
-                        if defect_resolutions:
-                            qa_build_output = (
-                                "## CLAUDE DEFECT RESOLUTIONS\n\n"
-                                "Claude resolved some defects via EXPLAINED (governance citation) "
-                                "rather than code changes. Evaluate each before assessing artifacts.\n\n"
-                                + defect_resolutions
-                                + "\n\n---\n\n"
-                                + qa_build_output
-                            )
+                self.artifacts.save_log(f'iteration_{iteration:02d}_qa_prompt', qa_prompt)
 
-                    qa_prompt = PromptTemplates.qa_prompt(
-                        qa_build_output,
-                        self.intake_data,
-                        self.block,
-                        self.effective_tech_stack,
-                        self.qa_override,
-                        prohibitions_block=prohibitions_block,
-                        defect_history_block=self._build_qa_defect_history(recurring_tracker),
-                        resolved_defects_block=self._build_resolved_defects_block(resolved_tracker)
-                    )
+                start_time = time.time()
+                try:
+                    qa_response = self.chatgpt.call(qa_prompt)
+                    qa_report   = qa_response['choices'][0]['message']['content']
+                    qa_time     = time.time() - start_time
+                    print_success(f"QA completed in {qa_time:.1f}s")
 
-                    self.artifacts.save_log(f'iteration_{iteration:02d}_qa_prompt', qa_prompt)
+                    # Log ChatGPT usage and accumulate stats
+                    gpt_usage = self._log_chatgpt_usage(qa_response, iteration)
+                    total_gpt_calls += 1
+                    total_gpt_input_tokens += gpt_usage['input_tokens']
+                    total_gpt_output_tokens += gpt_usage['output_tokens']
 
-                    start_time = time.time()
-                    try:
-                        # Repair mode: pass focused rules via system role (not inline — preserves prompt hierarchy)
-                        _qa_system_msg = REPAIR_MODE_RULES if build_mode == 'repair' else None
-                        qa_response = self.chatgpt.call(qa_prompt, system_message=_qa_system_msg)
-                        qa_report   = qa_response['choices'][0]['message']['content']
-                        qa_time     = time.time() - start_time
-                        print_success(f"QA completed in {qa_time:.1f}s")
+                    # Filter fabricated / out-of-scope defects before acting on report
+                    raw_qa_report = qa_report
+                    qa_report = self._filter_hallucinated_defects(qa_report, qa_build_output)
+                    if qa_report != raw_qa_report:
+                        self.artifacts.save_log(
+                            f'iteration_{iteration:02d}_qa_report_raw', raw_qa_report
+                        )
 
-                        # Log ChatGPT usage and accumulate stats
-                        gpt_usage = self._log_chatgpt_usage(qa_response, iteration)
-                        total_gpt_calls += 1
-                        total_gpt_input_tokens += gpt_usage['input_tokens']
-                        total_gpt_output_tokens += gpt_usage['output_tokens']
-
-                        # Filter fabricated / out-of-scope defects before acting on report
-                        raw_qa_report = qa_report
-                        qa_report = self._filter_hallucinated_defects(qa_report, qa_build_output)
-                        if qa_report != raw_qa_report:
+                    # Triage and sharpen surviving defects before triggering a build.
+                    # Classifies each defect as SURGICAL (line-level fix) / SYSTEMIC (architectural
+                    # rethink) / INVALID (scope creep). Sharpens vague Fix fields into exact
+                    # function+line instructions so Claude doesn't have to guess. Stores strategy
+                    # in _triage_strategy for prompt routing on the next iteration.
+                    if "QA STATUS: REJECTED" in qa_report:
+                        _triage_file_contents = self._read_target_file_contents(
+                            iteration,
+                            [d['location'] for d in self._extract_defects_for_tracking(qa_report)]
+                        )
+                        qa_report, _triage_strategy, _triage_contested = self._triage_and_sharpen_defects(
+                            qa_report, iteration, recurring_tracker, _triage_file_contents
+                        )
+                        if _triage_contested:
                             self.artifacts.save_log(
-                                f'iteration_{iteration:02d}_qa_report_raw', raw_qa_report
+                                f'iteration_{iteration:02d}_triage_contested',
+                                '\n'.join(
+                                    f"DEFECT-{c['defect']} @ {c['location']}: {c['reason']}"
+                                    for c in _triage_contested
+                                )
+                            )
+                        if _triage_strategy == 'accepted':
+                            # All remaining defects were invalid — flip verdict without another build
+                            qa_report = qa_report.replace(
+                                'QA STATUS: REJECTED', 'QA STATUS: ACCEPTED [TRIAGE-CLEARED]'
+                            )
+                            print_success(
+                                f"  [TRIAGE] Verdict flipped to ACCEPTED — all defects invalid/out-of-scope"
                             )
 
-                        # Triage and sharpen surviving defects before triggering a build.
-                        # Classifies each defect as SURGICAL (line-level fix) / SYSTEMIC (architectural
-                        # rethink) / INVALID (scope creep). Sharpens vague Fix fields into exact
-                        # function+line instructions so Claude doesn't have to guess. Stores strategy
-                        # in _triage_strategy for prompt routing on the next iteration.
-                        if "QA STATUS: REJECTED" in qa_report:
-                            _triage_file_contents = self._read_target_file_contents(
-                                iteration,
-                                [d['location'] for d in self._extract_defects_for_tracking(qa_report)]
+                    # Confirm pending resolutions: any FIXED defect absent from this QA → resolved
+                    if pending_resolution:
+                        newly_confirmed, pending_resolution = self._confirm_resolutions(
+                            pending_resolution, qa_report, resolved_tracker, iteration
+                        )
+                        for loc, cls in newly_confirmed:
+                            print_success(
+                                f"  [RESOLVED] {loc} ({cls}) confirmed fixed — added to resolved list"
                             )
-                            qa_report, _triage_strategy, _triage_contested = self._triage_and_sharpen_defects(
-                                qa_report, iteration, recurring_tracker, _triage_file_contents
-                            )
-                            if _triage_contested:
-                                self.artifacts.save_log(
-                                    f'iteration_{iteration:02d}_triage_contested',
-                                    '\n'.join(
-                                        f"DEFECT-{c['defect']} @ {c['location']}: {c['reason']}"
-                                        for c in _triage_contested
-                                    )
-                                )
-                            if _triage_strategy == 'accepted':
-                                # All remaining defects were invalid — flip verdict without another build
-                                qa_report = qa_report.replace(
-                                    'QA STATUS: REJECTED', 'QA STATUS: ACCEPTED [TRIAGE-CLEARED]'
-                                )
-                                print_success(
-                                    f"  [TRIAGE] Verdict flipped to ACCEPTED — all defects invalid/out-of-scope"
-                                )
-
-                        # Confirm pending resolutions: any FIXED defect absent from this QA → resolved
                         if pending_resolution:
-                            newly_confirmed, pending_resolution = self._confirm_resolutions(
-                                pending_resolution, qa_report, resolved_tracker, iteration
+                            reappeared = [loc for loc, cls, _ in pending_resolution]
+                            print_warning(
+                                f"  [PING-PONG] {len(pending_resolution)} defect(s) Claude claimed FIXED "
+                                f"but QA re-flagged: {', '.join(reappeared)}"
                             )
-                            for loc, cls in newly_confirmed:
-                                print_success(
-                                    f"  [RESOLVED] {loc} ({cls}) confirmed fixed — added to resolved list"
-                                )
-                            if pending_resolution:
-                                reappeared = [loc for loc, cls, _ in pending_resolution]
-                                print_warning(
-                                    f"  [PING-PONG] {len(pending_resolution)} defect(s) Claude claimed FIXED "
-                                    f"but QA re-flagged: {', '.join(reappeared)}"
-                                )
 
-                        self.artifacts.save_qa_report(iteration, qa_report)
+                    self.artifacts.save_qa_report(iteration, qa_report)
 
-                    except Exception as e:
-                        print_error(f"QA failed: {e}")
-                        return False, str(e)
+                except Exception as e:
+                    print_error(f"QA failed: {e}")
+                    return False, str(e)
 
                 # ================================================
                 # STEP 3: CHECK QA VERDICT
@@ -7436,39 +7124,6 @@ End with: SHARPEN_COMPLETE"""
                     _record_gate('FEATURE_QA', 'PASS', 'QA accepted', iteration)
                     print_success(f"GATE 1 PASSED: Feature QA ACCEPTED on iteration {iteration}")
                     _qa_accepted_at_iter = iteration
-                    gate_locks['FEATURE_QA'] = True
-
-                    # ── Acceptance gate check: QUALITY must have run in acceptance mode ──────
-                    if not _quality_ran_in_acceptance_mode:
-                        print_warning("  [ACCEPTANCE] QUALITY gate has not run in acceptance mode yet — forcing acceptance mode now")
-                        _record_gate('QUALITY', 'FORCE_RUN', 'required before acceptance', iteration)
-                        quality_issues_final, quality_usage_final = self._run_quality_gate(iteration)
-                        total_gpt_calls += 1
-                        total_gpt_input_tokens += int(quality_usage_final.get('input_tokens', 0) or 0)
-                        total_gpt_output_tokens += int(quality_usage_final.get('output_tokens', 0) or 0)
-                        if quality_issues_final:
-                            quality_issues_final = self._prioritize_and_cap_defects(quality_issues_final)
-                            print_warning(f"  [QUALITY] Forced run found {len(quality_issues_final)} issue(s) — cannot accept")
-                            _record_gate('QUALITY', 'FAIL', f'{len(quality_issues_final)} issue(s) on forced acceptance check', iteration)
-                            defect_source        = 'quality'
-                            _raw_pending_defects = quality_issues_final
-                            previous_defects     = self._format_consistency_defects_for_claude(quality_issues_final)
-                            iteration += 1
-                            if iteration > self.max_qa_iterations:
-                                self._print_cost_summary(
-                                    iteration - 1, total_calls, total_cache_writes, total_cache_hits,
-                                    total_cache_write_tokens, total_cache_read_tokens,
-                                    total_input_tokens, total_output_tokens,
-                                    total_gpt_calls, total_gpt_input_tokens, total_gpt_output_tokens,
-                                    run_end_reason='MAX_ITERATIONS'
-                                )
-                                _flush_gate_trace()
-                                return False, "MAX_ITERATIONS_EXCEEDED"
-                            continue
-                        else:
-                            print_success("  [QUALITY] Forced acceptance-mode run: PASS")
-                            _record_gate('QUALITY', 'PASS', 'forced acceptance-mode run passed', iteration)
-                            _quality_ran_in_acceptance_mode = True
 
                     # ── All gates passed ──────────────────────────────────────────
                     print_success("")

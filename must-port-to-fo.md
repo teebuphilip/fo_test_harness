@@ -1,5 +1,38 @@
 # Must Port to FO
 
+## Harness Loop Optimisations (2026-03-15 session 4)
+
+82. perf: gate locking — CONSISTENCY/QUALITY/FEATURE_QA skip when no relevant files changed
+- `gate_locks` dict persists across iterations; `_files_changed_in_last_fix()` compares artifact manifests
+- CONSISTENCY unlocks on models/services/routes/schemas change; QUALITY + FEATURE_QA unlock on any business/ change
+- When FEATURE_QA locked: ChatGPT call skipped entirely, qa_report set to ACCEPTED
+- Files: `fo_test_harness.py`
+⬜ TODO for FO codebase
+
+83. perf: repair vs acceptance mode split — QUALITY gate skipped during repair iterations
+- `acceptance_threshold = max_iterations - 2`; `build_mode = 'repair' | 'acceptance'`
+- QUALITY skipped in repair mode (logs `QUALITY GATE SKIPPED — repair mode`)
+- FEATURE_QA uses REPAIR_MODE_RULES via ChatGPT system message in repair mode (not inline prepend)
+- Acceptance check enforced: QUALITY must have run in acceptance mode before build can be accepted
+- `ChatGPTClient.call()` gained optional `system_message` param
+- Files: `fo_test_harness.py`
+⬜ TODO for FO codebase
+
+84. perf: artifact filtering per gate — send only relevant files to each AI gate
+- `GATE_FILE_FILTERS` / `GATE_FILE_EXCLUDES` class constants + `filter_artifacts_for_gate()` static method
+- CONSISTENCY: models/services/routes/schemas only (50-70% token reduction when frontend-heavy)
+- QUALITY: all business/ minus README-INTEGRATION.md, .env.example, .gitignore
+- Files: `fo_test_harness.py`
+⬜ TODO for FO codebase
+
+85. perf: INTEGRATION_FAST gate — deterministic structural pre-check before AI gates
+- `run_fast_checks()` added to `integration_check.py` (checks 1,2,4,6,7); `--fast` CLI flag added
+- `_run_integration_fast_gate()` method on FOHarness; gate inserted between STATIC and CONSISTENCY
+- Failure: skips AI gates, routes to integration structural fix; saves issues JSON to build dir
+- Post-build full 15-check run unchanged
+- Files: `fo_test_harness.py`, `integration_check.py`
+⬜ TODO for FO codebase (integration_check.py --fast flag is harness-only; gate logic is FO-relevant)
+
 ## Feature Spec Pipeline (2026-03-15 session 3)
 
 79. feat: generate_feature_spec.py — pre-build feature definition tool
