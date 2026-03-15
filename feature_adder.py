@@ -105,6 +105,40 @@ def extract_existing_files(zip_path: str) -> list:
     return sorted(existing)
 
 
+def extract_existing_files_from_repo(repo_path: str) -> list:
+    """
+    Walks a local repo directory and returns all business/** file paths
+    (no .pyc, no __pycache__). Works whether the repo has a business/
+    subdirectory or the files are at the root.
+    """
+    import os as _os
+    base = _os.path.join(repo_path, 'business')
+    if not _os.path.isdir(base):
+        # Fallback: repo root may itself be the business/ layer
+        base = repo_path
+        prefix = ''
+    else:
+        prefix = 'business/'
+
+    existing = []
+    for dirpath, dirnames, filenames in _os.walk(base):
+        # Skip hidden dirs and __pycache__
+        dirnames[:] = [d for d in dirnames
+                       if d != '__pycache__' and not d.startswith('.')]
+        for fname in filenames:
+            if fname.endswith('.pyc'):
+                continue
+            full = _os.path.join(dirpath, fname)
+            rel = _os.path.relpath(full, repo_path)
+            # Normalise to forward slashes
+            rel = rel.replace('\\', '/')
+            if rel.startswith('business/') or prefix == '':
+                path = rel if prefix else f'business/{rel}'
+                existing.append(path)
+
+    return sorted(existing)
+
+
 def match_intake_feature(feature_str: str, intake_features: list) -> Optional[str]:
     """
     Try to match feature_str against the intake feature list.
@@ -228,12 +262,16 @@ Examples:
         """
     )
     parser.add_argument('--intake',   required=True, help='Original full intake JSON path')
-    parser.add_argument('--manifest', required=True, help='Prior run ZIP (any phase or feature build)')
     parser.add_argument('--feature',  required=True, help='Feature name or description to add')
     parser.add_argument('--output-dir', default=None,
                         help='Output directory (default: same dir as intake)')
     parser.add_argument('--output', default=None,
                         help='Full output file path (overrides --output-dir + auto-name)')
+
+    src = parser.add_mutually_exclusive_group(required=True)
+    src.add_argument('--manifest', help='Prior run ZIP (any phase or feature build)')
+    src.add_argument('--repo',     help='Local path to existing deployed repo (alternative to --manifest)')
+
     args = parser.parse_args()
 
     intake_path = Path(args.intake)
@@ -241,28 +279,37 @@ Examples:
         print(f"ERROR: Intake not found: {intake_path}")
         sys.exit(1)
 
-    # Resolve glob in manifest path (user may pass a *.zip pattern)
-    manifest_path = args.manifest
-    if '*' in manifest_path:
-        import glob as _glob
-        matches = sorted(_glob.glob(manifest_path))
-        if not matches:
-            print(f"ERROR: No ZIP found matching: {manifest_path}")
-            sys.exit(1)
-        manifest_path = matches[-1]  # most recent
-        print(f"  Manifest: {manifest_path}")
-
-    if not os.path.exists(manifest_path):
-        print(f"ERROR: Manifest ZIP not found: {manifest_path}")
-        sys.exit(1)
-
     # Load intake
     with open(intake_path) as f:
         intake = json.load(f)
 
-    # Extract existing files from prior ZIP
-    print(f"\nReading existing files from: {manifest_path}")
-    existing_files = extract_existing_files(manifest_path)
+    # Extract existing files — from ZIP or from repo directory
+    if args.repo:
+        repo_path = os.path.abspath(args.repo)
+        if not os.path.isdir(repo_path):
+            print(f"ERROR: Repo directory not found: {repo_path}")
+            sys.exit(1)
+        print(f"\nReading existing files from repo: {repo_path}")
+        existing_files = extract_existing_files_from_repo(repo_path)
+    else:
+        # Resolve glob in manifest path (user may pass a *.zip pattern)
+        manifest_path = args.manifest
+        if '*' in manifest_path:
+            import glob as _glob
+            matches = sorted(_glob.glob(manifest_path))
+            if not matches:
+                print(f"ERROR: No ZIP found matching: {manifest_path}")
+                sys.exit(1)
+            manifest_path = matches[-1]  # most recent
+            print(f"  Manifest: {manifest_path}")
+
+        if not os.path.exists(manifest_path):
+            print(f"ERROR: Manifest ZIP not found: {manifest_path}")
+            sys.exit(1)
+
+        print(f"\nReading existing files from: {manifest_path}")
+        existing_files = extract_existing_files(manifest_path)
+
     print(f"  {len(existing_files)} existing business/ file(s) found")
 
     # Get all intake features
