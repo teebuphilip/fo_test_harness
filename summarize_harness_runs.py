@@ -22,26 +22,60 @@ CLAUDE_API = "https://api.anthropic.com/v1/messages"
 DEFAULT_CLAUDE_MODEL = "claude-sonnet-4-20250514"
 
 
+# Maps startup_id prefix → clean product name.
+# Any startup_id starting with the key is grouped under that product.
+PRODUCT_PREFIXES = {
+    "ai_workforce_intelligence": "AI Workforce Intelligence",
+    "adversarial_ai_validator":  "Adversarial AI Validator",
+}
+
+# startup_ids to skip entirely (test runs, noise)
+SKIP_STARTUPS = {"startup"}
+
+
+def _product_name(startup_id: str) -> str:
+    """Return the canonical product name for a startup_id."""
+    for prefix, name in PRODUCT_PREFIXES.items():
+        if startup_id.startswith(prefix):
+            return name
+    # Clean up: replace underscores, title-case
+    return startup_id.replace("_", " ").title()
+
+
+def _is_feature_run(startup_id: str) -> bool:
+    """True if this startup_id is a feature/phase run rather than a top-level build."""
+    for prefix in PRODUCT_PREFIXES:
+        if startup_id.startswith(prefix) and startup_id != prefix:
+            return True
+    return False
+
+
 def summarize_runs(csv_path):
-    """Parse CSV and generate summary statistics by startup."""
-    
-    # Data structure: startup_name -> list of run records
-    runs_by_startup = defaultdict(list)
-    
+    """Parse CSV and generate summary statistics grouped by product."""
+
+    # product_name -> list of run records
+    runs_by_product = defaultdict(list)
+    # product_name -> set of distinct feature startup_ids
+    features_by_product = defaultdict(set)
+
     with open(csv_path, 'r') as f:
         reader = csv.DictReader(f)
         for row in reader:
             startup = row['startup']
-            runs_by_startup[startup].append(row)
-    
-    # Calculate stats for each startup
+            if startup in SKIP_STARTUPS:
+                continue
+            product = _product_name(startup)
+            runs_by_product[product].append(row)
+            if _is_feature_run(startup):
+                features_by_product[product].add(startup)
+
     summaries = []
-    
-    for startup, runs in runs_by_startup.items():
+
+    for product, runs in runs_by_product.items():
         total_runs = len(runs)
         qa_accepted = sum(1 for r in runs if r['run_end_reason'] == 'QA_ACCEPTED')
-        
-        # Calculate average cost for QA_ACCEPTED runs only
+
+        # Average cost for QA_ACCEPTED runs only
         accepted_costs = [
             float(r['total_cost'])
             for r in runs
@@ -49,58 +83,61 @@ def summarize_runs(csv_path):
         ]
         avg_cost = sum(accepted_costs) / len(accepted_costs) if accepted_costs else 0
 
-        # Total spend across ALL runs for this startup
+        # Total spend across ALL runs
         total_cost = sum(float(r['total_cost']) for r in runs if r.get('total_cost'))
-        
-        # Find most common failure mode (excluding QA_ACCEPTED)
+
+        # Most common failure mode (excluding QA_ACCEPTED)
         failures = [r['run_end_reason'] for r in runs if r['run_end_reason'] != 'QA_ACCEPTED']
         failure_counts = defaultdict(int)
         for f in failures:
             failure_counts[f] += 1
-        
         main_failure = max(failure_counts.items(), key=lambda x: x[1])[0] if failure_counts else "None"
-        
-        # Look for expensive non-converging runs
+
+        # Call out expensive non-converging runs
         expensive_failures = [
             (r['run_end_reason'], r['iterations'], r['total_cost'])
             for r in runs
             if r['run_end_reason'] == 'NON_CONVERGING' and float(r['total_cost']) > 3.0
         ]
-        
         failure_detail = main_failure
         if expensive_failures:
             reason, iters, cost = expensive_failures[0]
             failure_detail = f"{reason} ({iters} iters, ${cost})"
-        
+
+        feature_count = len(features_by_product[product])
+
         summaries.append({
-            'startup': startup,
-            'runs': total_runs,
-            'passes': qa_accepted,
-            'avg_cost': avg_cost,
-            'total_cost': total_cost,
-            'failure': failure_detail
+            'product':       product,
+            'features':      feature_count,
+            'runs':          total_runs,
+            'passes':        qa_accepted,
+            'avg_cost':      avg_cost,
+            'total_cost':    total_cost,
+            'failure':       failure_detail,
         })
-    
+
     return summaries
 
 
 def format_table(summaries):
     """Format summary data as markdown table."""
-    
-    # Build table
-    lines = []
-    lines.append("Product                      | Runs | Passes | Avg Cost | Total Cost | Main Failure Mode")
-    lines.append("-----------------------------|------|--------|----------|------------|-------------------")
+
+    COL = 32  # product name column width
+
+    header  = f"{'Product':<{COL}} | Feat | Runs | Passes | Avg Cost | Total Cost | Main Failure Mode"
+    divider = f"{'-'*COL}-|------|------|--------|----------|------------|-------------------"
+    lines   = [header, divider]
 
     for s in summaries:
-        name = s['startup'].replace('_', ' ').title()[:28]
-        runs = str(s['runs']).rjust(4)
-        passes = str(s['passes']).rjust(6)
-        avg = f"${s['avg_cost']:.2f}".rjust(8)
-        total = f"${s['total_cost']:.2f}".rjust(10)
-        failure = s['failure'][:40]
+        name    = s['product'][:COL]
+        feat    = str(s['features']).rjust(4)
+        runs    = str(s['runs']).rjust(4)
+        passes  = str(s['passes']).rjust(6)
+        avg     = f"${s['avg_cost']:.2f}".rjust(8)
+        total   = f"${s['total_cost']:.2f}".rjust(10)
+        failure = s['failure'][:45]
 
-        lines.append(f"{name:<28} | {runs} | {passes} | {avg} | {total} | {failure}")
+        lines.append(f"{name:<{COL}} | {feat} | {runs} | {passes} | {avg} | {total} | {failure}")
 
     return "\n".join(lines)
 
