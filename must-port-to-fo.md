@@ -1,5 +1,14 @@
 # Must Port to FO
 
+## add_feature.sh (2026-03-15)
+
+75. feat: add_feature.sh — post-deploy single-feature addition pipeline
+- Takes existing final ZIP + feature name → generates scoped intake → builds → integration check → new final ZIP
+- Does NOT use phase_planner or the multi-feature loop (those are for greenfield)
+- Auto-resume at each stage; MEDIUM-only integration issues skip fix pass
+- Files: `add_feature.sh` (new — harness-only tooling, not applicable to FO codebase itself)
+✅ DONE here — N/A for FO codebase port (tooling, not app code)
+
 ## QA + Integration Check Improvements (additions 2026-03-14 session 2)
 
 73. feat: integration_check.py — Checks 6-11 (auth contract, async misuse, gather sync args, npm integrity, bare except, unbounded polling)

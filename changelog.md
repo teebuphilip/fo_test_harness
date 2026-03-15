@@ -1,5 +1,32 @@
 # Changelog
 
+## 2026-03-15
+
+### feat: add_feature.sh — post-deploy feature addition pipeline
+
+New script for adding features to an already-built, already-deployed codebase.
+Distinct from `run_integration_and_feature_build.sh` which is for greenfield builds.
+
+Flow:
+1. `feature_adder.py` generates scoped feature intake from `--existing-zip` as the manifest
+2. `fo_test_harness.py` builds the feature (with `--prior-run` if run dir exists)
+3. `integration_check.py` validates; fix loop (up to 2 passes) for HIGH issues only
+4. Merges existing ZIP + feature ZIP → new final ZIP (later ZIP wins on conflict)
+
+Auto-resume at each stage: if feature intake / feature ZIP / final ZIP already exist, skips that step.
+
+Files: `add_feature.sh` (new)
+
+Usage:
+```bash
+./add_feature.sh \
+  --intake intake/intake_runs/awi/awi.5.json \
+  --feature "Competitor benchmarking dashboard" \
+  --existing-zip fo_harness_runs/awi_downloadable_exec_report_FINAL_20260309.zip
+```
+
+---
+
 ## 2026-03-14 (session 2)
 
 ### fix: integration fix pass — 4 bugs fixed, adversarial_ai completes end-to-end
