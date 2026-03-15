@@ -6,7 +6,7 @@ End-to-end pipeline for testing the FounderOps BUILD → QA → DEPLOY workflow.
 
 - **Builder**: Claude (Anthropic) generates full-stack code + docs
 - **Validator**: ChatGPT (OpenAI) checks against intake spec
-- **Loop**: Defects feed back into Claude until clean or max iterations (default 5)
+- **Loop**: Defects feed back into Claude until clean or max iterations (default 20)
 
 ---
 
@@ -15,7 +15,7 @@ End-to-end pipeline for testing the FounderOps BUILD → QA → DEPLOY workflow.
 | Stage | Entry Point | Purpose |
 |-------|------------|---------|
 | 1. Intake | `intake/generate_intake.sh` | Founder answers → structured intake JSON |
-| 2. Build-QA | `fo_test_harness.py` | BUILD + iterative QA loop → output ZIP |
+| 2. Build-QA | `run_integration_and_feature_build.sh` | Phase-by-phase BUILD + QA + integration check |
 | 3. Deploy | `deploy/zip_to_repo.py` → `deploy/pipeline_deploy.py` | ZIP → GitHub → Railway/Vercel |
 
 ---
@@ -24,7 +24,12 @@ End-to-end pipeline for testing the FounderOps BUILD → QA → DEPLOY workflow.
 
 | File | Purpose |
 |------|---------|
-| `fo_test_harness.py` | Main orchestrator (~4000 lines); all BUILD-QA logic |
+| `run_integration_and_feature_build.sh` | **Main pipeline** — greenfield phase-by-phase build |
+| `add_feature.sh` | Add one feature to an existing built/deployed repo |
+| `fo_test_harness.py` | Core BUILD-QA orchestrator (~4000 lines) |
+| `integration_check.py` | 15-check deterministic post-build validator |
+| `phase_planner.py` | Splits intake into data layer + intelligence feature list |
+| `feature_adder.py` | Generates scoped feature intake from existing ZIP or repo |
 | `check_openai.py` | Pre-run API health check — Claude + OpenAI, shows TPM quota |
 | `check_boilerplate_fit.py` | Checks if intake suits boilerplate (YES/NO + file list) |
 | `aggregate_ai_costs.py` | Merges cost CSVs |
@@ -65,39 +70,14 @@ End-to-end pipeline for testing the FounderOps BUILD → QA → DEPLOY workflow.
 
 ### Prerequisites
 ```bash
+pip install anthropic openai requests
+
 export ANTHROPIC_API_KEY=sk-ant-xxxxx
 export OPENAI_API_KEY=sk-xxxxx
-# Governance ZIP must be unzipped
-unzip fobuilgov100.zip -d /tmp/fobuilgov100/
-```
 
-### Step 1: Generate Intake
-```bash
-cd intake
-./generate_intake.sh hero_text/twofaced_ai.json
-# Output: intake/intake_runs/twofaced_ai/twofaced_ai.json
+# Governance ZIP must be in the project root
+ls FOBUILFINALLOCKED*.zip   # should find one
 ```
-
-### Step 2: Run Build-QA Loop
-```bash
-python fo_test_harness.py \
-  --intake intake/intake_runs/twofaced_ai/twofaced_ai.json \
-  --startup-id twofaced_ai \
-  --block B \
-  --build-gov /tmp/fobuilgov100 \
-  --tech-stack lowcode
-```
-
-**Key CLI flags:**
-- `--block A|B` — Tier 1 or Tier 2 intake block
-- `--tech-stack lowcode` — Skip boilerplate; use Zapier/Shopify stack
-- `--deploy` — Run deploy pipeline after build
-- `--max-iterations N` — Override default 5-iteration cap
-- `--max-parts N` — Multipart output limit (default 10)
-- `--max-continuations N` — Continuation limit (default 9)
-- `--resume-run <dir>` — Resume a killed run from an existing run directory
-- `--resume-iteration N` — Which iteration to resume from (default 1)
-- `--resume-mode qa|fix` — `qa`: skip Claude BUILD, run fresh QA on existing artifacts; `fix`: load QA report as defects, run Claude fix at N+1. Defaults to `qa` when `--resume-run` is given.
 
 **Check APIs before running:**
 ```bash
@@ -105,10 +85,79 @@ python check_openai.py          # both Claude + OpenAI
 python check_openai.py --openai # shows TPM quota remaining
 ```
 
+### Step 1: Generate Intake
+```bash
+cd intake
+./generate_intake.sh hero_text/twofaced_ai.json
+# Output: intake/intake_runs/twofaced_ai/twofaced_ai.json
+cd ..
+```
+
+### Step 2: Run Build-QA Pipeline
+```bash
+./run_integration_and_feature_build.sh \
+  --intake intake/intake_runs/twofaced_ai/twofaced_ai.json \
+  --startup-id twofaced_ai
+```
+
+This script handles everything automatically:
+1. Runs `phase_planner.py` — splits intake into data layer + feature list
+2. Builds Phase 1 (data layer models, auth, core routes)
+3. For each intelligence feature: generates scoped intake → builds → integration check
+4. Fixes integration issues via harness resume (up to 2 fix passes per feature)
+5. Merges all ZIPs into a single final deliverable
+
+**Output:** `fo_harness_runs/twofaced_ai_BLOCK_B_full_<timestamp>.zip`
+
+**Auto-resume:** If interrupted, rerun the exact same command — the script detects which ZIPs already exist and picks up where it left off.
+
+### Running the Harness Directly
+
+For manual control or resume scenarios:
+
+```bash
+python fo_test_harness.py \
+  intake/intake_runs/twofaced_ai/twofaced_ai.json \
+  FOBUILFINALLOCKED100.zip \
+  --max-iterations 20
+```
+
+**Key CLI flags:**
+
+| Flag | Purpose |
+|------|---------|
+| `--block A\|B` | Tier 1 or Tier 2 intake block (default B) |
+| `--max-iterations N` | Iteration cap (default 20) |
+| `--no-polish` | Skip README / .env / tests (for intermediate phases) |
+| `--prior-run <dir>` | Seed QA prohibition tracker from a previous run |
+| `--resume-run <dir>` | Resume a killed run from existing run directory |
+| `--resume-iteration N` | Which iteration to resume from |
+| `--resume-mode qa\|fix\|consistency` | `qa`: fresh QA on existing artifacts; `fix`: load QA report as defects; `consistency`: re-run AI consistency check |
+| `--integration-issues <file>` | Targeted integration fix pass (routes to surgical patch prompt) |
+| `--deploy` | Run deploy pipeline after build acceptance |
+
+### Adding a Feature to an Existing Build
+
+```bash
+# From an existing ZIP
+./add_feature.sh \
+  --intake intake/intake_runs/twofaced_ai/twofaced_ai.json \
+  --feature "Some new feature" \
+  --existing-zip fo_harness_runs/twofaced_ai_FINAL.zip
+
+# From a live deployed repo (local path or GitHub URL)
+./add_feature.sh \
+  --intake intake/intake_runs/twofaced_ai/twofaced_ai.json \
+  --feature "Some new feature" \
+  --existing-repo ~/Documents/work/twofaced_ai
+```
+
+**Flow:** `feature_adder.py` → `fo_test_harness.py` → `integration_check.py` → merge → new final ZIP
+
 ### Step 3: Deploy
 ```bash
 # Extract ZIP → git repo → GitHub
-python deploy/zip_to_repo.py fo_harness_runs/twofaced_ai_BLOCK_B_*.zip
+python deploy/zip_to_repo.py fo_harness_runs/twofaced_ai_BLOCK_B_full_*.zip
 
 # Full deploy (Railway + Vercel)
 python deploy/pipeline_deploy.py --repo ~/Documents/work/twofaced_ai
@@ -126,7 +175,7 @@ python deploy/pipeline_prepare.py --repo . --configs-only  # skip git push too
 fo_harness_runs/<startup>_BLOCK_<X>_<timestamp>/
 ├── build/
 │   ├── iteration_01_build.txt        # Raw Claude output
-│   ├── iteration_01_artifacts/       # Extracted files
+│   ├── iteration_01_artifacts/       # Extracted files (business/**)
 │   └── iteration_02_fix.txt          # Defect-fix iteration
 ├── qa/
 │   └── iteration_01_qa_report.txt    # ChatGPT QA report
@@ -134,8 +183,58 @@ fo_harness_runs/<startup>_BLOCK_<X>_<timestamp>/
 │   ├── iteration_01_build_prompt.log
 │   ├── iteration_01_qa_prompt.log
 │   └── claude_questions.txt
+├── integration_issues.json           # Integration check output
 ├── artifact_manifest.json            # File checksums
 └── build_state.json                  # Run metadata
+```
+
+---
+
+## Integration Check
+
+Run `integration_check.py` on any build to get a deterministic (no AI) report of structural bugs. Used automatically by `run_integration_and_feature_build.sh` and `add_feature.sh` after each feature build.
+
+```bash
+# Against an artifacts directory
+python integration_check.py \
+  --artifacts fo_harness_runs/my_startup_BLOCK_B_<ts>/build/iteration_19_artifacts \
+  --intake intake/intake_runs/my_startup/my_startup.json \
+  --output my_integration_issues.json
+
+# Against a ZIP
+python integration_check.py \
+  --zip fo_harness_runs/my_startup_BLOCK_B_<ts>.zip \
+  --intake intake/intake_runs/my_startup/my_startup.json
+```
+
+**15 checks across backend and frontend:**
+
+| # | Category | What it catches |
+|---|----------|-----------------|
+| 1 | Route inventory | Frontend fetch() calls vs backend @router endpoints |
+| 2 | Model field refs | Service model.field accesses vs Column definitions |
+| 3 | Spec compliance | Intake keywords (PDF, KPI names) missing from artifacts |
+| 4 | Import chains | `from business.X import Y` vs actual artifact files |
+| 5 | Route double-path | @router decorators that repeat the filename stem |
+| 6 | Auth contract | Routes with `Depends(get_current_user)` vs frontend Authorization headers |
+| 7 | Async misuse | `await` called on non-async (sync) functions |
+| 8 | gather() sync args | `asyncio.gather(sync_func())` → TypeError at runtime |
+| 9 | npm integrity | JSX imports vs `business/package.json` dependencies |
+| 10 | Bare except | Silent error swallow (`except:` / `except Exception: pass`) |
+| 11 | Unbounded polling | `setTimeout(fn, N)` with no attempt cap → infinite loop |
+| 12 | Background timeout | `BackgroundTasks.add_task()` with no timeout when intake has SLA |
+| 13 | Config object as text | JSX renders `{config.section.key}` where config value is a dict → `[object Object]` |
+| 14 | Dead buttons | `<button>` with no onClick (not submit), `<a href="#">` placeholder links |
+| 15 | Form state mismatch | `useState` fields not in `business_config.json` form definitions → silent data loss |
+
+To feed issues back into the harness for a targeted fix:
+
+```bash
+python fo_test_harness.py \
+  my_startup.json FOBUILFINALLOCKED100.zip \
+  --resume-run fo_harness_runs/my_startup_BLOCK_B_<ts> \
+  --resume-iteration 19 \
+  --integration-issues my_integration_issues.json
 ```
 
 ---
@@ -168,6 +267,7 @@ fo_harness_runs/<startup>_BLOCK_<X>_<timestamp>/
 - Use `--resume-run` to reuse an existing run dir after a 429 kill
 - `qa` mode: loads existing build output, skips Claude BUILD, runs fresh QA
 - `fix` mode: loads existing QA report as defects, starts Claude fix at N+1
+- `consistency` mode: re-runs AI consistency check on existing artifacts
 - Loop start iteration is set to `--resume-iteration` (not always 1)
 
 ### ChatGPT 429 Handling
