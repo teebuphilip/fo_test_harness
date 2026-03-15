@@ -1,5 +1,25 @@
 # Must Port to FO
 
+## Frontend Integration Checks (2026-03-15 session 2)
+
+76. feat: integration_check.py — Check 13: CONFIG_OBJECT_AS_TEXT
+- Flattens business_config.json; finds dict/list-valued paths; scans JSX for unqualified access
+- Catches {home.hero.cta_primary} where config value is {"label":..., "href":...} → [object Object]
+- Files: `integration_check.py`
+⬜ TODO for FO codebase
+
+77. feat: integration_check.py — Check 14: DEAD_BUTTON
+- Scans JSX <button>/<Button> for missing onClick (skips submit, disabled, .map() items)
+- Also flags <a href="#"> placeholder anchors (MEDIUM)
+- Files: `integration_check.py`
+⬜ TODO for FO codebase
+
+78. feat: integration_check.py — Check 15: FORM_STATE_CONFIG_MISMATCH
+- Cross-references useState({...}) field keys against business_config.json form field name lists
+- Catches state fields that will never render or be submitted (silent data loss)
+- Files: `integration_check.py`
+⬜ TODO for FO codebase
+
 ## add_feature.sh (2026-03-15)
 
 75. feat: add_feature.sh — post-deploy single-feature addition pipeline

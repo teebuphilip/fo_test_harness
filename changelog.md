@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-03-15 (session 2)
+
+### feat: integration_check.py — Checks 13-15 (frontend structural bugs)
+
+Root cause: all prior checks were backend-only. Three AWI bugs survived all 5 QA gates because no check cross-referenced JSX against the config JSON.
+
+**Check 13 — CONFIG_OBJECT_AS_TEXT (HIGH)**
+Flattens `business_config.json`, finds all dict/list-valued paths, then scans JSX pages for `{expr.dotted.path}` expressions that access one of those object-valued paths without a scalar suffix (`.label`, `.text`, etc.). Catches `{home.hero.cta_primary}` → `[object Object]`.
+
+**Check 14 — DEAD_BUTTON (HIGH/MEDIUM)**
+Scans JSX for `<button>` / `<Button>` tags with no `onClick` (skips `type="submit"` inside `<form>`, disabled, and `.map()` list items). Also flags `<a href="#">` placeholder anchors (MEDIUM).
+
+**Check 15 — FORM_STATE_CONFIG_MISMATCH (MEDIUM)**
+Finds `useState({field: '',...})` initializers in JSX files that contain a form. Cross-references state keys against all `name`-keyed field lists in `business_config.json`. Orphan state fields → silent data loss on submit.
+
+Files: `integration_check.py`
+
+---
+
 ## 2026-03-15
 
 ### feat: add_feature.sh — post-deploy feature addition pipeline
@@ -15,7 +34,7 @@ Flow:
 
 Auto-resume at each stage: if feature intake / feature ZIP / final ZIP already exist, skips that step.
 
-Files: `add_feature.sh` (new)
+Files: `add_feature.sh` (new), `feature_adder.py` (--repo flag added)
 
 Usage:
 ```bash

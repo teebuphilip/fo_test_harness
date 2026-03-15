@@ -18,6 +18,9 @@ Checks:
   10. Bare except      — silent error swallow in services (bare except / except+pass)
   11. Unbounded polling — recursive setTimeout with no attempt cap → infinite loop
   12. Background timeout — BackgroundTasks.add_task() with no asyncio.wait_for when intake has SLA
+  13. Config object as text — JSX renders a config value directly but config value is a dict/list → [object Object]
+  14. Dead buttons       — <button> with no onClick (not submit), <a href="#"> placeholder links
+  15. Form state mismatch — useState fields not in business_config.json form field definitions → silent data loss
 
 Output:
   integration_issues.json  (harness-compatible defect format)
@@ -1131,6 +1134,351 @@ def check_background_task_timeout(artifacts: dict, intake: dict) -> list:
     return issues
 
 
+# ── Check 13: Config object rendered as text in JSX ──────────────────────────
+
+def check_config_object_rendered_as_text(artifacts: dict) -> list:
+    """
+    Detect JSX files that render a business_config.json value directly as a
+    React child when that config value is a JSON object (not a string/number).
+
+    Pattern: {config.section.key} where config[section][key] is a dict/list.
+
+    Strategy:
+      1. Load business_config.json and flatten all leaf paths.
+      2. For each JSX page file, find every {identifier.dotted.path} expression.
+      3. If the config value at that path is a dict or list → flag HIGH.
+
+    Skips: .map(), .filter(), .length, .forEach — those are intentional iterations.
+    """
+    issues = []
+
+    config_content = artifacts.get('business/business_config.json', '')
+    if not config_content:
+        return issues
+
+    try:
+        config = json.loads(config_content)
+    except Exception:
+        return issues
+
+    # Flatten config to {dotted.path: value}
+    def flatten(obj, prefix=''):
+        result = {}
+        if isinstance(obj, dict):
+            for k, v in obj.items():
+                result.update(flatten(v, f'{prefix}.{k}' if prefix else k))
+        elif isinstance(obj, list):
+            result[prefix] = obj  # treat list as leaf for this check
+        else:
+            result[prefix] = obj
+        return result
+
+    flat_config = flatten(config)
+
+    # Object-valued paths: value is a dict or list
+    object_paths = {k for k, v in flat_config.items() if isinstance(v, (dict, list))}
+
+    if not object_paths:
+        return issues
+
+    # React child expression pattern: {someVar.path.key} NOT followed by ( or .map/.filter
+    EXPR_RE = re.compile(r'\{([a-zA-Z_]\w*(?:\.[a-zA-Z_]\w*){1,})\}')
+    # Skip call-site and method patterns
+    SKIP_SUFFIXES = re.compile(r'\.(map|filter|forEach|length|keys|values|entries|join|find|some|every)\b|\(')
+
+    for path, content in artifacts.items():
+        if not (path.endswith('.jsx') and 'pages/' in path):
+            continue
+
+        lines = content.splitlines()
+        for i, line in enumerate(lines, 1):
+            for m in EXPR_RE.finditer(line):
+                expr = m.group(1)
+                # Skip if immediately followed by a method call or ()
+                tail = line[m.end():]
+                if SKIP_SUFFIXES.match(tail):
+                    continue
+
+                # Check each suffix of the dotted expression against config paths
+                # (JSX may use a local alias like `home` that maps to config.home)
+                parts = expr.split('.')
+                # Try suffix paths of length 2+ against flat config
+                matched_config_path = None
+                for start in range(len(parts) - 1):
+                    candidate = '.'.join(parts[start:])
+                    if candidate in object_paths:
+                        matched_config_path = candidate
+                        break
+
+                if not matched_config_path:
+                    continue
+
+                val = flat_config[matched_config_path]
+                val_preview = json.dumps(val)[:60]
+
+                issues.append({
+                    'id': f'INT-CFG-OBJ-{Path(path).stem}-L{i}-{matched_config_path.replace(".", "_")}',
+                    'severity': 'HIGH',
+                    'category': 'CONFIG_OBJECT_AS_TEXT',
+                    'file': path,
+                    'files': [path, 'business/business_config.json'],
+                    'evidence': (
+                        f"`{{{expr}}}` at line {i} in {Path(path).name} — "
+                        f"config path `{matched_config_path}` is an object: {val_preview}"
+                    ),
+                    'issue': (
+                        f"React cannot render a plain object as text. "
+                        f"`{{{expr}}}` will show `[object Object]` or throw. "
+                        f"The config value at `{matched_config_path}` is "
+                        f"{'a dict' if isinstance(val, dict) else 'a list'}: {val_preview}."
+                    ),
+                    'fix': (
+                        f"Either: (a) access a scalar field — e.g. `{{{expr}.label}}` or "
+                        f"`{{{expr}.text}}` depending on the object's shape; "
+                        f"OR (b) change the config value to a plain string."
+                    ),
+                })
+
+    seen = set()
+    deduped = []
+    for issue in issues:
+        if issue['id'] not in seen:
+            seen.add(issue['id'])
+            deduped.append(issue)
+    return deduped
+
+
+# ── Check 14: Dead buttons (no onClick / no href) ─────────────────────────────
+
+def check_dead_buttons(artifacts: dict) -> list:
+    """
+    Detect <button> and <Button> elements in JSX pages that have no onClick
+    handler and are not inside a <form> (where submit handles the action).
+
+    Also flags <a href="#"> and <a> with no href — placeholder anchors.
+
+    Skips:
+    - type="submit" buttons (handled by form onSubmit)
+    - Buttons inside a JSX .map() body (list items, dynamic)
+    - Disabled buttons
+    """
+    issues = []
+
+    # Detect <form> regions so we can skip submit buttons inside them
+    FORM_RE = re.compile(r'<form[\s>]', re.IGNORECASE)
+
+    for path, content in artifacts.items():
+        if not (path.endswith('.jsx') and 'pages/' in path):
+            continue
+
+        lines = content.splitlines()
+
+        # Track whether we're inside a <form> block (simple heuristic: count <form>/</ form>)
+        form_depth = 0
+
+        for i, line in enumerate(lines, 1):
+            stripped = line.strip()
+
+            # Track form open/close
+            form_opens  = len(re.findall(r'<[Ff]orm[\s>/]', line))
+            form_closes = len(re.findall(r'</[Ff]orm\s*>', line))
+            form_depth = max(0, form_depth + form_opens - form_closes)
+
+            # ── <button> or <Button> tags ──────────────────────────────────────
+            btn_match = re.search(r'<[Bb]utton(\s[^>]*)?>', line)
+            if btn_match:
+                attrs = btn_match.group(1) or ''
+
+                # Skip: type="submit" inside a form
+                if form_depth > 0 and 'submit' in attrs:
+                    continue
+                if re.search(r'type\s*=\s*["\']submit["\']', attrs):
+                    continue
+                # Skip: disabled
+                if re.search(r'\bdisabled\b', attrs):
+                    continue
+                # Skip: has onClick
+                if 'onClick' in attrs:
+                    continue
+                # Skip: inside .map( — dynamic list
+                window = '\n'.join(lines[max(0, i - 5):i])
+                if '.map(' in window:
+                    continue
+
+                issues.append({
+                    'id': f'INT-DEADBTN-{Path(path).stem}-L{i}',
+                    'severity': 'HIGH',
+                    'category': 'DEAD_BUTTON',
+                    'file': path,
+                    'files': [path],
+                    'evidence': f"`{stripped[:120]}` at line {i} in {Path(path).name}",
+                    'issue': (
+                        f"Button at line {i} in {Path(path).name} has no onClick handler — "
+                        f"renders and looks clickable but does nothing."
+                    ),
+                    'fix': (
+                        f"Add an onClick handler: `onClick={{() => router.push('/target')}}` "
+                        f"or `onClick={{handleActionName}}`. "
+                        f"If this button navigates, use Next.js `<Link href='/path'>` instead."
+                    ),
+                })
+
+            # ── <a href="#"> or bare <a> ───────────────────────────────────────
+            anchor_match = re.search(r'<a(\s[^>]*)?>', line)
+            if anchor_match:
+                attrs = anchor_match.group(1) or ''
+                href_m = re.search(r'href\s*=\s*["\']([^"\']*)["\']', attrs)
+                if href_m and href_m.group(1) == '#':
+                    issues.append({
+                        'id': f'INT-DEADANCHOR-{Path(path).stem}-L{i}',
+                        'severity': 'MEDIUM',
+                        'category': 'DEAD_BUTTON',
+                        'file': path,
+                        'files': [path],
+                        'evidence': f"`{stripped[:120]}` at line {i} in {Path(path).name}",
+                        'issue': (
+                            f"`<a href=\"#\">` at line {i} in {Path(path).name} is a placeholder "
+                            f"link — goes nowhere."
+                        ),
+                        'fix': (
+                            f"Replace with a real destination or use a <button onClick={{...}}> "
+                            f"if this triggers an action rather than navigation."
+                        ),
+                    })
+
+    seen = set()
+    deduped = []
+    for issue in issues:
+        if issue['id'] not in seen:
+            seen.add(issue['id'])
+            deduped.append(issue)
+    return deduped
+
+
+# ── Check 15: React state fields not in config form definition ────────────────
+
+def check_form_state_config_mismatch(artifacts: dict) -> list:
+    """
+    Detect form state fields in JSX that are not defined in business_config.json
+    contact/form field lists.
+
+    Pattern:
+      JSX: useState({name: '', email: '', subject: '', message: ''})
+      Config: form_fields: [{name: 'name'}, {name: 'email'}, {name: 'message'}]
+              → 'subject' is in state but not in config → silent data loss on submit.
+
+    Also catches the inverse: config defines a field but JSX state has no slot for it
+    (field never gets submitted).
+    """
+    issues = []
+
+    config_content = artifacts.get('business/business_config.json', '')
+    if not config_content:
+        return issues
+
+    try:
+        config = json.loads(config_content)
+    except Exception:
+        return issues
+
+    # Collect all form field name lists from config (any key containing 'form' or 'contact')
+    config_field_sets = {}  # section_key → set of field names
+
+    def collect_form_fields(obj, path=''):
+        if isinstance(obj, dict):
+            for k, v in obj.items():
+                cur = f'{path}.{k}' if path else k
+                if isinstance(v, list) and any(
+                    isinstance(item, dict) and 'name' in item for item in v
+                ):
+                    field_names = {item['name'] for item in v if isinstance(item, dict) and 'name' in item}
+                    if field_names:
+                        config_field_sets[cur] = field_names
+                else:
+                    collect_form_fields(v, cur)
+        elif isinstance(obj, list):
+            for item in obj:
+                collect_form_fields(item, path)
+
+    collect_form_fields(config)
+
+    if not config_field_sets:
+        return issues  # No form field definitions in config
+
+    # Merge all config-defined field names into one set for matching
+    all_config_fields = set()
+    for fields in config_field_sets.values():
+        all_config_fields.update(fields)
+
+    # Scan JSX pages for useState({...}) object initializers
+    STATE_INIT_RE = re.compile(
+        r'useState\s*\(\s*\{([^}]+)\}',
+        re.DOTALL,
+    )
+    KEY_RE = re.compile(r'(\w+)\s*:')
+
+    for path, content in artifacts.items():
+        if not (path.endswith('.jsx') and 'pages/' in path):
+            continue
+
+        # Only check files that appear to have a form
+        if '<form' not in content.lower() and 'onSubmit' not in content:
+            continue
+
+        for state_match in STATE_INIT_RE.finditer(content):
+            state_body = state_match.group(1)
+            state_keys = set(KEY_RE.findall(state_body))
+
+            if not state_keys:
+                continue
+
+            # Fields in state but NOT in any config form definition
+            orphan_state = state_keys - all_config_fields - {
+                # Common non-form-data state fields — not form fields
+                'loading', 'error', 'success', 'isLoading', 'isSubmitting',
+                'isError', 'isSuccess', 'status', 'message', 'data',
+                'submitted', 'submitting', 'errors', 'touched',
+            }
+
+            if not orphan_state:
+                continue
+
+            line_no = content[:state_match.start()].count('\n') + 1
+
+            for field in sorted(orphan_state):
+                issues.append({
+                    'id': f'INT-FORMSTATE-{Path(path).stem}-{field}',
+                    'severity': 'MEDIUM',
+                    'category': 'FORM_STATE_CONFIG_MISMATCH',
+                    'file': path,
+                    'files': [path, 'business/business_config.json'],
+                    'evidence': (
+                        f"useState field `{field}` at line {line_no} in {Path(path).name} "
+                        f"not found in any config form field list "
+                        f"(config defines: {sorted(all_config_fields)})"
+                    ),
+                    'issue': (
+                        f"Form state field `{field}` in {Path(path).name} has no corresponding "
+                        f"entry in business_config.json form fields. "
+                        f"If the config drives form rendering, this field will never render. "
+                        f"If submit reads from config fields, this value will be silently dropped."
+                    ),
+                    'fix': (
+                        f"Either: (a) add `{{\"name\": \"{field}\"}}` to the appropriate form "
+                        f"field list in business_config.json; "
+                        f"OR (b) remove `{field}` from useState if it is not a real form field."
+                    ),
+                })
+
+    seen = set()
+    deduped = []
+    for issue in issues:
+        if issue['id'] not in seen:
+            seen.add(issue['id'])
+            deduped.append(issue)
+    return deduped
+
+
 # ── Runner ────────────────────────────────────────────────────────────────────
 
 def run_all_checks(artifacts: dict, intake: dict) -> list:
@@ -1182,9 +1530,22 @@ def run_all_checks(artifacts: dict, intake: dict) -> list:
     timeout_issues = check_background_task_timeout(artifacts, intake)
     print(f"    → {len(timeout_issues)} issue(s)")
 
+    print(f"  Running Check 13: Config object rendered as text in JSX...")
+    config_obj_issues = check_config_object_rendered_as_text(artifacts)
+    print(f"    → {len(config_obj_issues)} issue(s)")
+
+    print(f"  Running Check 14: Dead buttons (no onClick / placeholder href)...")
+    dead_btn_issues = check_dead_buttons(artifacts)
+    print(f"    → {len(dead_btn_issues)} issue(s)")
+
+    print(f"  Running Check 15: Form state fields not in config form definition...")
+    form_state_issues = check_form_state_config_mismatch(artifacts)
+    print(f"    → {len(form_state_issues)} issue(s)")
+
     return (route_issues + field_issues + spec_issues + import_issues + dblpath_issues
             + auth_issues + async_issues + gather_issues + npm_issues + except_issues
-            + poll_issues + timeout_issues)
+            + poll_issues + timeout_issues + config_obj_issues + dead_btn_issues
+            + form_state_issues)
 
 
 def build_output(issues: list, zip_path: str = None, artifacts_dir: str = None,
