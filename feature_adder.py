@@ -242,6 +242,26 @@ def build_feature_intake(
     return scoped
 
 
+def apply_spec_file(scoped: dict, spec_file: str) -> dict:
+    """
+    Embed a feature spec (from generate_feature_spec.py) into the scoped intake.
+    The spec replaces vague feature names with precise requirements so Claude
+    implements exactly what was described rather than inventing behaviour.
+    """
+    spec_text = Path(spec_file).read_text(encoding='utf-8').strip()
+    scoped['_phase_context']['feature_spec'] = spec_text
+    scoped['_phase_context']['note'] = (
+        scoped['_phase_context']['note']
+        + '\n\nFEATURE SPEC (implement this exactly — do not deviate):\n'
+        + spec_text
+    )
+    return scoped
+
+
+
+    return scoped
+
+
 def main():
     parser = argparse.ArgumentParser(
         description='feature_adder.py — Scope a single-feature intake from an existing build.',
@@ -271,6 +291,11 @@ Examples:
     src = parser.add_mutually_exclusive_group(required=True)
     src.add_argument('--manifest', help='Prior run ZIP (any phase or feature build)')
     src.add_argument('--repo',     help='Local path to existing deployed repo (alternative to --manifest)')
+
+    parser.add_argument('--spec-file', default=None,
+                        help='Path to feature spec text file from generate_feature_spec.py. '
+                             'Embedded into the build prompt so Claude implements exactly '
+                             'what you described rather than inventing the feature.')
 
     args = parser.parse_args()
 
@@ -336,6 +361,15 @@ Examples:
         classification=classification,
         all_intake_features=all_features,
     )
+
+    # Embed feature spec if provided
+    if args.spec_file:
+        spec_path = Path(args.spec_file)
+        if not spec_path.exists():
+            print(f"ERROR: Spec file not found: {spec_path}")
+            sys.exit(1)
+        print(f"  Embedding feature spec from: {spec_path}")
+        scoped = apply_spec_file(scoped, str(spec_path))
 
     # Write output
     if args.output:

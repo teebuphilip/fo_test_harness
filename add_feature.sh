@@ -52,6 +52,7 @@ INTAKE=""
 FEATURE=""
 EXISTING_ZIP=""
 EXISTING_REPO=""
+SPEC_FILE=""
 _CLONED_REPO_TMP=""   # set if we cloned a URL; cleaned up on exit
 
 cleanup() {
@@ -102,6 +103,7 @@ while [[ $# -gt 0 ]]; do
     --feature)          FEATURE="$2";       shift 2 ;;
     --existing-zip)     EXISTING_ZIP="$2";  shift 2 ;;
     --existing-repo)    EXISTING_REPO="$2"; shift 2 ;;
+    --spec-file)        SPEC_FILE="$2";     shift 2 ;;
     --startup-id)       STARTUP_ID="$2";    shift 2 ;;
     --build-gov)        BUILD_GOV="$2";     shift 2 ;;
     --max-iterations)   MAX_ITER="$2";      shift 2 ;;
@@ -207,16 +209,27 @@ if [[ -f "$FEATURE_INTAKE" ]]; then
   echo "  ↩ Feature intake already exists — skipping:"
   echo "    $FEATURE_INTAKE"
 else
+  SPEC_FLAG=""
+  if [[ -n "$SPEC_FILE" ]]; then
+    if [[ ! -f "$SPEC_FILE" ]]; then
+      echo "ERROR: Spec file not found: $SPEC_FILE"
+      exit 1
+    fi
+    SPEC_FLAG="--spec-file $SPEC_FILE"
+  fi
+
   if [[ -n "$EXISTING_ZIP" ]]; then
     python feature_adder.py \
       --intake "$INTAKE" \
       --manifest "$EXISTING_ZIP" \
-      --feature "$FEATURE"
+      --feature "$FEATURE" \
+      $SPEC_FLAG
   else
     python feature_adder.py \
       --intake "$INTAKE" \
       --repo "$REPO_LOCAL_PATH" \
-      --feature "$FEATURE"
+      --feature "$FEATURE" \
+      $SPEC_FLAG
   fi
 
   if [[ ! -f "$FEATURE_INTAKE" ]]; then
