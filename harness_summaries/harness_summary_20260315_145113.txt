@@ -1,0 +1,33 @@
+Title: Building 70 SaaS products to stress-test my AI build harness — 16 down, 54 to go
+Body:
+I built a deterministic SaaS harness with 53 capabilities (auth, payments, fraud detection, GDPR compliance, the works). Now I need to know if it actually works at scale.
+So I'm building 70 different SaaS products through it. Real FastAPI + React + Stripe deployments. If the harness breaks, I fix it. If it holds, I know it's solid.
+Here's what the harness logged from builds 1-16:
+Product                      | Runs | Passes | Avg Cost | Total Cost | Main Failure Mode
+-----------------------------|------|--------|----------|------------|-------------------
+Adversarial Ai Validator     |    9 |      2 |    $0.60 |      $6.50 | CTRL_C
+Wynwood Thoroughbreds        |   10 |      6 |    $1.22 |     $14.28 | BUILD_TRUNCATED
+Ai Workforce Intelligence    |   56 |     10 |    $1.35 |    $102.62 | NON_CONVERGING (15 iters, $5.4001)
+Freelance Invoice Tracker    |    2 |      1 |    $1.65 |      $5.64 | CTRL_C
+Property Manager Maintenance |    1 |      1 |    $0.65 |      $0.65 | None
+Ai Workforce Intelligence P1 |    1 |      1 |    $2.85 |      $2.85 | None
+Ai Workforce Intelligence P2 |    2 |      0 |    $0.00 |      $4.14 | CTRL_C
+Ai Workforce Intelligence Kp |    2 |      1 |    $2.15 |      $7.16 | MAX_ITERATIONS
+Ai Workforce Intelligence Kp |    2 |      1 |    $3.11 |      $7.43 | MAX_ITERATIONS
+Ai Workforce Intelligence Na |    3 |      1 |    $0.86 |      $4.37 | CTRL_C
+Ai Workforce Intelligence Do |   12 |      5 |    $2.18 |     $28.83 | CTRL_C
+Adversarial Ai Validator P1  |    2 |      1 |    $2.19 |      $5.44 | MAX_ITERATIONS
+Adversarial Ai Validator Int |    2 |      1 |    $1.01 |      $4.91 | MAX_ITERATIONS
+Adversarial Ai Validator Int |    2 |      1 |    $2.42 |      $6.77 | MAX_ITERATIONS
+Adversarial Ai Validator Bui |    1 |      1 |    $0.57 |      $0.57 | None
+Adversarial Ai Validator Imp |    2 |      2 |    $1.23 |      $2.47 | None
+
+Total: 109 runs, 35 clean builds (32% first-pass success), $204.64 spent
+What I learned:
+- High costs correlate with non-convergence; one run reached $5.40 before failing after 15 iterations.
+- CTRL_C is the most common failure mode, indicating potential issues with resource limits or timeouts.
+- Ai Workforce Intelligence shows significant scalability issues, with costs rising sharply in larger runs.
+- Average costs vary widely; some products are inefficient despite passing tests, suggesting optimization needed.
+- Non-converging runs often exceed 10 iterations, indicating a need for better convergence strategies.
+
+Following this for the next 6 months. Will post failures and edge cases as I find them.
