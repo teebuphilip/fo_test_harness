@@ -1,5 +1,27 @@
 # Must Port to FO
 
+## Feature Spec Pipeline (2026-03-15 session 3)
+
+79. feat: generate_feature_spec.py — pre-build feature definition tool
+- --questions-only: saves 8-question template (what/who/data/UI/actions/integrations/scope/AC)
+- --answers-file: calls Claude Sonnet to structure answers into a precise spec using intake for context
+- Output: feature_specs/<slug>_spec.txt — passed to add_feature.sh via --spec-file
+- Closes gap: previously Claude only received a feature name and invented the rest
+- Files: `generate_feature_spec.py` (new)
+✅ DONE here — N/A for FO codebase port (harness tooling)
+
+80. feat: feature_adder.py — --spec-file flag + apply_spec_file()
+- Reads spec text and embeds it into _phase_context.note in the scoped intake
+- Claude receives full spec (data requirements, UI, actions, scope boundaries, AC) alongside do-not-regenerate list
+- Files: `feature_adder.py`
+✅ DONE here — N/A for FO codebase port (harness tooling)
+
+81. feat: add_feature.sh — --spec-file passthrough + --existing-repo support
+- --spec-file: passes spec file to feature_adder.py
+- --existing-repo: accepts local path or GitHub URL (clones with --depth=1) as alternative to --existing-zip
+- Files: `add_feature.sh`
+✅ DONE here — N/A for FO codebase port (harness tooling)
+
 ## Frontend Integration Checks (2026-03-15 session 2)
 
 76. feat: integration_check.py — Check 13: CONFIG_OBJECT_AS_TEXT

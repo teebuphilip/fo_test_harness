@@ -1,5 +1,13 @@
 # Learnings From AF to FO
 
+## Latest Learnings (2026-03-15)
+
+- Frontend bugs are structurally invisible to all five QA gates when no check reads JSX against config JSON. The AWI build shipped with 8 bugs — config objects rendered as text (`[object Object]`), dead buttons with no onClick, and a form state field silently dropped on submit — none caught by Feature QA, Static check, AI Consistency, or integration_check.py. Root cause: every check was backend-focused. Fix: integration_check.py Checks 13-15 cross-reference JSX expressions against `business_config.json` data shapes, scan for buttons missing onClick, and compare useState keys against config form field definitions.
+
+- QA's anti-hallucination rules (`NEVER use hedged language`, `absence-of-thing defects are NOT valid`) correctly prevent false positives but also suppress valid cross-file inference bugs. A missing `onClick` is an absence; `{home.hero.cta_primary}` rendering an object looks syntactically fine. QA cannot flag what it can only infer. The right fix is deterministic checks in integration_check.py, not loosening QA rules — loosening QA rules would re-introduce the hallucination problem.
+
+- A feature name alone is not a feature spec. Giving Claude only `--feature "Competitor benchmarking dashboard"` causes it to invent the data model, UI layout, scope, and acceptance criteria from scratch. In a feature-add context (not greenfield), invented behaviour conflicts with existing models and navigation. Fix: `generate_feature_spec.py` structures founder answers into a spec (data requirements, UI, actions, scope exclusions, AC) before the build runs. The spec is embedded in `_phase_context.note` so Claude implements exactly what was described.
+
 ## Latest Learnings (2026-03-13)
 
 - QA and the Consistency gate can produce a direct logical contradiction on the same field. QA

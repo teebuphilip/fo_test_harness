@@ -1,5 +1,57 @@
 # Changelog
 
+## 2026-03-15 (session 3)
+
+### feat: generate_feature_spec.py — feature spec before build
+
+Closes the gap where `add_feature.sh --feature "Name"` gave Claude only a feature name, causing it to invent the feature rather than build what was intended.
+
+**Two modes:**
+
+`--questions-only` — prints an 8-question template to stdout and saves it to `feature_specs/<slug>_questions.txt`. No API call. Questions cover: what it does, who uses it, data requirements, UI/UX, user actions, integrations with existing features, explicit scope exclusions, and acceptance criteria.
+
+`--answers-file <path>` — reads your filled-in answers (or AI-assisted answers), optionally loads the original intake for product context, calls Claude Sonnet to structure them into a precise feature spec (`feature_specs/<slug>_spec.txt`). Claude fills obvious gaps from context but does not invent functionality not mentioned.
+
+**Downstream wiring:**
+
+`feature_adder.py` — new `--spec-file` flag + `apply_spec_file()` function. Embeds spec text into `_phase_context.note` so the build prompt receives the full spec alongside the do-not-regenerate file list.
+
+`add_feature.sh` — new `--spec-file` passthrough to `feature_adder.py`.
+
+Files: `generate_feature_spec.py` (new), `feature_adder.py`, `add_feature.sh`
+
+### feat: add_feature.sh + feature_adder.py — --existing-repo support
+
+`add_feature.sh` accepts `--existing-repo` (local path or GitHub URL) as alternative to `--existing-zip`. GitHub URLs are cloned with `--depth=1` and cleaned up on exit.
+
+`feature_adder.py` gains `--repo` flag that walks the repo's `business/` directory to build the do-not-regenerate list instead of reading a ZIP manifest. Handles repos where `business/` is a subdirectory or the root.
+
+Files: `add_feature.sh`, `feature_adder.py`
+
+### feat: add_feature.sh — post-deploy single-feature pipeline (initial)
+
+New script for adding features to an already-built, already-deployed codebase. Distinct from `run_integration_and_feature_build.sh` (greenfield). Flow: `feature_adder.py` → `fo_test_harness.py` → `integration_check.py` → merge → new final ZIP. Auto-resume at each stage.
+
+Files: `add_feature.sh` (new)
+
+### feat: integration_check.py — Checks 13-15 (frontend structural bugs)
+
+Root cause: all prior checks were backend-only. Three AWI bugs survived all 5 QA gates because no check cross-referenced JSX against the config JSON.
+
+- **Check 13 CONFIG_OBJECT_AS_TEXT (HIGH):** Flattens `business_config.json`, finds dict/list-valued paths, flags JSX `{expr.path}` expressions that render them without a scalar suffix → `[object Object]`.
+- **Check 14 DEAD_BUTTON (HIGH/MEDIUM):** `<button>` with no `onClick` (skips submit/disabled/`.map()`). Also flags `<a href="#">` placeholders.
+- **Check 15 FORM_STATE_CONFIG_MISMATCH (MEDIUM):** `useState` field keys not in `business_config.json` form field lists → silent data loss on submit.
+
+Files: `integration_check.py`
+
+### docs: README rewrites (root, deploy/, intake/)
+
+Root `README.md` fully rewritten — correct CLI, all scripts, 15-check integration table, three QA gates, all resume modes, deploy prerequisites.
+`deploy/README.md` — new file covering full deploy sequence and all 10 deploy scripts.
+`intake/README.md` — updated for current pipeline: generate_intake.sh wrapper, phase planner outputs, add_feature.sh cross-reference, post_intake_fix_batch.py.
+
+---
+
 ## 2026-03-15 (session 2)
 
 ### feat: integration_check.py — Checks 13-15 (frontend structural bugs)
