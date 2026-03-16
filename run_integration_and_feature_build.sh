@@ -458,9 +458,11 @@ while [[ $IC_EXIT -ne 0 && $FIX_PASS -lt $MAX_FIX_PASSES ]]; do
   INT_MAX_ITER=$(( LATEST_ITER + 5 ))
   if [[ $INT_MAX_ITER -lt $MAX_ITER ]]; then INT_MAX_ITER=$MAX_ITER; fi
 
+  # Use FEATURE_INTAKE if set (inside feature loop), else fall back to phase 1 INTAKE
+  _FIX_INTAKE="${FEATURE_INTAKE:-$INTAKE}"
   FIX_EXIT=0
   python fo_test_harness.py \
-    "$FEATURE_INTAKE" \
+    "$_FIX_INTAKE" \
     "$BUILD_GOV" \
     --resume-run "$LATEST_RUN_DIR" \
     --resume-iteration "$LATEST_ITER" \

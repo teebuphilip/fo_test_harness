@@ -21,6 +21,8 @@ NEVER generate any of the following. These will fail automated validation and lo
 | `user.getAccessTokenSilently()` | Not a method on the Auth0 user object. Destructure it from `useAuth0()`. |
 | `import fetch from 'node-fetch'` | Use `import api from '../utils/api'` (pre-configured axios). |
 | `db.execute("SELECT * FROM ...")` | Raw SQL. Use SQLAlchemy ORM: `db.query(Model).filter(...)`. |
+| `@router.get("/horses")` in `horses.py` | Double-path bug. File mounts at `/api/horses` — path must be `""` not `"/horses"`. |
+| `@router.get("/horses/{id}")` in `horses.py` | Double-path bug. Use `"/{id}"` not `"/horses/{id}"`. |
 | `from app.database import ...` | Wrong path. Use `from core.database import Base, get_db`. |
 | `from app.auth import ...` | Wrong path. Use `from core.rbac import get_current_user`. |
 | `sequential_id = max(ids) + 1` | Never generate sequential IDs manually. Use `Column(Integer, primary_key=True)`. |
@@ -33,6 +35,21 @@ NEVER generate any of the following. These will fail automated validation and lo
 **File location**: `business/backend/routes/entities.py`
 *(Replace `entities` with your resource name — lowercase, plural, no spaces)*
 
+**CRITICAL — ROUTE PATH RULE (read this before writing any route):**
+
+The boilerplate auto-mounts every file in `business/backend/routes/` at `/api/<filename>`.
+A file named `horses.py` is mounted at `/api/horses`.
+
+**NEVER repeat the resource name in the route path. It causes a double-path bug.**
+
+| File | Mounted at | CORRECT path | WRONG path |
+|------|-----------|-------------|-----------|
+| `horses.py` | `/api/horses` | `@router.get("")` | `@router.get("/horses")` ❌ |
+| `horses.py` | `/api/horses` | `@router.get("/{id}")` | `@router.get("/horses/{id}")` ❌ |
+| `members.py` | `/api/members` | `@router.post("")` | `@router.post("/members")` ❌ |
+
+The WRONG paths produce `/api/horses/horses` and `/api/members/members` at runtime — broken URLs.
+
 ```python
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -42,14 +59,15 @@ from services.EntityService import EntityService
 
 router = APIRouter()
 
-@router.get("/entities")
+# File is mounted at /api/entities — do NOT repeat "/entities" in paths below
+@router.get("")
 async def list_entities(
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
     return EntityService.list_all(db)
 
-@router.post("/entities")
+@router.post("")
 async def create_entity(
     payload: dict,
     db: Session = Depends(get_db),
@@ -57,7 +75,7 @@ async def create_entity(
 ):
     return EntityService.create(payload, current_user["sub"], db)
 
-@router.get("/entities/{entity_id}")
+@router.get("/{entity_id}")
 async def get_entity(
     entity_id: int,
     db: Session = Depends(get_db),
@@ -68,7 +86,7 @@ async def get_entity(
         raise HTTPException(status_code=404, detail="Not found")
     return entity
 
-@router.put("/entities/{entity_id}")
+@router.put("/{entity_id}")
 async def update_entity(
     entity_id: int,
     payload: dict,
@@ -77,7 +95,7 @@ async def update_entity(
 ):
     return EntityService.update(entity_id, payload, db)
 
-@router.delete("/entities/{entity_id}")
+@router.delete("/{entity_id}")
 async def delete_entity(
     entity_id: int,
     db: Session = Depends(get_db),
@@ -89,6 +107,7 @@ async def delete_entity(
 
 **Rules for this file:**
 - `router = APIRouter()` — no arguments, no `tags=`, no `prefix=`
+- Route paths: `""` for collection, `"/{id}"` for item — NEVER start with the resource name
 - Every endpoint MUST have `db: Session = Depends(get_db)` AND `current_user: dict = Depends(get_current_user)`
 - Decorators MUST be `@router.get`, `@router.post`, `@router.put`, `@router.delete`, `@router.patch` — nothing else
 - Use `current_user["sub"]` as the owner/user identifier — do NOT hardcode user IDs
