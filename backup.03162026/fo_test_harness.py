@@ -2724,9 +2724,6 @@ class FOHarness:
         print_info(f"  → Output: ${output_cost:.4f}")
         print_info(f"  → Total:  ${total_cost:.4f}")
 
-        cached_tokens = usage.get('prompt_tokens_details', {}).get('cached_tokens', 0) or 0
-        print_info(f'CACHE CHECK [FEATURE_QA] iteration {iteration}: cached={cached_tokens} / total_prompt={input_tokens} ({int(cached_tokens/input_tokens*100) if input_tokens else 0}% cached)')
-
         print_info("═══════════════════════════════════════════════════════════")
 
         return {
@@ -5828,8 +5825,6 @@ End with: SHARPEN_COMPLETE"""
             out_tok = usage.get('completion_tokens', 0)
             cost = (in_tok / 1_000_000) * 2.50 + (out_tok / 1_000_000) * 10.00
             print_info(f"  [CONSISTENCY] ChatGPT responded (${cost:.4f})")
-            cached_tokens = usage.get('prompt_tokens_details', {}).get('cached_tokens', 0) or 0
-            print_info(f'CACHE CHECK [CONSISTENCY] iteration {iteration}: cached={cached_tokens} / total_prompt={in_tok} ({int(cached_tokens/in_tok*100) if in_tok else 0}% cached)')
         except Exception as e:
             print_error(f"  [CONSISTENCY] ChatGPT call failed: {e}")
             return []
@@ -5926,8 +5921,6 @@ End with: SHARPEN_COMPLETE"""
             usage_stats['output_tokens'] = int(usage.get('completion_tokens', 0) or 0)
             cost = (usage_stats['input_tokens'] / 1_000_000) * 2.50 + (usage_stats['output_tokens'] / 1_000_000) * 10.00
             print_info(f"  [QUALITY] ChatGPT responded (${cost:.4f})")
-            _quality_cached = usage.get('prompt_tokens_details', {}).get('cached_tokens', 0) or 0
-            print_info(f'CACHE CHECK [QUALITY] iteration {iteration}: cached={_quality_cached} / total_prompt={usage_stats["input_tokens"]} ({int(_quality_cached/usage_stats["input_tokens"]*100) if usage_stats["input_tokens"] else 0}% cached)')
         except Exception as e:
             print_error(f"  [QUALITY] ChatGPT call failed: {e}")
             return [], usage_stats

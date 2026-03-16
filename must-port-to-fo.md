@@ -1,5 +1,32 @@
 # Must Port to FO
 
+## QA Prompt Caching + Inventory Step (2026-03-16 session 5)
+
+86. perf: qa_prompt.md — static rules moved to top for OpenAI prefix caching
+- All 170 lines of static rules now precede ALL dynamic blocks ({{tech_stack_context}}, {{prohibitions_block}}, {{defect_history_block}}, {{resolved_defects_block}}, {{block_data_json}}, {{build_output}})
+- Static prefix is now ~150+ lines — well above 1024-token OpenAI caching threshold
+- No logic changes; order only
+- Files: `directives/prompts/qa_prompt.md`
+⬜ TODO for FO codebase
+
+87. feat: qa_prompt.md — STEP -1 BUILD ARTIFACT INVENTORY
+- GPT-4o must scan build output for all **FILE: path** headers and output a typed FILE INVENTORY before any QA analysis
+- Artifact types: FRONTEND_PAGE, BACKEND_ROUTE, BACKEND_MODEL, BACKEND_SERVICE, CONFIG, DOCUMENTATION
+- Hard rule: files not in the inventory MUST NOT appear in defects
+- Files: `directives/prompts/qa_prompt.md`
+⬜ TODO for FO codebase
+
+88. feat: qa_prompt.md — STEP 2 deterministic artifact traversal order
+- Explicit evaluation order: BACKEND_ROUTEs → BACKEND_MODELs → BACKEND_SERVICEs → FRONTEND_PAGEs → CONFIG → DOCUMENTATION
+- Files: `directives/prompts/qa_prompt.md`
+⬜ TODO for FO codebase
+
+89. observability: CACHE CHECK log line on all three AI gate calls (CONSISTENCY, QUALITY, FEATURE_QA)
+- Format: `CACHE CHECK [GATE] iteration N: cached=X / total_prompt=Y (Z% cached)`
+- Dict-based access: `usage.get('prompt_tokens_details', {}).get('cached_tokens', 0)`
+- Files: `fo_test_harness.py`
+⬜ TODO for FO codebase
+
 ## Harness Loop Optimisations (2026-03-15 session 4)
 
 82. perf: gate locking — CONSISTENCY/QUALITY/FEATURE_QA skip when no relevant files changed

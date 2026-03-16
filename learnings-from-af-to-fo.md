@@ -623,3 +623,52 @@
 - QA convergence requires both: specific defect descriptions (Fix: field) AND upfront prohibitions
   that prevent the failure pattern from appearing in the first place.
 - Full capability coverage (not partial) is required — missing capabilities = recurring unfixable bugs.
+
+## Session 5 — 2026-03-16: Prompt Caching + QA Inventory
+
+### OpenAI prefix caching requires static content FIRST, dynamic content LAST
+
+OpenAI automatically caches prompt prefixes ≥1024 tokens within a 5-10 minute window. No
+`cache_control` parameter is needed — it is fully automatic. But it only caches the
+**prefix** (leading tokens). If any dynamic content appears before your static rules, the
+static rules are not in the cached prefix and caching never fires.
+
+`qa_prompt.md` had `{{build_output}}` on line 13 of 183 — 170 lines of static rules came
+AFTER the dynamic build output. Zero caching on any call.
+
+Fix: move ALL dynamic blocks (`{{tech_stack_context}}`, `{{prohibitions_block}}`,
+`{{defect_history_block}}`, `{{resolved_defects_block}}`, `{{block_data_json}}`,
+`{{build_output}}`) to the very end. Static rules first, always.
+
+Rule: **any `{{template_var}}` in a prompt file = everything from that line onward is NOT
+in the cacheable prefix.** Check every prompt file: if dynamic vars appear before static
+rules, the static rules don't cache.
+
+### QA hallucination root cause: repeated full-prompt re-scanning during reasoning
+
+GPT-4o re-scans the entire build_output multiple times while reasoning (for routes, then
+models, then services, then frontend). On large builds (4k-15k tokens) this causes context
+drift — the model loses track of what it has and hasn't seen, producing hallucinated missing
+files and duplicate defects.
+
+Fix: add a STEP -1 inventory instruction as static content. Force the model to build an
+explicit FILE INVENTORY (typed by artifact category) from all `**FILE:**` headers before any
+analysis. Hard-gate: files not in inventory must not appear in defects.
+
+This shifts hallucination prevention from post-QA harness filtering to pre-analysis model
+discipline. Earlier is better — filtering removes hallucinations after they're generated;
+inventory prevents them from being generated at all.
+
+### Cache hit logging is mandatory before claiming caching works
+
+You cannot assume OpenAI caching is firing. Even with correct prompt ordering, caching can
+fail if: (a) calls are >5-10 min apart (cache expires), (b) a dynamic field mutates the
+static prefix, (c) prompt is under 1024 tokens at the static prefix boundary.
+
+Always add `CACHE CHECK [GATE] iteration N: cached=X / total_prompt=Y` log lines to every
+AI gate call. Check iteration 2+: if cached=0 consistently, find the root cause before
+assuming savings.
+
+Access pattern for plain-dict ChatGPT responses (NOT SDK objects):
+`usage.get('prompt_tokens_details', {}).get('cached_tokens', 0)`
+Not: `response.usage.prompt_tokens_details.cached_tokens` (SDK object — wrong here).

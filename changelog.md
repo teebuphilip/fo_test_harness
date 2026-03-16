@@ -1,5 +1,36 @@
 # Changelog
 
+## 2026-03-16 (session 5)
+
+### perf: qa_prompt.md restructure for prefix caching + QA inventory step
+
+**`directives/prompts/qa_prompt.md` — restructured for OpenAI prefix caching**
+- Moved all 170 lines of static rules to the TOP of the prompt (before any dynamic blocks)
+- Dynamic content (`{{tech_stack_context}}`, `{{prohibitions_block}}`, `{{defect_history_block}}`, `{{resolved_defects_block}}`, `{{block_data_json}}`, `{{build_output}}`) moved to BOTTOM
+- Static prefix now ~150+ lines before any dynamic content — well above 1024-token caching threshold
+- All existing rules preserved word-for-word; order only
+
+**New: STEP -1 — BUILD ARTIFACT INVENTORY**
+- First thing QA does: scan build output for all `**FILE: path/to/file**` headers, output a FILE INVENTORY table with artifact types (FRONTEND_PAGE, BACKEND_ROUTE, BACKEND_MODEL, BACKEND_SERVICE, CONFIG, DOCUMENTATION)
+- Hard rule: files not in the inventory MUST NOT be referenced in any defect
+- Targets root cause of hallucinated defects — model re-scans full prompt repeatedly; inventory creates stable working set
+
+**New: STEP 1 — REQUIRED STRUCTURE CHECK (reframed from inline section)**
+- Existing required-structure rules promoted to an explicit numbered step after inventory
+
+**New: STEP 2 — EVALUATE ARTIFACTS IN FIXED ORDER**
+- Deterministic traversal: BACKEND_ROUTEs → BACKEND_MODELs → BACKEND_SERVICEs → FRONTEND_PAGEs → CONFIG → DOCUMENTATION
+- Reduces non-determinism in defect ordering across iterations
+
+**`fo_test_harness.py` — CACHE CHECK logging for all three AI gates**
+- Added `CACHE CHECK [CONSISTENCY]` log line after every CONSISTENCY ChatGPT call
+- Added `CACHE CHECK [QUALITY]` log line after every QUALITY ChatGPT call
+- Added `CACHE CHECK [FEATURE_QA]` log line inside `_log_chatgpt_usage()` (covers all FEATURE_QA calls)
+- Format: `CACHE CHECK [GATE] iteration N: cached=X / total_prompt=Y (Z% cached)`
+- Correct dict-based access: `usage.get('prompt_tokens_details', {}).get('cached_tokens', 0)` — not SDK object access
+
+---
+
 ## 2026-03-15 (session 4)
 
 ### perf: fo_harness_improvements_v2.md — 4 of 5 improvements implemented
