@@ -1,5 +1,15 @@
 # Must Port to FO
 
+## CONSISTENCY False-Positive Filter (2026-03-16 session 6 hotfix 2)
+
+92. fix: CONSISTENCY gate false-positive FIELD_MISMATCH filter in `_run_ai_consistency_check()`
+- Claude Sonnet hallucinates "field missing from _to_dict" even when field is present in artifact
+- Post-parse filter checks each Evidence token against actual file_contents dict before accepting issue
+- If evidence found in involved file → removed as false positive + logged
+- Root cause of 20-iteration QA-never-runs deadlock on wynwood_thoroughbreds
+- Files: `fo_test_harness.py`
+⬜ TODO for FO codebase
+
 ## Canonical Code Skeletons + Flask Fix (2026-03-16 session 6)
 
 90. feat: new directive `build_code_skeletons.md` — canonical route/model/service/JSX skeletons

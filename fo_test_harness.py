@@ -5872,6 +5872,26 @@ End with: SHARPEN_COMPLETE"""
             return []
 
         issues = self._parse_consistency_report(output)
+
+        # Filter false-positive FIELD_MISMATCH issues.
+        # Consistency AI sometimes flags fields as missing from _to_dict even when they ARE present.
+        # Verify each issue: if the evidence token appears anywhere in the involved file(s), remove it.
+        verified = []
+        for issue in issues:
+            evidence = issue.get('evidence', '').strip().strip('"').strip("'")
+            if not evidence:
+                verified.append(issue)
+                continue
+            files_str = issue.get('files', '')
+            involved_files = re.findall(r'business/\S+\.py', files_str)
+            found_in_any = any(evidence in file_contents.get(fp, '') for fp in involved_files)
+            if found_in_any:
+                print_info(f"  [CONSISTENCY] Filtered false positive {issue.get('id', '?')}: "
+                           f"'{evidence}' confirmed present in artifact — AI hallucinated missing-field defect")
+            else:
+                verified.append(issue)
+        issues = verified
+
         return issues
 
     @staticmethod

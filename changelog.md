@@ -1,5 +1,28 @@
 # Changelog
 
+## 2026-03-16 (session 6 — hotfix 2)
+
+### fix: CONSISTENCY gate false-positive FIELD_MISMATCH deadlock
+
+**Root cause:** Claude Sonnet (CONSISTENCY gate) repeatedly flagged fields as missing from
+`_to_dict` service methods (e.g. `status`, `membership_start`, `publish_date`) even when
+those fields were present in the actual artifact. AI hallucinated the defect every
+iteration — CONSISTENCY never passed, QA never ran, all 20 iterations consumed.
+
+**Evidence:** `HorseService._to_dict` contained `"status": horse.status` verbatim.
+Consistency output still reported `Evidence: "status"` as a missing field. Pure hallucination.
+
+**Fix:** Post-parse verification filter in `_run_ai_consistency_check()`.
+For each parsed issue with a non-empty Evidence token:
+1. Extract involved `.py` file paths from the `Files:` field
+2. Check if the evidence token appears in those files' actual content (`file_contents` dict, in scope)
+3. If found → log "Filtered false positive" + remove
+4. If not found → real defect, keep
+
+Files: `fo_test_harness.py` — `_run_ai_consistency_check()`
+
+---
+
 ## 2026-03-16 (session 6)
 
 ### feat: canonical code skeletons directive + Flask Blueprint static fix
