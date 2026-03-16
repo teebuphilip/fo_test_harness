@@ -5873,21 +5873,48 @@ End with: SHARPEN_COMPLETE"""
 
         issues = self._parse_consistency_report(output)
 
-        # Filter false-positive FIELD_MISMATCH issues.
-        # Consistency AI sometimes flags fields as missing from _to_dict even when they ARE present.
-        # Verify each issue: if the evidence token appears anywhere in the involved file(s), remove it.
+        # Filter false-positive consistency issues.
+        # The consistency AI hallucinates field-missing defects for fields that ARE present,
+        # and flags non-verifiable concerns (duplicate code, vague URL integrity, import style).
+        # Strategy: extract the first quoted token from evidence and check it against file content.
+        _UNVERIFIABLE_ISSUE_TYPES = {
+            'DUPLICATE_SUBSYSTEM', 'DUPLICATE_CODE', 'CODE_DUPLICATION',
+            'FRONTEND_URL', 'ROUTE_INTEGRITY', 'URL_INTEGRITY',
+        }
         verified = []
         for issue in issues:
-            evidence = issue.get('evidence', '').strip().strip('"').strip("'")
-            if not evidence:
+            iid = issue.get('id', '?')
+            raw_evidence = issue.get('evidence', '').strip()
+
+            # Drop issue types that are quality opinions, not verifiable cross-file assertions
+            issue_text = issue.get('issue', '') + raw_evidence
+            if any(t in issue_text.upper() for t in _UNVERIFIABLE_ISSUE_TYPES):
+                print_info(f"  [CONSISTENCY] Filtered non-verifiable {iid}: issue type is a quality opinion, not a runtime assertion")
+                continue
+
+            # Extract the first quoted token from evidence (handles "field_name ..." or "field_name")
+            quoted_match = re.search(r'"([^"]{1,60})"', raw_evidence)
+            if quoted_match:
+                evidence_token = quoted_match.group(1).strip()
+            else:
+                # No quoted token — skip the check, keep the issue
                 verified.append(issue)
                 continue
+
+            if not evidence_token:
+                verified.append(issue)
+                continue
+
             files_str = issue.get('files', '')
             involved_files = re.findall(r'business/\S+\.py', files_str)
-            found_in_any = any(evidence in file_contents.get(fp, '') for fp in involved_files)
+            if not involved_files:
+                verified.append(issue)
+                continue
+
+            found_in_any = any(evidence_token in file_contents.get(fp, '') for fp in involved_files)
             if found_in_any:
-                print_info(f"  [CONSISTENCY] Filtered false positive {issue.get('id', '?')}: "
-                           f"'{evidence}' confirmed present in artifact — AI hallucinated missing-field defect")
+                print_info(f"  [CONSISTENCY] Filtered false positive {iid}: "
+                           f"'{evidence_token}' confirmed present in artifact — AI hallucinated missing-field defect")
             else:
                 verified.append(issue)
         issues = verified
