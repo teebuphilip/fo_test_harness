@@ -1673,6 +1673,11 @@ class PromptTemplates:
                 'build_boilerplate_sample_code.md'
             ) + "\n\n"
 
+        # Inject canonical code skeletons for all builds — prevents Flask/Blueprint patterns
+        code_skeletons_instruction = "\n\n" + DirectiveTemplateLoader.render(
+            'build_code_skeletons.md'
+        ) + "\n\n"
+
         previous_defects_section = ""
         if previous_defects:
             required_inventory_bullets = "\n".join(f"- {p}" for p in (required_file_inventory or []))
@@ -1712,7 +1717,8 @@ class PromptTemplates:
             previous_defects_section=previous_defects_section,
             tech_stack_instructions=tech_stack_instructions,
             integration_instructions=integration_instructions,
-            boilerplate_path_instruction=boilerplate_path_instruction
+            boilerplate_path_instruction=boilerplate_path_instruction,
+            code_skeletons_instruction=code_skeletons_instruction
         )
 
         return (governance_section, dynamic_section)
@@ -1938,6 +1944,11 @@ it will be considered DELETED. QA will flag it as missing and you'll loop foreve
                 'build_boilerplate_sample_code.md'
             ) + "\n\n"
 
+        # Inject canonical code skeletons for all builds — prevents Flask/Blueprint patterns
+        code_skeletons_instruction = "\n\n" + DirectiveTemplateLoader.render(
+            'build_code_skeletons.md'
+        ) + "\n\n"
+
         # Inject external integration policy
         integration_instructions = ""
         if external_integration_override:
@@ -1948,7 +1959,7 @@ it will be considered DELETED. QA will flag it as missing and you'll loop foreve
         dynamic_section += f"""
 **INTAKE DATA ({block} — key: {block_key}):**
 {json.dumps(block_data, indent=2)}
-{tech_stack_instructions}{integration_instructions}{boilerplate_path_instruction}
+{tech_stack_instructions}{integration_instructions}{boilerplate_path_instruction}{code_skeletons_instruction}
 **BEGIN BUILD EXECUTION NOW.**
 """
 
@@ -5206,6 +5217,26 @@ End with: SHARPEN_COMPLETE"""
                 source = _read(py_file)
                 has_route = bool(re.search(r'@router\.(get|post|put|delete|patch)\s*\(', source))
                 if has_route:
+                    continue
+                # Detect Flask Blueprint pattern — escalate to HIGH with exact fix
+                is_flask = bool(re.search(r'from flask import|Blueprint\(|@router\.route\(', source))
+                if is_flask:
+                    add_defect(
+                        rel,
+                        'FLASK BLUEPRINT DETECTED — this is a FastAPI project. '
+                        'Replace: `from flask import Blueprint` → `from fastapi import APIRouter`. '
+                        'Replace: `router = Blueprint(...)` → `router = APIRouter()`. '
+                        'Replace: `@router.route(\'/path\', methods=[\'GET\'])` → `@router.get(\'/path\')`. '
+                        'All endpoints must use @router.get / @router.post / @router.put / @router.delete.',
+                        'HIGH',
+                        'Convert entire file to FastAPI APIRouter pattern. '
+                        'Import: `from fastapi import APIRouter, Depends, HTTPException`. '
+                        'Import: `from sqlalchemy.orm import Session`. '
+                        'Import: `from core.database import get_db`. '
+                        'Import: `from core.rbac import get_current_user`. '
+                        'Declare: `router = APIRouter()`. '
+                        'Every endpoint: `@router.get("/path") async def fn(db=Depends(get_db), current_user=Depends(get_current_user)):`'
+                    )
                     continue
                 # Allow explicit scope-boundary stubs (comment-only route file)
                 scope_stub = (

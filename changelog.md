@@ -1,5 +1,32 @@
 # Changelog
 
+## 2026-03-16 (session 6)
+
+### feat: canonical code skeletons directive + Flask Blueprint static fix
+
+**New file: `directives/prompts/build_code_skeletons.md`**
+- Four canonical skeletons (route, model, service, JSX page) extracted from real production builds
+- Injected into ALL build prompts (not just lowcode) via `{{code_skeletons_instruction}}` slot in `build_dynamic_base.md`
+- Hard prohibition table at top: NEVER Flask/Blueprint, NEVER .tsx, NEVER app/ router, NEVER raw SQL, NEVER wrong import paths
+- Substitution guide: exact naming conventions for route/model/service/page files
+- Goal: eliminate all architectural decisions from Claude's scope; implementation only
+
+**`fo_test_harness.py` — Flask Blueprint static check upgrade (CHECK 7 area)**
+- Added explicit Flask detection before the generic "no @router endpoints" defect
+- Regex: `from flask import|Blueprint\(|@router\.route\(`
+- Severity upgraded from MEDIUM → HIGH on Flask detection
+- Fix field now contains exact FastAPI conversion (APIRouter import, router = APIRouter(), @router.get pattern)
+- Previous MEDIUM defect was too vague — Claude kept generating Flask despite repeated flag
+
+**`fo_test_harness.py` — both `build_iteration_prompt()` functions updated**
+- `code_skeletons_instruction` variable added; loads `build_code_skeletons.md` unconditionally
+- Template variable `{{code_skeletons_instruction}}` added to `build_dynamic_base.md`
+- Second (inline) prompt function also injects `code_skeletons_instruction` before `BEGIN BUILD EXECUTION NOW.`
+
+Files: `fo_test_harness.py`, `directives/prompts/build_code_skeletons.md`, `directives/prompts/build_dynamic_base.md`
+
+---
+
 ## 2026-03-16 (session 5 — hotfix)
 
 ### fix: static CHECK 8 deadlock on boilerplate-owned frontend configs

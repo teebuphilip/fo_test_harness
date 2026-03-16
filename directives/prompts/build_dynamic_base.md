@@ -14,5 +14,5 @@
 
 **INTAKE DATA ({{block}} — key: {{block_key}}):**
 {{block_data_json}}
-{{tech_stack_instructions}}{{integration_instructions}}{{boilerplate_path_instruction}}
+{{tech_stack_instructions}}{{integration_instructions}}{{boilerplate_path_instruction}}{{code_skeletons_instruction}}
 **BEGIN BUILD EXECUTION NOW.**

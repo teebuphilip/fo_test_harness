@@ -1,5 +1,17 @@
 # Learnings From AF to FO
 
+## Latest Learnings (2026-03-16 session 6)
+
+- Vague defect messages cause indefinite loops when Claude cannot infer the correct fix. "Route file has executable code but defines no @router endpoints" with Fix "Define route decorators" is insufficient — Claude regenerates Flask Blueprint code because it doesn't know what framework to use. The fix message must name the exact wrong pattern and provide the exact correct replacement code, not a description of what to do.
+
+- Claude generates Flask/Blueprint routes when it has no architectural constraint specifying otherwise. The model defaults to Flask for Python web routes in the absence of an explicit FastAPI instruction. A canonical skeleton showing `from fastapi import APIRouter`, `router = APIRouter()`, `@router.get(...)` eliminates this immediately — it is not ambiguous.
+
+- Prose build instructions ("use FastAPI, not Flask") are less effective than concrete code patterns. Showing Claude an actual file with the correct imports and decorator patterns it must copy is more reliable than telling it the framework name. Architecture defined as code, not text.
+
+- The distinction between architectural freedom and implementation freedom matters. When Claude is asked to build a feature, it should only decide: what entities exist, what fields they have, what business logic runs. It should not also decide: what framework, what decorator pattern, what import path, what file structure. These are already decided by the boilerplate. Canonical skeletons encode those decisions so they are removed from Claude's scope entirely.
+
+- Detecting the wrong framework (Flask) explicitly in the static check is more actionable than detecting the absence of the right framework (FastAPI). "No @router endpoints found" is ambiguous — Claude may respond by adding Flask route decorators. "FLASK BLUEPRINT DETECTED" with exact conversion instructions is unambiguous.
+
 ## Latest Learnings (2026-03-15 session 4)
 
 - Running all AI gates on every iteration regardless of what changed is the single largest source of wasted tokens in the loop. CONSISTENCY and FEATURE_QA are expensive ChatGPT calls that produce identical results when no files they care about have changed. Gate locking (comparing artifact manifests between iterations) eliminates these redundant calls with zero impact on QA correctness.

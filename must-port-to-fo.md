@@ -1,5 +1,21 @@
 # Must Port to FO
 
+## Canonical Code Skeletons + Flask Fix (2026-03-16 session 6)
+
+90. feat: new directive `build_code_skeletons.md` — canonical route/model/service/JSX skeletons
+- Extracted from real production builds (ai-workforce-intelligence, content_marketing_example)
+- Includes HARD PROHIBITIONS table (Flask, Blueprint, .tsx, app/ router, raw SQL, wrong import paths)
+- Injected into ALL build prompts unconditionally via `{{code_skeletons_instruction}}`
+- Files: `directives/prompts/build_code_skeletons.md`, `directives/prompts/build_dynamic_base.md`, `fo_test_harness.py`
+⬜ TODO for FO codebase
+
+91. fix: Flask Blueprint detection in static CHECK 7 — upgraded to HIGH with exact fix
+- Regex `from flask import|Blueprint\(|@router\.route\(` detects Flask before generic "no endpoints" check
+- Severity: HIGH (was MEDIUM generic defect — too vague for Claude to action)
+- Fix field: exact FastAPI import list + APIRouter declaration + @router.get pattern
+- Files: `fo_test_harness.py`
+⬜ TODO for FO codebase
+
 ## QA Prompt Caching + Inventory Step (2026-03-16 session 5)
 
 86. perf: qa_prompt.md — static rules moved to top for OpenAI prefix caching
