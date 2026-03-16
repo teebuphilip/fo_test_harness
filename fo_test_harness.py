@@ -5232,7 +5232,7 @@ End with: SHARPEN_COMPLETE"""
             postcss_cfg = frontend_dir / 'postcss.config.js'
             tailwind_cfgs = [frontend_dir / 'tailwind.config.js', frontend_dir / 'tailwind.config.ts']
 
-            if next_cfg.exists():
+            if next_cfg.exists() and next_cfg.name not in BOILERPLATE_OWNED_FRONTEND_CONFIGS:
                 s = _read(next_cfg)
                 if 'compilerOptions' in s:
                     add_defect(
@@ -5241,7 +5241,7 @@ End with: SHARPEN_COMPLETE"""
                         'HIGH',
                         'Replace with valid Next.js config object (module.exports = { ... })'
                     )
-            if postcss_cfg.exists():
+            if postcss_cfg.exists() and postcss_cfg.name not in BOILERPLATE_OWNED_FRONTEND_CONFIGS:
                 s = _read(postcss_cfg)
                 if 'rewrites()' in s or 'destination:' in s or 'nextConfig' in s:
                     add_defect(
@@ -5252,6 +5252,9 @@ End with: SHARPEN_COMPLETE"""
                     )
             for cfg in tailwind_cfgs:
                 if not cfg.exists():
+                    continue
+                if cfg.name in BOILERPLATE_OWNED_FRONTEND_CONFIGS:
+                    # Boilerplate owns this file — pruner will delete it; no point flagging content
                     continue
                 s = _read(cfg)
                 if not re.search(r'\bcontent\s*:', s):

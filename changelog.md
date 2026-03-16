@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-03-16 (session 5 — hotfix)
+
+### fix: static CHECK 8 deadlock on boilerplate-owned frontend configs
+
+**Root cause:** CHECK 8 in `_run_static_check()` flagged `business/frontend/tailwind.config.ts`
+for missing `content:` paths. The file reached the static checker in iteration 1 via wrong-path
+remap (survived pruner). Iterations 2+ sent surgical fix for that file, Claude output it, pruner
+immediately deleted it (boilerplate-owned), only 2 files survived — BUILD VALIDATION FAILED.
+Loop repeated until max iterations.
+
+**Fix:** All three config checks in CHECK 8 now skip if `cfg.name` is in
+`BOILERPLATE_OWNED_FRONTEND_CONFIGS`. Boilerplate owns `tailwind.config.js/ts`,
+`next.config.js/ts`, and `postcss.config.js/ts` — pruner always deletes them; no point
+flagging their content.
+
+Files: `fo_test_harness.py` — CHECK 8 (`_run_static_check`)
+
+---
+
 ## 2026-03-16 (session 5)
 
 ### perf: qa_prompt.md restructure for prefix caching + QA inventory step
