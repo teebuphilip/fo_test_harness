@@ -1,5 +1,30 @@
 # Changelog
 
+## 2026-03-16 (session 6 — checks 16 & 17)
+
+### feat: integration_check.py Check 16 (hollow services) + Check 17 (orphaned pages)
+
+**Check 16 — Hollow service detection (HIGH)**
+Scans every `business/services/*.py` public method that accepts a `db` parameter.
+If the method body has no `db.query/add/execute/commit` call AND returns a literal
+`[]`, `{}`, `None`, `""`, or is `pass`/`# TODO` — flags HIGH HOLLOW_SERVICE.
+Root cause of AWI pattern: Claude generates a page + route + service but the service
+method just returns `[]` with no DB query. Page renders, API responds, but data is
+always empty. Silent at runtime, invisible to all other checks.
+
+**Check 17 — Orphaned page detection (HIGH)**
+For every `business/frontend/pages/*.jsx` that makes an API call (`api.get/post/...`
+or `fetch(...)`), derives the domain entity name from the filename and checks for
+any corresponding model/route/service file. If none found → flags HIGH ORPHANED_PAGE.
+Skips generic pages (dashboard, home, login, settings, etc.).
+Root cause of AWI assessments pattern: Assessments.jsx existed and called `/api/assessments`
+but there was no Assessment model, no assessments route, no AssessmentService.
+All API calls 404'd silently.
+
+Files: `integration_check.py`
+
+---
+
 ## 2026-03-16 (session 6 — hotfix 2)
 
 ### fix: CONSISTENCY gate false-positive FIELD_MISMATCH deadlock

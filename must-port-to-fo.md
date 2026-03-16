@@ -1,5 +1,22 @@
 # Must Port to FO
 
+## Integration Check 16 & 17 (2026-03-16 session 6)
+
+93. feat: integration_check.py Check 16 — Hollow service detection
+- Scans business/services/*.py public methods that accept db param but never call db.query/add/commit
+- Flags stub returns ([], {}, None, '') and pass/TODO bodies as HIGH HOLLOW_SERVICE
+- Catches AWI pattern: service exists but returns empty data — page appears to work but shows nothing
+- Files: `integration_check.py`
+⬜ TODO for FO codebase
+
+94. feat: integration_check.py Check 17 — Orphaned page detection
+- For each business/frontend/pages/*.jsx making API calls, checks that a model/route/service exists for the entity
+- Skips generic pages (dashboard, home, login, etc.)
+- Flags HIGH ORPHANED_PAGE when page makes API calls but no backend coverage found
+- Catches AWI pattern: Assessments.jsx calls /api/assessments but no model/route/service — all 404
+- Files: `integration_check.py`
+⬜ TODO for FO codebase
+
 ## CONSISTENCY False-Positive Filter (2026-03-16 session 6 hotfix 2)
 
 92. fix: CONSISTENCY gate false-positive FIELD_MISMATCH filter in `_run_ai_consistency_check()`

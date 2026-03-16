@@ -21,6 +21,8 @@ Checks:
   13. Config object as text — JSX renders a config value directly but config value is a dict/list → [object Object]
   14. Dead buttons       — <button> with no onClick (not submit), <a href="#"> placeholder links
   15. Form state mismatch — useState fields not in business_config.json form field definitions → silent data loss
+  16. Hollow services    — public service methods accepting db but never calling db.query/add/commit → silent empty returns
+  17. Orphaned pages     — frontend page makes API calls but no model/route/service exists for that entity → all calls 404
 
 Output:
   integration_issues.json  (harness-compatible defect format)
@@ -1481,6 +1483,201 @@ def check_form_state_config_mismatch(artifacts: dict) -> list:
 
 # ── Runner ────────────────────────────────────────────────────────────────────
 
+def check_hollow_services(artifacts: dict) -> list:
+    """
+    Check 16: Hollow service detection.
+
+    Flags any public method in a business/services/*.py file whose body contains
+    no database interaction (no db.query / db.add / db.execute / db.commit) AND
+    returns a literal empty value ([], {}, None, '') or is a pass/TODO stub.
+
+    These are Claude stubs — the page and route exist but nothing is actually
+    persisted or retrieved. They will silently return empty data at runtime.
+    """
+    issues = []
+
+    # Regex: match a top-level def (not starting with _) inside a service file
+    FUNC_RE = re.compile(
+        r'^\s{4}(?:async\s+)?def\s+([a-zA-Z][a-zA-Z0-9_]*)\s*\(([^)]*)\)\s*(?:->[^:]+)?:(.*?)(?=^\s{4}(?:async\s+)?def\s|\Z)',
+        re.MULTILINE | re.DOTALL,
+    )
+    # Literals that indicate a stub return
+    STUB_RETURN_RE = re.compile(
+        r'\breturn\s+(\[\s*\]|\{\s*\}|None|""|\'\')\s*$',
+        re.MULTILINE,
+    )
+    DB_TOUCH_RE = re.compile(
+        r'\bdb\.(query|add|execute|commit|delete|bulk_insert|merge|flush)\b'
+        r'|\btenant_db\.(query|add|execute|commit)\b'
+        r'|\bsession\.(query|add|execute|commit)\b',
+    )
+    TODO_RE = re.compile(r'#\s*(TODO|FIXME|PLACEHOLDER|stub)', re.IGNORECASE)
+
+    for path, content in artifacts.items():
+        if not (path.startswith('business/services/') and path.endswith('.py')):
+            continue
+        if '__init__' in path:
+            continue
+
+        for m in FUNC_RE.finditer(content):
+            func_name = m.group(1)
+            params    = m.group(2)
+            body      = m.group(3)
+
+            # Skip private/dunder helpers
+            if func_name.startswith('_'):
+                continue
+            # Must accept a db/session parameter to be a data-access method
+            if not re.search(r'\bdb\b|\bsession\b|\btenant_db\b', params):
+                continue
+
+            has_db = bool(DB_TOUCH_RE.search(body))
+            has_stub_return = bool(STUB_RETURN_RE.search(body))
+            has_todo = bool(TODO_RE.search(body))
+            is_pass_only = bool(re.match(r'\s*pass\s*$', body.strip()))
+
+            if has_db:
+                continue  # real implementation — skip
+
+            if has_stub_return or has_todo or is_pass_only:
+                stub_evidence = (
+                    STUB_RETURN_RE.search(body) or TODO_RE.search(body)
+                )
+                evidence_line = stub_evidence.group(0).strip() if stub_evidence else 'pass'
+                line_no = content[:m.start()].count('\n') + 1
+
+                issues.append({
+                    'id': f'INT-HOLLOW-{Path(path).stem}-{func_name}',
+                    'severity': 'HIGH',
+                    'category': 'HOLLOW_SERVICE',
+                    'file': path,
+                    'files': [path],
+                    'evidence': (
+                        f"`{func_name}()` in {Path(path).name} line ~{line_no}: "
+                        f"no db.query/db.add found — stub body: `{evidence_line}`"
+                    ),
+                    'issue': (
+                        f"{Path(path).name}.{func_name}() has no database interaction. "
+                        f"The method accepts a `db` session but never queries or writes to it. "
+                        f"At runtime this returns empty/None data silently — the page will appear "
+                        f"to work but display nothing."
+                    ),
+                    'fix': (
+                        f"Implement {func_name}() using SQLAlchemy ORM: "
+                        f"`db.query(Model).filter(...).all()` for reads, "
+                        f"`db.add(entity); db.commit(); db.refresh(entity)` for writes. "
+                        f"Remove the stub return and replace with real DB access."
+                    ),
+                })
+
+    return issues
+
+
+def check_orphaned_pages(artifacts: dict) -> list:
+    """
+    Check 17: Orphaned page detection.
+
+    For every business/frontend/pages/*.jsx, derive the domain entity name
+    (e.g. Assessments.jsx → 'assessment'). Then verify at least one of:
+      - a model file exists containing that entity name
+      - a route file exists for that entity
+      - a service file exists for that entity
+
+    If none exist, the page is orphaned — it renders UI for an entity that
+    has no backend support at all.
+    """
+    issues = []
+
+    # Collect entity names from models, routes, services
+    model_names   = set()   # lowercase stems
+    route_names   = set()
+    service_names = set()
+
+    for path in artifacts:
+        stem = Path(path).stem.lower()
+        if path.startswith('business/models/') and path.endswith('.py') and '__init__' not in path:
+            model_names.add(stem)
+            # Also add singular/plural variants
+            model_names.add(stem.rstrip('s'))
+            if not stem.endswith('s'):
+                model_names.add(stem + 's')
+        elif path.startswith('business/backend/routes/') and path.endswith('.py') and '__init__' not in path:
+            route_names.add(stem)
+            route_names.add(stem.rstrip('s'))
+            if not stem.endswith('s'):
+                route_names.add(stem + 's')
+        elif path.startswith('business/services/') and path.endswith('.py') and '__init__' not in path:
+            # Strip 'Service' suffix: HorseService → horse
+            svc = re.sub(r'service$', '', stem, flags=re.IGNORECASE)
+            service_names.add(svc)
+            service_names.add(svc.rstrip('s'))
+            if not svc.endswith('s'):
+                service_names.add(svc + 's')
+
+    # Pages to skip — generic utility/dashboard pages with no single entity
+    GENERIC_PAGES = {
+        'dashboard', 'home', 'index', 'layout', 'login', 'signup', 'register',
+        'profile', 'settings', 'notfound', 'error', '404', 'app', 'main',
+        'landing', 'welcome', 'unauthorized', 'forbidden',
+    }
+
+    for path, content in artifacts.items():
+        if not (path.startswith('business/frontend/pages/') and path.endswith('.jsx')):
+            continue
+
+        page_stem = Path(path).stem.lower()
+        # Derive candidate entity names: HorseProfiles → ['horseprofiles', 'horseprofil', 'horseprofile']
+        candidates = {page_stem, page_stem.rstrip('s')}
+        if not page_stem.endswith('s'):
+            candidates.add(page_stem + 's')
+
+        if candidates & GENERIC_PAGES:
+            continue  # skip generic pages
+
+        # Check if the page makes ANY api/fetch call — if it's purely static, skip
+        has_api_call = bool(re.search(
+            r'api\.(get|post|put|delete|patch)\s*\(|fetch\s*\(|axios\.',
+            content,
+        ))
+        if not has_api_call:
+            continue  # static/presentational page — no backend expected
+
+        # Check for backend coverage
+        has_model   = bool(candidates & model_names)
+        has_route   = bool(candidates & route_names)
+        has_service = bool(candidates & service_names)
+
+        if has_model or has_route or has_service:
+            continue  # covered
+
+        issues.append({
+            'id': f'INT-ORPHAN-PAGE-{Path(path).stem}',
+            'severity': 'HIGH',
+            'category': 'ORPHANED_PAGE',
+            'file': path,
+            'files': [path],
+            'evidence': (
+                f"{Path(path).name} makes API calls but no model/route/service found "
+                f"for entity '{page_stem}'. "
+                f"Models: {sorted(model_names)}, Routes: {sorted(route_names)}, "
+                f"Services: {sorted(service_names)}"
+            ),
+            'issue': (
+                f"{Path(path).name} renders UI and makes API calls for '{page_stem}' "
+                f"but there is no corresponding model, route, or service. "
+                f"All API calls from this page will 404 at runtime."
+            ),
+            'fix': (
+                f"Create the missing backend layer for '{page_stem}': "
+                f"(1) business/models/{Path(path).stem.rstrip('s')}.py — SQLAlchemy model, "
+                f"(2) business/backend/routes/{page_stem}.py — APIRouter with CRUD endpoints, "
+                f"(3) business/services/{Path(path).stem.rstrip('s')}Service.py — db query methods."
+            ),
+        })
+
+    return issues
+
+
 def run_all_checks(artifacts: dict, intake: dict) -> list:
     print(f"\n  Running Check 1: Route inventory...")
     route_issues = check_route_inventory(artifacts)
@@ -1542,10 +1739,18 @@ def run_all_checks(artifacts: dict, intake: dict) -> list:
     form_state_issues = check_form_state_config_mismatch(artifacts)
     print(f"    → {len(form_state_issues)} issue(s)")
 
+    print(f"  Running Check 16: Hollow service methods (no DB interaction)...")
+    hollow_issues = check_hollow_services(artifacts)
+    print(f"    → {len(hollow_issues)} issue(s)")
+
+    print(f"  Running Check 17: Orphaned pages (UI with no backend coverage)...")
+    orphan_issues = check_orphaned_pages(artifacts)
+    print(f"    → {len(orphan_issues)} issue(s)")
+
     return (route_issues + field_issues + spec_issues + import_issues + dblpath_issues
             + auth_issues + async_issues + gather_issues + npm_issues + except_issues
             + poll_issues + timeout_issues + config_obj_issues + dead_btn_issues
-            + form_state_issues)
+            + form_state_issues + hollow_issues + orphan_issues)
 
 
 def run_fast_checks(artifacts: dict, intake: dict) -> list:
