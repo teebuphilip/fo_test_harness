@@ -541,6 +541,42 @@
         "additionalProperties": false
       }
     }
+    ,{
+      "template_id": "PRT008_add_data_spec",
+      "title": "Add data specification for UI deliverable",
+      "instruction": "For each flagged UI deliverable (dashboard, management page, tracker, list), specify: (1) what data entity is displayed/managed, (2) what fields that entity has, (3) what CRUD operations the page performs (create/read/update/delete). Add explicit tasks covering model definition and backend route for each entity.",
+      "response_schema": {
+        "type": "object",
+        "required": ["affected_deliverables", "data_specs"],
+        "properties": {
+          "affected_deliverables": {
+            "type": "array",
+            "items": {"type": "string"},
+            "minItems": 1
+          },
+          "data_specs": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["deliverable_name", "entity_name", "fields", "operations"],
+              "properties": {
+                "deliverable_name": {"type": "string"},
+                "entity_name": {"type": "string"},
+                "fields": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+                "operations": {
+                  "type": "array",
+                  "items": {"type": "string", "enum": ["create", "read", "update", "delete", "list"]},
+                  "minItems": 1
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    }
   ],
-  "total_templates": 7
+  "total_templates": 8
 }

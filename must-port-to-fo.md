@@ -1,5 +1,40 @@
 # Must Port to FO
 
+## CONSISTENCY Full-Build Escalation Removed (2026-03-16 session 6)
+
+97. fix: CONSISTENCY hard cap no longer escalates to full-build + N/A files filter
+- Removed full-build escalation at MAX_CONSISTENCY_CONSECUTIVE: always fall through to Feature QA
+- Full-build for 1 stubborn issue caused Claude to invent new wrong-path architectures (app/, backend/)
+- Added no-file filter: issues with files="N/A"/"N/A <-> N/A" dropped before any other processing
+- QA is authoritative — real HIGH issues surface as QA defects with concrete evidence
+- Root cause of wynwood 30-iter run: iter 4 ISSUE-5 had N/A files → survived filter → 1 HIGH → full-build
+- Files: `fo_test_harness.py`
+⬜ TODO for FO codebase
+
+## CONSISTENCY Filter Bug 2 (2026-03-16 session 6)
+
+96. fix: CONSISTENCY gate — DUPLICATE_SUBSYSTEM bypass + BROKEN_IMPORT wrong filter direction
+- `_parse_consistency_report()` now captures `[TYPE]` from block header into `issue['type']`
+- Unverifiable check now tests `issue_type in _UNVERIFIABLE_ISSUE_TYPES` first (before scanning problem text)
+- New `_FIELD_MISMATCH_TYPES` set: token-in-file filter only applied for FIELD_MISMATCH/SCHEMA_FIELD_MISMATCH/MODEL_FIELD_MISMATCH
+- BROKEN_IMPORT (and all other types) skip the "token found → hallucination" filter — real defects preserved
+- Root cause of wynwood 30-iter deadlock: DUPLICATE_SUBSYSTEM survived filter each time → Claude called for fix → no change → repeat
+- Files: `fo_test_harness.py`
+⬜ TODO for FO codebase
+
+## PDR060 Intake Check (2026-03-16 session 6)
+
+95. feat: postintakeassist PDR060 — UI deliverable missing data spec (pre-build "orphaned page" catch)
+- New rule in `post_intake_detection_rules.v2.1.json`, mode `ui_feature_missing_data_spec`
+- Flags HIGH when a deliverable name contains UI keywords (dashboard, tracker, management, etc.)
+  but none of its mapped tasks contain data operation keywords (create/add/form/input/save/etc.)
+- Catches the AWI "Executive Dashboard" + "KPI Tracker" pattern at intake time before build
+- New revision template PRT008_add_data_spec: prompts for entity_name, fields[], operations[]
+- Handler in `post_intake_assist.py` `_detect_issues()`, mode `ui_feature_missing_data_spec`
+- Files: `postintakeassist/post_intake_detection_rules.v2.1.json`,
+  `postintakeassist/post_intake_revision_templates.v2.1.json`, `postintakeassist/post_intake_assist.py`
+⬜ TODO for FO codebase
+
 ## Integration Check 16 & 17 (2026-03-16 session 6)
 
 93. feat: integration_check.py Check 16 — Hollow service detection

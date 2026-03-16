@@ -1,5 +1,86 @@
 # Changelog
 
+## 2026-03-16 (session 6 — CONSISTENCY full-build escalation removed)
+
+### fix: CONSISTENCY hard cap no longer escalates to full-build; added no-file filter
+
+**Bug: full-build escalation for 1 HIGH CONSISTENCY issue**
+When `_consistency_consecutive_iters >= MAX_CONSISTENCY_CONSECUTIVE (4)` with any HIGH issue,
+the harness set `defect_source='qa'` and issued a full 16384-token build prompt.
+Claude regenerated all files from scratch → invented wrong-path architectures (`app/`, `backend/`,
+`frontend/`) → PATCH_SET_COMPLETE fired → collateral wrong-path files extracted → prior surgical
+fixes destroyed. Triggered by a single GPT-4o hallucinated HIGH issue at iter 4 → exploded to 30.
+
+**Fix 1: Remove full-build escalation — always fall through to QA at hard cap**
+QA is the authoritative validator. If a CONSISTENCY issue is a real AttributeError it will
+appear as a QA defect with concrete evidence. A full build for 1 stubborn issue is never correct.
+
+**Fix 2: Drop issues with no files named (N/A <-> N/A)**
+ISSUE-5 in iter 4 had `files = "N/A <-> N/A"` — consistency cannot identify a cross-file
+mismatch without naming both files. These are always fabrications. Added pre-filter check:
+if `files` is empty / `N/A` / `N/A <-> N/A` → filtered immediately.
+
+Files: `fo_test_harness.py` — `_run_ai_consistency_check()`, `execute_build_qa_loop()`
+
+---
+
+## 2026-03-16 (session 6 — CONSISTENCY filter bug 2)
+
+### fix: CONSISTENCY filter — DUPLICATE_SUBSYSTEM not caught + BROKEN_IMPORT incorrectly removed
+
+**Bug 1 — DUPLICATE_SUBSYSTEM not caught:**
+`_UNVERIFIABLE_ISSUE_TYPES` check scanned `issue['issue']` (Problem text) + evidence.
+The type string `DUPLICATE_SUBSYSTEM` only appears in the block header `[DUPLICATE_SUBSYSTEM]`,
+never in the Problem or Evidence fields → set membership check always missed it.
+Fix: `_parse_consistency_report` now captures the `[TYPE]` from the header into `issue['type']`.
+The unverifiable check tests `issue_type in _UNVERIFIABLE_ISSUE_TYPES` first.
+
+**Bug 2 — BROKEN_IMPORT incorrectly filtered:**
+The "token found in file → hallucination" logic was applied to ALL issue types.
+For FIELD_MISMATCH, finding the field name in the file proves the "missing" claim is false.
+For BROKEN_IMPORT, finding the wrong import string in the file confirms the defect is real.
+Applying FIELD_MISMATCH logic to BROKEN_IMPORT caused real import bugs to be filtered out.
+Fix: `_FIELD_MISMATCH_TYPES` set — token-in-file filter only applied for FIELD_MISMATCH/
+SCHEMA_FIELD_MISMATCH/MODEL_FIELD_MISMATCH. All other types pass through to verified unchanged.
+
+**Result:** iter 30 (3 issues: 2 FIELD_MISMATCH, 1 DUPLICATE_SUBSYSTEM) → 0 surviving.
+iter 29 (4 issues: 2 FIELD_MISMATCH, 2 BROKEN_IMPORT) → 2 surviving (real BROKEN_IMPORTs).
+
+Files: `fo_test_harness.py` — `_parse_consistency_report()`, `_run_ai_consistency_check()`
+
+---
+
+## 2026-03-16 (session 6 — PDR060 intake check)
+
+### feat: postintakeassist PDR060 — UI deliverable missing data specification
+
+New intake-level rule that catches the "page with nothing behind it" problem (AWI pattern)
+**before** the build starts, not just after.
+
+**Rule:** `PDR060_ui_deliverable_missing_data_spec` (severity: HIGH, mode: `ui_feature_missing_data_spec`)
+
+**Logic:** For each deliverable whose name contains UI keywords (dashboard, management, tracker,
+portal, list, hub, panel, board, console, monitor, browser, manager, viewer, explorer):
+1. Look at all tasks mapped to the same feature IDs
+2. If no task title contains a data operation keyword (create, add, form, input, enter, edit,
+   update, delete, save, store, upload, import, export, field, record, log, submit, crud, model,
+   schema, database, persist, table, entry) → flag HIGH
+3. Skip static/auth pages (login, home page, about, sidebar, etc.)
+
+**Fallback:** If feature_id mapping is absent, checks ALL task titles as context.
+
+**Revision template:** `PRT008_add_data_spec` — AI asks for entity name, fields, and CRUD operations
+for each flagged deliverable.
+
+**Tested:** 5 unit cases — AWI hollow dashboard+tracker flagged; backed management dashboard cleared;
+home page skipped; "Assessment Management" with UI-only task flagged; "Report List" with export task cleared.
+
+Files: `postintakeassist/post_intake_detection_rules.v2.1.json`,
+`postintakeassist/post_intake_revision_templates.v2.1.json`,
+`postintakeassist/post_intake_assist.py`
+
+---
+
 ## 2026-03-16 (session 6 — checks 16 & 17)
 
 ### feat: integration_check.py Check 16 (hollow services) + Check 17 (orphaned pages)

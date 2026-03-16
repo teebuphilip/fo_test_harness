@@ -1,5 +1,31 @@
 # Learnings From AF to FO
 
+## Latest Learnings (2026-03-16 session 6 — CONSISTENCY escalation)
+
+- Full-build escalation as a response to a persistent CONSISTENCY issue is strictly worse than falling through to QA. The full-build forces Claude to regenerate all files from memory without seeing the current artifact state, producing invented architectures and wrong-path files. The QA gate sees the actual artifacts and reports real defects. One stubborn hallucinated CONSISTENCY issue should never trigger a complete rebuild.
+
+- CONSISTENCY issues with no files named (`N/A <-> N/A`) are structurally unverifiable. Cross-file consistency requires two specific files. If the AI cannot name them, it cannot have observed the mismatch. Filter immediately — these are always fabrications.
+
+- The escalation path `surgical → wide surgical → full-build` creates a feedback loop: full-build generates fresh wrong-path files → PATCH_SET_COMPLETE fires → collateral files discarded → 10 files lost → next CONSISTENCY has even more missing imports → more issues → another escalation. The right path is always `surgical → wide surgical → fall through to QA`.
+
+## Latest Learnings (2026-03-16 session 6 — CONSISTENCY filter)
+
+- The CONSISTENCY filter has two opposing failure modes depending on issue type. For FIELD_MISMATCH, finding the evidence token in the file proves the AI hallucinated ("field is missing" when it's present). For BROKEN_IMPORT, finding the wrong import string in the file proves the defect is real ("wrong path" when the wrong path is there). Applying one filter direction to both issue types simultaneously filters real bugs and keeps hallucinations. The fix is to partition by issue type before applying the token-in-file test.
+
+- Issue type metadata (`[DUPLICATE_SUBSYSTEM]`) appears only in the block header line, never in the Problem or Evidence text. Checking evidence + problem text for `DUPLICATE_SUBSYSTEM` always fails. The parser must extract the `[TYPE]` bracket from the header explicitly and store it as a separate field. Text-scanning the output for type names is fragile and unreliable.
+
+- A filter that passes one class of hallucinations (DUPLICATE_SUBSYSTEM due to type-extraction bug) at 30+ iterations costs approximately the same token budget as 2-3 full QA passes. The filter needs to be comprehensive — every AI issue type the consistency AI can produce must be explicitly handled (either filtered or passed through), not left to fall through to the "keep" path.
+
+## Latest Learnings (2026-03-16 session 6 — intake checks)
+
+- A UI deliverable name is not a data specification. "Executive Dashboard" tells Claude to render a page. It does not tell Claude what data model backs it, what fields to persist, or what CRUD operations the page performs. Without that information Claude will generate a page + route + hollow service that returns `[]`. The page renders. The API responds 200. But the data is always empty. This is the AWI pattern.
+
+- The correct fix is a two-layer defense: (1) catch it at intake time with PDR060 before the build runs — force the founder to name the entity, fields, and operations for every UI-named deliverable; (2) catch what slips through at build time with integration_check.py Checks 16 (hollow services) and 17 (orphaned pages).
+
+- Intake-level detection is better than post-build detection because: fixing intake costs zero AI tokens, fixing post-build costs 2-4 extra fix iterations + integration check pass. The PDR060 rule fires before `run_integration_and_feature_build.sh` even starts. If the founder answers "the dashboard lists client assessments with fields: name, score, date — create and delete" then that information flows into the build prompt as a concrete spec, not as an ambiguous feature name.
+
+- UI keyword matching on deliverable names is a reliable proxy for data-model requirement. Names containing "dashboard", "management", "tracker", "portal", "list", "board", "hub", "console", "monitor", "browser", "manager", "viewer", "explorer" almost always imply a database table. Names containing "login", "home page", "sidebar", "about" almost never do. The false-positive rate on the skip list is low enough that this heuristic is production-ready without AI.
+
 ## Latest Learnings (2026-03-16 session 6)
 
 - Vague defect messages cause indefinite loops when Claude cannot infer the correct fix. "Route file has executable code but defines no @router endpoints" with Fix "Define route decorators" is insufficient — Claude regenerates Flask Blueprint code because it doesn't know what framework to use. The fix message must name the exact wrong pattern and provide the exact correct replacement code, not a description of what to do.

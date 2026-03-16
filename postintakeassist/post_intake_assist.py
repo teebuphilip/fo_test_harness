@@ -463,6 +463,54 @@ def _detect_issues(data: dict, rules: dict, vocab: dict) -> List[dict]:
                         issues.append(_issue(rule, "Acceptance criteria unmapped"))
                         break
 
+        elif mode == "ui_feature_missing_data_spec":
+            deliverables = _get_path(data, rule["paths"]["deliverables"]) or []
+            tasks = _get_path(data, rule["paths"]["tasks"]) or []
+            ui_kw = [k.lower() for k in rule.get("ui_keywords", [])]
+            data_kw = [k.lower() for k in rule.get("data_keywords", [])]
+            skip_kw = [k.lower() for k in rule.get("skip_keywords", [])]
+
+            # Build task text index by feature_id
+            task_titles_by_feature: dict = {}
+            for t in tasks if isinstance(tasks, list) else []:
+                if not isinstance(t, dict):
+                    continue
+                title = t.get("title", "")
+                for fid in (t.get("maps_to_feature_ids") or []):
+                    task_titles_by_feature.setdefault(fid, []).append(title)
+            all_task_text = " ".join(
+                t.get("title", "") for t in tasks if isinstance(t, dict)
+            ).lower()
+
+            flagged = []
+            for d in deliverables if isinstance(deliverables, list) else []:
+                if not isinstance(d, dict):
+                    continue
+                name = d.get("name", "")
+                name_lower = name.lower()
+                # Skip static/auth pages
+                if any(sk in name_lower for sk in skip_kw):
+                    continue
+                # Only flag deliverables that sound like UI views
+                if not any(uk in name_lower for uk in ui_kw):
+                    continue
+                # Gather task text for this deliverable's features
+                feature_ids = d.get("maps_to_feature_ids") or []
+                related = " ".join(
+                    " ".join(task_titles_by_feature.get(fid, []))
+                    for fid in feature_ids
+                ).lower()
+                # Fall back to all tasks if feature mapping produced nothing
+                check_text = related if related.strip() else all_task_text
+                if not any(dk in check_text for dk in data_kw):
+                    flagged.append(name)
+
+            if flagged:
+                issues.append(_issue(
+                    rule,
+                    f"UI deliverable(s) missing data spec: {', '.join(flagged)}"
+                ))
+
     return issues
 
 

@@ -207,6 +207,16 @@ Every build iteration passes through **five sequential gates** inside `fo_test_h
 
 Gates 1–5 run inside the iterative loop. Gate 6 runs once after the loop exits (via `run_integration_and_feature_build.sh` or `add_feature.sh`). Any gate failure → targeted Claude fix → back to Gate 1.
 
+**Gate design principle — CONSISTENCY is a pre-filter, not the authority:**
+
+CONSISTENCY (Gate 3) catches obvious cross-file structural bugs cheaply before the expensive QA call. It is not the authoritative validator. After 4 consecutive CONSISTENCY failures the harness falls through to Feature QA regardless of issue severity. This is intentional:
+
+- If CONSISTENCY has failed 4 times on the same issue, it is either a stubborn GPT-4o hallucination (the filter catches most but not all) or a minor gap that doesn't break the running app.
+- Escalating to a full rebuild for 1 unresolved CONSISTENCY issue is strictly worse — Claude regenerates all files from memory, inventing wrong-path architectures and destroying the surgical fixes from prior iterations.
+- Feature QA sees the actual artifacts and the full spec. If the CONSISTENCY issue is a real AttributeError it will surface as a QA defect with concrete evidence. If QA accepts the build, the issue wasn't real.
+
+**Rule:** never treat a CONSISTENCY failure as a reason to do a full build. Fix surgically, fall through to QA at the cap.
+
 ---
 
 ## Key Scripts

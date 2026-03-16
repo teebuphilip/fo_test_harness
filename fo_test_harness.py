@@ -5632,10 +5632,15 @@ End with: SHARPEN_COMPLETE"""
         for block in blocks:
             if not block.strip().startswith('ISSUE-'):
                 continue
-            issue = {'id': '', 'files': '', 'file': '', 'evidence': '', 'issue': '', 'fix': '', 'severity': 'MEDIUM'}
-            m = re.match(r'(ISSUE-\d+):', block)
+            issue = {'id': '', 'type': '', 'files': '', 'file': '', 'evidence': '', 'issue': '', 'fix': '', 'severity': 'MEDIUM'}
+            m = re.match(r'(ISSUE-\d+):\s*\[([A-Z_]+)\]', block)
             if m:
                 issue['id'] = m.group(1)
+                issue['type'] = m.group(2)
+            else:
+                m2 = re.match(r'(ISSUE-\d+):', block)
+                if m2:
+                    issue['id'] = m2.group(1)
             for field, pattern in [
                 ('files',     r'Files:\s*(.+)'),
                 ('evidence',  r'Evidence:\s*(.+)'),
@@ -5886,10 +5891,20 @@ End with: SHARPEN_COMPLETE"""
             iid = issue.get('id', '?')
             raw_evidence = issue.get('evidence', '').strip()
 
-            # Drop issue types that are quality opinions, not verifiable cross-file assertions
+            # Drop issues with no concrete file targets — "N/A <-> N/A" or empty files field.
+            # These are always fabrications: CONSISTENCY cannot identify a cross-file mismatch
+            # without naming both files.
+            files_val = issue.get('files', '').strip()
+            if not files_val or files_val.upper() in ('N/A', 'N/A <-> N/A', 'NONE', 'UNKNOWN'):
+                print_info(f"  [CONSISTENCY] Filtered no-file {iid}: no concrete files named — unverifiable")
+                continue
+
+            # Drop issue types that are quality opinions, not verifiable cross-file assertions.
+            # Check the parsed [TYPE] header first, then fall back to scanning problem + evidence text.
+            issue_type = issue.get('type', '').upper()
             issue_text = issue.get('issue', '') + raw_evidence
-            if any(t in issue_text.upper() for t in _UNVERIFIABLE_ISSUE_TYPES):
-                print_info(f"  [CONSISTENCY] Filtered non-verifiable {iid}: issue type is a quality opinion, not a runtime assertion")
+            if issue_type in _UNVERIFIABLE_ISSUE_TYPES or any(t in issue_text.upper() for t in _UNVERIFIABLE_ISSUE_TYPES):
+                print_info(f"  [CONSISTENCY] Filtered non-verifiable {iid} [{issue_type}]: quality opinion, not a runtime assertion")
                 continue
 
             # Extract the first quoted token from evidence (handles "field_name ..." or "field_name")
@@ -5897,11 +5912,19 @@ End with: SHARPEN_COMPLETE"""
             if quoted_match:
                 evidence_token = quoted_match.group(1).strip()
             else:
-                # No quoted token — skip the check, keep the issue
+                # No quoted token — if it's a known unverifiable type skip, otherwise keep
                 verified.append(issue)
                 continue
 
             if not evidence_token:
+                verified.append(issue)
+                continue
+
+            # The "token found in file → AI hallucinated missing-field" logic ONLY applies to
+            # FIELD_MISMATCH issues. For BROKEN_IMPORT, finding the wrong import string confirms
+            # the defect is real (opposite direction). All other types: keep as-is.
+            _FIELD_MISMATCH_TYPES = {'FIELD_MISMATCH', 'SCHEMA_FIELD_MISMATCH', 'MODEL_FIELD_MISMATCH'}
+            if issue_type not in _FIELD_MISMATCH_TYPES:
                 verified.append(issue)
                 continue
 
@@ -7220,56 +7243,27 @@ End with: SHARPEN_COMPLETE"""
 
                     _consistency_consecutive_iters += 1
 
-                    # Consistency hard cap
+                    # Consistency hard cap — always fall through to Feature QA.
+                    # Full-build escalation is removed: a full regeneration for 1 stubborn
+                    # CONSISTENCY issue causes Claude to invent new wrong-path architectures
+                    # (app/, backend/) from scratch, destroying all prior surgical fixes.
+                    # QA is the authoritative validator — if a CONSISTENCY issue is a real
+                    # AttributeError it will surface as a QA defect with concrete evidence.
                     if _consistency_consecutive_iters >= Config.MAX_CONSISTENCY_CONSECUTIVE:
                         _high_consistency = [i for i in consistency_issues
                                              if i.get('severity', 'HIGH') == 'HIGH']
-                        if _high_consistency:
-                            # HIGH issues remain — escalate to full-build fix pass.
-                            # Do NOT fall through to QA: QA will accept a build with real
-                            # AttributeError bugs and our filter will remove its evidence.
-                            # Instead, give Claude a full-build pass (16384 tokens, full
-                            # governance context) so it can fix all cross-file issues holistically.
-                            print_warning(
-                                f"  [CONSISTENCY] Hard cap reached with {len(_high_consistency)} HIGH "
-                                f"issue(s) — escalating to full-build fix pass (not falling through to QA)"
-                            )
-                            _record_gate('CONSISTENCY', 'FALLTHROUGH',
-                                         f'cap={Config.MAX_CONSISTENCY_CONSECUTIVE} reached — escalating to full build',
-                                         iteration)
-                            _consistency_consecutive_iters = 0
-                            # Format as QA-style defects — Claude gets full build prompt + 16384 tokens
-                            previous_defects     = self._format_consistency_defects_for_claude(consistency_issues)
-                            defect_source        = 'qa'
-                            _raw_pending_defects = []
-                            iteration += 1
-                            if iteration > self.max_qa_iterations:
-                                print_error(f"Max iterations ({self.max_qa_iterations}) reached during consistency escalation — halting")
-                                self._print_cost_summary(
-                                    iteration - 1, total_calls, total_cache_writes, total_cache_hits,
-                                    total_cache_write_tokens, total_cache_read_tokens,
-                                    total_input_tokens, total_output_tokens,
-                                    total_gpt_calls, total_gpt_input_tokens, total_gpt_output_tokens,
-                                    run_end_reason='MAX_ITERATIONS'
-                                )
-                                _flush_gate_trace()
-                                return False, "MAX_ITERATIONS_EXCEEDED"
-                            print_info(f"  [CONSISTENCY] Full-build fix pass at iteration {iteration}")
-                            continue
-                        else:
-                            # Only LOW/MEDIUM issues — safe to fall through to Feature QA
-                            print_warning(
-                                f"  [CONSISTENCY] Hard cap reached (no HIGH issues remaining) "
-                                "— falling through to Feature QA"
-                            )
-                            _record_gate('CONSISTENCY', 'FALLTHROUGH',
-                                         f'cap={Config.MAX_CONSISTENCY_CONSECUTIVE} reached, no HIGH issues',
-                                         iteration)
-                            _consistency_consecutive_iters = 0
-                            defect_source        = 'qa'
-                            previous_defects     = None
-                            _raw_pending_defects = []
-                            # Fall through to GATE 4 + Feature QA this iteration
+                        high_note = f" ({len(_high_consistency)} HIGH remain)" if _high_consistency else ""
+                        print_warning(
+                            f"  [CONSISTENCY] Hard cap reached{high_note} — falling through to Feature QA"
+                        )
+                        _record_gate('CONSISTENCY', 'FALLTHROUGH',
+                                     f'cap={Config.MAX_CONSISTENCY_CONSECUTIVE} reached — falling through to QA',
+                                     iteration)
+                        _consistency_consecutive_iters = 0
+                        defect_source        = 'qa'
+                        previous_defects     = None
+                        _raw_pending_defects = []
+                        # Fall through to GATE 4 + Feature QA this iteration
                     else:
                         defect_source        = 'consistency'
                         _raw_pending_defects = consistency_issues

@@ -368,7 +368,33 @@
         "deliverables": "block_b_final.deliverables"
       },
       "revision_template_id": "PRT006_map_acceptance"
+    },
+    {
+      "rule_id": "PDR060_ui_deliverable_missing_data_spec",
+      "severity": "HIGH",
+      "mode": "ui_feature_missing_data_spec",
+      "paths": {
+        "deliverables": "block_b_final.deliverables",
+        "tasks": "block_b_final.tasks"
+      },
+      "ui_keywords": [
+        "dashboard", "management", "tracker", "portal", "list",
+        "hub", "panel", "board", "console", "monitor", "browser",
+        "manager", "viewer", "explorer"
+      ],
+      "data_keywords": [
+        "create", "add", "form", "input", "enter", "edit", "update",
+        "delete", "remove", "save", "store", "upload", "import",
+        "export", "field", "record", "log", "submit", "crud",
+        "model", "schema", "database", "persist", "table", "entry"
+      ],
+      "skip_keywords": [
+        "login", "auth", "signup", "register", "password",
+        "landing", "home page", "about", "contact", "nav", "sidebar",
+        "header", "footer", "onboarding"
+      ],
+      "revision_template_id": "PRT008_add_data_spec"
     }
   ],
-  "total_rules": 31
+  "total_rules": 32
 }
