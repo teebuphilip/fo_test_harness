@@ -23,10 +23,13 @@ Outputs (if 1-phase):
 
 import argparse
 import copy
+import csv
 import json
 import os
 import re
 import sys
+import time
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -192,7 +195,40 @@ def classify_rule_based(feature: str) -> str:
     return 'AMBIGUOUS'
 
 
-def classify_with_ai(features: list, api_key: str) -> dict:
+def _log_ai_cost(csv_path: str, caller: str, model: str, input_tokens: int,
+                  output_tokens: int, cost_usd: float, duration_s: float,
+                  startup_id: str = '', note: str = '') -> None:
+    """Append a row to the phase_planner AI cost CSV."""
+    file_exists = os.path.exists(csv_path)
+    with open(csv_path, 'a', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        if not file_exists:
+            writer.writerow([
+                'timestamp', 'caller', 'model', 'input_tokens', 'output_tokens',
+                'cost_usd', 'duration_s', 'startup_id', 'note',
+            ])
+        writer.writerow([
+            datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            caller, model, input_tokens, output_tokens,
+            f'{cost_usd:.6f}', f'{duration_s:.1f}', startup_id, note,
+        ])
+
+
+# Pricing per 1M tokens (as of 2026-03)
+_PRICING = {
+    'claude-haiku-4-5-20251001': {'input': 0.80, 'output': 4.00},
+    'gpt-4o':                    {'input': 2.50, 'output': 10.00},
+}
+
+COST_CSV = 'phase_planner_ai_costs.csv'
+
+
+def _calc_cost(model: str, input_tokens: int, output_tokens: int) -> float:
+    p = _PRICING.get(model, {'input': 3.0, 'output': 15.0})
+    return (input_tokens * p['input'] + output_tokens * p['output']) / 1_000_000
+
+
+def classify_with_ai(features: list, api_key: str, startup_id: str = '') -> dict:
     """
     Use Claude Haiku to classify ambiguous features.
     Returns {feature_text: 'DATA_LAYER' | 'INTELLIGENCE_LAYER'}.
@@ -220,12 +256,27 @@ or
 
 No explanations. No other text."""
 
+        print(f'  [CLASSIFIER] Calling Claude Haiku — {len(features)} features, '
+              f'~{len(prompt)} chars prompt')
+        t0 = time.time()
         resp = client.messages.create(
             model='claude-haiku-4-5-20251001',
             max_tokens=512,
             messages=[{'role': 'user', 'content': prompt}]
         )
+        elapsed = time.time() - t0
         text = resp.content[0].text
+
+        in_tok = resp.usage.input_tokens
+        out_tok = resp.usage.output_tokens
+        cost = _calc_cost('claude-haiku-4-5-20251001', in_tok, out_tok)
+        print(f'  [CLASSIFIER] Done in {elapsed:.1f}s — '
+              f'{in_tok} in / {out_tok} out — ${cost:.4f}')
+
+        _log_ai_cost(COST_CSV, 'classify_with_ai', 'claude-haiku-4-5-20251001',
+                     in_tok, out_tok, cost, elapsed, startup_id,
+                     f'{len(features)} ambiguous features')
+
         result = {}
         for line in text.strip().splitlines():
             m = re.match(r'(\d+):\s*(DATA_LAYER|INTELLIGENCE_LAYER)', line.strip())
@@ -242,7 +293,8 @@ No explanations. No other text."""
 # ── Phase assessment ──────────────────────────────────────────────────────────
 
 def assess(intake: dict, use_ai: bool = True, api_key: str = '',
-           threshold: int = FEATURE_COUNT_THRESHOLD) -> dict:
+           threshold: int = FEATURE_COUNT_THRESHOLD,
+           startup_id: str = '') -> dict:
     """
     Returns:
     {
@@ -275,7 +327,7 @@ def assess(intake: dict, use_ai: bool = True, api_key: str = '',
     if ambiguous:
         if use_ai and api_key:
             print(f'  Sending {len(ambiguous)} ambiguous feature(s) to AI classifier...')
-            ai_result = classify_with_ai(ambiguous, api_key)
+            ai_result = classify_with_ai(ambiguous, api_key, startup_id=startup_id)
             for f in ambiguous:
                 classifications[f] = ai_result.get(f, 'DATA_LAYER')
         else:
@@ -344,15 +396,124 @@ def _prune_intel_features(obj: Any, intel_set: set) -> Any:
     return obj
 
 
+# Keywords that signal external integrations or intelligence features in text fields.
+# Used to strip sentences from HLD, engineering questions, QA docs, and task lists.
+PHASE2_STRIP_KEYWORDS = [
+    # External integrations
+    'equineline', 'truenicks', 'shopify', 'stripe', 'twilio', 'sendgrid',
+    'mailchimp', 'zapier', 'plaid', 'airtable', 'salesforce',
+    'third-party', 'third party', 'external api', 'external integration',
+    'webhook', 'oauth', 'api integration',
+    # Intelligence features
+    'breeding data', 'pedigree', 'lineage', 'bloodline',
+    'analytics', 'report generation', 'scoring', 'kpi',
+    'trend analysis', 'forecast', 'prediction', 'recommendation',
+    'ai-powered', 'machine learning', 'intelligence',
+    'executive report', 'executive summary', 'pdf export',
+    'visualization', 'chart', 'graph', 'benchmark',
+    # Merchandising (external commerce)
+    'merchandise', 'merch', 'shopify store', 'e-commerce', 'ecommerce',
+    'fulfillment', 'inventory management',
+    # Payment / billing (requires Stripe or similar)
+    'payment processing', 'configure payment', 'billing',
+]
+
+
+def _strip_phase2_from_text(text: str) -> str:
+    """Remove sentences containing Phase 2 / external integration keywords from text."""
+    if not text or not isinstance(text, str):
+        return text
+    # Split on sentence boundaries (period, comma in lists, semicolons)
+    sentences = re.split(r'(?<=[.;])\s+', text)
+    kept = []
+    for sent in sentences:
+        sl = sent.lower()
+        if any(kw in sl for kw in PHASE2_STRIP_KEYWORDS):
+            continue
+        kept.append(sent)
+    result = ' '.join(kept).strip()
+    return result if result else text  # fallback to original if everything got stripped
+
+
+def _strip_phase2_from_list(items: list) -> list:
+    """Remove list items (strings or dicts) that reference Phase 2 features."""
+    result = []
+    for item in items:
+        if isinstance(item, str):
+            if not any(kw in item.lower() for kw in PHASE2_STRIP_KEYWORDS):
+                result.append(item)
+        elif isinstance(item, dict):
+            desc = str(item.get('description', '') or item.get('name', '') or
+                       item.get('title', '') or item.get('feature', '') or '').lower()
+            if not any(kw in desc for kw in PHASE2_STRIP_KEYWORDS):
+                result.append(item)
+        else:
+            result.append(item)
+    return result
+
+
+def _extract_entity_names(data_features: list, intake: dict) -> list:
+    """
+    Derive entity names from data-layer features for explicit Phase 1 entity list.
+    E.g. 'Manage horse profiles' → 'Horse', 'Track member onboarding' → 'Member'
+    """
+    # Common entity-suggesting words in feature descriptions
+    entity_patterns = [
+        r'\b(horse|horses)\b', r'\b(member|members)\b', r'\b(stable|stables)\b',
+        r'\b(update|updates)\b', r'\b(content|contents)\b', r'\b(client|clients)\b',
+        r'\b(user|users)\b', r'\b(project|projects)\b', r'\b(event|events)\b',
+        r'\b(booking|bookings)\b', r'\b(order|orders)\b', r'\b(team|teams)\b',
+        r'\b(report|reports)\b', r'\b(task|tasks)\b', r'\b(asset|assets)\b',
+        r'\b(property|properties)\b', r'\b(listing|listings)\b',
+        r'\b(contact|contacts)\b', r'\b(lead|leads)\b', r'\b(campaign|campaigns)\b',
+        r'\b(subscription|subscriptions)\b', r'\b(payment|payments)\b',
+        r'\b(invoice|invoices)\b', r'\b(compliance|compliance records)\b',
+    ]
+    entities = set()
+    all_text = ' '.join(data_features).lower()
+    # Also scan HLD and task descriptions — but NOT the entire blob (too noisy)
+    bb = intake.get('block_b', {})
+    if isinstance(bb, str):
+        try:
+            bb = json.loads(bb)
+        except Exception:
+            bb = {}
+    hld = str(bb.get('pass_2', {}).get('hld_document', '')).lower()
+    task_descs = ' '.join(
+        str(t.get('description', '')) for t in
+        recursive_get_lists(intake, TASK_LIST_KEYS) if isinstance(t, dict)
+    ).lower()
+    combined = all_text + ' ' + hld + ' ' + task_descs
+    for pat in entity_patterns:
+        if re.search(pat, combined):
+            # Capitalize the first match group
+            m = re.search(pat, combined)
+            if m:
+                entities.add(m.group(1).capitalize().rstrip('s'))  # Normalize: horses → Horse
+    return sorted(entities)
+
+
 def build_phase1_intake(intake: dict, assessment: dict) -> dict:
     """
-    Phase 1 intake: data layer only.
+    Phase 1 intake: data layer only — aggressively stripped.
     - Intelligence-layer must-haves removed from all feature list fields
     - KPI definition fields emptied (deferred to Phase 2)
-    - _phase_context block added for harness awareness
+    - External integration tasks stripped from combined_task_list
+    - HLD, engineering questions, QA docs sanitized of Phase 2 references
+    - _phase_context block with explicit entity list and hard prohibitions
     """
     p1 = copy.deepcopy(intake)
     intel_set = {f.lower() for f in assessment['intelligence_features']}
+
+    # Keys whose text content should be sanitized of Phase 2 references
+    TEXT_SANITIZE_KEYS = {
+        'hld_document', 'qa_hlt_document', 'approved_bdr', 'bdr_summary',
+    }
+    # Keys whose list content should have Phase 2 items removed
+    LIST_SANITIZE_KEYS = {
+        'engineering_questions', 'qa_questions_for_engineering',
+        'questions_for_hero', 'test_vectors',
+    }
 
     def walk(obj: Any) -> Any:
         if isinstance(obj, dict):
@@ -363,6 +524,13 @@ def build_phase1_intake(intake: dict, assessment: dict) -> dict:
                     result[k] = []  # defer KPIs to Phase 2
                 elif kl in FEATURE_KEYS:
                     result[k] = _prune_intel_features(v, intel_set)
+                elif kl in TASK_LIST_KEYS and isinstance(v, list):
+                    # Strip external integration and intelligence tasks
+                    result[k] = _strip_phase2_from_list(v)
+                elif kl in TEXT_SANITIZE_KEYS and isinstance(v, str):
+                    result[k] = _strip_phase2_from_text(v)
+                elif kl in LIST_SANITIZE_KEYS and isinstance(v, list):
+                    result[k] = _strip_phase2_from_list(v)
                 else:
                     result[k] = walk(v)
             return result
@@ -371,6 +539,17 @@ def build_phase1_intake(intake: dict, assessment: dict) -> dict:
         return obj
 
     p1 = walk(p1)
+
+    # Extract entity names for explicit Phase 1 scope
+    entities = _extract_entity_names(assessment['data_features'], intake)
+
+    # Build deferred items list (for the note)
+    deferred_items = list(assessment['intelligence_features'])
+    # Also note any stripped tasks
+    orig_tasks = recursive_get_lists(intake, TASK_LIST_KEYS)
+    stripped_tasks = recursive_get_lists(p1, TASK_LIST_KEYS)
+    stripped_count = len(orig_tasks) - len(stripped_tasks)
+
     # Suffix startup_idea_id so Phase 1 and Phase 2 run dirs/ZIPs are distinct
     if 'startup_idea_id' in p1:
         p1['startup_idea_id'] = p1['startup_idea_id'].rstrip('_') + '_p1'
@@ -378,13 +557,25 @@ def build_phase1_intake(intake: dict, assessment: dict) -> dict:
         'phase': 1,
         'of_phases': 2,
         'scope': 'DATA_LAYER — CRUD, entities, basic views only',
-        'deferred_to_phase2': assessment['intelligence_features'],
+        'entities_to_build': entities,
+        'deferred_to_phase2': deferred_items,
         'kpis_deferred': assessment['kpis'],
+        'tasks_stripped': stripped_count,
         'note': (
-            'Build ONLY the data-collection layer. '
-            'Do not implement KPI calculation, scoring, report generation, '
-            'analytics charts, or any computed intelligence features. '
-            'Those are Phase 2 scope.'
+            'Build ONLY the data-collection layer: SQLAlchemy models, Pydantic schemas, '
+            'CRUD services (create/get/list/update/delete), FastAPI routes, and basic '
+            'frontend list/detail pages for each entity. '
+            'HARD PROHIBITIONS for Phase 1: '
+            '(1) No external API integrations (Equineline, TrueNicks, Shopify, Stripe API calls, etc.) '
+            '(2) No KPI calculation, scoring, analytics, report generation, or dashboard charts '
+            '(3) No AI/ML features, recommendations, or predictions '
+            '(4) No PDF/export generation '
+            '(5) No email automation or webhook handlers '
+            '(6) No merchandise/e-commerce features '
+            'If the intake mentions any of these, IGNORE THEM — they are Phase 2 scope. '
+            'Phase 1 entities: ' + ', '.join(entities) + '. '
+            'For each entity build exactly: 1 model, 1 schema, 1 service (sync CRUD), '
+            '1 route file, 1 frontend page.'
         ),
     }
     return p1
@@ -435,6 +626,557 @@ def build_phase2_intake(intake: dict, assessment: dict) -> dict:
 
 
 # ── Reporting ─────────────────────────────────────────────────────────────────
+
+# ── AI Decomposer ────────────────────────────────────────────────────────────
+
+DECOMPOSER_PROMPT = """You are a software architect decomposing a startup intake spec into buildable mini specs for Phase 1 (data layer only).
+
+Read the full intake below. Your job:
+1. Identify ONLY entities that are explicitly named or strictly necessary to satisfy a named Phase 1 user-visible capability in the intake
+2. For each entity, specify exact fields with SQLAlchemy types
+3. Define CRUD operations as FastAPI endpoints
+4. Map dependencies (foreign keys between entities)
+5. Describe the frontend page (React, list + detail views)
+6. Explicitly list what is OUT OF SCOPE for this entity in Phase 1
+
+RULES — ABSOLUTE:
+- Phase 1 is DATA LAYER ONLY: models, schemas, services (sync CRUD), routes, basic pages
+- "Data layer only" means ALL entities that store and manage user data — NOT "absolute minimum"
+- If a feature says "create X", "manage X", "build X system", "setup X framework" → that IS a data entity
+- Content management systems, member portals, educational content pages — these are ALL data layer entities that need models + CRUD
+- External API integrations (Shopify, Equineline, TrueNicks, Stripe API calls, any third-party) are Phase 2 — do NOT include as entities or fields
+- Computed features (analytics, reports, scoring, recommendations, PDF export) are Phase 2
+- Email automation, webhook handlers, background tasks are Phase 2
+- Every entity gets exactly: 1 model, 1 schema, 1 service, 1 route file, 1 frontend page
+- Standard fields on EVERY model (do NOT list these in fields — they are automatic): id (UUID, primary key), owner_id (String, from auth), status (String, default "active"), created_at (DateTime), updated_at (DateTime)
+- All services are synchronous (no async def)
+- All routes use Depends(get_current_user) for auth
+- Route file names use underscores, NEVER hyphens: membership_plans.py NOT membership-plans.py
+- Frontend page file extension is .jsx NOT .tsx
+- Every entity MUST include at least 1 evidence phrase copied verbatim from the intake
+- Do NOT create an entity only because it is common in similar systems — but DO create entities for every explicit feature in the intake that involves storing/managing data
+- Do NOT create fields for external integration IDs, analytics outputs, webhook states, automation schedules, or future-phase computations
+- Do NOT add fields like sire_name, dam_name, breeding_score, auction_value unless the intake EXPLICITLY mentions them
+- IMPORTANT: Be thorough with fields. Each entity should have 5-10 meaningful fields based on what the intake describes. A horse profile for a thoroughbred site needs more than just name/bio/image. Read the intake carefully for domain-specific attributes.
+- IMPORTANT: Do NOT under-extract. If the intake lists 10 features and 6 are data-layer CRUD, you should produce ~6 entities, not 2. Rejecting an entity that has an explicit "create X" or "build X" feature in the intake is WRONG.
+- CRITICAL DISTINCTION: "Set up X signup" or "collect X" = Phase 1 data entity (store the data). "Automate X" or "send X sequences" = Phase 2 automation. Example: "Set up email list signup" → Phase 1 EmailSubscriber entity (name, email, signup_date). "Setup email automation" → Phase 2 (sending drip campaigns). These are DIFFERENT features — do not conflate them.
+- CRITICAL DISTINCTION: "Setup member portal framework" = Phase 1 Member entity (profiles, basic access, tier assignment). "Configure payment processing" = Phase 2 Stripe integration. A portal framework needs a data model for members even without payments. Do NOT reject Member just because payments exist elsewhere in the intake.
+- CRITICAL DISTINCTION: "Build content management system" = Phase 1 CMS entity with CRUD for managing content pages. This is a core data-layer feature, NOT Phase 2.
+
+OUTPUT CONTRACT — return ONLY valid JSON with this exact structure:
+{
+  "phase": 1,
+  "scope": "data_layer_only",
+  "entities": [
+    {
+      "entity": "EntityName",
+      "build_order": 1,
+      "evidence": ["exact phrase from intake supporting this entity"],
+      "inclusion_reason": "one sentence explaining why this entity is needed",
+      "fields": [
+        {"name": "field_name", "type": "String|Text|Integer|Boolean|DateTime|JSON|Numeric|Float", "constraints": ["nullable=False"], "default": null}
+      ],
+      "crud_operations": ["GET /entity_name", "GET /entity_name/{id}", "POST /entity_name", "PUT /entity_name/{id}", "DELETE /entity_name/{id}"],
+      "dependencies": [],
+      "relationship_cardinality": [{"related_entity": "Other", "type": "many_to_one", "fk_field": "other_id"}],
+      "frontend_page": {
+        "route": "/entity-name",
+        "list_view": ["field1", "field2"],
+        "detail_view": ["field1", "field2", "field3"]
+      },
+      "out_of_scope": ["specific things NOT to build"],
+      "deferred_related_capabilities": ["Phase 2 features related to this entity"],
+      "acceptance_checks": ["model compiles", "CRUD works synchronously", "routes require auth", "page renders list and detail"],
+      "file_contract": {
+        "allowed_files": ["models/entity_name.py", "schemas/entity_name.py", "services/entity_name_service.py", "routes/entity_name.py", "pages/EntityName.jsx"]
+      },
+      "forbidden_expansions": ["Do not add X", "Do not add Y"],
+      "open_questions": ["anything ambiguous in the intake"]
+    }
+  ],
+  "deferred_items": ["list of capabilities explicitly deferred to Phase 2"],
+  "rejected_candidates": [{"name": "EntityName", "reason": "why it was rejected"}]
+}
+
+No markdown. No explanation. No code fences. ONLY the JSON object.
+
+INTAKE:
+"""
+
+
+def decompose_intake(intake: dict, api_key: str = '', startup_id: str = '') -> dict:
+    """
+    Use ChatGPT to decompose the full intake into mini specs for Phase 1 entities.
+    Returns the structured decomposition JSON, or None on failure.
+    """
+    if not api_key:
+        api_key = os.environ.get('OPENAI_API_KEY', '')
+    if not api_key:
+        print('  [DECOMPOSER] No OPENAI_API_KEY — cannot run AI decomposer')
+        return None
+
+    try:
+        import openai
+        client = openai.OpenAI(api_key=api_key)
+
+        intake_json = json.dumps(intake, indent=2, default=str)
+        prompt = DECOMPOSER_PROMPT + intake_json
+
+        prompt_len = len(prompt)
+        print(f'  [DECOMPOSER] Sending intake to ChatGPT (gpt-4o)')
+        print(f'  [DECOMPOSER] Prompt: ~{prompt_len:,} chars, '
+              f'~{prompt_len // 4:,} est. tokens')
+        print(f'  [DECOMPOSER] Waiting for response...')
+
+        t0 = time.time()
+        resp = client.chat.completions.create(
+            model='gpt-4o',
+            temperature=0.2,
+            max_tokens=8192,
+            messages=[{'role': 'user', 'content': prompt}],
+        )
+        elapsed = time.time() - t0
+
+        raw = resp.choices[0].message.content.strip()
+        in_tok = resp.usage.prompt_tokens
+        out_tok = resp.usage.completion_tokens
+        cost = _calc_cost('gpt-4o', in_tok, out_tok)
+
+        print(f'  [DECOMPOSER] Response in {elapsed:.1f}s — '
+              f'{in_tok:,} in / {out_tok:,} out — ${cost:.4f}')
+
+        _log_ai_cost(COST_CSV, 'decompose_intake', 'gpt-4o',
+                     in_tok, out_tok, cost, elapsed, startup_id,
+                     f'prompt {prompt_len} chars')
+
+        # Strip code fences if present
+        if raw.startswith('```'):
+            raw = re.sub(r'^```\w*\n?', '', raw)
+            raw = re.sub(r'\n?```$', '', raw)
+
+        result = json.loads(raw)
+        n_entities = len(result.get('entities', []))
+        n_deferred = len(result.get('deferred_items', []))
+        n_rejected = len(result.get('rejected_candidates', []))
+        print(f'  [DECOMPOSER] Parsed: {n_entities} entities, '
+              f'{n_deferred} deferred, {n_rejected} rejected')
+
+        # Print entity summary
+        for ent in result.get('entities', []):
+            n_fields = len(ent.get('fields', []))
+            n_crud = len(ent.get('crud_operations', []))
+            deps = ', '.join(ent.get('dependencies', [])) or 'none'
+            print(f'    [{ent.get("build_order", "?")}] {ent["entity"]}: '
+                  f'{n_fields} fields, {n_crud} CRUD ops, deps={deps}')
+
+        if result.get('deferred_items'):
+            print(f'  [DECOMPOSER] Deferred to Phase 2:')
+            for d in result['deferred_items']:
+                print(f'    → {d}')
+
+        if result.get('rejected_candidates'):
+            print(f'  [DECOMPOSER] Rejected candidates:')
+            for r in result['rejected_candidates']:
+                if isinstance(r, dict):
+                    print(f'    ✗ {r.get("name", "?")}: {r.get("reason", "")}')
+                else:
+                    print(f'    ✗ {r}')
+
+        return result
+
+    except json.JSONDecodeError as e:
+        print(f'  [DECOMPOSER] Failed to parse JSON: {e}')
+        print(f'  [DECOMPOSER] Raw output (first 500 chars): {raw[:500]}')
+        return None
+    except Exception as e:
+        print(f'  [DECOMPOSER] API call failed: {e}')
+        return None
+
+
+def check_coverage(decomposition: dict, data_features: list) -> list:
+    """
+    Cross-check: every DATA_LAYER feature from the classifier should be
+    covered by at least one entity's evidence or inclusion_reason.
+    Returns list of uncovered features (excluding legitimately Phase 2 items).
+    """
+    if not decomposition or not data_features:
+        return []
+
+    # Collect all evidence, inclusion reasons, and out_of_scope from entities
+    covered_text = ''
+    for ent in decomposition.get('entities', []):
+        for ev in ent.get('evidence', []):
+            covered_text += ' ' + ev.lower()
+        covered_text += ' ' + ent.get('inclusion_reason', '').lower()
+        covered_text += ' ' + ent.get('entity', '').lower()
+        # Also count out_of_scope and forbidden_expansions as "covered by this entity"
+        for oos in ent.get('out_of_scope', []):
+            covered_text += ' ' + oos.lower()
+        for fe in ent.get('forbidden_expansions', []):
+            covered_text += ' ' + fe.lower()
+        # File contract file names contribute coverage (e.g. "content_page" covers "content")
+        for af in ent.get('file_contract', {}).get('allowed_files', []):
+            covered_text += ' ' + af.replace('_', ' ').replace('/', ' ').lower()
+
+    # Also check deferred items (legitimately deferred = covered)
+    for d in decomposition.get('deferred_items', []):
+        covered_text += ' ' + d.lower()
+
+    uncovered = []
+    for feat in data_features:
+        fl = feat.lower()
+
+        # Skip features that are legitimately Phase 2 (external integrations)
+        if any(kw in fl for kw in PHASE2_STRIP_KEYWORDS):
+            continue
+
+        # Skip features that don't imply a database entity
+        NON_ENTITY_PHRASES = [
+            'static website structure', 'website layout', 'page layout',
+            'css', 'html structure', 'navigation', 'landing page design',
+        ]
+        if any(p in fl for p in NON_ENTITY_PHRASES):
+            continue
+
+        # Extract key nouns from feature (skip generic verbs)
+        key_words = [w for w in re.findall(r'[a-z]+', fl)
+                     if w not in {'create', 'set', 'up', 'build', 'setup', 'manage',
+                                  'configure', 'write', 'add', 'make', 'the', 'and',
+                                  'for', 'with', 'a', 'an', 'of', 'to', 'static'}]
+        # If at least half the key words appear in covered text, it's covered
+        if key_words:
+            hits = sum(1 for w in key_words if w in covered_text)
+            if hits < len(key_words) * 0.5:
+                uncovered.append(feat)
+
+    return uncovered
+
+
+RETRY_PROMPT = """You previously decomposed a startup intake into Phase 1 entities but MISSED these data-layer features:
+
+{uncovered_features}
+
+These features were classified as DATA_LAYER by the system. They involve storing and managing data — NOT external integrations, NOT analytics, NOT automation.
+
+Your previous entities were: {existing_entities}
+
+For EACH uncovered feature above, produce an entity mini spec. Use the SAME JSON structure as before.
+Return ONLY a JSON array of entity objects (same structure as before). No markdown, no explanation.
+
+Remember:
+- "member portal framework" = Member entity (name, email, tier, join_date etc.) — NOT payment processing
+- "content management system" = CMS/ContentPage entity (title, body, slug, published etc.) — basic CRUD
+- Standard fields (id, owner_id, status, created_at, updated_at) are automatic — do NOT list them
+- Route files use underscores, pages use .jsx
+- 5-10 meaningful fields per entity
+
+INTAKE (for reference):
+{intake_json}
+"""
+
+
+def _retry_coverage_gaps(intake: dict, uncovered: list, decomposition: dict,
+                         api_key: str, startup_id: str = '') -> list:
+    """
+    Second ChatGPT call to fill coverage gaps.
+    Returns list of new entity specs, or empty list on failure.
+    """
+    try:
+        import openai
+        client = openai.OpenAI(api_key=api_key)
+
+        existing = ', '.join(e['entity'] for e in decomposition.get('entities', []))
+        intake_json = json.dumps(intake, indent=2, default=str)
+        prompt = RETRY_PROMPT.format(
+            uncovered_features='\n'.join(f'- {f}' for f in uncovered),
+            existing_entities=existing,
+            intake_json=intake_json,
+        )
+
+        prompt_len = len(prompt)
+        print(f'  [RETRY] Sending {len(uncovered)} gap(s) to ChatGPT (gpt-4o)')
+        print(f'  [RETRY] Prompt: ~{prompt_len:,} chars')
+
+        t0 = time.time()
+        resp = client.chat.completions.create(
+            model='gpt-4o',
+            temperature=0.2,
+            max_tokens=4096,
+            messages=[{'role': 'user', 'content': prompt}],
+        )
+        elapsed = time.time() - t0
+
+        raw = resp.choices[0].message.content.strip()
+        in_tok = resp.usage.prompt_tokens
+        out_tok = resp.usage.completion_tokens
+        cost = _calc_cost('gpt-4o', in_tok, out_tok)
+
+        print(f'  [RETRY] Response in {elapsed:.1f}s — '
+              f'{in_tok:,} in / {out_tok:,} out — ${cost:.4f}')
+
+        _log_ai_cost(COST_CSV, 'retry_coverage_gaps', 'gpt-4o',
+                     in_tok, out_tok, cost, elapsed, startup_id,
+                     f'{len(uncovered)} gaps')
+
+        # Strip code fences if present
+        if raw.startswith('```'):
+            raw = re.sub(r'^```\w*\n?', '', raw)
+            raw = re.sub(r'\n?```$', '', raw)
+
+        parsed = json.loads(raw)
+        if isinstance(parsed, dict) and 'entities' in parsed:
+            entities = parsed['entities']
+        elif isinstance(parsed, list):
+            entities = parsed
+        elif isinstance(parsed, dict) and 'entity' in parsed:
+            entities = [parsed]
+        else:
+            print(f'  [RETRY] Unexpected response shape: {type(parsed)}')
+            print(f'  [RETRY] Keys: {list(parsed.keys()) if isinstance(parsed, dict) else "N/A"}')
+            return []
+
+        # Filter out entities without required 'entity' key
+        valid = []
+        for ent in entities:
+            if not isinstance(ent, dict):
+                continue
+            # Handle common alternate keys for entity name
+            if 'entity' not in ent:
+                for alt_key in ('entity_name', 'name', 'entityName'):
+                    if alt_key in ent:
+                        ent['entity'] = ent[alt_key]
+                        break
+            if 'entity' not in ent:
+                print(f'  [RETRY] Skipping entity without name: {list(ent.keys())}')
+                continue
+            valid.append(ent)
+
+        for ent in valid:
+            n_fields = len(ent.get('fields', []))
+            print(f'    + {ent["entity"]}: {n_fields} fields')
+
+        return valid
+
+    except Exception as e:
+        print(f'  [RETRY] Failed: {e}')
+        return []
+
+
+def _normalize_entity_schema(entity: dict) -> dict:
+    """
+    Normalize retry entities that come back in a different schema.
+    Converts field_name/field_type → name/type, adds missing file_contract, etc.
+    """
+    ename = entity.get('entity', 'Unknown')
+    slug = re.sub(r'[^a-z0-9]+', '_', ename.lower()).strip('_')
+
+    # Normalize fields: field_name/field_type → name/type with SQLAlchemy types
+    TYPE_MAP = {
+        'string': 'String', 'str': 'String', 'text': 'Text',
+        'integer': 'Integer', 'int': 'Integer', 'number': 'Integer',
+        'boolean': 'Boolean', 'bool': 'Boolean',
+        'date': 'DateTime', 'datetime': 'DateTime',
+        'json': 'JSON', 'array': 'JSON', 'object': 'JSON',
+        'float': 'Float', 'decimal': 'Numeric', 'numeric': 'Numeric',
+    }
+    if entity.get('fields') and isinstance(entity['fields'][0], dict):
+        if 'field_name' in entity['fields'][0]:
+            new_fields = []
+            for f in entity['fields']:
+                raw_type = str(f.get('field_type', f.get('type', 'String'))).lower()
+                new_fields.append({
+                    'name': f.get('field_name', f.get('name', '')),
+                    'type': TYPE_MAP.get(raw_type, 'String'),
+                    'constraints': f.get('constraints', ['nullable=True']),
+                    'default': f.get('default', None),
+                })
+            entity['fields'] = new_fields
+
+    # Ensure file_contract exists with standard structure
+    if 'file_contract' not in entity or not entity['file_contract'].get('allowed_files'):
+        plural = slug + 's' if not slug.endswith('s') else slug
+        entity['file_contract'] = {
+            'allowed_files': [
+                f'models/{slug}.py',
+                f'schemas/{slug}.py',
+                f'services/{slug}_service.py',
+                f'routes/{plural}.py',
+                f'pages/{ename}.jsx',
+            ]
+        }
+
+    # Ensure crud_operations exists
+    if 'crud_operations' not in entity:
+        plural = slug + 's' if not slug.endswith('s') else slug
+        entity['crud_operations'] = [
+            f'GET /{plural}',
+            f'GET /{plural}/{{id}}',
+            f'POST /{plural}',
+            f'PUT /{plural}/{{id}}',
+            f'DELETE /{plural}/{{id}}',
+        ]
+
+    # Ensure other required fields
+    entity.setdefault('evidence', [])
+    entity.setdefault('inclusion_reason', '')
+    entity.setdefault('dependencies', [])
+    entity.setdefault('relationship_cardinality', [])
+    entity.setdefault('frontend_page', {
+        'route': f'/{slug.replace("_", "-")}',
+        'list_view': [f['name'] for f in entity.get('fields', [])[:3]],
+        'detail_view': [f['name'] for f in entity.get('fields', [])],
+    })
+    entity.setdefault('out_of_scope', [])
+    entity.setdefault('deferred_related_capabilities', [])
+    entity.setdefault('acceptance_checks', [
+        'model compiles', 'CRUD works synchronously',
+        'routes require auth', 'page renders list and detail',
+    ])
+    entity.setdefault('forbidden_expansions', [])
+    entity.setdefault('open_questions', [])
+
+    # Remove non-standard keys from retry response
+    for junk_key in ('routes', 'pages', 'entity_name'):
+        entity.pop(junk_key, None)
+
+    return entity
+
+
+def validate_mini_specs(decomposition: dict) -> dict:
+    """
+    Deterministic validation of AI-produced mini specs.
+    Enforces harness rules: underscore filenames, .jsx extension, standard fields,
+    no external integration IDs, no Phase 2 leakage.
+    Returns cleaned decomposition with any fixes applied.
+    """
+    if not decomposition or 'entities' not in decomposition:
+        return decomposition
+
+    fixes = []
+
+    for i, entity in enumerate(decomposition['entities']):
+        # Normalize schema first (handles retry entities with different format)
+        decomposition['entities'][i] = _normalize_entity_schema(entity)
+        entity = decomposition['entities'][i]
+
+        ename = entity.get('entity', 'Unknown')
+
+        # Fix 1: Ensure file_contract uses underscores and .jsx
+        fc = entity.get('file_contract', {})
+        if 'allowed_files' in fc:
+            fixed_files = []
+            for f in fc['allowed_files']:
+                # Hyphens → underscores in Python files
+                if f.endswith('.py'):
+                    old = f
+                    f = f.replace('-', '_')
+                    if f != old:
+                        fixes.append(f'{ename}: fixed hyphen in {old} → {f}')
+                # .tsx → .jsx
+                if f.endswith('.tsx'):
+                    old = f
+                    f = f[:-4] + '.jsx'
+                    fixes.append(f'{ename}: fixed .tsx → .jsx in {old}')
+                fixed_files.append(f)
+            fc['allowed_files'] = fixed_files
+
+        # Fix 2: Strip external integration ID fields
+        EXTERNAL_ID_PATTERNS = [
+            'shopify_', 'stripe_', 'equineline_', 'truenicks_',
+            'external_', 'webhook_', 'sync_', 'integration_',
+        ]
+        if 'fields' in entity:
+            clean_fields = []
+            for field in entity['fields']:
+                fname = field.get('name', '').lower()
+                if any(fname.startswith(p) for p in EXTERNAL_ID_PATTERNS):
+                    fixes.append(f'{ename}: stripped external field {fname}')
+                    continue
+                clean_fields.append(field)
+            entity['fields'] = clean_fields
+
+        # Fix 3: Strip standard fields if AI included them (they're automatic)
+        STANDARD_FIELDS = {'id', 'owner_id', 'status', 'created_at', 'updated_at'}
+        if 'fields' in entity:
+            entity['fields'] = [
+                f for f in entity['fields']
+                if f.get('name', '').lower() not in STANDARD_FIELDS
+            ]
+
+        # Fix 4: Ensure CRUD operations use underscores in URLs
+        if 'crud_operations' in entity:
+            entity['crud_operations'] = [
+                op.replace('-', '_') for op in entity['crud_operations']
+            ]
+
+        # Fix 5: Ensure frontend route uses hyphens (URL convention)
+        # (URLs use hyphens, filenames use underscores — this is correct)
+
+    if fixes:
+        print(f'  [VALIDATOR] Applied {len(fixes)} fix(es):')
+        for f in fixes:
+            print(f'    → {f}')
+
+    return decomposition
+
+
+def build_entity_intakes(intake: dict, decomposition: dict, assessment: dict,
+                         output_dir: Path, stem: str) -> list:
+    """
+    Produce one intake JSON per entity from the decomposition.
+    Each intake JSON contains the original intake data PLUS a _mini_spec key
+    with the entity's full mini spec. The harness detects _mini_spec and uses it
+    to constrain the build.
+
+    Returns list of (entity_name, intake_path, build_order) tuples sorted by build_order.
+    """
+    entity_intakes = []
+
+    for entity_spec in decomposition.get('entities', []):
+        ename = entity_spec['entity']
+        build_order = entity_spec.get('build_order', 99)
+
+        # Create entity-specific intake
+        entity_intake = copy.deepcopy(intake)
+
+        # Suffix startup_idea_id for unique run dirs/ZIPs
+        slug = re.sub(r'[^a-z0-9]+', '_', ename.lower()).strip('_')
+        base_id = intake.get('startup_idea_id', stem).rstrip('_')
+        entity_intake['startup_idea_id'] = f'{base_id}_p1_{slug}'
+
+        # Inject mini spec — the harness will detect this and use it
+        entity_intake['_mini_spec'] = entity_spec
+
+        # Inject phase context
+        all_entities = [e['entity'] for e in decomposition.get('entities', [])]
+        entity_intake['_phase_context'] = {
+            'phase': 1,
+            'of_phases': 2,
+            'scope': f'DATA_LAYER — {ename} entity ONLY',
+            'current_entity': ename,
+            'all_phase1_entities': all_entities,
+            'deferred_to_phase2': decomposition.get('deferred_items', []),
+            'note': (
+                f'Build ONLY the {ename} entity. '
+                f'Allowed files: {", ".join(entity_spec.get("file_contract", {}).get("allowed_files", []))}. '
+                f'Do NOT create any other files. '
+                f'Do NOT build any other entities. '
+                + (' '.join(entity_spec.get('forbidden_expansions', [])))
+            ),
+        }
+
+        # Write entity intake
+        entity_path = output_dir / f'{stem}_p1_{slug}.json'
+        with open(entity_path, 'w', encoding='utf-8') as f:
+            json.dump(entity_intake, f, indent=2)
+
+        entity_intakes.append((ename, entity_path, build_order))
+        print(f'  Entity intake: {entity_path.name} (order {build_order})')
+
+    # Sort by build_order
+    entity_intakes.sort(key=lambda x: x[2])
+    return entity_intakes
+
 
 def print_assessment(assessment: dict) -> None:
     phases = assessment['phases']
@@ -499,6 +1241,14 @@ def main() -> None:
         print(f'ERROR: Intake file not found: {intake_path}')
         sys.exit(1)
 
+    # Early-exit if a final ZIP already exists for this intake — no point re-planning.
+    _stem = intake_path.stem
+    _existing_zips = sorted(Path('fo_harness_runs').glob(f'{_stem}_BLOCK_B_full_*.zip')) if Path('fo_harness_runs').exists() else []
+    if _existing_zips:
+        print(f'✓ Already complete — final ZIP exists: {_existing_zips[-1]}')
+        print('  Delete it and rerun to rebuild from scratch.')
+        sys.exit(0)
+
     try:
         with open(intake_path, 'r', encoding='utf-8') as f:
             intake = json.load(f)
@@ -523,7 +1273,8 @@ def main() -> None:
     print()
 
     print('Analyzing intake...')
-    result = assess(intake, use_ai=use_ai, api_key=api_key, threshold=args.threshold)
+    result = assess(intake, use_ai=use_ai, api_key=api_key, threshold=args.threshold,
+                    startup_id=stem)
 
     print_assessment(result)
 
@@ -539,6 +1290,74 @@ def main() -> None:
 
     # 2-phase split
     print('\nGenerating split intakes...')
+
+    # ── AI Decomposer: break Phase 1 into entity-level mini specs ────────────
+    openai_key = os.environ.get('OPENAI_API_KEY', '')
+    decomposition = None
+    if not args.no_ai and openai_key:
+        print('\n▶ AI DECOMPOSER — Breaking Phase 1 into entity mini specs')
+        print('─' * 60)
+        decomposition = decompose_intake(intake, api_key=openai_key, startup_id=stem)
+        if decomposition:
+            decomposition = validate_mini_specs(decomposition)
+
+            # Coverage check: are all data features accounted for?
+            uncovered = check_coverage(decomposition, result['data_features'])
+            if uncovered:
+                print(f'\n  ⚠ COVERAGE GAP — {len(uncovered)} data feature(s) not covered:')
+                for uf in uncovered:
+                    print(f'    ✗ {uf}')
+
+                # Targeted retry: ask ChatGPT to reconsider only the uncovered features
+                print(f'\n  [DECOMPOSER] Retry: asking ChatGPT to produce entities for gaps...')
+                gap_entities = _retry_coverage_gaps(
+                    intake, uncovered, decomposition, openai_key, stem
+                )
+                if gap_entities:
+                    # Merge new entities into decomposition
+                    max_order = max(
+                        (e.get('build_order', 0) for e in decomposition['entities']),
+                        default=0
+                    )
+                    for ge in gap_entities:
+                        ge['build_order'] = max_order + ge.get('build_order', 1)
+                        max_order = ge['build_order']
+                    decomposition['entities'].extend(gap_entities)
+                    decomposition = validate_mini_specs(decomposition)
+                    print(f'  [DECOMPOSER] Total entities after gap fill: '
+                          f'{len(decomposition["entities"])}')
+
+                    # Re-check coverage
+                    still_uncovered = check_coverage(decomposition, result['data_features'])
+                    if still_uncovered:
+                        print(f'  ⚠ Still uncovered after retry: {still_uncovered}')
+                    else:
+                        print(f'  ✓ All data features now covered')
+
+            # Save decomposition for debugging
+            decomp_path = output_dir / f'{stem}_decomposition.json'
+            with open(decomp_path, 'w', encoding='utf-8') as f:
+                json.dump(decomposition, f, indent=2)
+            print(f'  Decomposition saved: {decomp_path}')
+
+            # Generate per-entity intake files
+            print('\n▶ ENTITY INTAKES')
+            print('─' * 60)
+            entity_intakes = build_entity_intakes(
+                intake, decomposition, result, output_dir, stem
+            )
+
+            # Save entity order to assessment for run_integration_and_feature_build.sh
+            result['entity_intakes'] = [
+                {'entity': name, 'intake_file': str(path), 'build_order': order}
+                for name, path, order in entity_intakes
+            ]
+            result['decomposition_mode'] = 'ai_mini_specs'
+        else:
+            print('  [DECOMPOSER] Failed — falling back to monolithic Phase 1 intake')
+
+    # Always generate the legacy monolithic intakes (Phase 1 + Phase 2)
+    # Phase 1 monolithic is used as fallback if decomposer fails
     p1 = build_phase1_intake(intake, result)
     p2 = build_phase2_intake(intake, result)
 
@@ -550,10 +1369,22 @@ def main() -> None:
     with open(p2_path, 'w', encoding='utf-8') as f:
         json.dump(p2, f, indent=2)
 
-    print(f'Phase 1 intake: {p1_path}')
+    print(f'\nPhase 1 intake (fallback): {p1_path}')
     print(f'Phase 2 intake: {p2_path}')
 
-    print_next_steps(p1_path, p2_path, stem)
+    # Re-save assessment with entity_intakes info
+    with open(assessment_path, 'w', encoding='utf-8') as f:
+        json.dump(result, f, indent=2)
+
+    if decomposition and result.get('entity_intakes'):
+        print(f'\n▶ ENTITY BUILD ORDER')
+        print('─' * 60)
+        for ei in result['entity_intakes']:
+            print(f"  {ei['build_order']}. {ei['entity']} → {Path(ei['intake_file']).name}")
+        print(f'\n  Total: {len(result["entity_intakes"])} entities')
+        print(f'  Mode:  AI mini specs (entity-by-entity build)')
+    else:
+        print_next_steps(p1_path, p2_path, stem)
 
 
 if __name__ == '__main__':

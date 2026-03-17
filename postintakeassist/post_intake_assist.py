@@ -591,6 +591,13 @@ def _build_revision_prompt(issue: dict, template: dict, context: dict) -> str:
 
 
 def run_post_intake_assist(input_data: dict, use_ai: bool, provider: str, openai_model: str, claude_model: str) -> dict:
+    # Normalize intake keys: intake/generate_intake.sh produces block_a/block_b;
+    # post_intake_assist expects block_a_final/block_b_final.
+    if "block_a_final" not in input_data and "block_a" in input_data:
+        input_data = {**input_data, "block_a_final": input_data["block_a"]}
+    if "block_b_final" not in input_data and "block_b" in input_data:
+        input_data = {**input_data, "block_b_final": input_data["block_b"]}
+
     detection_rules = _load_json(FILES["detection"])
     validation_rules = _load_json(FILES["validation"])
     vocab = _load_json(FILES["vocabulary"]) if FILES["vocabulary"].exists() else {}
