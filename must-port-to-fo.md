@@ -1,5 +1,16 @@
 # Must Port to FO
 
+## Status Column False Positive Fix (2026-03-17 session 7)
+
+100. fix: status/created_at/updated_at columns must never be flagged — moved to ABSOLUTE RULES
+- Existing DO NOT FLAG rule for `status` columns was ignored by QA in wynwood run
+- Caused 6-iteration cascade: QA removes column → service references break → INTEGRATION_FAST fires
+- qa_prompt.md: added to ABSOLUTE RULES at top of section (extended to created_at, updated_at)
+- fo_test_harness.py: added "Standard model fields" block to FROZEN_ARCHITECTURAL_DECISIONS —
+  Claude must always include status/created_at/updated_at and must not remove them on fix passes
+- Files: `directives/prompts/qa_prompt.md`, `fo_test_harness.py`
+⬜ TODO for FO codebase
+
 ## QA Cross-File Contract Verification (2026-03-17 session 7)
 
 99. feat: qa_prompt.md STEP 1.5 — 6 explicit cross-file contracts QA verifies on every build

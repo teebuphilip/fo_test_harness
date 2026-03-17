@@ -1,5 +1,27 @@
 # Changelog
 
+## 2026-03-17 (session 7 — status column false positive fix)
+
+### fix: status/created_at/updated_at columns must never be flagged as scope creep
+
+**Root cause:** QA flagged `status = Column(String(50), default="active")` as SCOPE-BOUNDARY on
+Member, Horse, Update, and BreedingData models in wynwood run. The existing DO NOT FLAG rule was
+ignored. Claude removed the columns → services still referenced them → INTEGRATION_FAST fired on
+every subsequent iteration → 6-iteration cascade from a single false positive.
+
+**Fix 1 — qa_prompt.md:** Moved `status`/`processing_status`/`created_at`/`updated_at` ban into
+ABSOLUTE RULES (top of section, not buried in DO NOT FLAG). Extended to cover `created_at` and
+`updated_at`. Removed the now-duplicate weaker DO NOT FLAG entry (replaced with a pointer).
+
+**Fix 2 — fo_test_harness.py FROZEN_ARCHITECTURAL_DECISIONS:** Added "Standard model fields"
+section — every model MUST include status/created_at/updated_at with exact Column definitions.
+Claude must not remove them even if QA flags them. This prevents the fix-removes-column→service-
+breaks cascade at generation time, not just at QA time.
+
+Files: `directives/prompts/qa_prompt.md`, `fo_test_harness.py`
+
+---
+
 ## 2026-03-17 (session 7 — QA cross-file contract verification)
 
 ### feat: qa_prompt.md STEP 1.5 — systematic cross-file contract verification

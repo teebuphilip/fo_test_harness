@@ -78,6 +78,13 @@ These decisions are already made. Do not deviate. Do not invent alternatives.
 - All API calls via fetch() with Authorization Bearer token from Auth0
 - No inline styles — Tailwind classes only
 
+### Standard model fields — always include, never remove
+- Every SQLAlchemy model MUST include: `status`, `created_at`, `updated_at`
+- These are infrastructure fields — do NOT remove them even if a QA report flags them as scope creep
+- `status = Column(String(50), default="active")` — always present
+- `created_at = Column(DateTime(timezone=True), server_default=func.now())` — always present
+- `updated_at = Column(DateTime(timezone=True), onupdate=func.now())` — always present
+
 ### File count constraints
 - Minimize number of files — prefer adding to existing files over creating new ones
 - Only create a new file if it represents a new domain entity OR the feature spec explicitly requires it

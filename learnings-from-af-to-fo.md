@@ -1,5 +1,15 @@
 # Learnings From AF to FO
 
+## Latest Learnings (2026-03-17 session 7 — status column cascade)
+
+- A QA rule buried in the DO NOT FLAG list is not an absolute constraint — it is guidance that the model can and will ignore under certain conditions. Any rule whose violation triggers a multi-iteration cascade must be in ABSOLUTE RULES at the top of the section, not in a long bulleted list that the model reads opportunistically.
+
+- Infrastructure fields (`status`, `created_at`, `updated_at`) must be protected at both ends: (1) QA must be absolutely prohibited from flagging them as scope creep, and (2) Claude must be told in the build prompt to always include them and never remove them. A single-sided fix (only QA rule, or only build rule) is insufficient — if QA flags and Claude complies, the model column disappears and every service that references it produces an AttributeError at runtime.
+
+- The cascade pattern from a single infrastructure field false positive: QA flags column → Claude removes it from model → service still accesses the field → INTEGRATION_FAST fires on every subsequent iteration → each fix pass is surgical and doesn't touch the model → the service reference persists → loop. The fix must address both the QA false positive prevention and the build-time guarantee that Claude never removes these fields.
+
+- `status`, `created_at`, and `updated_at` should be treated as part of the boilerplate model contract, not as application-specific fields. They are as fixed as `id` and `owner_id`. QA cannot have authority over them regardless of what the intake spec says.
+
 ## Latest Learnings (2026-03-17 session 7 — QA cross-file contracts)
 
 - QA finds cross-file mismatches opportunistically when reading individual files. Opportunistic detection means a mismatch is only caught if it happens to be visible while reviewing the specific file in focus. A systematic contract checklist forces QA to actively verify each cross-file relationship regardless of whether it surfaces during per-file review — turning a probabilistic catch into a guaranteed check.

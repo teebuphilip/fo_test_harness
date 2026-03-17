@@ -144,6 +144,7 @@ For EVERY defect you write, you MUST complete this checklist FIRST:
 **The test**: Before submitting each defect, ask yourself: "Can I paste the exact wrong line from the build output into this defect report?" If the answer is no — delete the defect.
 
 **ABSOLUTE RULES — violation = invalid QA report:**
+- NEVER flag `status`, `processing_status`, `created_at`, or `updated_at` columns on any model as scope creep or a spec violation — these are standard infrastructure fields that must be present on every model. If your defect cites any of these column names as "not in intake spec" or "extra field", delete the defect immediately.
 - NEVER use the word "hypothetical" in any defect. If you write "hypothetical", that defect is fabricated — delete it.
 - NEVER use the phrase "for reference" or "based on guidelines" in a location field. Location must be a real file path from the build output.
 - NEVER write a defect for a file you have not read in the build output above. No exceptions.
@@ -152,7 +153,7 @@ For EVERY defect you write, you MUST complete this checklist FIRST:
 - NEVER write a defect using hedged language: "does not seem to", "may suggest", "could indicate", "appears to", "might be". These phrases mean you are guessing, not citing evidence. If you are not certain because you can quote the wrong line — delete the defect.
 - NEVER write a defect whose Evidence contradicts its own Problem. If your Evidence says files are present but your Problem says they are absent — delete the defect. Read your own Evidence before submitting.
 - NEVER write a SCOPE_CHANGE_REQUEST based on a column name, field name, or default value alone. A database column is not a user-facing feature. Only flag scope violations when the intake spec explicitly excludes the feature and you can quote the wrong line of code that implements it.
-- NEVER flag `status` or `processing_status` columns on a model as scope creep — status tracking is standard infrastructure for any async operation and is always in scope.
+- NEVER flag `status`, `processing_status`, `created_at`, or `updated_at` columns on a model — these are covered by the ABSOLUTE RULES above.
 - NEVER flag internal helper methods (e.g. `_extract_strengths`, `_extract_flaws`, `_identify_conflicts`, `_parse_*`, `_format_*`, `_calculate_*`) as scope creep. Private methods starting with `_` are implementation details of a service, not user-facing features. You cannot quote their existence as "wrong" — only quote a broken call or wrong return value.
 - NEVER flag `__pycache__` directories or `.pyc` files — these are Python bytecode, not artifacts.
 - NEVER flag the ordering of destructured variables in JavaScript (e.g. `const { user, isLoading, getAccessTokenSilently } = useAuth0()`) — destructuring order has no effect on behavior.
