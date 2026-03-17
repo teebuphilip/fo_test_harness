@@ -30,6 +30,276 @@ from typing import Dict, Optional, Tuple
 import requests
 
 # ============================================================
+# BUILD PROMPT CONSTANTS — injected into every build call
+# FROZEN_ARCHITECTURAL_DECISIONS + SEEDED_DEPENDENCIES go into
+# governance_section (cacheable — paid once per run, not per iter).
+# GOLDEN_EXAMPLES goes into governance_section (same reason).
+# PRE_OUTPUT_CHECKLIST goes into dynamic_section (last instruction
+# Claude reads before generating — must stay per-iteration).
+# ============================================================
+
+FROZEN_ARCHITECTURAL_DECISIONS = """
+## FROZEN ARCHITECTURAL DECISIONS — NON-NEGOTIABLE
+These decisions are already made. Do not deviate. Do not invent alternatives.
+
+### Service layer
+- All service methods are synchronous unless the feature spec explicitly requires async
+- Service methods raise HTTPException directly — no custom exception classes
+- Every service method that touches the DB accepts `db: Session` as first argument
+
+### Error handling
+- All error responses: `return JSONResponse({"error": "message"}, status_code=N)`
+- 400 for bad input, 401 for auth failure, 403 for permission, 404 for not found, 500 for server error
+- Never return bare strings or unstructured error bodies
+
+### Auth
+- Always use `Depends(get_current_user)` on protected routes — never custom middleware
+- User identity: `current_user["sub"]` — never hardcode a user ID
+- Never implement your own JWT logic — boilerplate handles it
+
+### Data types
+- All monetary values stored as integers (cents) — never floats
+- All timestamps stored as UTC — never naive datetimes
+- All IDs are strings (UUID4) — never integers for primary keys unless intake spec requires it
+
+### Cross-file contracts
+- Route request/response schemas MUST match schema definitions exactly
+- Service return types MUST match route `response_model` exactly
+- Frontend fetch() payload MUST match backend request schema exactly
+
+### Route structure
+- Function-based routes only — no class-based views
+- Route files import router from fastapi — no app-level route registration
+- Every route file exports exactly one APIRouter instance named `router`
+
+### Frontend
+- .jsx files only — never .tsx or .ts
+- pages/ router only — never app/ router
+- All API calls via fetch() with Authorization Bearer token from Auth0
+- No inline styles — Tailwind classes only
+
+### File count constraints
+- Minimize number of files — prefer adding to existing files over creating new ones
+- Only create a new file if it represents a new domain entity OR the feature spec explicitly requires it
+- Maximum files per feature: 1 route file, 1 service file, 1 model file, 1 schema file, 1 frontend page
+- Do NOT create helper files, utility files, or additional services unless strictly required
+
+### Dependencies
+- Never add a dependency that duplicates boilerplate capability
+- Never add a dependency for something Python stdlib handles
+- Never pin to a specific version unless the feature spec requires it
+
+## BASELINE DEPENDENCIES — already available, do not re-add
+
+### Python (requirements.txt baseline — already installed)
+fastapi>=0.109.0, uvicorn[standard]>=0.27.0,
+pydantic>=2.5.0, email-validator>=2.0.0,
+python-multipart>=0.0.6, python-dotenv>=1.0.0,
+sqlalchemy>=2.0.0, alembic>=1.13.0,
+PyJWT>=2.8.0, cryptography>=41.0.0,
+stripe>=7.0.0, requests>=2.31.0, httpx>=0.24.1,
+meilisearch>=0.21.0, anthropic>=0.28.0, openai>=1.30.0,
+sentry-sdk[fastapi]>=1.40.0,
+praw>=7.7.0, tweepy>=4.14.0, linkedin-api>=2.2.0,
+facebook-sdk>=3.1.0, ratelimit>=2.2.1
+
+### Do NOT add to requirements.txt — these are Python stdlib, not external packages:
+uuid, os, json, re, datetime, typing, pathlib, collections, itertools,
+functools, math, hashlib, base64, time, sys, io, copy
+
+### JavaScript (package.json baseline — already installed)
+react@^18.2.0, react-dom@^18.2.0, react-router-dom@^6.21.0,
+axios@^1.6.0, @auth0/auth0-react@^2.2.4, react-scripts@5.0.1,
+tailwindcss@^3.4.0, autoprefixer@^10.4.16, postcss@^8.4.32
+
+### Only add a new dependency if ALL three are true:
+1. The feature spec explicitly requires a capability not in the baseline
+2. No baseline package provides that capability
+3. You can name the exact import you need from that package
+"""
+
+GOLDEN_EXAMPLES = """
+## REFERENCE IMPLEMENTATION — follow these patterns exactly
+
+These are real files from a production build in this stack.
+Copy the structure, naming conventions, import patterns, and error handling exactly.
+Replace the domain logic with the feature you are building.
+
+### Model (business/models/example.py):
+```python
+from sqlalchemy import Column, String, DateTime
+from sqlalchemy.sql import func
+from core.database import Base
+import uuid
+
+class ExampleModel(Base):
+    __tablename__ = "examples"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    owner_id = Column(String, nullable=False, index=True)
+    name = Column(String, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+```
+
+### Schema (business/schemas/example_schema.py):
+```python
+from pydantic import BaseModel
+from typing import Optional
+from datetime import datetime
+
+class ExampleCreate(BaseModel):
+    name: str
+
+class ExampleResponse(BaseModel):
+    id: str
+    owner_id: str
+    name: str
+    created_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+```
+
+### Service (business/services/example_service.py):
+```python
+from sqlalchemy.orm import Session
+from fastapi import HTTPException
+from business.models.example import ExampleModel
+from business.schemas.example_schema import ExampleCreate
+
+class ExampleService:
+    @staticmethod
+    def list_for_user(db: Session, user_id: str) -> list[ExampleModel]:
+        return db.query(ExampleModel).filter(
+            ExampleModel.owner_id == user_id
+        ).all()
+
+    @staticmethod
+    def create(db: Session, payload: ExampleCreate, user_id: str) -> ExampleModel:
+        record = ExampleModel(
+            owner_id=user_id,
+            name=payload.name,
+        )
+        db.add(record)
+        db.commit()
+        db.refresh(record)
+        return record
+```
+
+### Route (business/backend/routes/example_routes.py):
+```python
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+from core.database import get_db
+from core.rbac import get_current_user
+from business.models.example import ExampleModel
+from business.services.example_service import ExampleService
+from business.schemas.example_schema import ExampleCreate, ExampleResponse
+
+router = APIRouter()
+
+@router.get("/examples", response_model=list[ExampleResponse])
+def list_examples(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    return ExampleService.list_for_user(db, current_user["sub"])
+
+@router.post("/examples", response_model=ExampleResponse)
+def create_example(
+    payload: ExampleCreate,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    return ExampleService.create(db, payload, current_user["sub"])
+```
+
+### Frontend page (business/frontend/pages/ExamplePage.jsx):
+```jsx
+import { useState, useEffect } from "react";
+import { useAuth0 } from "@auth0/auth0-react";
+
+export default function ExamplePage() {
+  const { getAccessTokenSilently } = useAuth0();
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchItems();
+  }, []);
+
+  async function fetchItems() {
+    try {
+      const token = await getAccessTokenSilently();
+      const res = await fetch("/api/examples", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      setItems(data);
+    } catch (err) {
+      console.error("Failed to fetch items:", err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (loading) return <div className="p-4">Loading...</div>;
+
+  return (
+    <div className="p-4">
+      <h1 className="text-2xl font-bold mb-4">Examples</h1>
+      <ul className="space-y-2">
+        {items.map(item => (
+          <li key={item.id} className="p-3 border rounded">
+            {item.name}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+```
+"""
+
+PRE_OUTPUT_CHECKLIST = """
+## REQUIRED: SELF-CHECK BEFORE OUTPUTTING ANY CODE
+
+Before writing any file, verify ALL of the following internally.
+If any item fails, fix your plan before outputting.
+Failure on any item MUST block output until resolved — do not output partial or invalid builds.
+
+### Structure checks
+- [ ] Every route I am writing has a matching Pydantic request/response schema
+- [ ] Every service method I call from a route exists in the service file I am writing
+- [ ] Every model field I access in a service exists as a Column in the model
+- [ ] Every frontend fetch() URL exactly matches a backend route path including prefix
+- [ ] Every import from business/ resolves to a file I am outputting
+
+### Scope checks
+- [ ] I am only writing files within business/ — no files outside this directory
+- [ ] I am not re-implementing anything the boilerplate already provides
+- [ ] I am not adding features beyond what the feature spec requires
+
+### Dependency checks
+- [ ] I have not added any Python stdlib module to requirements.txt
+- [ ] I have not added any package that duplicates boilerplate capability
+- [ ] Every package I added to requirements.txt is genuinely required by my code
+
+### Frontend checks
+- [ ] All frontend files use .jsx — no .tsx or .ts files
+- [ ] All pages are in business/frontend/pages/ — not business/frontend/app/
+- [ ] No inline styles — Tailwind classes only
+- [ ] Auth0 token retrieved via getAccessTokenSilently() destructured from useAuth0()
+
+### Output format checks
+- [ ] Every file starts with the correct **FILE: path/to/file** header
+- [ ] No files output outside business/ directory
+
+Only after all checks pass: output your files.
+"""
+
+# ============================================================
 # CONFIGURATION
 # ============================================================
 
@@ -1706,6 +1976,12 @@ class PromptTemplates:
             block=block,
             build_governance=build_governance
         )
+        # FROZEN DECISIONS + SEEDED DEPS (A+E): injected into cacheable governance section.
+        # Same for every build/iteration — paid once per run via prompt caching.
+        governance_section += "\n\n" + FROZEN_ARCHITECTURAL_DECISIONS
+        # GOLDEN EXAMPLES (C): injected into cacheable governance section.
+        # Same for every build/iteration — paid once per run via prompt caching.
+        governance_section += "\n\n" + GOLDEN_EXAMPLES
 
         dynamic_section = DirectiveTemplateLoader.render(
             'build_dynamic_base.md',
@@ -1720,6 +1996,9 @@ class PromptTemplates:
             boilerplate_path_instruction=boilerplate_path_instruction,
             code_skeletons_instruction=code_skeletons_instruction
         )
+        # PRE-OUTPUT CHECKLIST (B): injected at end of dynamic section.
+        # Last instruction Claude reads before generating — must stay per-iteration.
+        dynamic_section += "\n\n" + PRE_OUTPUT_CHECKLIST
 
         return (governance_section, dynamic_section)
 

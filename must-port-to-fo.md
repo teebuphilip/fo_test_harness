@@ -1,5 +1,22 @@
 # Must Port to FO
 
+## Build Prompt Quality Improvements (2026-03-17 session 7)
+
+98. feat: FROZEN_ARCHITECTURAL_DECISIONS + GOLDEN_EXAMPLES + PRE_OUTPUT_CHECKLIST injected into every build prompt
+- `FROZEN_ARCHITECTURAL_DECISIONS`: locks sync service methods, JSONResponse error shape, `current_user["sub"]`
+  auth, UUID string IDs, function-based routes, `router` naming, .jsx-only frontend, cross-file contracts,
+  file count max (1 route/service/model/schema/page per feature), no helper/utility files
+- `SEEDED_DEPENDENCIES` (inside frozen block): exact Python baseline from actual boilerplate requirements.txt
+  (fastapi, pydantic, PyJWT, sqlalchemy, alembic, stripe, anthropic, openai, sentry-sdk, social libs etc.);
+  stdlib exclusion list; JS baseline from actual package.json (react, react-router-dom, axios, auth0, tailwind)
+- `GOLDEN_EXAMPLES`: 5 reference files — model (SQLAlchemy UUID), schema (Pydantic v2 from_attributes),
+  service (sync staticmethods), route (FastAPI router + Depends), JSX page (getAccessTokenSilently pattern)
+- `PRE_OUTPUT_CHECKLIST`: 5-category self-check before output, explicitly blocking on failure
+- FROZEN + GOLDEN injected into `governance_section` (cacheable — paid once per run, not per iteration)
+- PRE_OUTPUT_CHECKLIST injected at end of `dynamic_section` (last instruction before generation)
+- Files: `fo_test_harness.py` — module-level constants lines 41–300, injection at lines 1973–1995
+⬜ TODO for FO codebase
+
 ## CONSISTENCY Full-Build Escalation Removed (2026-03-16 session 6)
 
 97. fix: CONSISTENCY hard cap no longer escalates to full-build + N/A files filter

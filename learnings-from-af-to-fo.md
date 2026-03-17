@@ -1,5 +1,19 @@
 # Learnings From AF to FO
 
+## Latest Learnings (2026-03-17 session 7 — build prompt quality)
+
+- Unconstrained generation is the root cause of most convergence failures, not model capability or QA gate design. When Claude makes micro-decisions about sync vs async, error response shape, auth pattern, and file structure on every build, the decisions drift from the boilerplate on every run. Locking all architectural decisions as frozen constraints before the feature spec eliminates this drift class entirely.
+
+- Pattern cloning is more reliable than rule following. Five reference files showing exact import paths, decorator patterns, and data access patterns produce better structural conformance than equivalent paragraphs of written rules. Claude copies structure; it interprets rules. Rules leave room for "reasonable" deviations. Examples do not.
+
+- The Pydantic schema layer is the most commonly missing reference file in build quality improvements. Route/service/model examples are standard. The schema file (BaseModel subclasses with `from_attributes = True` for ORM mode, Optional fields, correct response shape) is what bridges model columns to route response_model — omitting it leaves Claude to invent the schema shape, which diverges from the route and model on every build.
+
+- File explosion increases QA surface area, import chain complexity, and integration failure rate proportionally. Claude's default behaviour is to create helper utilities, abstract base classes, and additional service files beyond what the spec requires. A hard constraint of 1 route/service/model/schema/page per feature with an explicit ban on helper/utility files reduces the defect count on first-pass builds.
+
+- The seeded dependency baseline prevents two common first-pass errors: adding Python stdlib modules (uuid, os, json) to requirements.txt (caught by static check, but better to prevent) and re-adding packages already in the boilerplate (pydantic, sqlalchemy, stripe) with wrong version pins. The baseline must be sourced from the actual boilerplate requirements.txt — using a generic list risks listing packages that are not installed (e.g. python-jose was listed but the boilerplate uses PyJWT; passlib listed but not installed).
+
+- Governance-section vs dynamic-section placement is a cost decision, not just an organisational one. Content that never changes between builds or iterations belongs in governance_section — Anthropic's prompt caching reuses it at ~10% of full input cost on iterations 2+. Frozen decisions, golden examples, and seeded dependencies are all static — injecting them into governance_section means a 300-line constant costs ~30 lines of tokens on every iteration after the first.
+
 ## Latest Learnings (2026-03-16 session 6 — CONSISTENCY escalation)
 
 - Full-build escalation as a response to a persistent CONSISTENCY issue is strictly worse than falling through to QA. The full-build forces Claude to regenerate all files from memory without seeing the current artifact state, producing invented architectures and wrong-path files. The QA gate sees the actual artifacts and reports real defects. One stubborn hallucinated CONSISTENCY issue should never trigger a complete rebuild.

@@ -1,5 +1,44 @@
 # Changelog
 
+## 2026-03-17 (session 7 — build prompt quality improvements)
+
+### feat: FROZEN_ARCHITECTURAL_DECISIONS + GOLDEN_EXAMPLES + PRE_OUTPUT_CHECKLIST injected into every build
+
+**Problem:** Claude has too much decision surface at build time — sync/async choice, error shape,
+auth pattern, file structure, dependency selection all vary between builds. Small divergences from
+boilerplate create integration failures → QA failures → extra iterations → cost.
+
+**Changes (all in `fo_test_harness.py`):**
+
+**A+E — FROZEN_ARCHITECTURAL_DECISIONS (module-level constant, injected into `governance_section`):**
+- Locks: sync-by-default service methods, JSONResponse error shape, `current_user["sub"]` auth,
+  UUID string IDs, function-based routes, `router` naming, .jsx-only frontend, pages/ router only
+- Adds cross-file contract rules: route schema ↔ service return type ↔ frontend fetch payload
+- Adds file count constraints: max 1 route/service/model/schema/page per feature — no helper files
+- Adds seeded dependency baseline: Python stdlib list (never add to requirements.txt),
+  boilerplate packages already installed (fastapi, sqlalchemy, auth0, etc.)
+- Injected into `governance_section` (cacheable) — paid once per run, not per iteration
+
+**C — GOLDEN_EXAMPLES (module-level constant, injected into `governance_section`):**
+- 5 reference files: model, schema (Pydantic — was missing from original doc), service, route, JSX page
+- Exact patterns: `from core.database import Base`, UUID primary key, `from_attributes = True`,
+  `get_current_user["sub"]`, `getAccessTokenSilently()` destructured from useAuth0
+- Injected into `governance_section` (cacheable) — paid once per run
+
+**B — PRE_OUTPUT_CHECKLIST (module-level constant, injected at end of `dynamic_section`):**
+- 5 check categories: structure, scope, dependencies, frontend, output format
+- Failure is explicitly blocking — "fix your plan before outputting"
+- Injected as last instruction before "BEGIN BUILD EXECUTION NOW" — stays per-iteration
+
+**Injection point:** `PromptTemplates.build_prompt()` ~line 1973–1995
+
+**Expected outcome:** First-pass build quality improves. Iteration count on simple builds drops
+from ~15–20 to ~8–12. Convergence failures from sync/async, wrong path, wrong imports reduced.
+
+Files: `fo_test_harness.py`
+
+---
+
 ## 2026-03-16 (session 6 — CONSISTENCY full-build escalation removed)
 
 ### fix: CONSISTENCY hard cap no longer escalates to full-build; added no-file filter
