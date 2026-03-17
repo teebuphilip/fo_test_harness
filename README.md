@@ -192,6 +192,24 @@ python fo_test_harness.py \
 
 ---
 
+## Cleanup Script
+
+Use `cleanup_fo_harness_runs.py` to reduce disk usage under `fo_harness_runs/` while
+keeping cost tracking viable.
+
+Default behavior:
+- Keeps all `.zip` files
+- Keeps latest **5** run directories per prefix
+- Removes heavy subfolders (`build/`, `qa/`, `logs/`, `tmp/`) from older runs
+
+Example:
+```bash
+python cleanup_fo_harness_runs.py --runs-dir fo_harness_runs --keep 5 --dry-run
+python cleanup_fo_harness_runs.py --runs-dir fo_harness_runs --keep 5 --apply
+```
+
+---
+
 ## QA Gates
 
 Every build iteration passes through **five sequential gates** inside `fo_test_harness.py`, then one post-build gate:

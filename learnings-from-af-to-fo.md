@@ -191,6 +191,9 @@
   production domain (`https://<project>.vercel.app`) when setting `CORS_ORIGINS`.
 - Auth0 must explicitly allow the production domain in callbacks/logout/origins. Automating
   this after frontend deploy (via a helper + `AUTH0_MGMT_TOKEN`) removes a brittle manual step.
+- Long-lived runs directories accumulate large `build/`, `qa/`, and `logs/` trees. A targeted
+  cleanup that preserves ZIPs + latest N runs per prefix keeps cost tracking viable while
+  reclaiming space.
 
 ## Latest Learnings (2026-03-08, session 10)
 

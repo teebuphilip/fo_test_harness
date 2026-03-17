@@ -670,6 +670,11 @@ Pipeline now derives the stable production domain (`https://<project>.vercel.app
 New `deploy/auth0_update_urls.py` updates Auth0 callback/logout/origin URLs. The pipeline
 now runs it automatically after a successful frontend deploy when `AUTH0_MGMT_TOKEN` is set.
 
+### new: cleanup_fo_harness_runs.py (targeted cleanup)
+
+Adds a helper to clean older run directories in `fo_harness_runs` by removing heavy
+subfolders while keeping the latest N runs per prefix and all ZIPs. Default keep = 5.
+
 ## 2026-03-10 (late session)
 
 ### fix: static/compile file contents not injected — business/ prefix filter was too strict

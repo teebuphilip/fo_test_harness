@@ -399,6 +399,12 @@
 - Files: `deploy/auth0_update_urls.py`, `deploy/pipeline_deploy.py`
 ⬜ TODO for FO codebase
 
+70. new: cleanup_fo_harness_runs.py
+- Targeted cleanup for `fo_harness_runs` removes heavy subfolders in older runs while keeping
+  all ZIPs and latest N runs per prefix (default N=5).
+- Files: `cleanup_fo_harness_runs.py`
+⬜ TODO for FO codebase
+
 ## Deploy Pipeline (additions 2026-03-10 evening)
 
 60. fix: Railway set_root_directory("backend") excludes business/ from container
