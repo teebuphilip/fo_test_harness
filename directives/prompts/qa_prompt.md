@@ -70,6 +70,56 @@ After the inventory, verify required structure before analyzing individual files
 
 ---
 
+**STEP 1.5 — CROSS-FILE CONTRACT VERIFICATION:**
+
+Before evaluating individual files, verify these structural contracts hold across files.
+Each violation is a defect — quote the conflicting lines from BOTH files as evidence.
+If a file named in a contract is not in your FILE INVENTORY, skip that contract (the missing file is already caught by STEP 1).
+
+**Contract 1 — Route response_model ↔ Schema definition**
+For every `response_model=XResponse` in a route file:
+- The schema file must define `class XResponse(BaseModel)`
+- If XResponse is not defined anywhere in the artifacts → DEFECT (HIGH, IMPLEMENTATION_BUG)
+- Evidence: quote the `response_model=XResponse` line AND confirm class is absent from inventory
+
+**Contract 2 — Route service call ↔ Service method definition**
+For every `XService.method_name(...)` call in a route file:
+- The service file must define `def method_name(...)` or `async def method_name(...)`
+- If the method does not exist in the service → DEFECT (HIGH, IMPLEMENTATION_BUG)
+- Evidence: quote the call in the route AND the service file header showing the method is absent
+
+**Contract 3 — Service field access ↔ Model Column definition**
+For every `model_instance.field_name` access in a service file:
+- The model file must define `field_name = Column(...)`
+- If the Column does not exist → DEFECT (HIGH, IMPLEMENTATION_BUG)
+- Evidence: quote the `.field_name` access AND the model class body showing no such Column
+
+**Contract 4 — Service import ↔ Artifact existence**
+For every `from business.models.X import XModel` or `from business.services.X import XService` in any file:
+- The imported file must appear in your FILE INVENTORY
+- If not present → DEFECT (HIGH, IMPLEMENTATION_BUG)
+- Evidence: quote the import line and note the file is absent from inventory
+
+**Contract 5 — Frontend fetch URL ↔ Backend route path**
+For every `fetch("/api/X", ...)` in a frontend page:
+- A backend route file must define `@router.get("/X")` or `@router.post("/X")` (or equivalent HTTP method)
+- Account for FastAPI router prefix: a route file at `business/backend/routes/foo.py` auto-mounts at `/api/foo`
+- If no matching route exists → DEFECT (HIGH, IMPLEMENTATION_BUG)
+- Evidence: quote the fetch URL AND confirm no matching @router decorator exists in inventory
+
+**Contract 6 — Frontend auth header ↔ Backend auth dependency**
+For every frontend fetch with `Authorization: Bearer` header calling a route:
+- That route must have `Depends(get_current_user)` in its signature
+- If the route exists but has no `Depends(get_current_user)` → DEFECT (HIGH, IMPLEMENTATION_BUG)
+- Evidence: quote the Authorization header line AND the unprotected route signature
+
+**IMPORTANT — contract check rules:**
+- Only flag a contract violation if you can quote evidence from BOTH sides (the caller and the callee)
+- Do NOT flag if the file containing the callee is absent from inventory — that is caught by Contract 4 or STEP 1
+- Do NOT infer a violation from a function name or import alone — read the actual definition
+
+---
+
 **STEP 2 — EVALUATE ARTIFACTS IN THIS FIXED ORDER:**
 
 Process artifact types in this sequence — do not skip ahead or jump between file types:
@@ -144,9 +194,12 @@ For EVERY defect you write, you MUST complete this checklist FIRST:
 - Standard library modules in requirements.txt (e.g. `uuid`, `os`, `json`, `re`, `datetime`)
   ARE defects — they should not be listed as external dependencies. Flag MEDIUM.
 - The following packages in requirements.txt are CORRECT external dependencies — do NOT flag them:
-  `sqlalchemy`, `alembic`, `psycopg2`, `psycopg2-binary`, `pydantic`, `fastapi`, `uvicorn`,
-  `httpx`, `python-jose`, `passlib`, `python-multipart`, `celery`, `redis`, `boto3`,
-  `stripe`, `auth0-python`, `requests`, `aiohttp`, `anyio`. These are real packages, not stdlib.
+  `fastapi`, `uvicorn`, `pydantic`, `email-validator`, `python-multipart`, `python-dotenv`,
+  `sqlalchemy`, `alembic`, `psycopg2`, `psycopg2-binary`,
+  `PyJWT`, `cryptography`, `stripe`, `requests`, `httpx`,
+  `meilisearch`, `anthropic`, `openai`, `sentry-sdk`,
+  `praw`, `tweepy`, `linkedin-api`, `facebook-sdk`, `ratelimit`,
+  `anyio`, `auth0-python`. These are real packages, not stdlib.
 
 **AI API COST CALCULATION BUG to FLAG (IMPLEMENTATION_BUG HIGH) — VERIFICATION REQUIRED:**
 If the build contains AI API calls (Anthropic, OpenAI, or similar), verify cost calculations:

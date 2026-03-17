@@ -1,5 +1,15 @@
 # Learnings From AF to FO
 
+## Latest Learnings (2026-03-17 session 7 — QA cross-file contracts)
+
+- QA finds cross-file mismatches opportunistically when reading individual files. Opportunistic detection means a mismatch is only caught if it happens to be visible while reviewing the specific file in focus. A systematic contract checklist forces QA to actively verify each cross-file relationship regardless of whether it surfaces during per-file review — turning a probabilistic catch into a guaranteed check.
+
+- The direction of evidence matters for cross-file contracts. For a route→service contract, QA must quote the call site (route) and confirm absence in the callee (service). Quoting only the call site proves the call exists but not that it's broken. Quoting only the callee proves the method is absent but not that it's referenced. Both sides are required to establish a real contract violation.
+
+- QA's existing "no inference" rule must be explicitly preserved in contract checks. Contract 3 (service field access → model Column) is the most likely false positive source — a service may access `model.field` where `field` is a Python property or relationship, not a Column. The rule "read the actual definition, not the name" prevents QA from flagging legitimate ORM patterns.
+
+- The DO NOT FLAG package list in qa_prompt.md must be sourced from the actual boilerplate requirements.txt. Using a generic or assumed list causes QA to incorrectly accept wrong imports (e.g. `from jose import jwt` when the boilerplate uses PyJWT) or incorrectly flag correct ones. The list drifted significantly: python-jose, passlib, celery, redis, boto3, aiohttp were listed as correct but are not installed; PyJWT, cryptography, meilisearch, social libs were missing.
+
 ## Latest Learnings (2026-03-17 session 7 — build prompt quality)
 
 - Unconstrained generation is the root cause of most convergence failures, not model capability or QA gate design. When Claude makes micro-decisions about sync vs async, error response shape, auth pattern, and file structure on every build, the decisions drift from the boilerplate on every run. Locking all architectural decisions as frozen constraints before the feature spec eliminates this drift class entirely.

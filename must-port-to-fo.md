@@ -1,5 +1,20 @@
 # Must Port to FO
 
+## QA Cross-File Contract Verification (2026-03-17 session 7)
+
+99. feat: qa_prompt.md STEP 1.5 — 6 explicit cross-file contracts QA verifies on every build
+- Contract 1: route response_model ↔ schema class definition
+- Contract 2: route service call ↔ service method definition
+- Contract 3: service model.field access ↔ model Column definition
+- Contract 4: import from business.X ↔ file exists in artifact inventory
+- Contract 5: frontend fetch("/api/X") ↔ backend @router path
+- Contract 6: frontend Authorization Bearer ↔ route Depends(get_current_user)
+- Evidence rule: must quote conflicting lines from both files; no single-sided inference
+- Also fixed DO NOT FLAG package list to match actual boilerplate (removed python-jose, passlib,
+  celery, redis, boto3, aiohttp; added PyJWT, cryptography, meilisearch, social libs)
+- Files: `directives/prompts/qa_prompt.md`
+⬜ TODO for FO codebase
+
 ## Build Prompt Quality Improvements (2026-03-17 session 7)
 
 98. feat: FROZEN_ARCHITECTURAL_DECISIONS + GOLDEN_EXAMPLES + PRE_OUTPUT_CHECKLIST injected into every build prompt

@@ -1,5 +1,28 @@
 # Changelog
 
+## 2026-03-17 (session 7 — QA cross-file contract verification)
+
+### feat: qa_prompt.md STEP 1.5 — systematic cross-file contract verification
+
+Added 6 explicit contracts QA must verify on every build before per-file evaluation:
+1. Route `response_model=XResponse` → schema defines `class XResponse(BaseModel)`
+2. Route `XService.method(...)` call → service defines `def method(...)`
+3. Service `model.field` access → model defines `field = Column(...)`
+4. Service/route `from business.X import Y` → file exists in artifact inventory
+5. Frontend `fetch("/api/X")` → backend `@router.get/post("/X")` exists
+6. Frontend `Authorization: Bearer` fetch → route has `Depends(get_current_user)`
+
+Rules: must quote conflicting lines from BOTH files; skip if callee file absent (caught by Contract 4/STEP 1);
+no inference from function names alone.
+
+Also fixed DO NOT FLAG package list — removed `python-jose`, `passlib`, `celery`, `redis`, `boto3`,
+`aiohttp` (not in actual boilerplate); added actual packages: `PyJWT`, `cryptography`, `meilisearch`,
+`praw`, `tweepy`, `linkedin-api`, `facebook-sdk`, `ratelimit`, `email-validator`.
+
+Files: `directives/prompts/qa_prompt.md`
+
+---
+
 ## 2026-03-17 (session 7 — build prompt quality improvements)
 
 ### feat: FROZEN_ARCHITECTURAL_DECISIONS + GOLDEN_EXAMPLES + PRE_OUTPUT_CHECKLIST injected into every build
