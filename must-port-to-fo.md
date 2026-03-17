@@ -1,5 +1,19 @@
 # Must Port to FO
 
+## Schema Naming Convention + pyc Filter (2026-03-17 session 7)
+
+101. fix: schema naming convention locked in FROZEN_ARCHITECTURAL_DECISIONS
+- Routes importing XCreateRequest, schemas defining XCreate → permanent static oscillation
+- Added: XCreate (not XCreateRequest), XResponse (not XResponseModel), XUpdate (not XUpdateRequest)
+- Files: `fo_test_harness.py`
+⬜ TODO for FO codebase
+
+102. fix: __pycache__/.pyc locations filtered before triage in _filter_hallucinated_defects()
+- QA flagged compiled bytecode files as SYSTEMIC defects → inflated fix scope
+- Added Check 1c: location containing __pycache__ or ending .pyc → removed immediately
+- Files: `fo_test_harness.py`
+⬜ TODO for FO codebase
+
 ## Status Column False Positive Fix (2026-03-17 session 7)
 
 100. fix: status/created_at/updated_at columns must never be flagged — moved to ABSOLUTE RULES

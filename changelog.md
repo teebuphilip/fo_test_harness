@@ -1,5 +1,27 @@
 # Changelog
 
+## 2026-03-17 (session 7 — schema naming + pyc filter)
+
+### fix: schema naming convention locked + __pycache__/.pyc filter added
+
+**Schema naming oscillation:** Routes importing `ContentCreateRequest`, `HorseCreateRequest`,
+`MemberCreateRequest` (with `Request` suffix) while schemas defined `ContentCreate`, `HorseCreate`
+etc. (no suffix). Static check fired the same 6 defects every iteration — Claude fixed routes but
+not schemas or vice versa, causing permanent oscillation.
+Fix: added schema naming convention to `FROZEN_ARCHITECTURAL_DECISIONS`:
+- Request schema: `XCreate` — NEVER `XCreateRequest`
+- Response schema: `XResponse` — NEVER `XResponseModel`
+- Update schema: `XUpdate` — NEVER `XUpdateRequest`
+
+**__pycache__/.pyc filter:** QA flagged `business/backend/routes/__pycache__/content.cpython-39.pyc`
+and `horses.cpython-39.pyc` as SYSTEMIC defects. These inflated defect count and triggered a wider
+fix scope than needed. Added Check 1c to `_filter_hallucinated_defects()` — any location containing
+`__pycache__` or ending in `.pyc` is removed immediately before triage.
+
+Files: `fo_test_harness.py`
+
+---
+
 ## 2026-03-17 (session 7 — status column false positive fix)
 
 ### fix: status/created_at/updated_at columns must never be flagged as scope creep

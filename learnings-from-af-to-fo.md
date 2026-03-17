@@ -1,5 +1,11 @@
 # Learnings From AF to FO
 
+## Latest Learnings (2026-03-17 session 7 — schema naming + pyc)
+
+- Schema class naming ambiguity causes permanent static oscillation. When the golden example shows `ExampleCreate` but doesn't explicitly prohibit `ExampleCreateRequest`, Claude freely chooses the longer form. Routes then import one name, schemas define another. The static check fires the same 6 defects every iteration regardless of which side Claude fixes — fixing routes makes schemas wrong, fixing schemas makes routes wrong. The only fix is to make the naming convention non-negotiable in the frozen decisions block so both sides are generated consistently from iteration 1.
+
+- Compiled bytecode files (`__pycache__/*.pyc`) appearing as QA defect locations are always fabrications — QA cannot read `.pyc` content. When triage classifies these as SYSTEMIC, it inflates the fix scope to a wide rebuild instead of the 1-3 surgical files that actually need changing. Filtering these before triage is the correct fix — they should never reach the strategy decision.
+
 ## Latest Learnings (2026-03-17 session 7 — status column cascade)
 
 - A QA rule buried in the DO NOT FLAG list is not an absolute constraint — it is guidance that the model can and will ignore under certain conditions. Any rule whose violation triggers a multi-iteration cascade must be in ABSOLUTE RULES at the top of the section, not in a long bulleted list that the model reads opportunistically.

@@ -62,6 +62,13 @@ These decisions are already made. Do not deviate. Do not invent alternatives.
 - All timestamps stored as UTC — never naive datetimes
 - All IDs are strings (UUID4) — never integers for primary keys unless intake spec requires it
 
+### Schema naming convention — non-negotiable
+- Request schema class name: `XCreate` — NEVER `XCreateRequest`, `XRequest`, `XInput`
+- Response schema class name: `XResponse` — NEVER `XResponseModel`, `XOut`, `XOutput`
+- Update schema class name: `XUpdate` — NEVER `XUpdateRequest`, `XPatch`
+- The route `response_model=XResponse` and `payload: XCreate` MUST use these exact suffixes
+- The schema file MUST define classes with exactly these names — no alternatives
+
 ### Cross-file contracts
 - Route request/response schemas MUST match schema definitions exactly
 - Service return types MUST match route `response_model` exactly
@@ -4687,6 +4694,13 @@ class FOHarness:
             import os as _os
             if _os.path.basename(file_path) == '__init__.py':
                 reason = f"Location '{file_path}' is an __init__.py — Python package plumbing, never a defect target"
+                removed.append((defect_id, block, reason))
+                print_warning(f"  [FILTER] Removed {defect_id}: {reason}")
+                continue
+
+            # --- Check 1c: __pycache__ / .pyc files are never valid defect targets ---
+            if '__pycache__' in file_path or file_path.endswith('.pyc'):
+                reason = f"Location '{file_path}' is a compiled bytecode file — never a defect target"
                 removed.append((defect_id, block, reason))
                 print_warning(f"  [FILTER] Removed {defect_id}: {reason}")
                 continue
