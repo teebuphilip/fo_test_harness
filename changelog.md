@@ -1,5 +1,175 @@
 # Changelog
 
+## 2026-03-18 (session 8 — factory mode, daily rollup, reddit post, various tooling)
+
+### feat: --mode factory for run_integration_and_feature_build.sh
+
+New build mode for high-volume AFH catalog builds (60 products).
+
+**Changes:**
+- `run_integration_and_feature_build.sh`: `--mode factory|quality` flag (default: quality).
+  Factory mode: caps MAX_ITER at 10, MAX_FIX_PASSES at 1, passes `--factory-mode` to all harness calls.
+- `fo_test_harness.py`: `--factory-mode` flag.
+  - Gate 3 (AI Consistency): SKIPPED entirely
+  - Gate 4 (Quality Gate): passes unless DEPLOYABILITY=FAIL (ignores Completeness/Code Quality LOW/FAIL)
+  - Logged in harness init output as "Factory mode: ON"
+
+**Rationale:** AFH catalog builds are small, simple, self-contained SaaS tools. Gate 3 burns ~$0.10/iter
+on cross-file consistency checks that rarely catch real issues in isolated single-feature builds.
+Gate 4 can accept incomplete completeness and imperfect code quality as long as the app deploys.
+
+### feat: daily cost rollup + GitHub Actions automation
+
+- `daily_cost_rollup.py`: reads all AI cost CSVs, groups by date, outputs ai_costs_daily.csv
+- `.github/workflows/daily_rollup.yml`: runs at 6am EST daily, commits ai_costs_daily.csv + harness_summary
+
+### feat: weekly Reddit post automation
+
+- `post_to_reddit.py`: parses latest harness_summary, posts to r/microsaas via PRAW
+- `.github/workflows/weekly_reddit_post.yml`: runs every Monday at 6am EST
+
+### feat: summarize_harness_runs.py — product grouping
+
+- Groups feature runs under parent products (PRODUCT_PREFIXES mapping)
+- Skips fake test entries (SKIP_STARTUPS)
+- Shows "Feat" column with distinct feature count per product
+
+### feat: phase_planner.py — ZIP guard
+
+- Skips re-run if a completed final ZIP already exists for the startup
+- Prevents wasting $0.03 on re-decomposing already-built products
+
+### feat: check_block_b.py — lightweight Block B quality checker
+
+- 15 deterministic signals across 6 passes, no AI, exit codes 0/1/2/3
+- PASS>=80, WARN 60-79, FAIL<60
+
+### fix: postintakeassist — block_a/block_b key normalization
+
+- Adds `block_a_final`/`block_b_final` aliases when only `block_a`/`block_b` present
+- NOT wired into build pipeline (Block A schema incompatible with intake pass_1..pass_6 format)
+
+---
+
+## 2026-03-17 (session 7 — AI decomposer + mini specs for Phase 1)
+
+### feat: AI-powered entity decomposer replaces keyword-based phase planner
+
+**Problem:** Phase 1 monolithic builds failed to converge (35+ iterations) because the full intake
+contained Phase 2 references (intelligence features, external integrations). Claude would build
+entities for features not yet in scope → QA flagged → oscillation.
+
+**Solution:** Three-part pipeline:
+1. **AI Decomposer** (`phase_planner.py:decompose_intake()`) — ChatGPT (gpt-4o) reads full intake
+   and produces structured mini specs: one per domain entity with exact fields, CRUD ops, file
+   contracts, dependencies, and forbidden expansions. Every entity must cite intake evidence.
+2. **Deterministic Validator** (`phase_planner.py:validate_mini_specs()`) — enforces harness rules
+   on AI output: underscore filenames, .jsx not .tsx, strip external IDs, remove standard fields
+   (id/created_at/updated_at/owner_id), underscore CRUD URLs.
+3. **Entity-by-entity building** (`run_integration_and_feature_build.sh`) — each entity built as
+   a separate harness run, chained via `--prior-run`. Independent entities (no FK deps) in Wave 1,
+   dependents in Wave 2+. Mirrors the existing feature loop structure.
+
+**Mini spec injection:** `fo_test_harness.py:PromptTemplates.build_prompt()` detects `_mini_spec`
+key in intake_data and injects structured entity definition (fields, CRUD, deps, allowed files,
+forbidden expansions) into the dynamic section of the build prompt.
+
+**Phase 1 intake stripping:** `build_phase1_intake()` aggressively strips HLD, engineering questions,
+QA docs, and task lists of Phase 2 references using `PHASE2_STRIP_KEYWORDS` (~60 keywords).
+
+**Fallback:** If OpenAI key unavailable or decomposer fails, falls back to monolithic Phase 1 build.
+
+Files: `phase_planner.py`, `fo_test_harness.py`, `run_integration_and_feature_build.sh`
+
+---
+
+## 2026-03-17 (session 7 — consistency type alignment false positives)
+
+### fix: SQLAlchemy↔Pydantic type mappings added to consistency DO NOT FLAG
+
+**Root cause:** Consistency AI flagged correct type alignments as FIELD_MISMATCH:
+- `Column(String, nullable=True)` ↔ `Optional[str] = None` flagged as "phantom field"
+- `Column(JSON)` ↔ `Optional[Dict[str, Any]]` flagged as "potential validation failure"
+- `Column(String(50), default="basic")` ↔ `Optional[str] = "basic"` flagged as "default conflict"
+These are all correct SQLAlchemy↔Pydantic mappings. The false positives caused 2 consecutive
+surgical failures → escalation to SYSTEMIC → wide 25-file context patch → collateral damage.
+
+**Fix:** Added comprehensive type alignment table to `build_ai_consistency.md` DO NOT FLAG section:
+- All standard Column types mapped to their correct Pydantic equivalents
+- Explicitly: nullable=True ↔ Optional, default=X ↔ = X or = None
+- Infrastructure fields (status/created_at/updated_at) — never flag
+- Derived/computed fields in service responses (e.g. `is_published`) — valid transformations
+
+Files: `directives/prompts/build_ai_consistency.md`
+
+---
+
+## 2026-03-17 (session 7 — consistency fix joint file targeting)
+
+### fix: consistency fixes now target ALL files in the <-> relationship simultaneously
+
+**Root cause:** `_parse_consistency_report()` sets `issue['file']` to only the first file from
+`Files: A <-> B`. The defect_target_files builder at the fix iteration only reads `d.get('file')`
+— so only one side of a FIELD_MISMATCH gets patched. The other side stays wrong → next consistency
+run fires the same issue in reverse → oscillates for all 4 cap iterations before falling to QA.
+
+**Fix:** Added Fix 3 in the defect_target_files building block:
+- For `defect_source == 'consistency'`, parse all files from `d.get('files', '')` via `<->` split
+- Add any `business/` prefixed files not already in `defect_target_files`
+- Both the service AND the model (or whichever two files are involved) get passed to Claude
+- Claude sees current content of both files and fixes field names on both sides in one pass
+
+**Expected impact:** FIELD_MISMATCH between model and service resolves in 1 consistency iteration
+instead of oscillating for 4 before falling to QA.
+
+Files: `fo_test_harness.py`
+
+---
+
+## 2026-03-17 (session 7 — status column harness filter)
+
+### fix: status/created_at/updated_at column defects now filtered at harness level
+
+**Root cause:** QA absolute rule prohibiting status column flagging is non-binding — QA ignored it
+at iterations 10 and 15, generating SCOPE-BOUNDARY defects targeting status columns in models,
+services (dict keys), and Alembic migrations.
+
+**Fix:** Added Check 1d to `_filter_hallucinated_defects()`. Patterns cover all citation forms:
+- ORM column assignment: `status = Column(...)`
+- Dict key / Alembic positional: `"status": ...`, `sa.Column('status', ...)`
+- Attribute access in service/route: `update.status`, `.created_at`
+
+If ALL backtick evidence snippets match any infrastructure pattern → defect removed.
+If all defects removed → verdict flips to ACCEPTED.
+
+**Iteration 15 caught:** DEFECT-1 evidence `"status": update.status,` (dict key → pattern 2),
+DEFECT-2 evidence `sa.Column('status', sa.String(50), default='active'),` (Alembic → pattern 2).
+
+Files: `fo_test_harness.py`
+
+---
+
+## 2026-03-17 (session 7 — hyphen filename normalization)
+
+### fix: hyphenated route filenames caused permanent INT-ROUTE false positives
+
+**Root cause:** `HorseDetailsPage.jsx` called `fetch('/api/stable-updates')`. Claude generated
+`business/backend/routes/stable-updates.py` (with hyphen). Two bugs in `integration_check.py`:
+1. Route file regex `\w+\.py$` excludes hyphens — file was never loaded into `route_stems`
+2. Cross-check compared raw URL stem `stable-updates` against normalized route stems — would
+   never match even if the file was loaded
+
+**Fixes:**
+- `integration_check.py` line 196: regex changed to `[\w-]+\.py$` (allows hyphens in filenames)
+- `integration_check.py` stem extraction: `Path(path).stem.replace('-', '_')` — normalize to underscore
+- `integration_check.py` cross-check: `stem.replace('-', '_')` before lookup; report uses normalized stem
+- `FROZEN_ARCHITECTURAL_DECISIONS` in `fo_test_harness.py`: added "Route and file naming — CRITICAL" section
+  locking route filenames to underscores and requiring fetch URLs to match
+
+Files: `integration_check.py`, `fo_test_harness.py`
+
+---
+
 ## 2026-03-17 (session 7 — schema naming + pyc filter)
 
 ### fix: schema naming convention locked + __pycache__/.pyc filter added

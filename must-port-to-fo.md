@@ -1,5 +1,94 @@
 # Must Port to FO
 
+## Factory Mode (2026-03-18 session 8)
+
+112. feat: --factory-mode flag in fo_test_harness.py
+- Skips Gate 3 (AI Consistency) entirely
+- Gate 4 (Quality Gate) passes unless DEPLOYABILITY=FAIL
+- Logged in harness init as "Factory mode: ON/OFF"
+- Files: `fo_test_harness.py`
+✅ DONE here, ⬜ TODO for FO codebase
+
+113. feat: --mode factory|quality in run_integration_and_feature_build.sh
+- factory: MAX_ITER=10, MAX_FIX_PASSES=1, passes --factory-mode to all harness calls
+- quality: unchanged defaults (MAX_ITER=20, MAX_FIX_PASSES=2, no --factory-mode)
+- Files: `run_integration_and_feature_build.sh`
+✅ DONE here, ⬜ TODO for FO codebase
+
+---
+
+## AI Decomposer + Mini Specs for Phase 1 (2026-03-17 session 7)
+
+108. feat: AI decomposer replaces keyword-based Phase 1 entity extraction
+- ChatGPT (gpt-4o) reads full intake → produces per-entity mini specs with fields, CRUD, deps, file contracts
+- Deterministic validator enforces harness rules (underscores, .jsx, strip standard fields)
+- Per-entity intake JSONs with `_mini_spec` key → sequential harness runs chained via `--prior-run`
+- Wave-based dependency ordering: independent entities first, dependents after parents pass QA
+- Files: `phase_planner.py`
+✅ DONE here, ⬜ TODO for FO codebase
+
+109. feat: mini spec injection in build prompt
+- `PromptTemplates.build_prompt()` detects `_mini_spec` in intake_data
+- Injects structured entity definition: fields, CRUD ops, deps, allowed files, forbidden expansions
+- Files: `fo_test_harness.py`
+✅ DONE here, ⬜ TODO for FO codebase
+
+110. feat: entity-by-entity Phase 1 build loop in shell script
+- Step 2 checks `decomposition_mode` from assessment JSON
+- If `ai_mini_specs`: loops entity intakes in dependency order, chains via `--prior-run`
+- Auto-resumes by checking for existing entity ZIPs
+- Falls back to monolithic if not `ai_mini_specs`
+- Files: `run_integration_and_feature_build.sh`
+✅ DONE here, ⬜ TODO for FO codebase
+
+111. fix: Phase 1 intake stripping — aggressive Phase 2 removal
+- `PHASE2_STRIP_KEYWORDS` (~60 keywords) strips HLD, tasks, engineering questions of Phase 2 refs
+- `_strip_phase2_from_text()` and `_strip_phase2_from_list()` remove sentences/items with keywords
+- Prevents scope bleed that caused 35+ iteration non-convergence
+- Files: `phase_planner.py`
+✅ DONE here, ⬜ TODO for FO codebase
+
+## Consistency Type Alignment False Positives (2026-03-17 session 7)
+
+107. fix: SQLAlchemy↔Pydantic type mapping table added to build_ai_consistency.md DO NOT FLAG
+- All standard Column types mapped to correct Pydantic equivalents (String↔str, JSON↔Dict, etc.)
+- nullable=True ↔ Optional, default=X ↔ = X, derived/computed fields all explicitly allowed
+- Infrastructure fields (status/created_at/updated_at) added to consistency DO NOT FLAG
+- Files: `directives/prompts/build_ai_consistency.md`
+✅ DONE here, ⬜ TODO for FO codebase
+
+## Consistency Fix Joint File Targeting (2026-03-17 session 7)
+
+106. fix: consistency fixes now target both sides of <-> relationship (Fix 3)
+- Only primary file was extracted from `Files: A <-> B` → field name oscillated for 4 iterations
+- Fix 3 added after Fix 2 block: splits `d.get('files')` on `<->`, adds all business/ files to targets
+- Both model and service (or whichever pair) get passed to Claude → one-pass fix
+- Files: `fo_test_harness.py`
+✅ DONE here, ⬜ TODO for FO codebase
+
+## Status Column Harness Filter (2026-03-17 session 7)
+
+105. fix: Check 1d added to _filter_hallucinated_defects() — infrastructure column filter
+- QA ignores ABSOLUTE RULES and flags status/created_at/updated_at as SCOPE-BOUNDARY regardless
+- Check 1d: if all backtick evidence snippets match an infrastructure column pattern → remove defect
+- Patterns: status/created_at/updated_at/processing_status = Column(...)
+- Files: `fo_test_harness.py`
+✅ DONE here, ⬜ TODO for FO codebase
+
+## Hyphen Filename Normalization (2026-03-17 session 7)
+
+103. fix: integration_check.py route inventory check — hyphen normalization
+- `\w+\.py$` regex excluded hyphens → `stable-updates.py` never loaded into route_stems
+- URL stem `stable-updates` never matched route `stable_updates` → permanent false positive
+- Fix: regex → `[\w-]+\.py$`; stem extraction adds `.replace('-','_')`; cross-check normalizes URL stem before lookup
+- Files: `integration_check.py`
+✅ DONE here, ⬜ TODO for FO codebase
+
+104. fix: FROZEN_ARCHITECTURAL_DECISIONS — route/file naming section added
+- Locked: backend route filenames must use underscores; fetch URLs must match
+- Files: `fo_test_harness.py`
+⬜ TODO for FO codebase
+
 ## Schema Naming Convention + pyc Filter (2026-03-17 session 7)
 
 101. fix: schema naming convention locked in FROZEN_ARCHITECTURAL_DECISIONS

@@ -20,7 +20,11 @@
 # Optional:
 #   --startup-id         Base name for final ZIP (default: derived from intake stem)
 #   --build-gov          Path to FOBUILFINALLOCKED100.zip (default: last known)
-#   --max-iterations N   Per-phase/feature iteration cap (default: 20)
+#   --max-iterations N   Per-phase/feature iteration cap (default: 20; capped at 10 in factory mode)
+#   --mode factory|quality  Build mode (default: quality)
+#                           quality  = all gates, 20 iters max, 2 integration fix passes
+#                           factory  = no Gate 3 (AI Consistency), Gate 4 Deployability-only,
+#                                      10 iters max, 1 integration fix pass
 #   --no-ai              Skip AI classifier in phase_planner (faster, rule-based only)
 #   --start-from-feature N  Skip Phase 1 + features 1..(N-1); resume from feature N (1-indexed).
 #                           Requires --phase1-zip to supply the Phase 1 output ZIP.
@@ -46,6 +50,8 @@ MAX_ITER=20
 STARTUP_ID=""
 INTAKE=""
 NO_AI=""
+MODE="quality"         # quality | factory
+FACTORY_FLAG=""        # set to --factory-mode when MODE=factory
 START_FROM_FEATURE=0   # skip Phase 1 + features 1..(N-1), resume from feature N (1-indexed)
 PHASE1_ZIP_OVERRIDE="" # if set, use this ZIP as Phase 1 output (implies --start-from-feature 1)
 
@@ -89,15 +95,29 @@ while [[ $# -gt 0 ]]; do
     --build-gov)           BUILD_GOV="$2";            shift 2 ;;
     --max-iterations)      MAX_ITER="$2";             shift 2 ;;
     --no-ai)               NO_AI="--no-ai";           shift 1 ;;
+    --mode)                MODE="$2";                 shift 2 ;;
     --start-from-feature)  START_FROM_FEATURE="$2";  shift 2 ;;
     --phase1-zip)          PHASE1_ZIP_OVERRIDE="$2"; shift 2 ;;
     *) echo "Unknown flag: $1"; exit 1 ;;
   esac
 done
 
+if [[ "$MODE" != "quality" && "$MODE" != "factory" ]]; then
+  echo "ERROR: --mode must be 'quality' or 'factory' (got: $MODE)"
+  exit 1
+fi
+
+# Factory mode: cap iterations and set harness flag
+if [[ "$MODE" == "factory" ]]; then
+  FACTORY_FLAG="--factory-mode"
+  if [[ $MAX_ITER -gt 10 ]]; then
+    MAX_ITER=10
+  fi
+fi
+
 if [[ -z "$INTAKE" ]]; then
   echo "ERROR: --intake is required"
-  echo "Usage: $0 --intake <path/to/intake.json> [--startup-id name]"
+  echo "Usage: $0 --intake <path/to/intake.json> [--startup-id name] [--mode factory|quality]"
   exit 1
 fi
 
@@ -181,6 +201,7 @@ echo "========================================================"
 echo "  FEATURE + INTEGRATION BUILD PIPELINE"
 echo "  Intake          : $INTAKE"
 echo "  Startup ID      : $STARTUP_ID"
+echo "  Mode            : $MODE"
 echo "  Max iter        : $MAX_ITER (per feature)"
 echo "  Build GOV       : $BUILD_GOV"
 if [[ -n "$PHASE1_ZIP_OVERRIDE" ]]; then
@@ -245,10 +266,10 @@ if [[ -n "$PHASE1_ZIP_OVERRIDE" ]]; then
     START_FROM_FEATURE=1
   fi
 elif [[ $START_FROM_FEATURE -gt 0 ]]; then
-  # --start-from-feature without --phase1-zip: find the most recent p1 ZIP automatically
-  LATEST_ZIP=$(ls -t fo_harness_runs/*_p1_BLOCK_B_*.zip 2>/dev/null | head -1 || true)
+  # --start-from-feature without --phase1-zip: find the most recent p1 ZIP for THIS intake stem
+  LATEST_ZIP=$(ls -t "fo_harness_runs/${INTAKE_STEM}_p1_BLOCK_B_"*.zip 2>/dev/null | head -1 || true)
   if [[ -z "$LATEST_ZIP" ]]; then
-    echo "ERROR: --start-from-feature set but no Phase 1 ZIP found in fo_harness_runs/."
+    echo "ERROR: --start-from-feature set but no Phase 1 ZIP found for '${INTAKE_STEM}' in fo_harness_runs/."
     echo "       Pass --phase1-zip <path> to specify it explicitly."
     exit 1
   fi
@@ -256,30 +277,122 @@ elif [[ $START_FROM_FEATURE -gt 0 ]]; then
   ALL_ZIPS+=("$LATEST_ZIP")
   echo "  ↩ Skipping Phase 1 build — auto-found: $LATEST_ZIP"
 else
-  P1_EXIT=0
-  python fo_test_harness.py \
-    "$PHASE1_INTAKE" \
-    "$BUILD_GOV" \
-    --max-iterations "$MAX_ITER" \
-    --no-polish || P1_EXIT=$?
+  # Check if decomposer produced entity-level mini specs
+  DECOMP_MODE=$(python3 -c "
+import json, sys
+a = json.load(open('$ASSESSMENT'))
+print(a.get('decomposition_mode', 'monolithic'))
+" 2>/dev/null || echo "monolithic")
 
-  if [[ $P1_EXIT -ne 0 ]]; then
+  if [[ "$DECOMP_MODE" == "ai_mini_specs" ]]; then
+    # ── Entity-by-entity build (AI decomposer mode) ───────────────────────
+    echo "  Mode: AI mini specs (entity-by-entity build)"
     echo ""
-    echo "✗ PHASE 1 FAILED (exit $P1_EXIT)"
-    echo "  Phase 1 did not produce a ZIP. Fix the issue then rerun the same command:"
-    echo "  ./run_integration_and_feature_build.sh --intake $INTAKE"
-    echo "  The script will auto-detect the Phase 1 ZIP once it exists."
-    exit 1
-  fi
 
-  # Find Phase 1 ZIP (most recent _p1_ ZIP)
-  LATEST_ZIP=$(ls -t fo_harness_runs/*_p1_BLOCK_B_*.zip 2>/dev/null | head -1 || true)
-  if [[ -z "$LATEST_ZIP" ]]; then
-    echo "ERROR: Phase 1 ZIP not found in fo_harness_runs/"
-    exit 1
+    ENTITY_INTAKES=$(python3 -c "
+import json
+a = json.load(open('$ASSESSMENT'))
+for ei in a.get('entity_intakes', []):
+    print(ei['intake_file'])
+")
+
+    ENTITY_NUM=0
+    ENTITY_TOTAL=$(echo "$ENTITY_INTAKES" | grep -c . || true)
+
+    while IFS= read -r ENTITY_INTAKE_FILE; do
+      [[ -z "$ENTITY_INTAKE_FILE" ]] && continue
+      ENTITY_NUM=$((ENTITY_NUM + 1))
+
+      ENTITY_NAME=$(python3 -c "
+import json
+d = json.load(open('$ENTITY_INTAKE_FILE'))
+print(d.get('_mini_spec', {}).get('entity', 'unknown'))
+")
+      ENTITY_STARTUP_ID=$(python3 -c "
+import json
+d = json.load(open('$ENTITY_INTAKE_FILE'))
+print(d.get('startup_idea_id', 'unknown'))
+")
+
+      # Check if this entity's ZIP already exists (auto-resume)
+      EXISTING_ENTITY_ZIP=$(ls -t "fo_harness_runs/${ENTITY_STARTUP_ID}_BLOCK_B_"*.zip 2>/dev/null | head -1 || true)
+      if [[ -n "$EXISTING_ENTITY_ZIP" ]]; then
+        echo "  ↩ SKIP Entity $ENTITY_NUM/$ENTITY_TOTAL: $ENTITY_NAME → $EXISTING_ENTITY_ZIP"
+        ALL_ZIPS+=("$EXISTING_ENTITY_ZIP")
+        LATEST_ZIP="$EXISTING_ENTITY_ZIP"
+        LATEST_RUN_DIR="${EXISTING_ENTITY_ZIP%.zip}"
+        continue
+      fi
+
+      echo "  ▶ Entity $ENTITY_NUM/$ENTITY_TOTAL: $ENTITY_NAME"
+      echo "  ─────────────────────────────────────────"
+
+      ENTITY_EXIT=0
+      # First entity has no prior run; subsequent entities chain from previous ZIP
+      PRIOR_RUN_FLAG=""
+      if [[ -n "$LATEST_RUN_DIR" && -d "$LATEST_RUN_DIR" ]]; then
+        PRIOR_RUN_FLAG="--prior-run $LATEST_RUN_DIR"
+      fi
+
+      python fo_test_harness.py \
+        "$ENTITY_INTAKE_FILE" \
+        "$BUILD_GOV" \
+        --max-iterations "$MAX_ITER" \
+        --no-polish \
+        $FACTORY_FLAG \
+        $PRIOR_RUN_FLAG || ENTITY_EXIT=$?
+
+      if [[ $ENTITY_EXIT -ne 0 ]]; then
+        echo ""
+        echo "✗ Entity '$ENTITY_NAME' FAILED (exit $ENTITY_EXIT)"
+        echo "  Rerun the same command — completed entities will be auto-skipped."
+        exit 1
+      fi
+
+      # Find the ZIP for this entity
+      ENTITY_ZIP=$(ls -t "fo_harness_runs/${ENTITY_STARTUP_ID}_BLOCK_B_"*.zip 2>/dev/null | head -1 || true)
+      if [[ -z "$ENTITY_ZIP" ]]; then
+        echo "ERROR: ZIP not found for entity '$ENTITY_NAME' (startup_id: $ENTITY_STARTUP_ID)"
+        exit 1
+      fi
+
+      echo "  ✓ Entity ZIP: $ENTITY_ZIP"
+      ALL_ZIPS+=("$ENTITY_ZIP")
+      LATEST_ZIP="$ENTITY_ZIP"
+      LATEST_RUN_DIR="${ENTITY_ZIP%.zip}"
+      echo ""
+
+    done <<< "$ENTITY_INTAKES"
+
+  else
+    # ── Monolithic Phase 1 build (legacy mode) ────────────────────────────
+    echo "  Mode: monolithic (single Phase 1 build)"
+    P1_EXIT=0
+    python fo_test_harness.py \
+      "$PHASE1_INTAKE" \
+      "$BUILD_GOV" \
+      --max-iterations "$MAX_ITER" \
+      --no-polish \
+      $FACTORY_FLAG || P1_EXIT=$?
+
+    if [[ $P1_EXIT -ne 0 ]]; then
+      echo ""
+      echo "✗ PHASE 1 FAILED (exit $P1_EXIT)"
+      echo "  Phase 1 did not produce a ZIP. Fix the issue then rerun the same command:"
+      echo "  ./run_integration_and_feature_build.sh --intake $INTAKE"
+      echo "  The script will auto-detect the Phase 1 ZIP once it exists."
+      exit 1
+    fi
+
+    # Find Phase 1 ZIP (most recent _p1_ ZIP)
+    LATEST_ZIP=$(ls -t fo_harness_runs/*_p1_BLOCK_B_*.zip 2>/dev/null | head -1 || true)
+    if [[ -z "$LATEST_ZIP" ]]; then
+      echo "ERROR: Phase 1 ZIP not found in fo_harness_runs/"
+      exit 1
+    fi
+    LATEST_RUN_DIR="${LATEST_ZIP%.zip}"
+    ALL_ZIPS+=("$LATEST_ZIP")
   fi
-  LATEST_RUN_DIR="${LATEST_ZIP%.zip}"
-  ALL_ZIPS+=("$LATEST_ZIP")
 fi
 
 echo "✓ Phase 1 ZIP: $LATEST_ZIP"
@@ -356,6 +469,7 @@ import re; print(re.sub(r'[^a-z0-9]+','_','$FEATURE'.lower()).strip('_')[:40])
     "$BUILD_GOV" \
     --max-iterations "$MAX_ITER" \
     --prior-run "$LATEST_RUN_DIR" \
+    $FACTORY_FLAG \
     $POLISH_FLAG || FEAT_EXIT=$?
 
   if [[ $FEAT_EXIT -ne 0 ]]; then
@@ -436,6 +550,7 @@ print(sum(1 for i in d.get('issues', []) if i.get('severity','').upper() == 'HIG
 fi
 
 MAX_FIX_PASSES=2
+if [[ "$MODE" == "factory" ]]; then MAX_FIX_PASSES=1; fi
 FIX_PASS=0
 
 while [[ $IC_EXIT -ne 0 && $FIX_PASS -lt $MAX_FIX_PASSES ]]; do
@@ -468,7 +583,8 @@ while [[ $IC_EXIT -ne 0 && $FIX_PASS -lt $MAX_FIX_PASSES ]]; do
     --resume-iteration "$LATEST_ITER" \
     --integration-issues "$INTEGRATION_ISSUES" \
     --max-iterations "$INT_MAX_ITER" \
-    --no-polish || FIX_EXIT=$?
+    --no-polish \
+    $FACTORY_FLAG || FIX_EXIT=$?
 
   if [[ $FIX_EXIT -ne 0 ]]; then
     echo ""
@@ -479,10 +595,13 @@ while [[ $IC_EXIT -ne 0 && $FIX_PASS -lt $MAX_FIX_PASSES ]]; do
   # Update latest ZIP after fix pass
   FIX_ZIP="${LATEST_RUN_DIR}.zip"
   if [[ ! -f "$FIX_ZIP" ]]; then
-    FIX_ZIP=$(ls -t "fo_harness_runs/"*_BLOCK_B_*.zip 2>/dev/null | head -1 || true)
+    # Scoped fallback: only look for ZIPs belonging to this startup's last run dir prefix
+    _FIX_RUN_PREFIX=$(basename "$LATEST_RUN_DIR" | sed 's/_[0-9]\{8\}_[0-9]\{6\}$//')
+    FIX_ZIP=$(ls -t "fo_harness_runs/${_FIX_RUN_PREFIX}_"*.zip 2>/dev/null | grep -v '_full_' | head -1 || true)
   fi
   if [[ -z "$FIX_ZIP" ]]; then
     echo "ERROR: ZIP not found after integration fix pass $FIX_PASS."
+    echo "       Expected: ${LATEST_RUN_DIR}.zip"
     exit 1
   fi
   LATEST_ZIP="$FIX_ZIP"

@@ -72,3 +72,26 @@
     automated or AI-assisted.
   - Missing piece today: the feature intake generator (step 2). Everything else
     either exists or is on this TODO. That is the next logical tool after feature_adder.py.
+
+## Harness pipeline risks (from review)
+
+- ✅ FIXED 2026-03-18: run_integration_and_feature_build.sh: Phase 1 ZIP auto-detect scoped to `${INTAKE_STEM}_p1_BLOCK_B_*.zip`
+- ✅ FIXED 2026-03-18: run_integration_and_feature_build.sh: Integration fix pass fallback scoped to run dir prefix (strips timestamp)
+- run_integration_and_feature_build.sh: Feature ZIP lookup uses broad `startup_idea_id` slug pattern;
+  if IDs are reused across runs, wrong ZIP can be selected. Consider scoping to current intake/run.
+
+## Convergence improvements (Claude build + ChatGPT QA)
+
+- Add strict file inventory enforcement: force Claude to output only files in manifest + explicit new files list.
+  If a file is missing, auto-carry-forward rather than allow silent deletion.
+- Add "known-good boilerplate snippets" retrieval for common patterns (auth, DB, errors) to reduce hallucinated variants.
+- Add a deterministic "schema contract validator" (route ↔ schema ↔ model ↔ service) before AI QA; only send
+  failing contracts to Claude as surgical fixes.
+- Add a "defect fingerprint budget": if the same defect repeats 2+ times, auto-escalate to SYSTEMIC with
+  larger context + explicit patch instructions.
+- Add a structured output schema for Claude fixes (JSON with file list + rationale) and reject if missing
+  required files; forces completeness.
+- QA: add calibration on hallucinated defects by checking evidence snippets against file contents; if evidence
+  lines are missing, auto-drop the defect before sending to Claude.
+- QA: enforce "single-source-of-truth" for business_config defaults (home/footer) in harness generation so
+  QA doesn't flag missing UI sections repeatedly.

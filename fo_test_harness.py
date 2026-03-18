@@ -98,6 +98,12 @@ These decisions are already made. Do not deviate. Do not invent alternatives.
 - Maximum files per feature: 1 route file, 1 service file, 1 model file, 1 schema file, 1 frontend page
 - Do NOT create helper files, utility files, or additional services unless strictly required
 
+### Route and file naming — CRITICAL
+- Backend route file names MUST use underscores, NEVER hyphens: `stable_updates.py` NOT `stable-updates.py`
+- Python modules cannot contain hyphens — a hyphenated filename will fail to import
+- The frontend fetch URL MUST match the underscore filename: `fetch('/api/stable_updates')` NOT `fetch('/api/stable-updates')`
+- This applies to ALL route files: `horse_details.py`, `race_entries.py`, `stable_updates.py` etc.
+
 ### Dependencies
 - Never add a dependency that duplicates boilerplate capability
 - Never add a dependency for something Python stdlib handles
@@ -2010,6 +2016,72 @@ class PromptTemplates:
             boilerplate_path_instruction=boilerplate_path_instruction,
             code_skeletons_instruction=code_skeletons_instruction
         )
+        # MINI SPEC INJECTION: if intake contains _mini_spec from the AI decomposer,
+        # inject it as a hard constraint between intake data and the pre-output checklist.
+        # This overrides any ambiguity in the broader intake with exact entity definitions.
+        mini_spec = intake_data.get('_mini_spec')
+        if mini_spec:
+            ms_lines = [
+                "\n\n## MINI SPEC — EXACT BUILD CONTRACT (NON-NEGOTIABLE)",
+                f"You are building ONLY the **{mini_spec.get('entity', 'unknown')}** entity.",
+                "",
+                f"**Evidence from intake:** {', '.join(mini_spec.get('evidence', []))}",
+                f"**Inclusion reason:** {mini_spec.get('inclusion_reason', 'N/A')}",
+                "",
+                "### Fields (in addition to standard id/owner_id/status/created_at/updated_at):",
+            ]
+            for field in mini_spec.get('fields', []):
+                constraints = ', '.join(field.get('constraints', []))
+                default = f", default={field['default']}" if field.get('default') else ''
+                ms_lines.append(f"- `{field['name']}` = Column({field.get('type', 'String')}, {constraints}{default})")
+
+            ms_lines.append("")
+            ms_lines.append("### CRUD Operations:")
+            for op in mini_spec.get('crud_operations', []):
+                ms_lines.append(f"- {op}")
+
+            if mini_spec.get('dependencies'):
+                ms_lines.append("")
+                ms_lines.append("### Dependencies (these entities already exist in prior ZIPs):")
+                for dep in mini_spec['dependencies']:
+                    ms_lines.append(f"- {dep}")
+
+            if mini_spec.get('relationship_cardinality'):
+                ms_lines.append("")
+                ms_lines.append("### Foreign Keys:")
+                for rel in mini_spec['relationship_cardinality']:
+                    ms_lines.append(f"- {rel['fk_field']}: foreign key to {rel['related_entity']} ({rel['type']})")
+
+            if mini_spec.get('frontend_page'):
+                fp = mini_spec['frontend_page']
+                ms_lines.append("")
+                ms_lines.append(f"### Frontend Page: {fp.get('route', '/unknown')}")
+                ms_lines.append(f"- List view columns: {', '.join(fp.get('list_view', []))}")
+                ms_lines.append(f"- Detail view fields: {', '.join(fp.get('detail_view', []))}")
+
+            fc = mini_spec.get('file_contract', {})
+            if fc.get('allowed_files'):
+                ms_lines.append("")
+                ms_lines.append("### ALLOWED FILES — create ONLY these files:")
+                for af in fc['allowed_files']:
+                    ms_lines.append(f"- `business/{af}`")
+                ms_lines.append("")
+                ms_lines.append("**DO NOT create any file not listed above.**")
+
+            if mini_spec.get('out_of_scope'):
+                ms_lines.append("")
+                ms_lines.append("### OUT OF SCOPE — do NOT build:")
+                for oos in mini_spec['out_of_scope']:
+                    ms_lines.append(f"- {oos}")
+
+            if mini_spec.get('forbidden_expansions'):
+                ms_lines.append("")
+                ms_lines.append("### FORBIDDEN EXPANSIONS:")
+                for fe in mini_spec['forbidden_expansions']:
+                    ms_lines.append(f"- {fe}")
+
+            dynamic_section += '\n'.join(ms_lines)
+
         # PRE-OUTPUT CHECKLIST (B): injected at end of dynamic section.
         # Last instruction Claude reads before generating — must stay per-iteration.
         dynamic_section += "\n\n" + PRE_OUTPUT_CHECKLIST
@@ -2732,6 +2804,8 @@ class FOHarness:
         self.max_build_continuations = int(getattr(cli_args, "max_continuations", Config.MAX_BUILD_CONTINUATIONS_DEFAULT)) if cli_args else Config.MAX_BUILD_CONTINUATIONS_DEFAULT
         # Gate 4 is now mandatory (always ON).
         self.enable_quality_gate = True
+        # Factory mode: skip Gate 3 (AI Consistency), Gate 4 fails only on DEPLOYABILITY=FAIL
+        self.factory_mode = bool(getattr(cli_args, 'factory_mode', False)) if cli_args else False
         # --no-polish: skip post-QA polish step (use for Phase 1 of a phased build)
         self.skip_polish = bool(getattr(cli_args, 'no_polish', False)) if cli_args else False
         self._last_claude_cost  = 0.0
@@ -2829,6 +2903,7 @@ class FOHarness:
         print_info(f"Max iterations:{self.max_qa_iterations}")
         print_info(f"Build caps:    max_parts={self.max_build_parts}, max_continuations={self.max_build_continuations}")
         print_info(f"Quality gate:  {'ON' if self.enable_quality_gate else 'OFF'}")
+        print_info(f"Factory mode:  {'ON (Gate 3 OFF, Gate 4 Deployability-only)' if self.factory_mode else 'OFF'}")
         print_info(f"Polish:        {'SKIP (--no-polish)' if self.skip_polish else 'ON'}")
         print_info(f"Deploy:        {'YES' if self.do_deploy else 'NO — ZIP output only'}")
         print_info(f"Run directory: {self.run_dir}")
@@ -4705,6 +4780,41 @@ class FOHarness:
                 print_warning(f"  [FILTER] Removed {defect_id}: {reason}")
                 continue
 
+            # --- Check 1d: Standard infrastructure columns are never scope violations ---
+            # status / created_at / updated_at must always be present on every model.
+            # QA routinely ignores the ABSOLUTE RULES instruction and flags these as SCOPE-BOUNDARY.
+            # Patterns cover all forms QA may cite:
+            #   ORM: status = Column(...)
+            #   Dict key / Alembic positional arg: "status": ..., sa.Column('status', ...)
+            #   Attribute access in service/route: update.status, horse.status
+            _INFRA_COLUMN_PATTERNS = (
+                # ORM model column assignment
+                r'\b(?:status|created_at|updated_at|processing_status)\s*=\s*Column\b',
+                # Dict key or positional column string: "status": ..., 'status', ...
+                r"""["'](?:status|created_at|updated_at|processing_status)["']\s*[,:]""",
+                # Attribute access: update.status, .created_at etc.
+                r"""\.\b(?:status|created_at|updated_at|processing_status)\b""",
+            )
+            _ev_block_for_1d = re.search(
+                r'-\s*Evidence:\s*(.*?)(?=\n\s*-\s*(?:Problem|Expected|Fix|Severity):|\Z)',
+                block, re.DOTALL
+            )
+            _ev_text_1d = _ev_block_for_1d.group(1).strip() if _ev_block_for_1d else ''
+            # Extract all backtick-quoted snippets from evidence
+            _bt_snippets_1d = re.findall(r'`([^`]{3,})`', _ev_text_1d)
+            if _bt_snippets_1d and all(
+                any(re.search(pat, snip) for pat in _INFRA_COLUMN_PATTERNS)
+                for snip in _bt_snippets_1d
+            ):
+                reason = (
+                    f"Evidence only references standard infrastructure column(s) "
+                    f"(status/created_at/updated_at) — these are required on every model and "
+                    f"must never be flagged as scope violations"
+                )
+                removed.append((defect_id, block, reason))
+                print_warning(f"  [FILTER] Removed {defect_id}: {reason}")
+                continue
+
             # --- Extract Evidence + Problem text for checks 2-4 ---
             ev_match = re.search(
                 r'-\s*Evidence:\s*(.*?)(?=\n\s*-\s*(?:Problem|Expected|Fix|Severity):|\Z)',
@@ -6355,7 +6465,13 @@ End with: SHARPEN_COMPLETE"""
         _c = dim_map.get('COMPLETENESS_VS_INTAKE')
         _q = dim_map.get('CODE_QUALITY')
         _d = dim_map.get('DEPLOYABILITY')
-        if _c in ('PASS', 'LOW') and _q in ('PASS', 'LOW') and _d in ('PASS', 'LOW'):
+        if self.factory_mode:
+            # Factory mode: only DEPLOYABILITY=FAIL blocks the gate
+            if _d != 'FAIL':
+                print_info("  [QUALITY] Factory mode — DEPLOYABILITY not FAIL, treating gate as PASS")
+                return [], usage_stats
+            print_warning(f"  [QUALITY] Factory mode — DEPLOYABILITY=FAIL, blocking")
+        elif _c in ('PASS', 'LOW') and _q in ('PASS', 'LOW') and _d in ('PASS', 'LOW'):
             print_info("  [QUALITY] LOW accepted for Completeness/Code Quality/Deployability — treating gate as PASS")
             return [], usage_stats
 
@@ -6738,6 +6854,23 @@ End with: SHARPEN_COMPLETE"""
                                 f"to targets for joint rebuild: {_extra_targets}"
                             )
                             defect_target_files = sorted(set(defect_target_files) | set(_extra_targets))
+
+                        # Fix 3: For consistency issues, include ALL files from the <-> relationship.
+                        # Consistency defects have Files: A <-> B — both sides must be fixed together
+                        # or the field name oscillates (fix service → model wrong, fix model → service wrong).
+                        if defect_source == 'consistency':
+                            _consistency_extra = []
+                            for _d in _raw_pending_defects:
+                                for _cf in re.split(r'\s*<->\s*|\s*,\s*', _d.get('files', '')):
+                                    _cf = _cf.strip()
+                                    if _cf.startswith('business/') and _cf not in defect_target_files:
+                                        _consistency_extra.append(_cf)
+                            if _consistency_extra:
+                                print_info(
+                                    f"  [CONSISTENCY] Fix 3: adding {len(_consistency_extra)} related file(s) "
+                                    f"for joint fix (both sides of <->): {_consistency_extra}"
+                                )
+                                defect_target_files = sorted(set(defect_target_files) | set(_consistency_extra))
                         required_file_inventory = self._get_previous_iteration_inventory(iteration)
                         if not required_file_inventory:
                             # Fallback: read manifest from last accepted artifacts dir
@@ -7509,7 +7642,11 @@ End with: SHARPEN_COMPLETE"""
                 print_info("═══════════════════════════════════════════════════════════")
 
                 _run_consistency = True
-                if gate_locks['CONSISTENCY'] and iteration > 1:
+                if self.factory_mode:
+                    print_info("  [CONSISTENCY] SKIPPED — factory mode")
+                    _record_gate('CONSISTENCY', 'SKIPPED', 'factory mode', iteration)
+                    _run_consistency = False
+                elif gate_locks['CONSISTENCY'] and iteration > 1:
                     _changed = _files_changed_in_last_fix(_cur_artifact_manifest, _prev_artifact_manifest)
                     _relevant = any(
                         'models/' in f or 'services/' in f or 'routes/' in f or 'schemas/' in f
@@ -8335,6 +8472,14 @@ Examples:
         action='store_true',
         default=False,
         help='Deprecated flag (Gate 4 quality is now mandatory and always ON).'
+    )
+    parser.add_argument(
+        '--factory-mode',
+        action='store_true',
+        default=False,
+        dest='factory_mode',
+        help='Factory mode: skip Gate 3 (AI Consistency), Gate 4 fails only on DEPLOYABILITY=FAIL. '
+             'Use for high-volume catalog builds where speed > perfection.'
     )
     parser.add_argument(
         '--no-polish',
