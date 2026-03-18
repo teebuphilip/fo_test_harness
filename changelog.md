@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-03-18 (session 9 — Check 17 fix, check_final_zip.py)
+
+### fix: Check 17 false positives on snake_case backend filenames (integration_check.py)
+- `check_orphaned_pages()` now adds underscore-stripped variants to model/route/service name sets
+- `horse_profile` → adds `horseprofile`, `horseprofiles` in addition to `horse_profile`, `horse_profiles`
+- Fixes: `HorseProfiles.jsx` (stem `horseprofiles`) was never matched against `horse_profile.py`
+- Helper `_name_variants()` centralises plural/singular/flat-underscore logic for all three sets
+- Verified: Wynwood Check 17 now 0 issues (was 2 HIGH false positives)
+
+### feat: check_final_zip.py — standalone quality check on final multi-entity ZIP
+- Extracts full ZIP, finds last iteration per entity, merges all `business/**` trees
+- Runs static check (Gate 1) + full integration check (Gate 2) on merged artifact set
+- Usage: `python check_final_zip.py --zip <full_zip> --intake <phase_assessment.json>`
+- Options: `--output <path>`, `--no-static`, `--no-integration`
+- Output written to `<zip_stem>_check.json` by default
+
+---
+
 ## 2026-03-18 (session 8 — factory mode, ZIP fixes, boilerplate lazy-load, tooling)
 
 ### fix: --clean / --fullclean flags for run_integration_and_feature_build.sh

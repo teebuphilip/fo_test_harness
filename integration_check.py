@@ -191,10 +191,12 @@ def check_route_inventory(artifacts: dict) -> list:
     issues = []
 
     # Collect all route file names (stem → endpoints defined)
+    # Normalize hyphenated filenames to underscores (Python modules can't have hyphens;
+    # if Claude generated stable-updates.py it should match fetch('/api/stable-updates'))
     route_stems = {}  # 'assessments' → {'/assessments', '/assessments/{id}', ...}
     for path, content in artifacts.items():
-        if re.match(r'business/backend/routes/\w+\.py$', path):
-            stem = Path(path).stem  # 'assessments'
+        if re.match(r'business/backend/routes/[\w-]+\.py$', path):
+            stem = Path(path).stem.replace('-', '_')  # 'stable-updates' → 'stable_updates'
             route_stems[stem] = parse_route_endpoints(content)
 
     # Collect all frontend API calls
@@ -205,29 +207,30 @@ def check_route_inventory(artifacts: dict) -> list:
             if calls:
                 frontend_calls[path] = calls
 
-    # Cross-check
+    # Cross-check — normalize URL stems to underscores for lookup
     all_route_stems = set(route_stems.keys())
     for jsx_path, called_stems in frontend_calls.items():
         for stem in called_stems:
-            if stem not in all_route_stems:
-                route_file = f'business/backend/routes/{stem}.py'
+            normalized_stem = stem.replace('-', '_')
+            if normalized_stem not in all_route_stems:
+                route_file = f'business/backend/routes/{normalized_stem}.py'
                 issues.append({
-                    'id': f'INT-ROUTE-{stem}',
+                    'id': f'INT-ROUTE-{normalized_stem}',
                     'severity': 'HIGH',
                     'category': 'MISSING_ROUTE',
                     'file': route_file,
                     'files': [jsx_path, 'business/backend/routes/'],
                     'evidence': (
                         f"fetch('/api/{stem}') called in {Path(jsx_path).name} "
-                        f"but no {stem}.py route file found in business/backend/routes/"
+                        f"but no {normalized_stem}.py route file found in business/backend/routes/"
                     ),
                     'issue': (
                         f"Frontend calls /api/{stem} but no matching backend route file exists. "
                         f"Will 404 in production."
                     ),
                     'fix': (
-                        f"Create business/backend/routes/{stem}.py with FastAPI APIRouter. "
-                        f"Include authenticated GET /{stem} and POST /{stem} endpoints. "
+                        f"Create business/backend/routes/{normalized_stem}.py with FastAPI APIRouter. "
+                        f"Include authenticated GET /{normalized_stem} and POST /{normalized_stem} endpoints. "
                         f"Use: from core.rbac import get_current_user; from core.database import get_db"
                     ),
                 })
@@ -1593,26 +1596,29 @@ def check_orphaned_pages(artifacts: dict) -> list:
     route_names   = set()
     service_names = set()
 
+    def _name_variants(s: str) -> set:
+        """Return plural/singular/underscore-stripped variants of a lowercase stem."""
+        variants = {s, s.rstrip('s')}
+        if not s.endswith('s'):
+            variants.add(s + 's')
+        # Also strip underscores: horse_profile → horseprofile, horse_profiles → horseprofiles
+        flat = s.replace('_', '')
+        variants.add(flat)
+        variants.add(flat.rstrip('s'))
+        if not flat.endswith('s'):
+            variants.add(flat + 's')
+        return variants
+
     for path in artifacts:
         stem = Path(path).stem.lower()
         if path.startswith('business/models/') and path.endswith('.py') and '__init__' not in path:
-            model_names.add(stem)
-            # Also add singular/plural variants
-            model_names.add(stem.rstrip('s'))
-            if not stem.endswith('s'):
-                model_names.add(stem + 's')
+            model_names.update(_name_variants(stem))
         elif path.startswith('business/backend/routes/') and path.endswith('.py') and '__init__' not in path:
-            route_names.add(stem)
-            route_names.add(stem.rstrip('s'))
-            if not stem.endswith('s'):
-                route_names.add(stem + 's')
+            route_names.update(_name_variants(stem))
         elif path.startswith('business/services/') and path.endswith('.py') and '__init__' not in path:
             # Strip 'Service' suffix: HorseService → horse
             svc = re.sub(r'service$', '', stem, flags=re.IGNORECASE)
-            service_names.add(svc)
-            service_names.add(svc.rstrip('s'))
-            if not svc.endswith('s'):
-                service_names.add(svc + 's')
+            service_names.update(_name_variants(svc))
 
     # Pages to skip — generic utility/dashboard pages with no single entity
     GENERIC_PAGES = {

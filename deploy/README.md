@@ -4,6 +4,26 @@ Converts a harness output ZIP into a live Railway (backend) + Vercel (frontend) 
 
 ---
 
+## Where You Are in the Pipeline
+
+```
+run_integration_and_feature_build.sh
+        ↓
+  fo_harness_runs/<startup>_BLOCK_B_full_<ts>.zip   ← you have this
+        ↓
+  check_final_zip.py                                ← auto-ran at end of build
+        ↓
+  YOU ARE HERE
+        ↓
+  zip_to_repo.py  →  repo_setup.py  →  pipeline_deploy.py
+        ↓
+  Live app on Railway + Vercel
+```
+
+If you're starting from scratch (new client), see `NON_AI_CLIENT_PIPELINE.md` in the project root.
+
+---
+
 ## Prerequisites
 
 ```bash

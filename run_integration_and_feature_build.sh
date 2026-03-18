@@ -712,5 +712,18 @@ echo ""
 echo "  FINAL ZIP : $FINAL_ZIP  ($FINAL_SIZE)"
 echo "========================================================"
 echo ""
+
+# ── Auto quality check on final ZIP ──────────────────────────────────────────
+if [[ -n "$INTAKE" ]]; then
+  echo "Running final quality check..."
+  echo ""
+  CHECK_OUTPUT="${FINAL_ZIP%.zip}_check.json"
+  python check_final_zip.py \
+    --zip "$FINAL_ZIP" \
+    --intake "$INTAKE" \
+    --output "$CHECK_OUTPUT" || true
+  echo ""
+fi
+
 echo "Next step — deploy:"
 echo "  python deploy/zip_to_repo.py $FINAL_ZIP"
