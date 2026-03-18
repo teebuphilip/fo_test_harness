@@ -21,6 +21,10 @@
 #   --startup-id         Base name for final ZIP (default: derived from intake stem)
 #   --build-gov          Path to FOBUILFINALLOCKED100.zip (default: last known)
 #   --max-iterations N   Per-phase/feature iteration cap (default: 20; capped at 10 in factory mode)
+#   --clean              Remove only the final ZIP — pipeline re-runs from last completed
+#                        feature (phase/feature ZIPs kept for auto-resume).
+#   --fullclean          Remove ALL ZIPs for this startup (phase1, feature, full).
+#                        Run dirs are left untouched. Forces a full rebuild.
 #   --mode factory|quality  Build mode (default: quality)
 #                           quality  = all gates, 20 iters max, 2 integration fix passes
 #                           factory  = no Gate 3 (AI Consistency), Gate 4 Deployability-only,
@@ -52,8 +56,12 @@ INTAKE=""
 NO_AI=""
 MODE="quality"         # quality | factory
 FACTORY_FLAG=""        # set to --factory-mode when MODE=factory
+CLEAN=0                # if 1, remove only the final ZIP so auto-resume re-runs
+FULLCLEAN=0            # if 1, remove ALL ZIPs for this startup (phase1, feature, full)
 START_FROM_FEATURE=0   # skip Phase 1 + features 1..(N-1), resume from feature N (1-indexed)
 PHASE1_ZIP_OVERRIDE="" # if set, use this ZIP as Phase 1 output (implies --start-from-feature 1)
+LATEST_ZIP=""
+LATEST_RUN_DIR=""
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 latest_artifacts_dir() {
@@ -96,6 +104,8 @@ while [[ $# -gt 0 ]]; do
     --max-iterations)      MAX_ITER="$2";             shift 2 ;;
     --no-ai)               NO_AI="--no-ai";           shift 1 ;;
     --mode)                MODE="$2";                 shift 2 ;;
+    --clean)               CLEAN=1;                   shift 1 ;;
+    --fullclean)           FULLCLEAN=1;               shift 1 ;;
     --start-from-feature)  START_FROM_FEATURE="$2";  shift 2 ;;
     --phase1-zip)          PHASE1_ZIP_OVERRIDE="$2"; shift 2 ;;
     *) echo "Unknown flag: $1"; exit 1 ;;
@@ -141,6 +151,37 @@ INTAKE_DIR=$(dirname "$INTAKE")
 INTAKE_STEM=$(basename "$INTAKE" .json)
 ASSESSMENT="${INTAKE_DIR}/${INTAKE_STEM}_phase_assessment.json"
 PHASE1_INTAKE="${INTAKE_DIR}/${INTAKE_STEM}_phase1.json"
+
+# ── Clean: remove only the final ZIP so auto-resume can re-run ────────────────
+if [[ $CLEAN -eq 1 ]]; then
+  _FINAL_TO_CLEAN=$(ls -t "fo_harness_runs/${STARTUP_ID}_BLOCK_B_full_"*.zip 2>/dev/null | head -1 || true)
+  if [[ -n "$_FINAL_TO_CLEAN" ]]; then
+    echo "⚠  --clean: removing final ZIP so build will re-run:"
+    echo "   $_FINAL_TO_CLEAN"
+    rm -f "$_FINAL_TO_CLEAN"
+    echo "   Done — prior phase/feature ZIPs kept for auto-resume."
+    echo ""
+  else
+    echo "ℹ  --clean: no final ZIP found, nothing to remove."
+    echo ""
+  fi
+fi
+
+# ── Full clean: remove ALL ZIPs for this startup ──────────────────────────────
+if [[ $FULLCLEAN -eq 1 ]]; then
+  echo "⚠  --fullclean: removing all ZIPs for '$STARTUP_ID' / '$INTAKE_STEM'"
+  _FC_ZIPS=$(ls "fo_harness_runs/${INTAKE_STEM}_"*.zip "fo_harness_runs/${STARTUP_ID}_BLOCK_B_full_"*.zip 2>/dev/null || true)
+  if [[ -n "$_FC_ZIPS" ]]; then
+    echo "$_FC_ZIPS" | while IFS= read -r _z; do
+      echo "  rm $_z"
+      rm -f "$_z"
+    done
+  else
+    echo "  No ZIPs found for this startup."
+  fi
+  echo "  Done — run dirs untouched."
+  echo ""
+fi
 
 # ── Auto-resume: detect prior run state from ZIPs on disk ─────────────────────
 # Only engages when user did not pass --phase1-zip or --start-from-feature manually.
@@ -361,6 +402,10 @@ print(d.get('startup_idea_id', 'unknown'))
       LATEST_ZIP="$ENTITY_ZIP"
       LATEST_RUN_DIR="${ENTITY_ZIP%.zip}"
       echo ""
+      echo "════════════════════════════════════════════════════════"
+      echo "  ✓ ENTITY $ENTITY_NUM/$ENTITY_TOTAL COMPLETE: $ENTITY_NAME"
+      echo "════════════════════════════════════════════════════════"
+      echo ""
 
     done <<< "$ENTITY_INTAKES"
 
@@ -500,6 +545,10 @@ print(d.get('startup_idea_id','unknown'))
   ALL_ZIPS+=("$FEATURE_ZIP")
   LATEST_ZIP="$FEATURE_ZIP"  # chain: next feature_adder reads this
   LATEST_RUN_DIR="${FEATURE_ZIP%.zip}"  # chain: next feature inherits QA prohibitions
+  echo ""
+  echo "════════════════════════════════════════════════════════"
+  echo "  ✓ FEATURE $FEATURE_NUM/$TOTAL_INTEL COMPLETE: $FEATURE"
+  echo "════════════════════════════════════════════════════════"
   echo ""
 
 done <<< "$INTEL_FEATURES"

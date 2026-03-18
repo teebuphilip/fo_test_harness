@@ -1,5 +1,30 @@
 # Changelog
 
+## 2026-03-18 (session 8 — factory mode, ZIP fixes, boilerplate lazy-load, tooling)
+
+### fix: --clean / --fullclean flags for run_integration_and_feature_build.sh
+- `--clean`: removes only the final `_full_` ZIP so auto-resume re-runs from last completed feature
+- `--fullclean`: removes all ZIPs for this startup (phase1, feature, full); run dirs untouched
+
+### fix: LATEST_RUN_DIR unbound variable on first entity build
+- Initialized `LATEST_ZIP` and `LATEST_RUN_DIR` to empty string at top of script
+- Was latent bug exposed by `--fullclean` wiping all ZIPs before entity loop
+
+### fix: ZIP selection bugs in run_integration_and_feature_build.sh
+- Phase 1 fallback glob scoped to `${INTAKE_STEM}` (was global wildcard — could grab wrong project)
+- Integration fix pass ZIP fallback scoped to run dir prefix (was global `fo_harness_runs/*`)
+
+### fix: stripe/mailerlite/auth0 libs — no startup crash on missing keys (teebu-saas-platform)
+- All three libs now load silently in DISABLED mode when keys are absent
+- `RuntimeError` raised only when an API method is actually called
+- Prevents uvicorn crash on deploy for apps that don't use those integrations
+
+### feat: entity/feature completion banners in pipeline output
+- Clear `════` separator printed after each entity and feature build completes
+- Prevents harness init output of next build running directly into prior build's summary
+
+---
+
 ## 2026-03-18 (session 8 — factory mode, daily rollup, reddit post, various tooling)
 
 ### feat: --mode factory for run_integration_and_feature_build.sh
