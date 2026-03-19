@@ -14,6 +14,7 @@ End-to-end pipeline for the FounderOps **BUILD → QA → DEPLOY** workflow.
 |-------|--------|---------|
 | 1. Intake | `intake/generate_intake.sh` | Founder answers → structured intake JSON |
 | 2. Build-QA | `run_integration_and_feature_build.sh` | Phase-by-phase BUILD + QA + integration check |
+| 2b. Build-QA (quality) | `run_slicer_and_feature_build.sh` | Slice-by-slice BUILD + QA + integration check |
 | 3. Deploy | `deploy/zip_to_repo.py` → `deploy/pipeline_deploy.py` | ZIP → GitHub → Railway / Vercel |
 
 ---
@@ -242,10 +243,14 @@ CONSISTENCY (Gate 3) catches obvious cross-file structural bugs cheaply before t
 | Script | Purpose |
 |--------|---------|
 | `run_integration_and_feature_build.sh` | **Main pipeline** — greenfield phase-by-phase build |
+| `run_slicer_and_feature_build.sh` | Slice-based pipeline (quality mode) using `slice_planner.py` |
+| `run_auto_build.sh` | Auto-route to slice vs phase pipeline via `planner_router.py` |
 | `add_feature.sh` | Add one feature to an existing built/deployed repo |
 | `fo_test_harness.py` | Core BUILD-QA orchestrator (~4000 lines) |
 | `integration_check.py` | 15-check deterministic post-build validator |
 | `phase_planner.py` | Splits intake into data layer + intelligence feature list |
+| `slice_planner.py` | Builds vertical slice plans + runnable slice intakes |
+| `planner_router.py` | Intake router: recommends slice vs phase |
 | `feature_adder.py` | Generates scoped feature intake from existing ZIP or repo |
 | `check_openai.py` | Pre-run API health check (Claude + OpenAI, TPM quota) |
 | `check_boilerplate_fit.py` | Checks if intake suits the boilerplate (YES/NO + file list) |

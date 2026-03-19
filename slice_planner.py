@@ -14,6 +14,7 @@ Output:
 
 import argparse
 import csv
+import copy
 import json
 import os
 import re
@@ -139,6 +140,9 @@ def _slugify(text: str) -> str:
     text = re.sub(r'_+', '_', text).strip('_')
     return text or 'feature'
 
+def _title_from_slug(slug: str) -> str:
+    return ''.join(w.capitalize() for w in slug.split('_') if w)
+
 
 def _infer_http_method(feature: str) -> str:
     f = feature.lower()
@@ -217,6 +221,150 @@ def build_slice_plan(intake: dict) -> Dict[str, Any]:
         "feature_count": len(features),
         "slices": slices,
     }
+
+def _ensure_unique_slug(base: str, used: set) -> str:
+    slug = base
+    n = 2
+    while slug in used:
+        slug = f"{base}_{n}"
+        n += 1
+    used.add(slug)
+    return slug
+
+
+def _normalize_slices(plan: dict) -> dict:
+    slices = plan.get('slices', [])
+    if not isinstance(slices, list):
+        slices = []
+
+    used_slugs = set()
+    normalized = []
+    for i, s in enumerate(slices, start=1):
+        feature = (s.get('feature') or s.get('title') or f"Slice {i}")
+        title = s.get('title') or feature
+
+        base_slug = _slugify(feature)
+        slug = _ensure_unique_slug(base_slug, used_slugs)
+
+        # Normalize API route and method
+        api = s.get('api') or {}
+        method = (api.get('method') or _infer_http_method(feature)).upper()
+        route = api.get('route') or f"/api/{slug}"
+        route = route.replace('-', '_')
+
+        # Normalize UI/page
+        ui = s.get('ui') or {}
+        page = ui.get('page') or f"{slug}_page"
+
+        # Normalize mode
+        mode = s.get('mode') or ('HITL' if _is_hitl(feature, '') else 'AFK')
+        mode_reason = s.get('mode_reason') or ("requires human taste/decision or external setup" if mode == 'HITL' else "deterministic from intake")
+
+        acceptance = s.get('acceptance_criteria') or [
+            f"API {method} {route} responds successfully",
+            f"UI can complete: {feature}",
+        ]
+
+        normalized.append({
+            "id": s.get('id') or f"S{i:02d}",
+            "title": title,
+            "feature": feature,
+            "slug": slug,
+            "api": {"method": method, "route": route},
+            "data_changes": s.get('data_changes') or [],
+            "ui": {"page": page, "actions": ui.get('actions', ["create", "view"])},
+            "acceptance_criteria": acceptance,
+            "mode": mode,
+            "mode_reason": mode_reason,
+            "dependencies": s.get('dependencies') or [],
+            "notes": s.get('notes', ""),
+        })
+
+    plan['slices'] = normalized
+    plan['feature_count'] = len(normalized)
+    return plan
+
+
+def _slice_to_mini_spec(slice_obj: dict) -> dict:
+    slug = slice_obj['slug']
+    plural = slug + 's' if not slug.endswith('s') else slug
+    page_name = _title_from_slug(slug)
+    api = slice_obj.get('api', {})
+    route = api.get('route', f"/api/{slug}")
+    method = api.get('method', 'POST').upper()
+    public_route = route.replace('/api', '')
+
+    mini_spec = {
+        "entity": slice_obj.get('title', slice_obj['feature']),
+        "build_order": int(slice_obj['id'].lstrip('S')) if str(slice_obj['id']).lstrip('S').isdigit() else 99,
+        "evidence": [slice_obj['feature']],
+        "inclusion_reason": f"Slice derived from intake: {slice_obj['feature']}",
+        "fields": [],
+        "crud_operations": [f"{method} {public_route}"],
+        "dependencies": slice_obj.get('dependencies', []),
+        "relationship_cardinality": [],
+        "frontend_page": {
+            "route": f"/{slug.replace('_', '-')}",
+            "list_view": [],
+            "detail_view": [],
+        },
+        "out_of_scope": [],
+        "deferred_related_capabilities": [],
+        "acceptance_checks": slice_obj.get('acceptance_criteria', []),
+        "file_contract": {
+            "allowed_files": [
+                f"models/{slug}.py",
+                f"schemas/{slug}.py",
+                f"services/{slug}_service.py",
+                f"routes/{plural}.py",
+                f"pages/{page_name}.jsx",
+            ]
+        },
+        "forbidden_expansions": [
+            "Do not create any file outside the allowed_files list.",
+        ],
+        "open_questions": [],
+    }
+    return mini_spec
+
+
+def build_slice_intakes(intake: dict, plan: dict, output_dir: Path, stem: str) -> list:
+    intakes = []
+    for i, s in enumerate(plan.get('slices', []), start=1):
+        mini_spec = _slice_to_mini_spec(s)
+
+        slice_intake = copy.deepcopy(intake)
+        base_id = intake.get('startup_idea_id', stem).rstrip('_')
+        slice_intake['startup_idea_id'] = f"{base_id}_s{i:02d}_{s['slug']}"
+        slice_intake['must_have_features'] = [s['feature']]
+        slice_intake['_mini_spec'] = mini_spec
+
+        slice_intake['_phase_context'] = {
+            'phase': 1,
+            'of_phases': plan.get('feature_count', len(plan.get('slices', []))),
+            'scope': f"SLICE — {s['title']} ONLY",
+            'current_entity': s['title'],
+            'all_phase1_entities': [x.get('title', x['feature']) for x in plan.get('slices', [])],
+            'deferred_to_phase2': [],
+            'note': (
+                f"Build ONLY this slice. "
+                f"Allowed files: {', '.join(mini_spec.get('file_contract', {}).get('allowed_files', []))}. "
+                f"Do NOT create any other files."
+            ),
+        }
+
+        slice_path = output_dir / f"{stem}_s{i:02d}_{s['slug']}.json"
+        with slice_path.open("w", encoding="utf-8") as f:
+            json.dump(slice_intake, f, indent=2)
+
+        intakes.append({
+            "id": s['id'],
+            "title": s['title'],
+            "feature": s['feature'],
+            "intake_path": str(slice_path),
+        })
+        print(f"  Slice intake: {slice_path.name} ({s['id']})")
+    return intakes
 
 AI_SLICE_PROMPT = """You are generating a vertical slice plan for a build harness.
 Each slice is a thin end-to-end tracer bullet that spans:
@@ -340,6 +488,8 @@ def main() -> None:
         print('  [SLICE-AI] AI disabled or unavailable — using heuristic slice planner')
         plan = build_slice_plan(intake)
 
+    plan = _normalize_slices(plan)
+
     out_dir = Path(args.output_dir) if args.output_dir else intake_path.parent
     out_dir.mkdir(parents=True, exist_ok=True)
     stem = intake_path.stem
@@ -359,6 +509,19 @@ def main() -> None:
             f"({cost_info['input_tokens']:,} in / {cost_info['output_tokens']:,} out, "
             f"{cost_info['model']}, {cost_info['elapsed_s']:.1f}s)"
         )
+
+    # Emit runnable slice intakes + assessment
+    intakes = build_slice_intakes(intake, plan, out_dir, stem)
+    assessment = {
+        "planner": "slice_planner",
+        "slice_count": plan['feature_count'],
+        "slices": plan.get('slices', []),
+        "slice_intakes": intakes,
+    }
+    assessment_path = out_dir / f"{stem}_slice_assessment.json"
+    with assessment_path.open("w", encoding="utf-8") as f:
+        json.dump(assessment, f, indent=2)
+    print(f"Slice assessment written: {assessment_path}")
 
 
 if __name__ == "__main__":
