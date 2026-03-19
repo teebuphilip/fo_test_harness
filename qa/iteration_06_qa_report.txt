@@ -1,0 +1,43 @@
+## QA REPORT
+
+### SUMMARY
+- Total defects found: 4
+- IMPLEMENTATION_BUG: 1
+- SPEC_COMPLIANCE_ISSUE: 2
+- SCOPE_CHANGE_REQUEST: 1
+
+### DEFECTS
+DEFECT-1: IMPLEMENTATION_BUG
+  - Location: business/frontend/pages/ClientManagement.jsx
+  - Evidence: `const { user, isLoading, getAccessTokenSilently } = useAuth0();`
+  - Problem: This is the correct usage pattern for obtaining the Auth0 token; however, `user.getAccessTokenSilently()` is incorrectly referenced in the application.
+  - Expected: The token should be obtained through the destructured `getAccessTokenSilently` function instead of referencing it through `user`.
+  - Fix: Replace calls to `user.getAccessTokenSilently()` with `await getAccessTokenSilently()`.
+  - Severity: HIGH
+
+DEFECT-2: SPEC_COMPLIANCE_ISSUE 
+  - Location: business/frontend/pages/Assessments.jsx
+  - Evidence: **No .tsx files are present; all files in business/frontend are .jsx**
+  - Problem: It has a valid requirement that frontend files should adhere to the .jsx format.
+  - Expected: All frontend files should be in .jsx format as per the usage of the Next.js framework.
+  - Fix: Ensure all frontend files are in .jsx format.
+  - Severity: MEDIUM
+
+DEFECT-3: SPEC_COMPLIANCE_ISSUE 
+  - Location: business/frontend/pages/
+  - Evidence: **There is no business/backend/routes/*.py file present.**
+  - Problem: The requirement specifies that at least one backend routes file must be present.
+  - Expected: At least one business/backend/routes/*.py file must be in the build.
+  - Fix: Ensure that there is at least one business/backend/routes/*.py file included in the output.
+  - Severity: HIGH
+
+DEFECT-4: SCOPE_CHANGE_REQUEST
+  - Location: business/frontend/pages/ReportGenerator.jsx
+  - Evidence: `const report = await response.json();`
+  - Problem: This file attempts to implement new features (download reports in various formats) that are not specified in the intake.
+  - Expected: The system should only implement features that are defined in the intake.
+  - Fix: Remove additional functionality to download report formats that are not specified in the intake.
+  - Severity: MEDIUM
+
+### VERDICT
+QA STATUS: REJECTED - 4 defects require fixing.

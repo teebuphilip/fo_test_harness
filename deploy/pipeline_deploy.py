@@ -1080,8 +1080,11 @@ def main():
 
             if railway_result["success"]:
                 print(f"  [Railway] SUCCESS: {railway_result.get('url', 'no URL yet')}")
+            else:
+                print("  [Railway] FAILED")
 
-                # Save project/service IDs back to Railway deploy state for next deploy
+            # Always persist project/service IDs when available to avoid re-creating projects.
+            if railway_result.get("project_id") and railway_result.get("service_id"):
                 railway_cfg.update({
                     "project": project_name,
                     "project_id": railway_result["project_id"],
@@ -1089,8 +1092,6 @@ def main():
                     "postgres_added": True,
                 })
                 write_config_back(repo_path, RAILWAY_STATE_FILE, railway_cfg)
-            else:
-                print("  [Railway] FAILED")
 
         except Exception as e:
             print(f"  [Railway] ERROR: {e}")

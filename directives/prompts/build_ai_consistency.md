@@ -12,7 +12,19 @@ Read ALL artifact files below and check for cross-file consistency defects — r
 6. **Frontend URL ↔ Backend route integrity**: Extract API paths used in `fetch(...)` / axios calls in `business/frontend/**` and verify matching FastAPI route paths in `business/backend/routes/**`.
 7. **React hook usage integrity**: Flag runtime-breaking hook misuse (e.g. `useAuth0`, `useState`, `useEffect`) called inside class methods or non-component/non-hook functions.
 
-**DO NOT FLAG:**
+**DO NOT FLAG — ABSOLUTE (violating these wastes iterations):**
+- **SQLAlchemy ↔ Pydantic type alignment is CORRECT in ALL of these cases** — do NOT flag as mismatches:
+  - `Column(String)` / `Column(String(N))` ↔ `str` / `Optional[str]` — CORRECT
+  - `Column(Integer)` ↔ `int` / `Optional[int]` — CORRECT
+  - `Column(Boolean)` ↔ `bool` / `Optional[bool]` — CORRECT
+  - `Column(JSON)` / `Column(JSON, nullable=True)` ↔ `Dict` / `Optional[Dict[str, Any]]` / `Optional[dict]` — CORRECT
+  - `Column(DateTime)` ↔ `datetime` / `Optional[datetime]` — CORRECT
+  - `Column(Text)` ↔ `str` / `Optional[str]` — CORRECT
+  - `Column(Float)` ↔ `float` / `Optional[float]` — CORRECT
+  - A Column with `default=X` paired with a schema field with `= X` or `= None` — CORRECT, not a "default conflict"
+  - A Column with `nullable=True` paired with an `Optional[...]` schema field — CORRECT, not a "phantom field"
+- **Standard infrastructure fields** (`status`, `created_at`, `updated_at`) — these are REQUIRED on every model. Never flag as scope violations, extra fields, or mismatches.
+- **Derived/computed fields in service responses** (e.g. `is_published = status == "published"`) — these are valid transformations, not mismatches.
 - Missing boilerplate files (`core.*`, `lib.*`) — these are provided by the platform and always present.
 - Imports of `../utils/api`, `../core/useEntitlements`, `../core/EntitlementGate`, `../hooks/useAnalytics` — these are boilerplate frontend utilities, always present at runtime.
 - Style preferences, naming conventions, or code quality suggestions.

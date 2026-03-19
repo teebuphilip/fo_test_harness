@@ -20,7 +20,6 @@ What it does:
 import argparse
 import json
 import os
-import re
 import shutil
 import sys
 import tempfile
@@ -32,38 +31,12 @@ from typing import Optional
 REPO_ROOT = Path(__file__).parent.resolve()
 sys.path.insert(0, str(REPO_ROOT))
 
-from integration_check import (
-    run_all_checks,
-    build_output,
-    print_summary,
-)
+from integration_check import run_all_checks, build_output, print_summary
 from fo_test_harness import FOHarness
+from deploy.zip_layout import merge_business_artifacts, find_entity_dirs
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
-
-def _iter_num(iter_dir: str) -> int:
-    m = re.search(r'(\d+)', iter_dir)
-    return int(m.group(1)) if m else 0
-
-
-def _best_iter_dir(entity_root: Path) -> Optional[Path]:
-    """
-    Return the highest-numbered iteration_NN_artifacts/ directory inside an
-    entity dir.  Checks both `build/` and `_harness/build/`.
-    """
-    for sub in ('build', '_harness/build'):
-        build_dir = entity_root / sub
-        if not build_dir.is_dir():
-            continue
-        candidates = [
-            d for d in build_dir.iterdir()
-            if d.is_dir() and re.match(r'iteration_\d+_artifacts$', d.name)
-        ]
-        if candidates:
-            return max(candidates, key=lambda d: _iter_num(d.name))
-    return None
-
 
 def merge_artifacts_from_zip(zip_path: Path, extract_root: Path) -> dict:
     """
@@ -74,45 +47,13 @@ def merge_artifacts_from_zip(zip_path: Path, extract_root: Path) -> dict:
     with zipfile.ZipFile(zip_path) as z:
         z.extractall(extract_root)
 
-    # Each top-level subdir is an entity run dir (or possibly the root dir itself)
-    entity_dirs = [d for d in extract_root.iterdir() if d.is_dir()]
+    entity_dirs = find_entity_dirs(extract_root)
     if not entity_dirs:
         print("[ERROR] ZIP contains no top-level directories")
         sys.exit(1)
-
-    # Sort by name to get deterministic order (entity ZIPs are named with timestamps)
-    entity_dirs.sort(key=lambda d: d.name)
-
-    merged: dict[str, str] = {}
-    entity_report = []
-
-    for entity_dir in entity_dirs:
-        best = _best_iter_dir(entity_dir)
-        if best is None:
-            print(f"  [SKIP] {entity_dir.name} — no iteration artifacts found")
-            continue
-
-        biz_dir = best / 'business'
-        if not biz_dir.is_dir():
-            print(f"  [SKIP] {entity_dir.name} / {best.name} — no business/ subdir")
-            continue
-
-        files_added = 0
-        for f in biz_dir.rglob('*'):
-            if not f.is_file():
-                continue
-            if f.suffix == '.pyc' or '__pycache__' in str(f):
-                continue
-            rel = 'business/' + str(f.relative_to(biz_dir))
-            try:
-                merged[rel] = f.read_text(errors='replace')
-                files_added += 1
-            except Exception:
-                pass
-
-        entity_report.append((entity_dir.name, best.name, files_added))
-        print(f"  [{best.name}] {entity_dir.name}  →  {files_added} file(s)")
-
+    merged, entity_report = merge_business_artifacts(extract_root)
+    for name, iter_dir, n in entity_report:
+        print(f"  [{iter_dir}] {name}  →  {n} file(s)")
     return merged, entity_report
 
 

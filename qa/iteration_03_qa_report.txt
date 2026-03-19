@@ -1,0 +1,30 @@
+## QA REPORT
+
+> **[HARNESS FILTER]** Removed 3 defect(s): DEFECT-1, DEFECT-2, DEFECT-3 — fabricated evidence or out-of-scope locations.
+
+### SUMMARY
+- Total defects found: 2
+- IMPLEMENTATION_BUG: 0
+- SPEC_COMPLIANCE_ISSUE: 1
+- SCOPE_CHANGE_REQUEST: 1
+
+### DEFECTS
+
+DEFECT-1: SCOPE_CHANGE_REQUEST
+  - Location: business/frontend/routes/integrations.py
+  - Evidence: `@router.get("/integrations/available")`
+  - Problem: The feature for listing available integrations is not specified in the intake; it constitutes additional functionality beyond the scope.
+  - Expected: The intake does not mention integration features at this stage.
+  - Fix: Remove the `/integrations/available` endpoint definition from the API routes.
+  - Severity: MEDIUM
+
+DEFECT-2: SPEC_COMPLIANCE_ISSUE
+  - Location: business/frontend/pages/ClientsNew.jsx
+  - Evidence: The form submission does not process input validations correctly, as the function does not handle validation for contact email.
+  - Problem: The form should validate the provided email before submission.
+  - Expected: Validation logic should be implemented to ensure the email is formatted correctly.
+  - Fix: Implement email validation in the `handleSubmit` function before submission.
+  - Severity: LOW
+
+### VERDICT
+QA STATUS: REJECTED - [2] defects require fixing

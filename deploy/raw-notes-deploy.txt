@@ -1,0 +1,72 @@
+# Deploy Raw Notes — Step-by-Step History
+# =========================================
+# Reference this when deploying a new app from scratch.
+
+# ─── ENVIRONMENT SETUP (run once per terminal session) ───────────────────────
+export GITHUB_TOKEN=`cat ~/Downloads/ACCESSKEYS/TEEBUGITHUBPERSONALACCESSTOKEN`
+export GITHUB_USERNAME=teebuphilip
+export AUTH0_DOMAIN=dev-thj2qxud8rsqo7hr.us.auth0.com
+export AUTH0_KEY=`cat ~/Downloads/ACCESSKEYS/AUTH0_KEY`
+export RAILWAY_TOKEN=`cat ~/Downloads/ACCESSKEYS/RAILWAY_TOKEN`
+export VERCEL_TOKEN=`cat ~/Downloads/ACCESSKEYS/VERCEL_TOKEN`
+
+# ─── STEP 0: CLEAN START (if repo already exists) ────────────────────────────
+rm -rf ~/Documents/work/<app-name>
+
+# Delete GitHub repo (requires delete_repo scope — may need gh auth refresh first)
+unset GITHUB_TOKEN                            # gh uses its own token, not env var
+gh auth refresh -h github.com -s delete_repo  # one-time scope grant (opens browser)
+gh repo delete teebuphilip/<app-name> --yes
+export GITHUB_TOKEN=`cat ~/Downloads/ACCESSKEYS/TEEBUGITHUBPERSONALACCESSTOKEN`  # restore
+
+# ─── STEP 1: RENAME ZIP (so repo name is clean) ──────────────────────────────
+mv ~/Downloads/FO_TEST_HARNESS/fo_harness_runs/<ugly_name>.zip \
+   ~/Downloads/FO_TEST_HARNESS/fo_harness_runs/<app-name>.zip
+
+# ─── STEP 2: EXTRACT ZIP → LOCAL REPO → GITHUB ───────────────────────────────
+cd ~/Downloads/FO_TEST_HARNESS/deploy
+python zip_to_repo.py ~/Downloads/FO_TEST_HARNESS/fo_harness_runs/<app-name>.zip
+
+# ─── STEP 3: AUTH0 SETUP (once per app) ──────────────────────────────────────
+# Creates Auth0 SPA app + API, saves creds to ~/Downloads/ACCESSKEYS/auth0_<app>.env
+python auth0_setup.py --app-name <app-name>
+
+# ─── STEP 4: GRANT GITHUB APP ACCESS (Railway + Vercel) ──────────────────────
+# Can't be done via API — opens browser to github.com/settings/installations
+python repo_setup.py --repo <app-name>
+# In browser: Railway App → Configure → add <app-name> → Save
+#             Vercel      → Configure → add <app-name> → Save
+
+# ─── STEP 5: FULL DEPLOY ─────────────────────────────────────────────────────
+cd ~/Downloads/FO_TEST_HARNESS/deploy
+python pipeline_deploy.py --repo ~/Documents/work/<app-name>
+
+# ─── NOTES ───────────────────────────────────────────────────────────────────
+# - Railway token must be a PERSONAL token (starts with railway_...), not a project UUID
+#   Get one at: railway.app/account/tokens
+# - If Railway vars fail, paste them manually in:
+#   railway.app/project/<project_id> → Variables tab
+# - Auth0 tenant is shared across all apps: dev-thj2qxud8rsqo7hr.us.auth0.com
+# - railway.toml is auto-written by pipeline_deploy.py (points to business/backend)
+# - Vercel CI=false is auto-set by pipeline_deploy.py (prevents ESLint build failures)
+
+# ─── ACTUAL SESSION LOG (2026-03-09, ai-workforce-intelligence) ───────────────
+rm -rf ~/Documents/work/ai-workforce-intelligence
+gh repo delete teebuphilip/ai-workforce-intelligence --yes
+gh auth refresh -h github.com -s delete_repo
+export GITHUB_TOKEN=`cat ~/Downloads/ACCESSKEYS/TEEBUGITHUBPERSONALACCESSTOKEN`
+export GITHUB_USERNAME=teebuphilip
+gh repo delete teebuphilip/ai-workforce-intelligence --yes
+gh auth refresh -h github.com -s delete_repo
+unset GITHUB_TOKEN
+gh auth refresh -h github.com -s delete_repo
+gh repo delete teebuphilip/ai-workforce-intelligence --yes
+python zip_to_repo.py ~/Downloads/FO_TEST_HARNESS/fo_harness_runs/ai-workforce-intelligence.zip
+export GITHUB_TOKEN=`cat ~/Downloads/ACCESSKEYS/TEEBUGITHUBPERSONALACCESSTOKEN`
+python zip_to_repo.py ~/Downloads/FO_TEST_HARNESS/fo_harness_runs/ai-workforce-intelligence.zip
+python auth0_setup.py
+python auth0_setup.py --app-name ai-workforce-intelligence
+export AUTH0_DOMAIN=dev-thj2qxud8rsqo7hr.us.auth0.com
+python auth0_setup.py --app-name ai-workforce-intelligence
+export AUTH0_KEY=`cat ~/Downloads/ACCESSKEYS/AUTH0_KEY`
+python auth0_setup.py --app-name ai-workforce-intelligence

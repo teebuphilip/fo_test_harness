@@ -24,6 +24,8 @@ import sys
 import os
 import requests
 from pathlib import Path
+from datetime import datetime
+from typing import Optional
 
 # ============================================================
 # RAILWAY GRAPHQL API WRAPPER
@@ -33,14 +35,18 @@ from pathlib import Path
 RAILWAY_API = "https://backboard.railway.app/graphql/v2"
 
 
+DEBUG_LOG_DEFAULT = "/tmp/railway_debug.log"
+
+
 class RailwayAPI:
     """
     Thin wrapper around Railway's GraphQL API.
     All methods return (success: bool, data: dict).
     """
 
-    def __init__(self, token: str):
+    def __init__(self, token: str, debug_log: Optional[str] = None):
         self.token = token
+        self.debug_log = debug_log
         self.session = requests.Session()
         self.session.headers.update({
             "Authorization": f"Bearer {token}",
@@ -54,6 +60,7 @@ class RailwayAPI:
             payload["variables"] = variables
 
         resp = self.session.post(RAILWAY_API, json=payload, timeout=30)
+        self._log_debug(payload, resp)
         if resp.status_code >= 400:
             # Include body for faster diagnosis of GraphQL shape/auth issues.
             raise Exception(f"Railway HTTP {resp.status_code}: {resp.text}")
@@ -63,6 +70,38 @@ class RailwayAPI:
             raise Exception(f"Railway API error: {data['errors']}")
 
         return data.get("data", {})
+
+    def _log_debug(self, payload: dict, resp: requests.Response) -> None:
+        """
+        Optional debug logger for Railway GraphQL calls.
+        Enabled when RAILWAY_DEBUG_LOG is set to a file path.
+        Redacts Authorization header.
+        """
+        log_path = self.debug_log
+        if not log_path:
+            return
+        try:
+            ts = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+            headers = dict(resp.request.headers or {})
+            if "Authorization" in headers:
+                headers["Authorization"] = "REDACTED"
+            record = {
+                "ts": ts,
+                "request": {
+                    "url": resp.request.url,
+                    "headers": headers,
+                    "json": payload,
+                },
+                "response": {
+                    "status": resp.status_code,
+                    "headers": dict(resp.headers or {}),
+                    "text": resp.text,
+                },
+            }
+            with open(log_path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(record, ensure_ascii=False) + "\n")
+        except Exception:
+            pass
 
     def whoami(self) -> dict:
         """Verify token is valid. Returns user info."""
@@ -156,6 +195,70 @@ class RailwayAPI:
         }
         data = self._query(q, variables)
         return data["serviceCreate"]
+
+    def update_project_name(self, project_id: str, name: str) -> bool:
+        """Update project name. Best-effort across schema variants."""
+        candidates = [
+            (
+                """
+                mutation ProjectUpdate($id: String!, $input: ProjectUpdateInput!) {
+                    projectUpdate(id: $id, input: $input) { id name }
+                }
+                """,
+                {"id": project_id, "input": {"name": name}},
+            ),
+            (
+                """
+                mutation ProjectUpdate($input: ProjectUpdateInput!) {
+                    projectUpdate(input: $input) { id name }
+                }
+                """,
+                {"input": {"id": project_id, "name": name}},
+            ),
+        ]
+        last_err = None
+        for q, vars in candidates:
+            try:
+                self._query(q, vars)
+                return True
+            except Exception as e:
+                last_err = e
+                continue
+        if last_err:
+            raise last_err
+        return False
+
+    def link_repo_to_service(self, service_id: str, repo_url: str) -> bool:
+        """Attach GitHub repo to an existing service. Best-effort across schema variants."""
+        candidates = [
+            (
+                """
+                mutation ServiceUpdate($id: String!, $input: ServiceUpdateInput!) {
+                    serviceUpdate(id: $id, input: $input) { id }
+                }
+                """,
+                {"id": service_id, "input": {"source": {"repo": repo_url}}},
+            ),
+            (
+                """
+                mutation ServiceUpdate($id: String!, $input: ServiceUpdateInput!) {
+                    serviceUpdate(id: $id, input: $input) { id }
+                }
+                """,
+                {"id": service_id, "input": {"repo": repo_url}},
+            ),
+        ]
+        last_err = None
+        for q, vars in candidates:
+            try:
+                self._query(q, vars)
+                return True
+            except Exception as e:
+                last_err = e
+                continue
+        if last_err:
+            raise last_err
+        return False
 
     def add_plugin(self, project_id: str, plugin_type: str = "postgresql") -> dict:
         """Add a plugin (postgresql, redis, etc.) to a project."""
@@ -451,6 +554,9 @@ def deploy_backend(
     env_file: Path = None,
     railway_config: dict = None,
     wait_minutes: int = 10,
+    defer_repo_link: bool = True,
+    use_temp_project_name: bool = True,
+    debug: bool = False,
 ) -> dict:
     """
     Deploy backend repo to Railway via API.
@@ -472,13 +578,19 @@ def deploy_backend(
             "url": "https://...",
         }
     """
-    api = RailwayAPI(token)
-    project_name = project_name or repo_path.name.lower().replace("_", "-")
-    # Railway rejects long names — truncate at word boundary before 30 chars
-    if len(project_name) > 30:
-        truncated = project_name[:30]
-        last_hyphen = truncated.rfind("-")
-        project_name = truncated[:last_hyphen] if last_hyphen > 0 else truncated
+    api = RailwayAPI(token, debug_log=DEBUG_LOG_DEFAULT if debug else None)
+
+    def _safe_project_name(name: str) -> str:
+        if not name:
+            return name
+        # Railway rejects long names — truncate at word boundary before 30 chars
+        if len(name) > 30:
+            truncated = name[:30]
+            last_hyphen = truncated.rfind("-")
+            name = truncated[:last_hyphen] if last_hyphen > 0 else truncated
+        return name.strip("-")
+
+    project_name = _safe_project_name(project_name or repo_path.name.lower().replace("_", "-"))
     env_file = env_file or (repo_path / ".env")
 
     # ── Step 1: Verify token (non-blocking) ─────────────────
@@ -497,28 +609,39 @@ def deploy_backend(
     service_id = railway_config.get("service_id") if railway_config else None
 
     if not project_id:
-        print(f"  [Railway] Creating project: {project_name}")
+        create_name = project_name
+        if use_temp_project_name:
+            create_name = _safe_project_name(f"{project_name}-tmp")
+        print(f"  [Railway] Creating project: {create_name}")
         workspace_id = api.get_workspace_id()
         if workspace_id:
             print(f"  [Railway] Using workspace: {workspace_id}")
-        project = api.create_project(project_name, workspace_id=workspace_id)
+        project = api.create_project(create_name, workspace_id=workspace_id)
         project_id = project["id"]
         print(f"  [Railway] Project created: {project_id}")
+        if use_temp_project_name and create_name != project_name:
+            print(f"  [Railway] Renaming project to: {project_name}")
+            try:
+                api.update_project_name(project_id, project_name)
+            except Exception as e:
+                print(f"  [Railway] Project rename skipped: {e}")
     else:
         print(f"  [Railway] Reusing project: {project_id}")
 
     # ── Step 3: Create or reuse service ────────────────────
     if not service_id:
         print(f"  [Railway] Creating service: backend")
+        repo_url = None if defer_repo_link else github_repo_url
         service = api.create_service(
             project_id=project_id,
             name="backend",
-            repo_url=github_repo_url,
+            repo_url=repo_url,
         )
         service_id = service["id"]
         print(f"  [Railway] Service created: {service_id}")
     else:
         print(f"  [Railway] Reusing service: {service_id}")
+    repo_linked = not defer_repo_link
 
     # ── Step 3b: Root directory intentionally NOT set ───────
     # business/ lives at repo root — setting root to "backend/" excludes it from the container.
@@ -583,6 +706,27 @@ def deploy_backend(
             print(f"  [Railway] Variables set.")
     else:
         print("  [Railway] No .env file or no filled variables - skipping")
+
+    # ── Step 5b: Link repo AFTER service creation (deferred) ─
+    if defer_repo_link and not repo_linked:
+        print("  [Railway] Linking GitHub repo to service...")
+        try:
+            if api.link_repo_to_service(service_id, github_repo_url):
+                repo_linked = True
+                print("  [Railway] Repo linked.")
+            else:
+                print("  [Railway] Repo link failed (no mutation matched).")
+        except Exception as e:
+            print(f"  [Railway] Repo link failed: {e}")
+        if not repo_linked:
+            print("  [Railway] Repo not linked — run deploy/repo_setup.py and retry.")
+            return {
+                "success": False,
+                "project_id": project_id,
+                "service_id": service_id,
+                "url": None,
+                "postgres_added": True,
+            }
 
     # ── Step 6: Trigger deploy ──────────────────────────────
     # Capture current latest deployment to verify a new one is created.
@@ -685,6 +829,7 @@ if __name__ == "__main__":
     parser.add_argument("--project-name", default=None, help="Railway project name")
     parser.add_argument("--env-file", default=None, help="Path to .env (optional)")
     parser.add_argument("--add-postgres", action="store_true", help="Add PostgreSQL plugin")
+    parser.add_argument("--debug", action="store_true", help="Log Railway GraphQL to /tmp/railway_debug.log")
     args = parser.parse_args()
 
     token = os.getenv("RAILWAY_TOKEN")
@@ -703,5 +848,6 @@ if __name__ == "__main__":
         add_postgres=args.add_postgres,
         env_file=env_file,
         railway_config=None,
+        debug=args.debug,
     )
     print(json.dumps(result, indent=2))
