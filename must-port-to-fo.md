@@ -1,5 +1,23 @@
 # Must Port to FO
 
+## Ubiquitous Language Extractor (2026-03-19 session 11)
+
+116. feat: ubiquity.py — pre-planner terminology lock
+- Extracts canonical terms (entities, KPIs, roles, integrations, synonyms) from intake
+- Outputs glossary JSON with `prompt_lock_block` for injection into BUILD + QA prompts
+- Optional AI refinement (Claude Haiku) for relationships + ambiguity resolution
+- Files: `ubiquity.py`
+✅ DONE here, ⬜ TODO for FO codebase
+
+117. feat: pipeline wiring — ubiquity before phase_planner
+- `run_integration_and_feature_build.sh`: Step 0 added before Step 1
+- `fo_test_harness.py`: loads glossary at init, injects into build_prompt + qa_prompt
+- `directives/prompts/qa_prompt.md`: added `{{ubiquitous_language_context}}` placeholder
+- Files: `run_integration_and_feature_build.sh`, `fo_test_harness.py`, `directives/prompts/qa_prompt.md`
+✅ DONE here, ⬜ TODO for FO codebase
+
+---
+
 ## Slice Planner + Planner Router (2026-03-19 session 10)
 
 114. feat: slice_planner.py — AI-first vertical slice planner (quality mode)
@@ -13,6 +31,18 @@
 - Lightweight intake gate: recommends `phase` or `slice` with reasons + score
 - JSON output supported via `--json`
 - Files: `planner_router.py`
+✅ DONE here, ⬜ TODO for FO codebase
+
+116. feat: run_slicer_and_feature_build.sh — slice pipeline
+- Consumes `*_slice_assessment.json` + per-slice intakes
+- Chains via `--prior-run`, runs integration check, merges ZIPs
+- Files: `run_slicer_and_feature_build.sh`
+✅ DONE here, ⬜ TODO for FO codebase
+
+117. feat: run_auto_build.sh — planner auto-router
+- Calls `planner_router.py` and runs slice or phase pipeline
+- `--force slice|phase` override
+- Files: `run_auto_build.sh`
 ✅ DONE here, ⬜ TODO for FO codebase
 
 ---

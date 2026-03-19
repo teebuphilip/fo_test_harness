@@ -254,6 +254,23 @@ fi
 echo "========================================================"
 echo ""
 
+# ── Step 0: Ubiquitous Language Extraction ────────────────────────────────────
+UBIQUITOUS_LANG="${INTAKE_DIR}/${INTAKE_STEM}_ubiquitous_language.json"
+
+echo "▶ STEP 0 — Ubiquitous Language (locking terminology)"
+echo "────────────────────────────────────────────────────────"
+
+if [[ -f "$UBIQUITOUS_LANG" && ( -n "$PHASE1_ZIP_OVERRIDE" || $START_FROM_FEATURE -gt 0 ) ]]; then
+  echo "  ↩ Skipping ubiquity — glossary already exists and resuming"
+else
+  python ubiquity.py --intake "$INTAKE" $NO_AI
+fi
+
+if [[ ! -f "$UBIQUITOUS_LANG" ]]; then
+  echo "WARNING: Ubiquitous language file not found: $UBIQUITOUS_LANG — continuing without it"
+fi
+echo ""
+
 # ── Step 1: Run phase_planner ──────────────────────────────────────────────────
 echo "▶ STEP 1 — Phase Planner (classifying features)"
 echo "────────────────────────────────────────────────────────"

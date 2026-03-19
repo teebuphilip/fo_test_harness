@@ -274,6 +274,7 @@ If REJECTED: end with exactly: "QA STATUS: REJECTED - [X] defects require fixing
 ---
 
 {{tech_stack_context}}{{qa_override_context}}
+{{ubiquitous_language_context}}
 {{prohibitions_block}}
 {{defect_history_block}}
 {{resolved_defects_block}}

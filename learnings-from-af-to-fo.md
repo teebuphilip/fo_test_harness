@@ -1,10 +1,21 @@
 # Learnings From AF to FO
 
+## Latest Learnings (2026-03-19 session 11 — ubiquitous language)
+
+- Claude and ChatGPT drift from intake terminology during multi-iteration builds. Claude invents synonyms ("metric" instead of "KPI"), QA flags them as defects, Claude "fixes" by using yet another synonym. This burns 2-3 iterations per run on pure terminology churn.
+
+- Locking terminology BEFORE planning (not during build) means the phase planner also uses canonical terms, so feature names stay consistent from planning through build through QA. The glossary is generated once and never changes.
+
+- Deterministic synonym detection catches 80% of conflicts (known synonym groups). AI refinement adds entity relationships and ambiguity resolution but is optional — the pipeline works without it.
+
+---
+
 ## Latest Learnings (2026-03-19 session 10 — slice planner + routing)
 
 - A single phase-planner is insufficient for quality builds that need clear sequencing and acceptance criteria. Vertical slice plans make scope explicit (API + data + UI) and reduce ambiguity before build.
 - AI-first slice planning is worth it for messy intakes, but a heuristic fallback is mandatory to keep the pipeline resilient when API keys are missing or calls fail.
 - Auto-routing between slice vs phase planning should be driven by intake signals (feature count, integrations, analytics, multi-role, subjective UX). This keeps factory mode lean without sacrificing quality-mode rigor.
+- A slice pipeline should chain outputs via `--prior-run` to preserve accumulated state and avoid ZIP merge collisions; file-ownership constraints help keep slices isolated.
 
 ## Latest Learnings (2026-03-17 session 7 — AI decomposer + mini specs)
 

@@ -1,5 +1,34 @@
 # Changelog
 
+## 2026-03-19 (session 11 — ubiquitous language extractor)
+
+### feat: ubiquity.py — pre-planner terminology lock
+- New `ubiquity.py` extracts canonical domain terms from intake JSON
+- Extracts: entities, KPIs, user roles, integrations, synonym conflicts
+- Deterministic synonym detection with known synonym groups
+- Optional AI refinement via Claude Haiku (relationships, ambiguities)
+- Outputs `<stem>_ubiquitous_language.json` with glossary + `prompt_lock_block`
+- Costs logged to `phase_planner_ai_costs.csv`
+
+### feat: wired into pipeline (run_integration_and_feature_build.sh)
+- Added Step 0 before phase_planner (Step 1)
+- Skips on resume if glossary already exists
+- `$NO_AI` flag passed through from CLI
+
+### feat: glossary injected into BUILD + QA prompts (fo_test_harness.py)
+- `FOHarness.__init__` loads `_ubiquitous_language.json` at startup
+- Falls back to base stem for entity-level intakes (`_p1_<entity>` suffix stripped)
+- `PromptTemplates.build_prompt()` accepts `ubiquitous_language_block` kwarg
+- Injected before PRE_OUTPUT_CHECKLIST in dynamic section
+- `PromptTemplates.qa_prompt()` accepts `ubiquitous_language_block` kwarg
+- Injected via `{{ubiquitous_language_context}}` in `qa_prompt.md` template
+
+### inspiration
+- Adapted from Matt Pocock's `ubiquitous-language` skill (https://github.com/mattpocock/skills)
+- DDD-style glossary extraction, tailored for the FO pipeline
+
+---
+
 ## 2026-03-19 (session 10 — slice planner + planner router)
 
 ### feat: slice_planner.py (AI-first, heuristic fallback)
@@ -10,6 +39,14 @@
 ### feat: planner_router.py (phase vs slice selector)
 - New lightweight router that recommends `phase` vs `slice` based on intake signals
 - Outputs reasons and feature count; supports JSON output via `--json`
+
+### feat: run_slicer_and_feature_build.sh (slice pipeline)
+- New slice-based pipeline that consumes `*_slice_assessment.json` + slice intakes
+- Chains slices via `--prior-run`, then runs integration check + ZIP merge
+
+### feat: run_auto_build.sh (auto-route)
+- Auto-routes to `run_slicer_and_feature_build.sh` or `run_integration_and_feature_build.sh`
+- Supports `--force slice|phase` override
 
 ---
 
