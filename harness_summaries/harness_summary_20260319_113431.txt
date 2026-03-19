@@ -1,0 +1,21 @@
+Title: Building 70 SaaS products to stress-test my AI build harness — 5 down, 65 to go
+Body:
+I built a deterministic SaaS harness with 53 capabilities (auth, payments, fraud detection, GDPR compliance, the works). Now I need to know if it actually works at scale.
+So I'm building 70 different SaaS products through it. Real FastAPI + React + Stripe deployments. If the harness breaks, I fix it. If it holds, I know it's solid.
+Here's what the harness logged from builds 1-5:
+Product                          | Feat | Runs | Passes | Avg Cost | Total Cost | Main Failure Mode
+---------------------------------|------|------|--------|----------|------------|-------------------
+Adversarial AI Validator         |    5 |   18 |      8 |    $1.23 |     $26.65 | CTRL_C
+Wynwood Thoroughbreds            |    0 |   10 |      6 |    $1.22 |     $14.28 | BUILD_TRUNCATED
+AI Workforce Intelligence        |    6 |   78 |     19 |    $1.78 |    $157.41 | NON_CONVERGING (15 iters, $5.4001)
+Freelance Invoice Tracker        |    0 |    2 |      1 |    $1.65 |      $5.64 | CTRL_C
+Property Manager Maintenance Sch |    0 |    1 |      1 |    $0.65 |      $0.65 | None
+
+Total: 109 runs, 35 clean builds (32% first-pass success), $204.64 spent
+What I learned:
+- High iteration counts lead to non-convergence; 15+ iterations often resulted in failure modes.
+- Average costs vary significantly; AI Workforce Intelligence peaked at $5.40 for non-convergence.
+- CTRL_C failures are prevalent, indicating potential stability issues across multiple products.
+- Scalability concerns arise with increasing runs; costs escalate without guaranteed passes.
+
+Following this for the next 6 months. Will post failures and edge cases as I find them.
