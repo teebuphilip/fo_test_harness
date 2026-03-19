@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-03-19 (session 10 — slice planner + planner router)
+
+### feat: slice_planner.py (AI-first, heuristic fallback)
+- New `slice_planner.py` for quality-mode vertical slice planning
+- Uses ChatGPT by default; `--no-ai` keeps heuristic-only behavior
+- Logs AI costs to `slice_planner_ai_costs.csv` and prints cost summary
+
+### feat: planner_router.py (phase vs slice selector)
+- New lightweight router that recommends `phase` vs `slice` based on intake signals
+- Outputs reasons and feature count; supports JSON output via `--json`
+
+---
+
 ## 2026-03-18 (session 9 — Check 17 fix, check_final_zip.py)
 
 ### fix: Check 17 false positives on snake_case backend filenames (integration_check.py)

@@ -1,5 +1,55 @@
 # Learnings From AF to FO
 
+## Latest Learnings (2026-03-19 session 10 — slice planner + routing)
+
+- A single phase-planner is insufficient for quality builds that need clear sequencing and acceptance criteria. Vertical slice plans make scope explicit (API + data + UI) and reduce ambiguity before build.
+- AI-first slice planning is worth it for messy intakes, but a heuristic fallback is mandatory to keep the pipeline resilient when API keys are missing or calls fail.
+- Auto-routing between slice vs phase planning should be driven by intake signals (feature count, integrations, analytics, multi-role, subjective UX). This keeps factory mode lean without sacrificing quality-mode rigor.
+
+## Latest Learnings (2026-03-17 session 7 — AI decomposer + mini specs)
+
+- Monolithic Phase 1 builds with the full intake cannot converge when the intake contains 10+ intelligence features. Claude reads the full spec and builds entities for features not yet in scope. QA flags them as out-of-scope. Claude removes them. Next iteration, it reads the spec again and re-adds them. This oscillation is structural — no prompt engineering can fix it because the information is in the context window.
+
+- The fix is to remove future-phase information from the context window entirely. Each entity gets its own mini spec with only the fields and operations it needs. The mini spec is the single source of truth — Claude cannot hallucinate extra fields because the spec explicitly lists what's allowed and what's forbidden.
+
+- AI (ChatGPT) is better than deterministic keyword extraction for entity decomposition because it understands semantic relationships. A keyword-based extractor finds "Horse" as an entity but misses that `stable_id` on Horse is a foreign key to Stable. The AI reads the full intake and produces dependency graphs that the deterministic validator then enforces.
+
+- However, AI output cannot be trusted directly. The deterministic validator is essential: it catches `.tsx` extensions the AI prefers, hyphenated filenames, external integration IDs (stripe_id, auth0_id) that shouldn't be in Phase 1, and standard fields (id, created_at) that the AI includes but the harness adds automatically.
+
+- Evidence requirements prevent hallucinated entities. If the AI must cite an intake phrase for every entity, it can't invent entities that aren't in the spec. This is more reliable than trying to filter phantom entities after the fact.
+
+- Wave-based dependency ordering (independent entities first, then dependents) prevents missing-FK errors. If Horse depends on Stable, building Horse first means `stable_id = Column(Integer, ForeignKey('stables.id'))` references a table that doesn't exist yet. Building Stable first and chaining via `--prior-run` means the table is already in the artifact set.
+
+- The mini spec approach has a QA alignment risk: if QA reads the full intake while the build reads only the mini spec, QA will flag missing future-phase items and recreate the oscillation. The QA prompt may need `_mini_spec` awareness to constrain its validation scope to only the current entity.
+
+## Latest Learnings (2026-03-17 session 7 — consistency type false positives)
+
+- The consistency AI does not understand that SQLAlchemy and Pydantic use different type systems that are nonetheless correctly aligned. `Column(String, nullable=True)` paired with `Optional[str] = None` is the correct mapping, but the AI sees "different" types and flags it as a mismatch. This produces consistency issues that can never be resolved because there's nothing to fix — the code is already correct. After 2 surgical failures, the triage escalates to SYSTEMIC, which passes 25+ files as context and invites Claude to make sweeping changes to correct code.
+
+- The fix is an explicit type mapping table in the consistency prompt's DO NOT FLAG section. Every standard Column type is paired with its correct Pydantic equivalent. This is more effective than a general rule ("don't flag type alignment") because the AI needs concrete examples to override its pattern-matching instinct.
+
+- Default value alignment (`Column(String(50), default="basic")` ↔ `Optional[str] = "basic"`) and nullable alignment (`nullable=True` ↔ `Optional[...]`) must be called out explicitly or the AI will flag them as "default conflicts" or "phantom fields."
+
+## Latest Learnings (2026-03-17 session 7 — consistency oscillation)
+
+- Consistency FIELD_MISMATCH defects require simultaneous fixes to both sides of the relationship. When the fix prompt only receives the primary file (the first file listed before `<->`), it patches that file's field name correctly, but the other file retains the old name. The next consistency check sees the mismatch in reverse and fires again. This oscillates for the full 4-cap before falling through to QA — wasting 4 iterations on what should be a 1-iteration fix. The fix is to extract all files from the `<->` relationship and pass them all to Claude in one surgical patch.
+
+- `_parse_consistency_report()` storing only `file` (primary) and not `all_files` (both sides) was the structural gap. Rather than changing the parse structure, the fix was added as Fix 3 in the defect_target_files building block — minimally invasive and located where the target set is already being assembled.
+
+## Latest Learnings (2026-03-17 session 7 — status column filter)
+
+- QA instruction compliance for ABSOLUTE RULES is unreliable across model families and temperature settings. A rule written in all-caps at the top of a section will still be ignored if the model has strong prior associations between "extra database column" and "scope violation". The only reliable fix is a harness-level filter that enforces the rule deterministically — the harness sees the same evidence text QA produced and can reject the defect before it reaches Claude.
+
+- The pattern "all backtick evidence snippets are infrastructure column definitions" is a precise enough signal that false positives from this filter are near-zero. A real scope violation would never cite only `status = Column(...)` as evidence; it would cite a business-logic field or a route.
+
+- Duplicate defects (DEFECT-1/DEFECT-3 both citing Horse.py status, DEFECT-2/DEFECT-4 both citing Update.py status) are a QA output artifact when the model processes the same file twice through different lenses (IMPLEMENTATION_BUG vs SPEC_COMPLIANCE_ISSUE). The filter eliminates both the original and the duplicate since both hit Check 1d.
+
+## Latest Learnings (2026-03-17 session 7 — hyphen filename bug)
+
+- Python route files with hyphens (`stable-updates.py`) cannot be imported by Python's module system — hyphens are not valid in module names. Despite this, Claude will generate hyphenated filenames when the frontend calls `/api/stable-updates`, because the URL uses a hyphen. The fix has two sides: (1) FROZEN_ARCHITECTURAL_DECISIONS must prohibit hyphenated filenames and require underscore filenames with matching underscore URLs; (2) the integration check must normalize hyphens to underscores when matching URLs to route files, so that a hyphenated file doesn't produce a false INT-ROUTE positive that oscillates indefinitely.
+
+- The integration check regex `\w+\.py$` is too strict — `\w` excludes hyphens, so any hyphenated file is silently dropped from the route inventory, which makes every fetch call targeting that endpoint appear as a missing route. This is a false positive that can never be resolved by Claude because the file exists but the check can't see it. Regex should be `[\w-]+\.py$` and stems should be normalized to underscores on both sides of the comparison.
+
 ## Latest Learnings (2026-03-17 session 7 — schema naming + pyc)
 
 - Schema class naming ambiguity causes permanent static oscillation. When the golden example shows `ExampleCreate` but doesn't explicitly prohibit `ExampleCreateRequest`, Claude freely chooses the longer form. Routes then import one name, schemas define another. The static check fires the same 6 defects every iteration regardless of which side Claude fixes — fixing routes makes schemas wrong, fixing schemas makes routes wrong. The only fix is to make the naming convention non-negotiable in the frozen decisions block so both sides are generated consistently from iteration 1.

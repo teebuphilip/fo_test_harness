@@ -1,5 +1,22 @@
 # Must Port to FO
 
+## Slice Planner + Planner Router (2026-03-19 session 10)
+
+114. feat: slice_planner.py — AI-first vertical slice planner (quality mode)
+- Generates end-to-end slice plan (API, data changes, UI, acceptance, HITL/AFK)
+- ChatGPT by default; `--no-ai` fallback to heuristics
+- Cost logging to `slice_planner_ai_costs.csv`
+- Files: `slice_planner.py`
+✅ DONE here, ⬜ TODO for FO codebase
+
+115. feat: planner_router.py — auto-select phase vs slice planner
+- Lightweight intake gate: recommends `phase` or `slice` with reasons + score
+- JSON output supported via `--json`
+- Files: `planner_router.py`
+✅ DONE here, ⬜ TODO for FO codebase
+
+---
+
 ## Factory Mode (2026-03-18 session 8)
 
 112. feat: --factory-mode flag in fo_test_harness.py

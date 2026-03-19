@@ -1,5 +1,19 @@
 # TODO
 
+## Intake / pre-planner improvements
+
+- Add two-mode flow for intake → pre-planner:
+  - Shared steps (factory + quality): Intake → PRD structuring → Grill-me pass → Patch intake + freeze decisions → Pre-planner slices (vertical tracer bullets) → Build.
+  - Quality-only add-on: Vision/positioning + audience feel + "what must be surprisingly good?"
+- Reference/inspiration: mattpocock/skills (write-a-prd, grill-me, prd-to-plan)
+  - https://github.com/mattpocock/skills
+- Triage enhancement (do NOT implement yet): add a lightweight root-cause note to the existing ChatGPT triage step (not Feature QA).
+  - Context: Feature QA prompt is pure QA; triage happens post-QA rejection in `fo_test_harness.py` via `_triage_and_sharpen_defects()`.
+  - Desired change: update triage prompt to include `ROOT_CAUSE: <one sentence>` per defect, alongside `CLASSIFICATION` and `SHARPENED_FIX`.
+  - Trigger: only when QA rejects (current behavior). No new calls; just extend triage output format.
+  - Output handling: log root-cause note for each defect (e.g., in `iteration_##_triage_output`) and optionally surface in console for audit.
+  - Goal: capture a minimal causal hypothesis to reduce fix thrash without bloating QA or adding extra API calls.
+
 ## Boilerplate fixes needed (teebu-saas-platform)
 
 - **stripe_lib.py: don't hard-crash on missing stripe_secret_key at startup.**
