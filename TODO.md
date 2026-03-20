@@ -16,15 +16,6 @@
 
 ## Boilerplate fixes needed (teebu-saas-platform)
 
-- **stripe_lib.py: don't hard-crash on missing stripe_secret_key at startup.**
-  Currently `StripeConfig.__init__` raises `ValueError("stripe_secret_key is required in config")`
-  which kills uvicorn before it can serve any requests. Apps that don't use Stripe (e.g. report tools)
-  crash on deploy.
-  Fix: make `stripe_secret_key` optional — return a disabled/stub Stripe client when key is absent,
-  raise only when a Stripe method is actually called. Pattern: `if not self.stripe_secret_key: return StubStripe()`.
-  Same treatment for any other lib that hard-raises on missing config at import time (mailerlite, etc.).
-  Priority: HIGH — blocks every non-Stripe app from starting.
-
 - Sanitize/normalize filenames extracted from model output to prevent path traversal.
 - Support unlabeled code fences (``` with no language) in artifact extraction.
 - Enforce governance ZIP size limits or selective inclusion to avoid prompt bloat.
@@ -91,6 +82,11 @@
 
 - ✅ FIXED 2026-03-18: run_integration_and_feature_build.sh: Phase 1 ZIP auto-detect scoped to `${INTAKE_STEM}_p1_BLOCK_B_*.zip`
 - ✅ FIXED 2026-03-18: run_integration_and_feature_build.sh: Integration fix pass fallback scoped to run dir prefix (strips timestamp)
+- run_integration_and_feature_build.sh: final merged ZIP can miss startup-specific `business_config.json` because the phase/feature pipeline suppresses post-QA polish on the runs that feed the final merge.
+  - Evidence: `fo_test_harness.py` generates `business/backend/config/business_config.json` and `business/frontend/config/business_config.json` during post-QA polish, but the Wynwood final ZIP `fo_harness_runs/wynwood_thoroughbreds_BLOCK_B_full_20260318_103929.zip` contains neither file.
+  - Current failure mode: final ZIP keeps boilerplate `saas-boilerplate/.../business_config.json` (`InboxTamer`) while runtime app reads `backend/config/business_config.json`, causing deploy-time mismatch and startup crashes.
+  - Likely cause: Phase 1/entity runs use `--no-polish`, intermediate features use `--no-polish`, and integration fix passes also resume with `--no-polish`, so the final accepted artifact path never carries forward the generated config files.
+  - Required fix: ensure the last artifact that feeds final ZIP assembly runs polish, or explicitly generate/copy startup-specific `business_config.json` into the final merged deliverable.
 - run_integration_and_feature_build.sh: Feature ZIP lookup uses broad `startup_idea_id` slug pattern;
   if IDs are reused across runs, wrong ZIP can be selected. Consider scoping to current intake/run.
 

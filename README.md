@@ -80,6 +80,11 @@ python deploy/zip_to_repo.py fo_harness_runs/my_startup_BLOCK_B_full_<timestamp>
 python deploy/pipeline_deploy.py --repo ~/Documents/work/my_startup
 ```
 
+Deploy notes:
+1. `deploy/pipeline_deploy.py` now writes a timestamped run log to `deploy/pipeline-deploy-logs/`.
+2. Railway backend deploy now reuses or generates a public `*.up.railway.app` domain automatically.
+3. The resolved backend URL is injected into the Vercel frontend deploy.
+
 ---
 
 ## Adding a Feature to an Existing Build
@@ -249,7 +254,7 @@ CONSISTENCY (Gate 3) catches obvious cross-file structural bugs cheaply before t
 | `fo_test_harness.py` | Core BUILD-QA orchestrator (~4000 lines) |
 | `integration_check.py` | 15-check deterministic post-build validator |
 | `phase_planner.py` | Splits intake into data layer + intelligence feature list |
-| `slice_planner.py` | Builds vertical slice plans + runnable slice intakes |
+| `slice_planner.py` | Builds vertical slice plans + runnable slice intakes (`--extra-repair` optional second repair pass) |
 | `planner_router.py` | Intake router: recommends slice vs phase |
 | `feature_adder.py` | Generates scoped feature intake from existing ZIP or repo |
 | `check_openai.py` | Pre-run API health check (Claude + OpenAI, TPM quota) |

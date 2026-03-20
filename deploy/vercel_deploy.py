@@ -431,8 +431,11 @@ def deploy_frontend(
     # ── Step 3: Set environment variables ──────────────────
     env_vars = parse_env_file(env_file)
 
-    # Disable CI=true so ESLint warnings don't fail the build
+    # Disable CRA's CI lint gate so Vercel builds do not fail on ESLint warnings.
     env_vars["CI"] = "false"
+    if framework == "create-react-app":
+        env_vars["DISABLE_ESLINT_PLUGIN"] = "true"
+        print("  [Vercel] CRA build guardrails enabled: CI=false, DISABLE_ESLINT_PLUGIN=true")
 
     # Merge env vars from vercel.deploy.json if present
     if isinstance(vercel_config, dict):

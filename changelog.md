@@ -1,5 +1,46 @@
 # Changelog
 
+## 2026-03-20 (session 13 — Railway/Vercel deploy hardening)
+
+### feat: Railway deploy automation now completes end-to-end domain provisioning
+- `deploy/railway_deploy.py` now links GitHub repos with Railway `serviceConnect` instead of the broken `serviceUpdate` path
+- Normalizes GitHub input from full URL to `owner/repo`
+- Defaults branch to `main` and derives project name from the GitHub repo slug when not provided
+- Reuses existing Railway project/service IDs via `--reuse` when `railway.deploy.json` is present
+- Reuses an existing Railway service domain when present; otherwise generates one automatically
+- Returns clearer result payloads: `deploy_status`, `url_pending`, and `environment_id`
+- Distinguishes successful deploys with missing URL from real failures
+
+### feat: pipeline_deploy.py now captures full run logs
+- Added tee logging so all console output is written to `deploy/pipeline-deploy-logs/`
+- Log filenames are timestamped per run
+- Every log line in the file is prefixed with date + time
+
+### feat: pipeline_deploy.py now persists Railway environment IDs
+- Saves `environment_id` back into `railway.deploy.json`
+- Uses Railway domain lookup first when resolving backend URLs for Vercel injection
+
+### fix: Vercel CRA deploys no longer fail on CI lint gate
+- `deploy/vercel_deploy.py` now injects `CI=false`
+- For `create-react-app`, also injects `DISABLE_ESLINT_PLUGIN=true`
+- Added explicit console output so the CRA lint-bypass guardrails are visible during deploy
+
+### docs: deploy runbook updated
+- `deploy/README.md` now documents:
+  - automatic Railway domain generation/reuse
+  - `pipeline_deploy.py` log file location
+  - current deploy behavior around backend URL injection into Vercel
+
+### note: upstream build artifact bug identified
+- Final phase-planner ZIPs can miss generated `business_config.json` because post-QA polish is suppressed on the runs feeding the merged ZIP
+- This was the root cause of Wynwood’s missing `business.description` crash on Railway startup
+
+
+## 2026-03-19 (session 12 — slice planner repair bound)
+### feat: slice_planner.py — bounded extra repair pass
+- Added `--extra-repair` to allow one additional AI repair pass before strict validation
+- Default remains single repair + deterministic sanitize; no infinite loops
+
 ## 2026-03-19 (session 11 — ubiquitous language extractor)
 
 ### feat: ubiquity.py — pre-planner terminology lock

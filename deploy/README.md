@@ -71,6 +71,13 @@ Runs AI config generation, pushes to GitHub, deploys backend to Railway, deploys
 python deploy/pipeline_deploy.py --repo ~/Documents/work/my_startup
 ```
 
+During the run:
+- all console output is also written to `deploy/pipeline-deploy-logs/`
+- each log file is timestamped per run
+- each log line in the file gets a date/time prefix
+- Railway now reuses an existing public domain if one already exists for the service; otherwise it generates one automatically
+- the resolved Railway backend URL is injected into the Vercel deploy as the frontend API base URL
+
 **Flags:**
 
 | Flag | Purpose |
@@ -81,6 +88,13 @@ python deploy/pipeline_deploy.py --repo ~/Documents/work/my_startup
 | `--frontend-only` | Deploy Vercel only, skip Railway |
 
 **Output:** Prints live Railway URL + Vercel URL.
+
+Example backend result:
+- `https://backend-production-xxxx.up.railway.app`
+
+Note:
+- Railway-managed public domains are generated `*.up.railway.app`
+- if you want a human-chosen hostname, add a custom domain you control after deploy
 
 ---
 
@@ -155,6 +169,14 @@ python aggregate_ai_costs.py
 
 Check that `repo_setup.py` has been run — Railway needs GitHub App access before it can pull the repo.
 
+**Railway deploy succeeds but no URL is printed**
+
+The deploy worker now treats this as a partial success, not a failure. It will:
+- reuse an existing service domain if present
+- otherwise generate a Railway-managed domain automatically
+
+If `url_pending` is still returned, check the Railway dashboard and rerun once the service domain exists.
+
 **Auth0 URLs not updating**
 
 `auth0_update_urls.py` runs automatically at the end of `pipeline_deploy.py`. If it fails, run it manually after deploy URLs are known:
@@ -172,5 +194,13 @@ python deploy/check_business_imports.py --repo ~/Documents/work/my_startup
 ```
 
 This catches relative imports in `business/frontend/pages/*.jsx` that break when files are copied into `frontend/src/business/pages/` during the Vercel build.
+
+**Vercel CRA build fails on ESLint / CI**
+
+`vercel_deploy.py` now forces:
+- `CI=false`
+- `DISABLE_ESLINT_PLUGIN=true` for `create-react-app`
+
+So CRA lint warnings should no longer fail the Vercel build.
 
 **Reference:** `deploy/lessons-from-first-deploy.md` — 17 documented deploy failures and their fixes.

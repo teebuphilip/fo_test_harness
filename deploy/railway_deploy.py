@@ -22,6 +22,7 @@ import json
 import time
 import sys
 import os
+import re
 import requests
 from pathlib import Path
 from datetime import datetime
@@ -36,6 +37,38 @@ RAILWAY_API = "https://backboard.railway.app/graphql/v2"
 
 
 DEBUG_LOG_DEFAULT = "/tmp/railway_debug.log"
+
+
+def normalize_github_repo(value: str) -> str:
+    """
+    Convert a GitHub URL or git remote into Railway's expected owner/repo format.
+    Returns the original value if it cannot be normalized safely.
+    """
+    if not value:
+        return value
+    cleaned = value.strip()
+    cleaned = cleaned.rstrip("/")
+    cleaned = re.sub(r"\.git$", "", cleaned)
+
+    if cleaned.startswith("git@github.com:"):
+        cleaned = cleaned.split("git@github.com:", 1)[1]
+    elif "github.com/" in cleaned:
+        cleaned = cleaned.split("github.com/", 1)[1]
+
+    parts = [part for part in cleaned.split("/") if part]
+    if len(parts) >= 2:
+        return f"{parts[-2]}/{parts[-1]}"
+    return value
+
+
+def default_project_name(repo_path: Path, github_repo_url: str, project_name: str = None) -> str:
+    """Prefer explicit project name, then GitHub repo slug, then local repo dir name."""
+    if project_name:
+        return project_name
+    github_repo = normalize_github_repo(github_repo_url)
+    if github_repo and "/" in github_repo:
+        return github_repo.split("/", 1)[1]
+    return repo_path.name
 
 
 class RailwayAPI:
@@ -184,7 +217,7 @@ class RailwayAPI:
         """
         source = {}
         if repo_url:
-            source["repo"] = repo_url
+            source["repo"] = normalize_github_repo(repo_url)
 
         variables = {
             "input": {
@@ -228,24 +261,39 @@ class RailwayAPI:
             raise last_err
         return False
 
-    def link_repo_to_service(self, service_id: str, repo_url: str) -> bool:
-        """Attach GitHub repo to an existing service. Best-effort across schema variants."""
+    def link_repo_to_service(self, service_id: str, repo_url: str, branch: str = "main") -> bool:
+        """Attach GitHub repo to an existing service via serviceConnect."""
+        repo = normalize_github_repo(repo_url)
+        if self.debug_log:
+            try:
+                with open(self.debug_log, "a", encoding="utf-8") as f:
+                    f.write(json.dumps({
+                        "ts": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+                        "event": "service_link_attempt",
+                        "service_id": service_id,
+                        "repo_input": repo_url,
+                        "repo_normalized": repo,
+                        "branch": branch,
+                    }, ensure_ascii=False) + "\n")
+            except Exception:
+                pass
+
         candidates = [
             (
                 """
-                mutation ServiceUpdate($id: String!, $input: ServiceUpdateInput!) {
-                    serviceUpdate(id: $id, input: $input) { id }
+                mutation ServiceConnect($id: String!, $input: ServiceConnectInput!) {
+                    serviceConnect(id: $id, input: $input) { id }
                 }
                 """,
-                {"id": service_id, "input": {"source": {"repo": repo_url}}},
+                {"id": service_id, "input": {"repo": repo, "branch": branch}},
             ),
             (
                 """
-                mutation ServiceUpdate($id: String!, $input: ServiceUpdateInput!) {
-                    serviceUpdate(id: $id, input: $input) { id }
+                mutation ServiceConnect($id: String!, $input: ServiceConnectInput!) {
+                    serviceConnect(id: $id, input: $input) { id }
                 }
                 """,
-                {"id": service_id, "input": {"repo": repo_url}},
+                {"id": service_id, "input": {"repo": repo}},
             ),
         ]
         last_err = None
@@ -423,6 +471,58 @@ class RailwayAPI:
                 return url
         return None
 
+    def list_service_domains(self, project_id: str, service_id: str, environment_id: str) -> list:
+        """
+        List domains for a service using the current Railway Public API shape.
+        Returns a flat list of domain strings.
+        """
+        q = """
+        query Domains($projectId: String!, $environmentId: String!, $serviceId: String!) {
+            domains(projectId: $projectId, environmentId: $environmentId, serviceId: $serviceId) {
+                serviceDomains {
+                    id
+                    domain
+                    suffix
+                }
+                customDomains {
+                    id
+                    domain
+                }
+            }
+        }
+        """
+        data = self._query(q, {
+            "projectId": project_id,
+            "environmentId": environment_id,
+            "serviceId": service_id,
+        })
+        domains = data.get("domains", {}) or {}
+        service_domains = [d.get("domain") for d in domains.get("serviceDomains", []) or [] if d.get("domain")]
+        custom_domains = [d.get("domain") for d in domains.get("customDomains", []) or [] if d.get("domain")]
+        return service_domains + custom_domains
+
+    def create_service_domain(self, service_id: str, environment_id: str) -> str:
+        """
+        Generate a Railway-provided public domain for a service.
+        Returns the created domain, if available.
+        """
+        q = """
+        mutation ServiceDomainCreate($input: ServiceDomainCreateInput!) {
+            serviceDomainCreate(input: $input) {
+                id
+                domain
+            }
+        }
+        """
+        data = self._query(q, {
+            "input": {
+                "serviceId": service_id,
+                "environmentId": environment_id,
+            }
+        })
+        created = data.get("serviceDomainCreate", {}) or {}
+        return created.get("domain")
+
     def get_service_domains(self, service_id: str) -> list:
         """
         Try to fetch public domains for a service via the public API.
@@ -541,6 +641,27 @@ def parse_env_file(env_path: Path) -> dict:
     return vars
 
 
+def load_railway_state(repo_path: Path) -> dict:
+    """
+    Load persisted Railway deploy state from the repo, if present.
+    Prefers railway.deploy.json and falls back to legacy railway.json.
+    """
+    candidates = [
+        repo_path / "railway.deploy.json",
+        repo_path / "railway.json",
+    ]
+    for path in candidates:
+        if path.exists():
+            try:
+                with open(path, encoding="utf-8") as f:
+                    data = json.load(f)
+                if isinstance(data, dict):
+                    return data
+            except Exception:
+                continue
+    return {}
+
+
 # ============================================================
 # MAIN DEPLOY FUNCTION
 # ============================================================
@@ -549,6 +670,7 @@ def deploy_backend(
     token: str,
     repo_path: Path,
     github_repo_url: str,
+    branch: str = "main",
     project_name: str = None,
     add_postgres: bool = True,
     env_file: Path = None,
@@ -590,8 +712,11 @@ def deploy_backend(
             name = truncated[:last_hyphen] if last_hyphen > 0 else truncated
         return name.strip("-")
 
-    project_name = _safe_project_name(project_name or repo_path.name.lower().replace("_", "-"))
+    project_name = _safe_project_name(
+        default_project_name(repo_path, github_repo_url, project_name).lower().replace("_", "-")
+    )
     env_file = env_file or (repo_path / ".env")
+    github_repo = normalize_github_repo(github_repo_url)
 
     # ── Step 1: Verify token (non-blocking) ─────────────────
     # Some Railway token types cannot access `me` but can still deploy.
@@ -710,8 +835,11 @@ def deploy_backend(
     # ── Step 5b: Link repo AFTER service creation (deferred) ─
     if defer_repo_link and not repo_linked:
         print("  [Railway] Linking GitHub repo to service...")
+        print(f"  [Railway] Link input repo: {github_repo_url}")
+        print(f"  [Railway] Link normalized repo: {github_repo}")
+        print(f"  [Railway] Link branch: {branch}")
         try:
-            if api.link_repo_to_service(service_id, github_repo_url):
+            if api.link_repo_to_service(service_id, github_repo, branch=branch):
                 repo_linked = True
                 print("  [Railway] Repo linked.")
             else:
@@ -774,13 +902,48 @@ def deploy_backend(
             pass
     print()
 
+    if new_deploy and new_deploy.get("status") == "SUCCESS" and not url:
+        env_id = (redeploy or {}).get("environment_id") if 'redeploy' in locals() else None
+        if env_id:
+            try:
+                existing_domains = api.list_service_domains(project_id, service_id, env_id)
+                if existing_domains:
+                    url = existing_domains[0]
+                    print(f"  [Railway] Reusing existing domain: {url}")
+                else:
+                    created_domain = api.create_service_domain(service_id, env_id)
+                    if created_domain:
+                        url = created_domain
+                        print(f"  [Railway] Generated service domain: {created_domain}")
+            except Exception as e:
+                print(f"  [Railway] Domain lookup/generation skipped: {e}")
+
+    if new_deploy and new_deploy.get("status") == "SUCCESS" and not url:
+        print("  [Railway] Deploy succeeded but URL is not ready yet - waiting up to 60 more seconds", end="", flush=True)
+        for _ in range(12):
+            time.sleep(5)
+            print(".", end="", flush=True)
+            try:
+                url = api.get_service_url(project_id, service_id)
+                if not url:
+                    env_id = (redeploy or {}).get("environment_id") if 'redeploy' in locals() else None
+                    domains = api.list_service_domains(project_id, service_id, env_id) if env_id else []
+                    if domains:
+                        url = domains[0]
+                if url:
+                    break
+            except Exception:
+                pass
+        print()
+
     if not new_deploy:
         print("  [Railway] WARNING: No new deployment detected after trigger.")
 
     if not url:
         # Try Public API domains first (some Railway accounts delay deployment.url)
         try:
-            domains = api.get_service_domains(service_id)
+            env_id = (redeploy or {}).get("environment_id") if 'redeploy' in locals() else None
+            domains = api.list_service_domains(project_id, service_id, env_id) if env_id else []
             if domains:
                 url = domains[0]
         except Exception:
@@ -806,16 +969,27 @@ def deploy_backend(
         except Exception:
             pass
 
-        print("  [Railway] Deploy triggered but URL not available yet.")
-        print("  [Railway] Check Railway dashboard for status.")
+    deploy_status = new_deploy.get("status") if new_deploy else None
+    success = deploy_status == "SUCCESS"
+    url_pending = success and not url
 
-    success = new_deploy is not None
+    if url_pending:
+        print("  [Railway] Deploy succeeded, but the public URL is not available yet.")
+        print(f"  [Railway] Check Railway dashboard: https://railway.app/project/{project_id}")
+    elif not success:
+        if deploy_status:
+            print(f"  [Railway] Deploy did not reach SUCCESS (latest status: {deploy_status}).")
+        else:
+            print("  [Railway] Deploy status could not be confirmed.")
 
     return {
         "success": success,
+        "deploy_status": deploy_status,
         "project_id": project_id,
         "service_id": service_id,
+        "environment_id": (redeploy or {}).get("environment_id") if 'redeploy' in locals() else None,
         "url": f"https://{url}" if url else None,
+        "url_pending": url_pending,
         "postgres_added": True,
     }
 
@@ -826,9 +1000,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Deploy backend to Railway")
     parser.add_argument("--repo", required=True, help="Path to repo (for .env)")
     parser.add_argument("--github-url", required=True, help="GitHub repo URL")
+    parser.add_argument("--branch", default="main", help="Git branch to connect (default: main)")
     parser.add_argument("--project-name", default=None, help="Railway project name")
     parser.add_argument("--env-file", default=None, help="Path to .env (optional)")
     parser.add_argument("--add-postgres", action="store_true", help="Add PostgreSQL plugin")
+    parser.add_argument("--reuse", action="store_true", help="Reuse project/service IDs from railway.deploy.json or railway.json")
     parser.add_argument("--debug", action="store_true", help="Log Railway GraphQL to /tmp/railway_debug.log")
     args = parser.parse_args()
 
@@ -839,15 +1015,23 @@ if __name__ == "__main__":
 
     repo_path = Path(args.repo).resolve()
     env_file = Path(args.env_file).resolve() if args.env_file else None
+    railway_config = load_railway_state(repo_path) if args.reuse else None
+    if args.reuse:
+        if railway_config.get("project_id") and railway_config.get("service_id"):
+            print(f"  [Railway] Reusing state from repo config: project={railway_config['project_id']} service={railway_config['service_id']}")
+        else:
+            print("  [Railway] --reuse requested but no project/service IDs found in railway.deploy.json or railway.json")
+            railway_config = None
 
     result = deploy_backend(
         token=token,
         repo_path=repo_path,
         github_repo_url=args.github_url,
+        branch=args.branch,
         project_name=args.project_name,
         add_postgres=args.add_postgres,
         env_file=env_file,
-        railway_config=None,
+        railway_config=railway_config,
         debug=args.debug,
     )
     print(json.dumps(result, indent=2))

@@ -1,5 +1,17 @@
 # Learnings From AF to FO
 
+## Latest Learnings (2026-03-20 session 13 — deploy pipeline hardening)
+
+- Railway GitHub repo linking should use the dedicated `serviceConnect` path, not a generic service update mutation. Once that was corrected and the repo input was normalized to `owner/repo`, automated backend deploys started working reliably again.
+
+- A successful Railway deploy and a discoverable public URL are separate states. The deploy worker needs to report those separately, otherwise a healthy backend looks like a failed deploy just because the URL or domain lookup lags behind.
+
+- Domain generation should be part of the backend deploy worker. Reusing an existing Railway public domain when present, and generating one only when missing, prevents repeated manual GUI work and stops domain sprawl on repeated deploys.
+
+- `pipeline_deploy.py` needs its own persistent run logs. In a directory with many overlapping scripts, timestamped logs are the only sane way to reconstruct what happened during a long deploy and to separate Railway failures from Vercel failures from app-code failures.
+
+- CRA-on-Vercel will still fail builds on lint warnings because Vercel sets `CI=true`. For this pipeline, deploy automation should force `CI=false` and `DISABLE_ESLINT_PLUGIN=true` for CRA builds rather than relying on humans to remember why a frontend failed on lint instead of code.
+
 ## Latest Learnings (2026-03-19 session 11 — ubiquitous language)
 
 - Claude and ChatGPT drift from intake terminology during multi-iteration builds. Claude invents synonyms ("metric" instead of "KPI"), QA flags them as defects, Claude "fixes" by using yet another synonym. This burns 2-3 iterations per run on pure terminology churn.

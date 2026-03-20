@@ -1,5 +1,34 @@
 # Must Port to FO
 
+## Deploy Hardening (2026-03-20 session 13)
+
+118. fix: Railway repo linking uses `serviceConnect` + repo normalization
+- `deploy/railway_deploy.py` now links GitHub repos with Railway `serviceConnect`
+- Accepts either full GitHub URL or `owner/repo`, normalizes internally
+- Defaults branch to `main`
+- Files: `deploy/railway_deploy.py`
+✅ DONE here, ⬜ TODO for FO codebase
+
+119. feat: Railway deploy state reuse + domain reuse/generation
+- `--reuse` mode reads `railway.deploy.json` / legacy `railway.json` to reuse project/service IDs
+- Reuses existing Railway public domain when available; otherwise generates one automatically
+- Returns `environment_id`, `deploy_status`, `url_pending`
+- Files: `deploy/railway_deploy.py`, `deploy/pipeline_deploy.py`
+✅ DONE here, ⬜ TODO for FO codebase
+
+120. feat: pipeline deploy logging to timestamped files
+- `deploy/pipeline_deploy.py` now writes all stdout/stderr to `deploy/pipeline-deploy-logs/`
+- Log filenames are timestamped and every line in the file gets a date/time prefix
+- Files: `deploy/pipeline_deploy.py`
+✅ DONE here, ⬜ TODO for FO codebase
+
+121. fix: CRA Vercel deploys bypass CI lint failures
+- `deploy/vercel_deploy.py` now forces `CI=false`
+- For `create-react-app`, also sets `DISABLE_ESLINT_PLUGIN=true`
+- Prevents Vercel builds from failing on CRA ESLint CI gating
+- Files: `deploy/vercel_deploy.py`
+✅ DONE here, ⬜ TODO for FO codebase
+
 ## Ubiquitous Language Extractor (2026-03-19 session 11)
 
 116. feat: ubiquity.py — pre-planner terminology lock

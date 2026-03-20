@@ -41,6 +41,8 @@ import sys
 import argparse
 import subprocess
 import time
+import io
+import atexit
 import requests
 import os
 import shutil
@@ -72,6 +74,64 @@ RAILWAY_STATE_FILE = "railway.deploy.json"
 VERCEL_STATE_FILE = "vercel.deploy.json"
 LEGACY_RAILWAY_FILE = "railway.json"
 LEGACY_VERCEL_FILE = "vercel.json"
+PIPELINE_DEPLOY_LOG_DIR = Path(__file__).parent / "pipeline-deploy-logs"
+
+
+class TeeStream(io.TextIOBase):
+    """Mirror writes to the original terminal stream and a log file."""
+
+    def __init__(self, terminal_stream, log_stream):
+        self._terminal_stream = terminal_stream
+        self._log_stream = log_stream
+        self._line_buffer = ""
+
+    def write(self, data):
+        self._terminal_stream.write(data)
+        self._terminal_stream.flush()
+
+        self._line_buffer += data
+        while True:
+            newline_index = self._line_buffer.find("\n")
+            if newline_index == -1:
+                break
+            line = self._line_buffer[:newline_index]
+            self._line_buffer = self._line_buffer[newline_index + 1:]
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            self._log_stream.write(f"[{timestamp}] {line}\n")
+            self._log_stream.flush()
+        return len(data)
+
+    def flush(self):
+        self._terminal_stream.flush()
+        if self._line_buffer:
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            self._log_stream.write(f"[{timestamp}] {self._line_buffer}\n")
+            self._line_buffer = ""
+        self._log_stream.flush()
+
+    def isatty(self):
+        return getattr(self._terminal_stream, "isatty", lambda: False)()
+
+
+def _start_pipeline_logging():
+    PIPELINE_DEPLOY_LOG_DIR.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_path = PIPELINE_DEPLOY_LOG_DIR / f"pipeline_deploy_{timestamp}.log"
+    log_file = log_path.open("a", encoding="utf-8", buffering=1)
+    original_stdout = sys.stdout
+    original_stderr = sys.stderr
+    sys.stdout = TeeStream(original_stdout, log_file)
+    sys.stderr = TeeStream(original_stderr, log_file)
+    print(f"[pipeline] Logging to {log_path}")
+    return log_file, original_stdout, original_stderr
+
+
+def _stop_pipeline_logging(log_file, original_stdout, original_stderr):
+    sys.stdout.flush()
+    sys.stderr.flush()
+    sys.stdout = original_stdout
+    sys.stderr = original_stderr
+    log_file.close()
 
 
 def load_config() -> dict:
@@ -806,13 +866,14 @@ def get_existing_backend_url(railway_token: str, railway_cfg: dict) -> str:
         return None
     try:
         api = RailwayAPI(railway_token)
-        # Prefer public domains if available
-        try:
-            domains = api.get_service_domains(service_id)
-            if domains:
-                return domains[0] if domains[0].startswith("http") else f"https://{domains[0]}"
-        except Exception:
-            pass
+        environment_id = (railway_cfg or {}).get("environment_id") or api.get_environment_id(project_id)
+        if environment_id:
+            try:
+                domains = api.list_service_domains(project_id, service_id, environment_id)
+                if domains:
+                    return domains[0] if domains[0].startswith("http") else f"https://{domains[0]}"
+            except Exception:
+                pass
         domain = api.get_service_url(project_id, service_id)
         if not domain:
             return None
@@ -856,6 +917,8 @@ def get_production_frontend_url(vercel_cfg: dict) -> str:
 # ============================================================
 
 def main():
+    log_file, original_stdout, original_stderr = _start_pipeline_logging()
+    atexit.register(_stop_pipeline_logging, log_file, original_stdout, original_stderr)
     parser = argparse.ArgumentParser(
         description="Deploy backend to Railway + frontend to Vercel. No CLI. No GUI."
     )
@@ -1091,6 +1154,8 @@ def main():
                     "service_id": railway_result["service_id"],
                     "postgres_added": True,
                 })
+                if railway_result.get("environment_id"):
+                    railway_cfg["environment_id"] = railway_result["environment_id"]
                 write_config_back(repo_path, RAILWAY_STATE_FILE, railway_cfg)
 
         except Exception as e:
