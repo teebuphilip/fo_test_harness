@@ -48,6 +48,13 @@
 
 set -euo pipefail
 
+# ── Logging: tee all output to screen + riaf-logs/ ───────────────────────────
+RIAF_LOG_DIR="riaf-logs"
+mkdir -p "$RIAF_LOG_DIR"
+RIAF_LOG_FILE="${RIAF_LOG_DIR}/riaf_$(date +%Y%m%d_%H%M%S).log"
+exec > >(tee -a "$RIAF_LOG_FILE") 2>&1
+echo "  Log: $RIAF_LOG_FILE"
+
 # ── Defaults ──────────────────────────────────────────────────────────────────
 BUILD_GOV="$(ls FOBUILFINALLOCKED*.zip 2>/dev/null | head -1)"
 MAX_ITER=20
@@ -713,6 +720,15 @@ echo ""
 for Z in "${ALL_ZIPS[@]}"; do
   unzip -q -o "$Z" -d "$MERGE_TMP"
 done
+
+# Generate startup-specific business_config.json from actual built artifacts
+echo ""
+echo "▶ Generating business_config.json from built artifacts..."
+echo "────────────────────────────────────────────────────────"
+python generate_business_config.py --dir "$MERGE_TMP" --intake "$INTAKE" || {
+  echo "WARNING: business_config generation failed — continuing with merge"
+}
+echo ""
 
 (cd "$MERGE_TMP" && zip -qr - .) > "$FINAL_ZIP"
 rm -rf "$MERGE_TMP"

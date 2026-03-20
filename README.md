@@ -257,6 +257,7 @@ CONSISTENCY (Gate 3) catches obvious cross-file structural bugs cheaply before t
 | `slice_planner.py` | Builds vertical slice plans + runnable slice intakes (`--extra-repair` optional second repair pass) |
 | `planner_router.py` | Intake router: recommends slice vs phase |
 | `feature_adder.py` | Generates scoped feature intake from existing ZIP or repo |
+| `generate_business_config.py` | Post-merge config generator — scans built pages, writes `business_config.json` |
 | `check_openai.py` | Pre-run API health check (Claude + OpenAI, TPM quota) |
 | `check_boilerplate_fit.py` | Checks if intake suits the boilerplate (YES/NO + file list) |
 | `aggregate_ai_costs.py` | Merges all cost CSVs into `ai_costs_aggregated.csv` |

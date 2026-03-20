@@ -1,5 +1,41 @@
 # Changelog
 
+## 2026-03-20 (session 14 — business_config.json + pipeline logging)
+
+### feat: generate_business_config.py — standalone post-merge config generator
+- New script that inspects actual built artifacts (`business/frontend/pages/*.jsx`) to discover pages
+- Converts PascalCase → kebab-case (same logic as boilerplate `loader.js`)
+- Populates `dashboard.nav_items` and `footer.columns["Product"]` from real built pages
+- Fills business metadata, branding, pricing, Stripe/Auth0/Mailerlite placeholders from intake
+- Writes to all config locations: `business/*/config/`, `frontend/src/config/`, `backend/config/`
+- Supports `--dir` (flat/merged dir), `--zip` (extract → generate → re-pack), and `--dry-run`
+- No AI cost — pure file inspection + JSON generation
+
+### fix: business_config.json missing from final ZIP (TODO #12)
+**Root cause:** `fo_test_harness.py:_generate_business_config()` only ran inside `_post_qa_polish()`,
+which is skipped with `--no-polish`. All Phase 1, intermediate feature, and integration fix pass
+builds use `--no-polish` → final merged ZIP never got a startup-specific config. The deployed app
+read the boilerplate InboxTamer config → wrong business name, missing nav items, blank screen.
+
+**Additional problem:** The harness config generator derived nav/footer from intake feature names,
+not from actual built `.jsx` pages. Dashboard links pointed to generic `/dashboard` instead of
+real routes like `/dashboard/horse-profiles`.
+
+**Fix:** New standalone `generate_business_config.py` runs after final ZIP merge in
+`run_integration_and_feature_build.sh`, inspecting the merged artifact tree. Wired into the
+merge step between unzip and zip commands. Non-blocking (warns on failure, continues merge).
+
+Files: `generate_business_config.py`, `run_integration_and_feature_build.sh`
+
+### feat: riaf-logs pipeline logging
+- `run_integration_and_feature_build.sh` now tees all stdout+stderr to `riaf-logs/`
+- Log files are timestamped: `riaf-logs/riaf_YYYYMMDD_HHMMSS.log`
+- Uses `exec > >(tee -a ...)` so all pipeline output (harness, integration check, merge) is captured
+
+Files: `run_integration_and_feature_build.sh`
+
+---
+
 ## 2026-03-20 (session 13 — Railway/Vercel deploy hardening)
 
 ### feat: Railway deploy automation now completes end-to-end domain provisioning

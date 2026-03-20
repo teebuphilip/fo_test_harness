@@ -1,5 +1,17 @@
 # Learnings From AF to FO
 
+## Latest Learnings (2026-03-20 session 14 — business_config + pipeline logging)
+
+- `business_config.json` must be generated AFTER the final merge, not during individual harness runs. Individual runs use `--no-polish` which skips config generation, and even when polish runs, the harness only sees its own feature's pages — not the full set across all entities/features. Only the merged artifact tree has the complete picture.
+
+- The harness-internal `_generate_business_config()` derived nav items and footer links from intake feature names, not from actual built `.jsx` pages. This produced generic `/dashboard` links instead of real routes like `/dashboard/horse-profiles`. Config generation must inspect the artifact tree to be accurate.
+
+- The boilerplate reads `business_config.json` from `frontend/src/config/` (imported by `useConfig.js`), not from `business/frontend/config/` (the harness convention). Config must be written to both paths — the harness path for builds and the deployed path for the running app. Missing either causes blank screens (frontend) or startup crashes (backend).
+
+- Pipeline scripts that orchestrate multi-step builds need persistent logs. When a build fails at step 7 of 12, the terminal scrollback is already gone. Timestamped log files in a dedicated directory (`riaf-logs/`) make post-mortem trivial.
+
+---
+
 ## Latest Learnings (2026-03-20 session 13 — deploy pipeline hardening)
 
 - Railway GitHub repo linking should use the dedicated `serviceConnect` path, not a generic service update mutation. Once that was corrected and the repo input was normalized to `owner/repo`, automated backend deploys started working reliably again.

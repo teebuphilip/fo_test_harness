@@ -82,11 +82,7 @@
 
 - ✅ FIXED 2026-03-18: run_integration_and_feature_build.sh: Phase 1 ZIP auto-detect scoped to `${INTAKE_STEM}_p1_BLOCK_B_*.zip`
 - ✅ FIXED 2026-03-18: run_integration_and_feature_build.sh: Integration fix pass fallback scoped to run dir prefix (strips timestamp)
-- run_integration_and_feature_build.sh: final merged ZIP can miss startup-specific `business_config.json` because the phase/feature pipeline suppresses post-QA polish on the runs that feed the final merge.
-  - Evidence: `fo_test_harness.py` generates `business/backend/config/business_config.json` and `business/frontend/config/business_config.json` during post-QA polish, but the Wynwood final ZIP `fo_harness_runs/wynwood_thoroughbreds_BLOCK_B_full_20260318_103929.zip` contains neither file.
-  - Current failure mode: final ZIP keeps boilerplate `saas-boilerplate/.../business_config.json` (`InboxTamer`) while runtime app reads `backend/config/business_config.json`, causing deploy-time mismatch and startup crashes.
-  - Likely cause: Phase 1/entity runs use `--no-polish`, intermediate features use `--no-polish`, and integration fix passes also resume with `--no-polish`, so the final accepted artifact path never carries forward the generated config files.
-  - Required fix: ensure the last artifact that feeds final ZIP assembly runs polish, or explicitly generate/copy startup-specific `business_config.json` into the final merged deliverable.
+- ✅ FIXED 2026-03-20: run_integration_and_feature_build.sh: `business_config.json` now generated post-merge by standalone `generate_business_config.py` (inspects actual built pages, writes to all config paths)
 - run_integration_and_feature_build.sh: Feature ZIP lookup uses broad `startup_idea_id` slug pattern;
   if IDs are reused across runs, wrong ZIP can be selected. Consider scoping to current intake/run.
 

@@ -1,5 +1,26 @@
 # Must Port to FO
 
+## Business Config + Pipeline Logging (2026-03-20 session 14)
+
+122. feat: generate_business_config.py — standalone post-merge config generator
+- Inspects actual built `.jsx` pages, converts PascalCase → kebab-case routes
+- Populates `dashboard.nav_items` and footer product links from real artifacts
+- Writes to all config paths: `business/*/config/`, `frontend/src/config/`, `backend/config/`
+- No AI cost — pure file inspection + JSON generation
+- Files: `generate_business_config.py`
+✅ DONE here, ⬜ TODO for FO codebase
+
+123. fix: business_config.json missing from final ZIP (wired into pipeline)
+- `run_integration_and_feature_build.sh` now calls `generate_business_config.py` after merge, before zip
+- Non-blocking: warns on failure, continues merge
+- Files: `run_integration_and_feature_build.sh`
+✅ DONE here, ⬜ TODO for FO codebase
+
+124. feat: riaf-logs pipeline logging
+- `run_integration_and_feature_build.sh` now tees all output to `riaf-logs/riaf_YYYYMMDD_HHMMSS.log`
+- Files: `run_integration_and_feature_build.sh`
+✅ DONE here, ⬜ TODO for FO codebase
+
 ## Deploy Hardening (2026-03-20 session 13)
 
 118. fix: Railway repo linking uses `serviceConnect` + repo normalization
