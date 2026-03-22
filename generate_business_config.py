@@ -241,8 +241,8 @@ def generate_config(intake_path: str, root_dir: str) -> dict:
             "hero": {
                 "headline": startup_name,
                 "subheadline": tagline,
-                "cta_primary": {"label": "Get Started", "href": "/signup"},
-                "cta_secondary": {"label": "Learn More", "href": "#features"},
+                "cta_primary": "Get Started",
+                "cta_secondary": "Learn More",
             },
             "features_heading": "Everything you need",
             "features": home_features,

@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-03-22 (session 15 — config shape fix)
+
+### fix: cta_primary/cta_secondary crash — objects → strings
+`generate_business_config.py` generated `home.hero.cta_primary` and `cta_secondary` as
+`{"label": "...", "href": "..."}` objects. Home.jsx renders these directly as JSX text
+(`{home.hero.cta_primary}`), which crashes React when it receives an object instead of a string.
+Fixed to emit plain strings: `"Get Started"`, `"Learn More"`.
+
+Re-ran on wynwood-thoroughbreds and committed fixed config.
+
+Files: `generate_business_config.py`
+
+---
+
 ## 2026-03-20 (session 14 — business_config.json + pipeline logging)
 
 ### feat: generate_business_config.py — standalone post-merge config generator

@@ -1,5 +1,11 @@
 # Learnings From AF to FO
 
+## Latest Learnings (2026-03-22 session 15 — config shape fix)
+
+- Config generators must match the exact types that boilerplate JSX pages expect. Home.jsx renders `{home.hero.cta_primary}` as raw JSX text — if the value is an object (`{label, href}`) instead of a string, React crashes with "[object Object]" or a blank screen. Every config key must be audited against the page that consumes it: JSX `{value}` = string, `{value.label}` = object.
+
+---
+
 ## Latest Learnings (2026-03-20 session 14 — business_config + pipeline logging)
 
 - `business_config.json` must be generated AFTER the final merge, not during individual harness runs. Individual runs use `--no-polish` which skips config generation, and even when polish runs, the harness only sees its own feature's pages — not the full set across all entities/features. Only the merged artifact tree has the complete picture.

@@ -1,5 +1,13 @@
 # Must Port to FO
 
+## Config Shape Fix (2026-03-22 session 15)
+
+125. fix: generate_business_config.py — cta_primary/cta_secondary must be strings not objects
+- Home.jsx renders `{home.hero.cta_primary}` as JSX text — objects crash React
+- Changed from `{"label": "...", "href": "..."}` to plain `"Get Started"` / `"Learn More"`
+- Files: `generate_business_config.py`
+- ✅ DONE here, ⬜ TODO for FO
+
 ## Business Config + Pipeline Logging (2026-03-20 session 14)
 
 122. feat: generate_business_config.py — standalone post-merge config generator
