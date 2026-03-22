@@ -162,18 +162,20 @@ def generate_config(intake_path: str, root_dir: str) -> dict:
         product_links = [{"label": "Dashboard", "url": "/dashboard"}]
 
     # ── Build home features from intake + actual pages ───────────────────
+    # Boilerplate FeatureCard renders {icon} as raw text — use emoji, not icon names
+    FEATURE_ICONS = ["⭐", "🚀", "📊", "🔒", "💡", "🎯", "📈", "⚡"]
     home_features = []
     # Use must_haves if available, else fall back to page names
     feature_sources = must_haves[:6] if must_haves else [pascal_to_label(p) for p in pages[:6]]
-    for feat in feature_sources:
+    for i, feat in enumerate(feature_sources):
         label = feat[:50] if isinstance(feat, str) else feat.get("label", "Feature")
         home_features.append({
-            "icon": "star",
+            "icon": FEATURE_ICONS[i % len(FEATURE_ICONS)],
             "title": label,
             "description": "",
         })
     if not home_features:
-        home_features = [{"icon": "star", "title": "Core features", "description": ""}]
+        home_features = [{"icon": "⭐", "title": "Core features", "description": ""}]
 
     # ── Assemble config ──────────────────────────────────────────────────
     config = {
