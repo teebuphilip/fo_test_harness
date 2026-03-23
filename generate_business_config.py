@@ -39,6 +39,80 @@ def pascal_to_label(name: str) -> str:
     return re.sub(r'([A-Z])', r' \1', name).strip()
 
 
+# ── Keyword → icon name mapping (matches FeatureCard ICON_MAP in boilerplate) ─
+# Keys are lowercase substrings matched against feature/page names.
+# Values are icon keys that FeatureCard maps to Lucide components.
+KEYWORD_ICON_MAP = [
+    # People / users
+    ('member', 'users'), ('user', 'users'), ('team', 'users'), ('client', 'users'),
+    ('customer', 'users'), ('employee', 'users'), ('staff', 'users'), ('workforce', 'users'),
+    # Communication
+    ('email', 'mail'), ('mail', 'mail'), ('message', 'message'), ('chat', 'message'),
+    ('contact', 'phone'), ('notification', 'bell'), ('alert', 'bell'), ('inbox', 'mail'),
+    # Content
+    ('content', 'file'), ('page', 'file'), ('article', 'file'), ('blog', 'file'),
+    ('document', 'file'), ('report', 'clipboard'), ('summary', 'clipboard'),
+    # Education
+    ('education', 'lightbulb'), ('learn', 'lightbulb'), ('course', 'lightbulb'),
+    ('training', 'lightbulb'), ('tutorial', 'lightbulb'),
+    # Data / analytics
+    ('analytics', 'chart'), ('dashboard', 'grid'), ('metric', 'trending'),
+    ('kpi', 'trending'), ('score', 'trending'), ('data', 'database'),
+    ('statistic', 'chart'), ('insight', 'chart'), ('intelligence', 'brain'),
+    # Finance / billing
+    ('billing', 'credit_card'), ('payment', 'credit_card'), ('invoice', 'credit_card'),
+    ('subscription', 'credit_card'), ('price', 'dollar'), ('revenue', 'dollar'),
+    ('expense', 'dollar'), ('cost', 'dollar'), ('stripe', 'credit_card'),
+    # Security
+    ('auth', 'lock'), ('security', 'shield'), ('permission', 'shield'),
+    ('password', 'lock'), ('encrypt', 'lock'), ('privacy', 'shield'),
+    # Search / discovery
+    ('search', 'search'), ('filter', 'search'), ('find', 'search'), ('browse', 'search'),
+    # Calendar / scheduling
+    ('calendar', 'calendar'), ('schedule', 'calendar'), ('event', 'calendar'),
+    ('booking', 'calendar'), ('appointment', 'calendar'), ('maintenance', 'wrench'),
+    # Location
+    ('map', 'map'), ('location', 'map'), ('address', 'map'), ('property', 'home'),
+    # Media
+    ('image', 'image'), ('photo', 'camera'), ('video', 'play'), ('gallery', 'image'),
+    ('upload', 'upload'), ('download', 'download'), ('file', 'file'),
+    # Product / inventory
+    ('product', 'package'), ('inventory', 'package'), ('order', 'package'),
+    ('shipping', 'truck'), ('delivery', 'truck'),
+    # AI
+    ('ai', 'brain'), ('predict', 'brain'), ('automat', 'zap'), ('generat', 'zap'),
+    # Animals (domain-specific)
+    ('horse', 'horse'), ('profile', 'bookmark'),
+    # Settings
+    ('setting', 'settings'), ('config', 'cog'), ('integrat', 'link'),
+    # Engagement
+    ('subscriber', 'bell'), ('form', 'clipboard'),
+]
+
+# Fallback rotation when no keyword matches
+FALLBACK_ICONS = ['star', 'rocket', 'chart', 'lock', 'lightbulb', 'target', 'trending', 'zap']
+
+
+def pick_icon(name: str, used: set) -> str:
+    """Pick a contextual icon for a feature/page name. Avoids duplicates when possible."""
+    name_lower = name.lower()
+    # Try keyword match
+    for keyword, icon in KEYWORD_ICON_MAP:
+        if keyword in name_lower and icon not in used:
+            used.add(icon)
+            return icon
+    # Keyword match even if duplicate
+    for keyword, icon in KEYWORD_ICON_MAP:
+        if keyword in name_lower:
+            return icon
+    # Fallback rotation
+    for icon in FALLBACK_ICONS:
+        if icon not in used:
+            used.add(icon)
+            return icon
+    return 'star'
+
+
 # ── Page discovery ────────────────────────────────────────────────────────────
 # Pages that are part of boilerplate, not business-specific
 BOILERPLATE_PAGES = {
@@ -140,16 +214,19 @@ def generate_config(intake_path: str, root_dir: str) -> dict:
         print(f"    {r}.py → /api/{r}")
 
     # ── Build nav_items from actual pages ────────────────────────────────
+    nav_used_icons = set()
     nav_items = [
         {"label": "Dashboard", "path": "/dashboard", "icon": "grid"},
     ]
+    nav_used_icons.add("grid")
     for page_name in pages:
+        label = pascal_to_label(page_name)
         nav_items.append({
-            "label": pascal_to_label(page_name),
+            "label": label,
             "path": f"/dashboard/{pascal_to_kebab(page_name)}",
-            "icon": "file",
+            "icon": pick_icon(label, nav_used_icons),
         })
-    nav_items.append({"label": "Settings", "path": "/settings", "icon": "cog"})
+    nav_items.append({"label": "Settings", "path": "/settings", "icon": "settings"})
 
     # ── Build footer product links from actual pages ─────────────────────
     product_links = []
@@ -162,20 +239,20 @@ def generate_config(intake_path: str, root_dir: str) -> dict:
         product_links = [{"label": "Dashboard", "url": "/dashboard"}]
 
     # ── Build home features from intake + actual pages ───────────────────
-    # Boilerplate FeatureCard renders {icon} as raw text — use emoji, not icon names
-    FEATURE_ICONS = ["⭐", "🚀", "📊", "🔒", "💡", "🎯", "📈", "⚡"]
+    # Boilerplate FeatureCard maps icon string names → Lucide components
+    used_icons = set()
     home_features = []
     # Use must_haves if available, else fall back to page names
     feature_sources = must_haves[:6] if must_haves else [pascal_to_label(p) for p in pages[:6]]
-    for i, feat in enumerate(feature_sources):
+    for feat in feature_sources:
         label = feat[:50] if isinstance(feat, str) else feat.get("label", "Feature")
         home_features.append({
-            "icon": FEATURE_ICONS[i % len(FEATURE_ICONS)],
+            "icon": pick_icon(label, used_icons),
             "title": label,
             "description": "",
         })
     if not home_features:
-        home_features = [{"icon": "⭐", "title": "Core features", "description": ""}]
+        home_features = [{"icon": "star", "title": "Core features", "description": ""}]
 
     # ── Assemble config ──────────────────────────────────────────────────
     config = {
