@@ -8,9 +8,23 @@
 (`{home.hero.cta_primary}`), which crashes React when it receives an object instead of a string.
 Fixed to emit plain strings: `"Get Started"`, `"Learn More"`.
 
-Re-ran on wynwood-thoroughbreds and committed fixed config.
-
 Files: `generate_business_config.py`
+
+### feat: Lucide icon system for FeatureCard (boilerplate + generator)
+**Problem:** Boilerplate FeatureCard renders `{icon}` as raw JSX text — no icon library, no lookup.
+Config `"icon": "star"` rendered the literal word "star" on screen.
+
+**Boilerplate fix:** Added `lucide-react` dependency. FeatureCard now maps string icon names
+(e.g. `"users"`, `"mail"`, `"horse"`) → Lucide components via `ICON_MAP`. Falls back to rendering
+raw text (supports emoji for backward compat).
+
+**Generator fix:** Added keyword→icon mapping table (`KEYWORD_ICON_MAP`, ~50 keyword rules) to
+`generate_business_config.py`. `pick_icon()` matches feature/page names to contextual icons
+(e.g. "Email Subscribers" → `mail`, "Horse Profiles" → `horse`, "Members" → `users`).
+Deduplicates across features. Applied to both `home.features` and `dashboard.nav_items`.
+
+Files: `generate_business_config.py`, boilerplate `FeatureCard.jsx`, boilerplate `package.json`
+Repos: fo_test_harness, teebu-saas-platform, wynwood-thoroughbreds
 
 ---
 

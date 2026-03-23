@@ -4,6 +4,10 @@
 
 - Config generators must match the exact types that boilerplate JSX pages expect. Home.jsx renders `{home.hero.cta_primary}` as raw JSX text — if the value is an object (`{label, href}`) instead of a string, React crashes with "[object Object]" or a blank screen. Every config key must be audited against the page that consumes it: JSX `{value}` = string, `{value.label}` = object.
 
+- Boilerplate components that accept config values as props must handle the data type they actually receive. FeatureCard rendered `{icon}` as raw text with no icon library — string icon names like `"star"` appeared literally on screen. If a component is supposed to show icons, it needs either (a) an icon library + lookup map, or (b) the config must provide something that renders visually in raw text (emoji). We chose (a) with lucide-react + a string→component map, with emoji fallback for backward compat.
+
+- Config icon assignment should be contextual, not generic. A rotating fallback set (`star`, `rocket`, `chart`...) looks placeholder-ish. Keyword matching against feature/page names produces much better results (e.g. "Horse Profiles" → horse icon, "Email Subscribers" → mail icon) with zero AI cost.
+
 ---
 
 ## Latest Learnings (2026-03-20 session 14 — business_config + pipeline logging)

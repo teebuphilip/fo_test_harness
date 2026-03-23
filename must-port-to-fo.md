@@ -8,6 +8,12 @@
 - Files: `generate_business_config.py`
 - ✅ DONE here, ⬜ TODO for FO
 
+126. feat: Lucide icon system for FeatureCard + contextual icon picker
+- Boilerplate: added `lucide-react`, FeatureCard maps string icon names → Lucide components (46 icons in ICON_MAP)
+- Generator: keyword→icon mapping table (~50 rules), `pick_icon()` deduplicates, applies to home features + nav items
+- Files: boilerplate `FeatureCard.jsx` + `package.json`, harness `generate_business_config.py`
+- ✅ DONE here + boilerplate, ⬜ TODO for FO
+
 ## Business Config + Pipeline Logging (2026-03-20 session 14)
 
 122. feat: generate_business_config.py — standalone post-merge config generator
