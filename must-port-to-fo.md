@@ -64,6 +64,13 @@
 - Files: `deploy/vercel_deploy.py`
 ✅ DONE here, ⬜ TODO for FO codebase
 
+122. fix: frontend Auth0 audience wiring
+- `deploy/vercel_deploy.py` now injects `REACT_APP_AUTH0_AUDIENCE`
+- Frontend `Auth0Provider` must pass `authorizationParams.audience = process.env.REACT_APP_AUTH0_AUDIENCE`
+- Without this, SPA login can succeed while protected backend API calls fail because the frontend never requests the API audience token
+- Files: `deploy/vercel_deploy.py`, boilerplate `frontend/src/App.js`
+✅ DONE here, ⬜ TODO for FO codebase
+
 ## Ubiquitous Language Extractor (2026-03-19 session 11)
 
 116. feat: ubiquity.py — pre-planner terminology lock

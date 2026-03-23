@@ -34,6 +34,8 @@
 
 - CRA-on-Vercel will still fail builds on lint warnings because Vercel sets `CI=true`. For this pipeline, deploy automation should force `CI=false` and `DISABLE_ESLINT_PLUGIN=true` for CRA builds rather than relying on humans to remember why a frontend failed on lint instead of code.
 
+- Auth0 SPA wiring is two-part: the frontend needs domain + client ID + API audience, and the backend needs domain + audience for JWT verification. If the frontend omits the audience, login can appear to work while all authenticated API calls fail because the SPA never requested the right token.
+
 ## Latest Learnings (2026-03-19 session 11 — ubiquitous language)
 
 - Claude and ChatGPT drift from intake terminology during multi-iteration builds. Claude invents synonyms ("metric" instead of "KPI"), QA flags them as defects, Claude "fixes" by using yet another synonym. This burns 2-3 iterations per run on pure terminology churn.

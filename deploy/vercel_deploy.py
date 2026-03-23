@@ -317,7 +317,7 @@ def parse_env_file(env_path: Path) -> dict:
 def load_auth0_frontend_env(repo_path: Path) -> dict:
     """
     Load Auth0 frontend env vars from ~/Downloads/ACCESSKEYS/auth0_<app>.env.
-    Returns a dict with REACT_APP_AUTH0_DOMAIN and REACT_APP_AUTH0_CLIENT_ID if present.
+    Returns a dict with frontend Auth0 env vars if present.
     """
     app_name = repo_path.name
     keys_file = Path.home() / "Downloads" / "ACCESSKEYS" / f"auth0_{app_name}.env"
@@ -335,6 +335,8 @@ def load_auth0_frontend_env(repo_path: Path) -> dict:
         env["REACT_APP_AUTH0_DOMAIN"] = raw["AUTH0_DOMAIN"]
     if raw.get("AUTH0_CLIENT_ID"):
         env["REACT_APP_AUTH0_CLIENT_ID"] = raw["AUTH0_CLIENT_ID"]
+    if raw.get("AUTH0_AUDIENCE"):
+        env["REACT_APP_AUTH0_AUDIENCE"] = raw["AUTH0_AUDIENCE"]
     return env
 
 

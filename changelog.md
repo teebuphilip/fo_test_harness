@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-03-23 (session 16 — Railway deploy state persistence)
+
+### feat: persist Railway project/service IDs for reuse
+- `deploy/railway_deploy.py` now writes `railway.deploy.json` after creating or reusing a service
+- Includes `project_id`, `service_id`, and optional `github_repo_url` + `branch`
+- Logs the saved file path for visibility
+
+Files: `deploy/railway_deploy.py`
+
+### feat: Auth0 mgmt token load via env or optional env file
+- `deploy/pipeline_deploy.py` now reads `AUTH0_MGMT_TOKEN` (or `AUTH0_KEY`) from the environment
+- Optional `--auth0-env-file` loads env vars before Auth0 URL update
+- Keeps Auth0 URL update working without hard CLI token requirements
+
+Files: `deploy/pipeline_deploy.py`
+
 ## 2026-03-22 (session 15 — config shape fix)
 
 ### fix: cta_primary/cta_secondary crash — objects → strings
@@ -88,6 +104,12 @@ Files: `run_integration_and_feature_build.sh`
 - `deploy/vercel_deploy.py` now injects `CI=false`
 - For `create-react-app`, also injects `DISABLE_ESLINT_PLUGIN=true`
 - Added explicit console output so the CRA lint-bypass guardrails are visible during deploy
+
+### fix: Auth0 SPA audience wiring corrected across deploy + boilerplate
+- `deploy/vercel_deploy.py` now injects `REACT_APP_AUTH0_AUDIENCE` from `~/Downloads/ACCESSKEYS/auth0_<app>.env`
+- Wynwood frontend was patched to pass `authorizationParams.audience` into `Auth0Provider`
+- Shared `teebu-saas-platform` boilerplate frontend was patched the same way so future apps inherit the fix
+- Root cause: frontend was getting domain + client ID, but not the API audience required for `getAccessTokenSilently()` against the protected backend API
 
 ### docs: deploy runbook updated
 - `deploy/README.md` now documents:
