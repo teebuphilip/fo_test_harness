@@ -1,5 +1,21 @@
 # Learnings From AF to FO
 
+## Latest Learnings (2026-03-24 session 17 — convergence + QA accuracy)
+
+- **Non-converging loops have three distinct failure modes**, each requiring different detection: (1) Stagnation — same artifact hash, nothing changing, Claude is stuck; (2) Oscillation — same defect fingerprint reappearing 5+ times, fix/reflag cycle; (3) Degradation — byte count drops sharply, Claude is destroying prior work. A single "defect count not decreasing" check misses modes 1 and 3.
+
+- **QA hallucinated defects are the #1 convergence killer**, not Claude's code quality. The harness was spending 3-5 iterations fixing defects that didn't exist. Teaching QA to not generate them (contrastive examples, deflationary scoring) is higher leverage than improving the post-hoc filter, though both are needed.
+
+- **"What breaks" as a mandatory field forces QA to prove impact.** Most hallucinated defects can't answer this question concretely — they use hedge words ("could potentially", "may cause issues"). Making this a required field with harness enforcement (auto-drop on hedge phrases) eliminates speculative defects at both the prompt and filter level.
+
+- **Root cause in triage is essentially free Reflexion.** The existing ChatGPT triage call already classifies and sharpens defects. Adding `ROOT_CAUSE: <one sentence>` to the triage prompt gives Claude a causal hypothesis without an extra API call. This helps Claude fix the underlying pattern rather than patching individual symptoms, which is the main cause of oscillation.
+
+- **Dual-condition exit catches a subtle failure**: ChatGPT writes "QA STATUS: ACCEPTED" in the verdict but lists 3 HIGH defects in the body. Without the dual-exit check, the harness accepts a build that QA itself flagged as broken. This happens ~10% of runs per observation.
+
+- **Bounded reflection memory prevents tracker bloat.** The recurring_tracker was growing unbounded — defects from iteration 2 that never reappeared were still counted in iteration 15, skewing the "systemic" classification. Pruning entries not seen in 2 iterations (keeping true systemic at count >= 3) keeps the tracker focused on live problems.
+
+---
+
 ## Latest Learnings (2026-03-22 session 15 — config shape fix)
 
 - Config generators must match the exact types that boilerplate JSX pages expect. Home.jsx renders `{home.hero.cta_primary}` as raw JSX text — if the value is an object (`{label, href}`) instead of a string, React crashes with "[object Object]" or a blank screen. Every config key must be audited against the page that consumes it: JSX `{value}` = string, `{value.label}` = object.

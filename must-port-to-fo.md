@@ -1,5 +1,37 @@
 # Must Port to FO
 
+## Convergence + QA Accuracy Hardening (2026-03-24 session 17)
+
+127. feat: run_status.json — structured exit status on every harness exit path
+- `_save_run_status()` writes JSON with status/reason/iteration/timestamp
+- 11 exit paths covered
+- Files: `fo_test_harness.py`
+- ✅ DONE here, ⬜ TODO for FO
+
+128. feat: Circuit Breaker — 3 detectors (stagnation/oscillation/degradation) halt non-converging loops
+- Writes `circuit_breaker_report.json` on trigger
+- Files: `fo_test_harness.py`
+- ✅ DONE here, ⬜ TODO for FO
+
+129. feat: ROOT_CAUSE in triage — zero-cost root cause hypothesis via existing ChatGPT call
+- Triage prompt + parser + injection into sharpened report
+- Files: `fo_test_harness.py`
+- ✅ DONE here, ⬜ TODO for FO
+
+130. feat: Bounded Reflection Memory — prune stale recurring_tracker entries (recency window = 2)
+- Files: `fo_test_harness.py`
+- ✅ DONE here, ⬜ TODO for FO
+
+131. feat: Dual-Condition Exit — override false ACCEPTED when structured defects remain
+- Files: `fo_test_harness.py`
+- ✅ DONE here, ⬜ TODO for FO
+
+132. feat: QA prompt hardening — Deflationary Scoring, Chain-of-Evidence, Self-Verification Gate, Contrastive Rules
+- STEP 2.5 (deflationary), STEP 2.75 (contrastive examples), Chain-of-Evidence rule, STEP 3 (self-verify)
+- Harness Check 7: auto-drop defects missing backtick evidence or with hedge phrases
+- Files: `directives/prompts/qa_prompt.md`, `fo_test_harness.py`
+- ✅ DONE here, ⬜ TODO for FO
+
 ## Config Shape Fix (2026-03-22 session 15)
 
 125. fix: generate_business_config.py — cta_primary/cta_secondary must be strings not objects

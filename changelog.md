@@ -1,5 +1,53 @@
 # Changelog
 
+## 2026-03-24 (session 17 — convergence + QA accuracy hardening)
+
+### feat: run_status.json on every exit path
+- `_save_run_status()` method writes structured JSON (status, reason, detail, iteration, timestamp) to run dir
+- Wired into all 11 exit paths: QA_ACCEPTED, NON_CONVERGING, MAX_ITERATIONS, QA_VERDICT_UNCLEAR, INTERRUPTED, QUESTIONS_DETECTED, BUILD_TRUNCATED, RESUME_FAILED (3 variants), warm-start QA_ACCEPTED
+
+### feat: Circuit Breaker (Steal 1.1)
+- Three independent detectors inside `execute_build_qa_loop()`:
+  - Stagnation: artifact manifest hash unchanged 3 consecutive iterations
+  - Oscillation: same defect fingerprint (location|classification) appears 5+ times
+  - Degradation: byte count drops below 30% of previous iteration
+- On trigger: writes `circuit_breaker_report.json`, saves run_status, prints cost summary, exits loop
+
+### feat: ROOT_CAUSE in triage (Steal 1.2a)
+- Triage prompt extended with `ROOT_CAUSE: <one sentence>` per defect
+- Parser extracts root_cause via regex, logs to console
+- Root cause block injected into sharpened report before DEFECT-1 so Claude fixes cause not symptom
+
+### feat: Bounded Reflection Memory (Steal 1.3)
+- `recurring_tracker` entries now track `last_seen` iteration
+- Stale entries (not seen in last 2 iterations, count < 3) pruned each iteration
+- True systemic defects (count >= 3) kept regardless of recency
+
+### feat: Dual-Condition Exit (Steal 1.5)
+- When QA says ACCEPTED, harness checks for residual CRITICAL/HIGH defects in structured defect list
+- If found: overrides verdict to REJECTED, falls through to fix loop
+- Fixed flow bug: quality gate + "ALL GATES PASSED" now inside inner ACCEPTED guard
+
+### feat: Deflationary Scoring (Steal 3.2) — qa_prompt.md
+- STEP 2.5: three-question gate ("What breaks? Who cares? Can I prove it?")
+- Severity calibration with explicit bias toward acceptance
+- LOW defects strongly discouraged
+
+### feat: Chain-of-Evidence (Steal 3.4) — qa_prompt.md + harness filter
+- New "What breaks" field required per defect (concrete failure, not vague concern)
+- CHAIN-OF-EVIDENCE RULE: Location + Evidence snippet + What breaks all mandatory
+- Harness Check 7: auto-drops defects with no backtick evidence or hedge phrases in "What breaks"
+
+### feat: Self-Verification Gate (Steal 3.5) — qa_prompt.md
+- STEP 3: QA re-reads own defect list before output
+- Verifies evidence is real, removes duplicates, rechecks DO NOT FLAG list, recalibrates severity
+
+### feat: Contrastive Rules (Steal 3.7) — qa_prompt.md
+- STEP 2.75: seven VALID/INVALID example pairs from real past hallucinations
+- Covers: fabricated evidence, Auth0 hallucination, Fix==Evidence, absence claims, infra columns, hedge phrases, comment stubs
+
+Files: `fo_test_harness.py`, `directives/prompts/qa_prompt.md`
+
 ## 2026-03-23 (session 16 — Railway deploy state persistence)
 
 ### feat: persist Railway project/service IDs for reuse
@@ -13,6 +61,11 @@ Files: `deploy/railway_deploy.py`
 - `deploy/pipeline_deploy.py` now reads `AUTH0_MGMT_TOKEN` (or `AUTH0_KEY`) from the environment
 - Optional `--auth0-env-file` loads env vars before Auth0 URL update
 - Keeps Auth0 URL update working without hard CLI token requirements
+
+### feat: AI startup naming + optional cheap-domain check
+- Added `agent-make/name_generator.py` to generate brandable names from intake JSON
+- Optional Porkbun API check filters available domains under a price cap
+- `agent-make/name_generator.sh` wrapper for easy CLI usage
 
 Files: `deploy/pipeline_deploy.py`
 

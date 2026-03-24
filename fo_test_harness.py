@@ -2967,6 +2967,43 @@ class FOHarness:
         with open(metadata_path, 'w') as f:
             json.dump(metadata, f, indent=2)
 
+    def _save_run_status(self, status: str, iteration: int = 0,
+                         reason: str = '', detail: str = '',
+                         accepted_at_iteration: int = None,
+                         defect_count: int = None):
+        """
+        Write run_status.json to run directory on EVERY exit path.
+
+        This is the single source of truth for how a run ended.
+        Written at: QA_ACCEPTED, NON_CONVERGING, MAX_ITERATIONS,
+        CIRCUIT_BREAKER_*, QA_VERDICT_UNCLEAR, CTRL_C, QUESTIONS_DETECTED,
+        RESUME_FAILED, ERROR.
+
+        The circuit breaker (Steal 1.1) will extend this with its own
+        status values and diagnostic fields.
+        """
+        run_status = {
+            "status": status,
+            "reason": reason,
+            "detail": detail,
+            "iteration": iteration,
+            "accepted_at_iteration": accepted_at_iteration,
+            "defect_count": defect_count,
+            "timestamp": datetime.now().isoformat(),
+            "startup_id": self.startup_id,
+            "block": self.block,
+            "max_iterations": self.max_qa_iterations,
+        }
+        # Strip None values for cleaner JSON
+        run_status = {k: v for k, v in run_status.items() if v is not None}
+
+        status_path = self.run_dir / 'run_status.json'
+        try:
+            with open(status_path, 'w') as f:
+                json.dump(run_status, f, indent=2)
+        except Exception as e:
+            print_warning(f"Failed to write run_status.json: {e}")
+
     def _resolve_qa_polish_2_directive_path(self) -> Path:
         """
         Resolve QA_POLISH_2 directive path with precedence:
@@ -4843,9 +4880,9 @@ class FOHarness:
                 print_warning(f"  [FILTER] Removed {defect_id}: {reason}")
                 continue
 
-            # --- Extract Evidence + Problem text for checks 2-4 ---
+            # --- Extract Evidence + Problem + What breaks text for checks 2-7 ---
             ev_match = re.search(
-                r'-\s*Evidence:\s*(.*?)(?=\n\s*-\s*(?:Problem|Expected|Fix|Severity):|\Z)',
+                r'-\s*Evidence:\s*(.*?)(?=\n\s*-\s*(?:What breaks|Problem|Expected|Fix|Severity):|\Z)',
                 block, re.DOTALL
             )
             evidence_text = ev_match.group(1).strip() if ev_match else ''
@@ -4855,6 +4892,34 @@ class FOHarness:
                 block, re.DOTALL
             )
             problem_text = prob_match.group(1).strip() if prob_match else ''
+
+            wb_match = re.search(
+                r'-\s*What breaks:\s*(.*?)(?=\n\s*-\s*(?:Problem|Expected|Fix|Severity):|\Z)',
+                block, re.DOTALL
+            )
+            what_breaks_text = wb_match.group(1).strip() if wb_match else ''
+
+            # --- Check 7: Chain-of-evidence enforcement (Steal 3.4) ---
+            # a) Evidence must contain at least one backtick-quoted code snippet
+            _ev_snippets = re.findall(r'`([^`]+)`', evidence_text)
+            _ev_code = [s.strip() for s in _ev_snippets if len(s.strip()) > 4]
+            if not _ev_code:
+                reason = f"Chain-of-evidence: no backtick-quoted code snippet in Evidence — defect has no proof"
+                removed.append((defect_id, block, reason))
+                print_warning(f"  [FILTER] Removed {defect_id}: {reason}")
+                continue
+
+            # b) "What breaks" must not be vague hedging
+            _HEDGE_PHRASES = ('may ', 'could ', 'might ', 'potentially ', 'may cause', 'could lead',
+                              'might result', 'could be problematic', 'may cause issues')
+            if what_breaks_text:
+                _wb_lower = what_breaks_text.lower()
+                hedge_hit = next((h for h in _HEDGE_PHRASES if h in _wb_lower), None)
+                if hedge_hit:
+                    reason = f"Chain-of-evidence: 'What breaks' uses hedge phrase '{hedge_hit}' — defect is speculative"
+                    removed.append((defect_id, block, reason))
+                    print_warning(f"  [FILTER] Removed {defect_id}: {reason}")
+                    continue
 
             # --- Check 2: Evidence must not contain banned absence phrases ---
             evidence_lower = evidence_text.lower()
@@ -5110,6 +5175,7 @@ For each defect, respond in EXACTLY this format (no extra text):
 
 TRIAGE-N:
   CLASSIFICATION: SURGICAL | SYSTEMIC | INVALID
+  ROOT_CAUSE: <one sentence — WHY this bug exists, not WHAT is wrong. Identify the underlying cause, not the symptom. Example: "Claude used Flask db.session pattern but boilerplate expects FastAPI Depends(get_db)">
   REASON: <one sentence — why this classification>
   SHARPENED_FIX: <see rules below>
 
@@ -5157,11 +5223,13 @@ End your response with: TRIAGE_COMPLETE"""
         ):
             n = int(match.group(1))
             block = match.group(2)
-            cls_match   = re.search(r'CLASSIFICATION:\s*(SURGICAL|SYSTEMIC|INVALID)', block)
+            cls_match    = re.search(r'CLASSIFICATION:\s*(SURGICAL|SYSTEMIC|INVALID)', block)
+            root_match   = re.search(r'ROOT_CAUSE:\s*(.+?)(?=\n\s*(?:REASON|SHARPENED_FIX):|\Z)', block, re.DOTALL)
             reason_match = re.search(r'REASON:\s*(.+?)(?=\n\s*SHARPENED_FIX:|\Z)', block, re.DOTALL)
             fix_match    = re.search(r'SHARPENED_FIX:\s*(.*?)(?=\n\s*TRIAGE-|\n\s*TRIAGE_COMPLETE|\Z)', block, re.DOTALL)
             triage_blocks[n] = {
                 'classification': cls_match.group(1).strip()   if cls_match   else 'SURGICAL',
+                'root_cause':     root_match.group(1).strip()  if root_match  else '',
                 'reason':         reason_match.group(1).strip() if reason_match else '',
                 'sharpened_fix':  fix_match.group(1).strip()   if fix_match   else '',
             }
@@ -5175,12 +5243,14 @@ End your response with: TRIAGE_COMPLETE"""
         any_systemic = any(c == 'SYSTEMIC' for c in classifications)
         contested    = []
 
-        # Log each decision
+        # Log each decision (including root cause for audit)
         labels = {'SURGICAL': '[SURGICAL]', 'SYSTEMIC': '[SYSTEMIC]', 'INVALID': '[INVALID ]'}
         for i, (n, t) in enumerate(sorted(triage_blocks.items())):
             loc = defects[i]['location'] if i < len(defects) else f'DEFECT-{n}'
             label = labels.get(t['classification'], '[?]')
             print_info(f"  [TRIAGE] DEFECT-{n} {label} {loc} — {t['reason'][:90]}")
+            if t.get('root_cause'):
+                print_info(f"           ROOT_CAUSE: {t['root_cause'][:120]}")
             if t['classification'] == 'INVALID':
                 contested.append({'defect': n, 'location': loc, 'reason': t['reason']})
 
@@ -5202,6 +5272,31 @@ End your response with: TRIAGE_COMPLETE"""
             if new_report != sharpened_report:
                 print_info(f"  [TRIAGE] DEFECT-{n} Fix field sharpened")
                 sharpened_report = new_report
+
+        # Inject ROOT_CAUSE analysis block into the sharpened report (Steal 1.2a — Reflexion).
+        # This gives Claude the "why" before the "what", improving fix accuracy.
+        root_cause_lines = []
+        for n, t in sorted(triage_blocks.items()):
+            if t['classification'] == 'INVALID':
+                continue
+            if t.get('root_cause'):
+                loc = defects[n - 1]['location'] if (n - 1) < len(defects) else f'DEFECT-{n}'
+                root_cause_lines.append(f"- DEFECT-{n} ({loc}): {t['root_cause']}")
+
+        if root_cause_lines:
+            root_cause_block = (
+                "\n## ROOT CAUSE ANALYSIS (from triage — fix the cause, not just the symptom)\n"
+                + '\n'.join(root_cause_lines)
+                + "\n\nFix the root cause FIRST. Individual defects should resolve as a consequence.\n\n"
+            )
+            # Prepend root cause block before the first DEFECT-
+            defect_start = re.search(r'DEFECT-1:', sharpened_report)
+            if defect_start:
+                sharpened_report = (
+                    sharpened_report[:defect_start.start()]
+                    + root_cause_block
+                    + sharpened_report[defect_start.start():]
+                )
 
         strategy = 'systemic' if any_systemic else 'surgical'
         systemic_count = sum(1 for c in classifications if c == 'SYSTEMIC')
@@ -6550,6 +6645,76 @@ End with: SHARPEN_COMPLETE"""
         defect_history = []  # Track defect count per iteration
         convergence_check_after = 10  # Check convergence after this many iterations
 
+        # ── Circuit Breaker (Steal 1.1) ──────────────────────────
+        # Three independent detectors; any one triggers a halt.
+        # Detector A: No file changes for N consecutive iterations (stagnation)
+        # Detector B: Same defect fingerprint appears N consecutive times (oscillation)
+        # Detector C: Total artifact bytes drop below threshold (degradation)
+        CB_NO_CHANGE_THRESHOLD   = 3   # halt after 3 iterations with identical artifacts
+        CB_SAME_DEFECT_THRESHOLD = 5   # halt after same defect fingerprint 5 times
+        CB_DEGRADATION_RATIO     = 0.3 # halt if output drops below 30% of previous
+
+        _cb_prev_manifest_hash  = None   # hash of sorted (file, checksum) pairs
+        _cb_no_change_count     = 0
+        _cb_defect_fingerprints = {}     # fingerprint_str → consecutive_count
+        _cb_prev_byte_count     = 0
+
+        def _cb_check(current_manifest: dict, current_defects: list, current_byte_count: int,
+                       iter_num: int) -> tuple:
+            """
+            Run circuit breaker detectors. Returns (tripped: bool, status: str, detail: str).
+            Must be called AFTER artifacts are extracted and defects are parsed each iteration.
+            Updates nonlocal circuit breaker state.
+            """
+            nonlocal _cb_prev_manifest_hash, _cb_no_change_count
+            nonlocal _cb_defect_fingerprints, _cb_prev_byte_count
+
+            # ── Detector A: Stagnation (no file changes) ──
+            manifest_hash = hash(tuple(sorted(current_manifest.items()))) if current_manifest else 0
+            if _cb_prev_manifest_hash is not None and manifest_hash == _cb_prev_manifest_hash:
+                _cb_no_change_count += 1
+            else:
+                _cb_no_change_count = 0
+            _cb_prev_manifest_hash = manifest_hash
+
+            if _cb_no_change_count >= CB_NO_CHANGE_THRESHOLD:
+                return (True, 'CIRCUIT_BREAKER_STAGNATION',
+                        f'No file changes for {_cb_no_change_count} consecutive iterations')
+
+            # ── Detector B: Oscillation (same defect repeating) ──
+            current_fps = set()
+            for d in current_defects:
+                # Fingerprint = location + classification (matches recurring_tracker key)
+                fp = f"{d.get('location', '')}|{d.get('classification', '')}"
+                current_fps.add(fp)
+
+            # Increment count for fingerprints present this iteration
+            for fp in current_fps:
+                _cb_defect_fingerprints[fp] = _cb_defect_fingerprints.get(fp, 0) + 1
+
+            # Reset count for fingerprints NOT present this iteration
+            for fp in list(_cb_defect_fingerprints):
+                if fp not in current_fps:
+                    _cb_defect_fingerprints[fp] = 0
+
+            stuck = {fp: c for fp, c in _cb_defect_fingerprints.items() if c >= CB_SAME_DEFECT_THRESHOLD}
+            if stuck:
+                detail_lines = [f'  {fp} ({c}x)' for fp, c in stuck.items()]
+                return (True, 'CIRCUIT_BREAKER_OSCILLATION',
+                        f'{len(stuck)} defect(s) unfixable after {CB_SAME_DEFECT_THRESHOLD} attempts:\n' +
+                        '\n'.join(detail_lines))
+
+            # ── Detector C: Degradation (output size collapsed) ──
+            if _cb_prev_byte_count > 0 and current_byte_count > 0:
+                ratio = current_byte_count / _cb_prev_byte_count
+                if ratio < CB_DEGRADATION_RATIO:
+                    return (True, 'CIRCUIT_BREAKER_DEGRADATION',
+                            f'Output collapsed to {ratio:.0%} of previous iteration '
+                            f'({current_byte_count:,} bytes vs {_cb_prev_byte_count:,} bytes)')
+            _cb_prev_byte_count = current_byte_count
+
+            return (False, '', '')
+
         # FIX #9: Track consecutive validation failures
         consecutive_validation_failures = 0
 
@@ -6711,6 +6876,8 @@ End with: SHARPEN_COMPLETE"""
             _qa_report_path = _ws_run_dir / 'qa' / f'iteration_{_ws_iteration:02d}_qa_report.txt'
             if not _qa_report_path.exists():
                 print_error(f"Warm-start (fix): QA report not found: {_qa_report_path}")
+                self._save_run_status(status='RESUME_FAILED', reason='QA report not found for warm-start fix mode',
+                                      detail=str(_qa_report_path))
                 return False, "RESUME_MISSING_QA_REPORT"
             previous_defects = _qa_report_path.read_text()
             iteration        = _ws_iteration + 1
@@ -6726,6 +6893,7 @@ End with: SHARPEN_COMPLETE"""
             if not accepted_iter:
                 print_error(f"Warm-start ({_ws_mode}): no QA-ACCEPTED iteration found in run dir. "
                             "Pass --resume-iteration N to specify manually.")
+                self._save_run_status(status='RESUME_FAILED', reason=f'No QA-ACCEPTED iteration found for warm-start {_ws_mode} mode')
                 return False, "RESUME_MISSING_ACCEPTED_ITERATION"
 
             print_success(f"Warm-start ({_ws_mode}): resuming from iteration {accepted_iter:02d}")
@@ -6789,6 +6957,9 @@ End with: SHARPEN_COMPLETE"""
                         print_info("  [POLISH] Skipped (--no-polish)")
                     else:
                         polish_success, polish_cost = self._post_qa_polish(accepted_iter, _ws_final_output, governance_section)
+                    self._save_run_status(status='QA_ACCEPTED', iteration=accepted_iter,
+                                          accepted_at_iteration=accepted_iter,
+                                          reason='All gates passed (warm-start consistency clean)')
                     self._print_cost_summary(
                         accepted_iter, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                         run_end_reason='QA_ACCEPTED'
@@ -6850,6 +7021,8 @@ End with: SHARPEN_COMPLETE"""
                     _build_path = self.artifacts.build_dir / f'iteration_{iteration:02d}_build.txt'
                     if not _build_path.exists():
                         print_error(f"Warm-start (qa): build output not found: {_build_path}")
+                        self._save_run_status(status='RESUME_FAILED', reason='Build output not found for warm-start qa mode',
+                                              detail=str(_build_path))
                         return False, "RESUME_MISSING_BUILD"
                     build_output   = _build_path.read_text()
                     still_truncated = False
@@ -7330,6 +7503,8 @@ End with: SHARPEN_COMPLETE"""
                             total_gpt_calls, total_gpt_input_tokens, total_gpt_output_tokens,
                             run_end_reason='BUILD_TRUNCATED'
                         )
+                        self._save_run_status(status='BUILD_TRUNCATED', iteration=iteration,
+                                              reason='Build output truncated after max continuations')
                         return False, "BUILD_TRUNCATED"
 
                 # Check for actual questions (CLARIFICATION_NEEDED marker)
@@ -7338,6 +7513,11 @@ End with: SHARPEN_COMPLETE"""
                     self.artifacts.save_claude_questions(iteration, build_output)
                     print_warning("Review questions in: logs/claude_questions.txt")
                     print_warning("Answer questions, update intake, and re-run")
+                    self._save_run_status(
+                        status='QUESTIONS_DETECTED',
+                        iteration=iteration,
+                        reason='Claude asked clarifying questions instead of building',
+                    )
                     self._print_cost_summary(
                         iteration, total_calls, total_cache_writes, total_cache_hits,
                         total_cache_write_tokens, total_cache_read_tokens,
@@ -7982,51 +8162,82 @@ End with: SHARPEN_COMPLETE"""
                 # ================================================
 
                 if "QA STATUS: ACCEPTED" in qa_report:
-                    _record_gate('FEATURE_QA', 'PASS', 'QA accepted', iteration)
-                    print_success(f"GATE 1 PASSED: Feature QA ACCEPTED on iteration {iteration}")
-                    _qa_accepted_at_iter = iteration
-                    gate_locks['FEATURE_QA'] = True
+                    # ── Steal 1.5: Dual-Condition Exit ──────────────────
+                    # QA said ACCEPTED, but verify no CRITICAL/HIGH defects
+                    # remain in the structured defect list. Prevents false
+                    # acceptance when ChatGPT says "looks good" but lists defects.
+                    _residual_defects = self._extract_defects_for_tracking(qa_report)
+                    _residual_high = [
+                        d for d in _residual_defects
+                        if d.get('classification', '').upper() in (
+                            'IMPLEMENTATION_BUG', 'SPEC_COMPLIANCE_ISSUE',
+                            'MISSING_FEATURE', 'CRITICAL', 'HIGH'
+                        )
+                    ]
+                    if _residual_high:
+                        # QA said ACCEPTED but listed critical defects — treat as REJECTED
+                        print_warning(
+                            f"  [DUAL-EXIT] QA said ACCEPTED but {len(_residual_high)} "
+                            f"CRITICAL/HIGH defect(s) found in report — overriding to REJECTED"
+                        )
+                        for rd in _residual_high:
+                            print_warning(f"    → {rd['location']}: {rd['classification']}")
+                        _record_gate('FEATURE_QA', 'FAIL',
+                                     f'dual-exit override: {len(_residual_high)} residual defects', iteration)
+                        # Fall through to the REJECTED branch below
+                        qa_report = qa_report.replace(
+                            'QA STATUS: ACCEPTED',
+                            f'QA STATUS: REJECTED [DUAL-EXIT: {len(_residual_high)} residual defects]'
+                        )
+                    else:
+                        _record_gate('FEATURE_QA', 'PASS', 'QA accepted (dual-exit clean)', iteration)
 
-                    # ── Acceptance gate check: QUALITY must have run in acceptance mode ──────
-                    if not _quality_ran_in_acceptance_mode:
-                        print_warning("  [ACCEPTANCE] QUALITY gate has not run in acceptance mode yet — forcing acceptance mode now")
-                        _record_gate('QUALITY', 'FORCE_RUN', 'required before acceptance', iteration)
-                        quality_issues_final, quality_usage_final = self._run_quality_gate(iteration)
-                        total_gpt_calls += 1
-                        total_gpt_input_tokens += int(quality_usage_final.get('input_tokens', 0) or 0)
-                        total_gpt_output_tokens += int(quality_usage_final.get('output_tokens', 0) or 0)
-                        if quality_issues_final:
-                            quality_issues_final = self._prioritize_and_cap_defects(quality_issues_final)
-                            print_warning(f"  [QUALITY] Forced run found {len(quality_issues_final)} issue(s) — cannot accept")
-                            _record_gate('QUALITY', 'FAIL', f'{len(quality_issues_final)} issue(s) on forced acceptance check', iteration)
-                            defect_source        = 'quality'
-                            _raw_pending_defects = quality_issues_final
-                            previous_defects     = self._format_consistency_defects_for_claude(quality_issues_final)
-                            iteration += 1
-                            if iteration > self.max_qa_iterations:
-                                self._print_cost_summary(
-                                    iteration - 1, total_calls, total_cache_writes, total_cache_hits,
-                                    total_cache_write_tokens, total_cache_read_tokens,
-                                    total_input_tokens, total_output_tokens,
-                                    total_gpt_calls, total_gpt_input_tokens, total_gpt_output_tokens,
-                                    run_end_reason='MAX_ITERATIONS'
-                                )
-                                _flush_gate_trace()
-                                return False, "MAX_ITERATIONS_EXCEEDED"
-                            continue
-                        else:
-                            print_success("  [QUALITY] Forced acceptance-mode run: PASS")
-                            _record_gate('QUALITY', 'PASS', 'forced acceptance-mode run passed', iteration)
-                            _quality_ran_in_acceptance_mode = True
+                    if "QA STATUS: ACCEPTED" in qa_report:
+                        print_success(f"GATE 1 PASSED: Feature QA ACCEPTED on iteration {iteration}")
+                        _qa_accepted_at_iter = iteration
+                        gate_locks['FEATURE_QA'] = True
 
-                    # ── All gates passed ──────────────────────────────────────────
-                    print_success("")
-                    print_success("══════════════════════════════════════════════════════════")
-                    print_success("ALL QA GATES PASSED: Compile + Static + AI Consistency + Quality + Feature QA")
-                    print_success("══════════════════════════════════════════════════════════")
-                    _loop_success = True
-                    break
+                        # ── Acceptance gate check: QUALITY must have run in acceptance mode ──────
+                        if not _quality_ran_in_acceptance_mode:
+                            print_warning("  [ACCEPTANCE] QUALITY gate has not run in acceptance mode yet — forcing acceptance mode now")
+                            _record_gate('QUALITY', 'FORCE_RUN', 'required before acceptance', iteration)
+                            quality_issues_final, quality_usage_final = self._run_quality_gate(iteration)
+                            total_gpt_calls += 1
+                            total_gpt_input_tokens += int(quality_usage_final.get('input_tokens', 0) or 0)
+                            total_gpt_output_tokens += int(quality_usage_final.get('output_tokens', 0) or 0)
+                            if quality_issues_final:
+                                quality_issues_final = self._prioritize_and_cap_defects(quality_issues_final)
+                                print_warning(f"  [QUALITY] Forced run found {len(quality_issues_final)} issue(s) — cannot accept")
+                                _record_gate('QUALITY', 'FAIL', f'{len(quality_issues_final)} issue(s) on forced acceptance check', iteration)
+                                defect_source        = 'quality'
+                                _raw_pending_defects = quality_issues_final
+                                previous_defects     = self._format_consistency_defects_for_claude(quality_issues_final)
+                                iteration += 1
+                                if iteration > self.max_qa_iterations:
+                                    self._print_cost_summary(
+                                        iteration - 1, total_calls, total_cache_writes, total_cache_hits,
+                                        total_cache_write_tokens, total_cache_read_tokens,
+                                        total_input_tokens, total_output_tokens,
+                                        total_gpt_calls, total_gpt_input_tokens, total_gpt_output_tokens,
+                                        run_end_reason='MAX_ITERATIONS'
+                                    )
+                                    _flush_gate_trace()
+                                    return False, "MAX_ITERATIONS_EXCEEDED"
+                                continue
+                            else:
+                                print_success("  [QUALITY] Forced acceptance-mode run: PASS")
+                                _record_gate('QUALITY', 'PASS', 'forced acceptance-mode run passed', iteration)
+                                _quality_ran_in_acceptance_mode = True
 
+                        # ── All gates passed ──────────────────────────────────────────
+                        print_success("")
+                        print_success("══════════════════════════════════════════════════════════")
+                        print_success("ALL QA GATES PASSED: Compile + Static + AI Consistency + Quality + Feature QA")
+                        print_success("══════════════════════════════════════════════════════════")
+                        _loop_success = True
+                        break
+
+                    # Dual-exit overrode ACCEPTED → treat as REJECTED, fall through
                 elif "QA STATUS: REJECTED" in qa_report:
                     _record_gate('FEATURE_QA', 'FAIL', 'QA rejected', iteration)
                     # Feature QA rejected — reset defect source to 'qa' and repair
@@ -8046,6 +8257,61 @@ End with: SHARPEN_COMPLETE"""
 
                     # Track defect count for convergence detection
                     defect_history.append(current_defect_count)
+
+                    # ── Circuit Breaker check (Steal 1.1) ──
+                    # Run after defects are known and artifacts are extracted.
+                    # Uses the artifact manifest from this iteration + parsed defects.
+                    _cb_cur_manifest = _load_iteration_manifest(iteration)
+                    _cb_cur_bytes = sum(
+                        len((self.artifacts.build_dir / f'iteration_{iteration:02d}_artifacts' / p).read_bytes())
+                        for p in _cb_cur_manifest
+                        if (self.artifacts.build_dir / f'iteration_{iteration:02d}_artifacts' / p).exists()
+                    ) if _cb_cur_manifest else 0
+                    _cb_cur_defects = self._extract_defects_for_tracking(qa_report)
+
+                    _cb_tripped, _cb_status, _cb_detail = _cb_check(
+                        _cb_cur_manifest, _cb_cur_defects, _cb_cur_bytes, iteration
+                    )
+                    if _cb_tripped:
+                        print_error(f"CIRCUIT BREAKER OPEN: {_cb_status}")
+                        print_error(f"  {_cb_detail}")
+
+                        # Write detailed report for post-mortem
+                        cb_report = {
+                            'status': _cb_status,
+                            'detail': _cb_detail,
+                            'iteration': iteration,
+                            'defect_history': defect_history,
+                            'defect_fingerprints': {
+                                fp: count for fp, count in _cb_defect_fingerprints.items() if count > 0
+                            },
+                            'artifact_byte_count': _cb_cur_bytes,
+                            'timestamp': datetime.now().isoformat(),
+                        }
+                        try:
+                            cb_report_path = self.run_dir / 'circuit_breaker_report.json'
+                            with open(cb_report_path, 'w') as f:
+                                json.dump(cb_report, f, indent=2)
+                            print_info(f"  → Circuit breaker report: {cb_report_path}")
+                        except Exception:
+                            pass
+
+                        self._save_run_status(
+                            status=_cb_status,
+                            iteration=iteration,
+                            reason=_cb_detail,
+                            defect_count=current_defect_count,
+                        )
+                        self._print_cost_summary(
+                            iteration, total_calls, total_cache_writes, total_cache_hits,
+                            total_cache_write_tokens, total_cache_read_tokens,
+                            total_input_tokens, total_output_tokens,
+                            total_gpt_calls, total_gpt_input_tokens, total_gpt_output_tokens,
+                            run_end_reason=_cb_status
+                        )
+                        _run_final_consistency_if_needed(iteration, governance_section if 'governance_section' in locals() else '')
+                        _flush_gate_trace()
+                        return False, _cb_status
 
                     # Check for convergence after several iterations.
                     # Use len(defect_history) — not the absolute iteration number — so that
@@ -8072,6 +8338,13 @@ End with: SHARPEN_COMPLETE"""
                                 print_warning("Recommendation: Review intake for ambiguity or adjust QA strictness")
 
                                 # Still print cost summary
+                                self._save_run_status(
+                                    status='NON_CONVERGING',
+                                    iteration=iteration,
+                                    reason='Defect count not decreasing',
+                                    detail=f'Early avg: {avg_early:.1f}, Recent avg: {avg_recent:.1f}, History: {defect_history}',
+                                    defect_count=defect_history[-1] if defect_history else None,
+                                )
                                 self._print_cost_summary(
                                     iteration, total_calls, total_cache_writes, total_cache_hits,
                                     total_cache_write_tokens, total_cache_read_tokens,
@@ -8097,10 +8370,28 @@ End with: SHARPEN_COMPLETE"""
                     for d in self._extract_defects_for_tracking(qa_report):
                         key = (d['location'], d['classification'])
                         if key not in recurring_tracker:
-                            recurring_tracker[key] = {'count': 0, 'last_problem': '', 'last_fix': ''}
+                            recurring_tracker[key] = {'count': 0, 'last_problem': '', 'last_fix': '', 'last_seen': 0}
                         recurring_tracker[key]['count'] += 1
                         recurring_tracker[key]['last_problem'] = d['problem']
                         recurring_tracker[key]['last_fix']     = d['fix']
+                        recurring_tracker[key]['last_seen']    = iteration
+
+                    # ── Steal 1.3: Bound reflection memory ──────────────
+                    # Prune defects not seen in the last 2 iterations from
+                    # recurring_tracker. Keeps prohibitions lean — old defects
+                    # that were genuinely fixed don't bloat the prompt forever.
+                    # Entries with count >= 3 are kept regardless (true systemic).
+                    _RECENCY_WINDOW = 2
+                    stale_keys = [
+                        k for k, v in recurring_tracker.items()
+                        if v.get('last_seen', 0) < iteration - _RECENCY_WINDOW
+                        and v['count'] < 3
+                    ]
+                    for k in stale_keys:
+                        del recurring_tracker[k]
+                    if stale_keys:
+                        print_info(f"  [MEMORY] Pruned {len(stale_keys)} stale defect(s) from tracker (not seen in last {_RECENCY_WINDOW} iterations)")
+
                     prohibitions_block = self._build_prohibitions_block(recurring_tracker)
                     if prohibitions_block:
                         promoted = sum(1 for v in recurring_tracker.values() if v['count'] >= 2)
@@ -8111,6 +8402,12 @@ End with: SHARPEN_COMPLETE"""
                     if iteration > self.max_qa_iterations:
                         print_error(f"Max iterations ({self.max_qa_iterations}) reached — loop failed to converge")
 
+                        self._save_run_status(
+                            status='MAX_ITERATIONS',
+                            iteration=iteration - 1,
+                            reason=f'Hit cap of {self.max_qa_iterations} iterations',
+                            defect_count=defect_history[-1] if defect_history else None,
+                        )
                         # FIX #1: Print cost summary even on failure
                         self._print_cost_summary(
                             iteration - 1, total_calls, total_cache_writes, total_cache_hits,
@@ -8129,6 +8426,11 @@ End with: SHARPEN_COMPLETE"""
                 else:
                     _record_gate('FEATURE_QA', 'ERROR', 'verdict unclear', iteration)
                     print_error("QA report format invalid — no clear ACCEPTED/REJECTED verdict")
+                    self._save_run_status(
+                        status='QA_VERDICT_UNCLEAR',
+                        iteration=iteration,
+                        reason='QA report had no clear ACCEPTED/REJECTED verdict',
+                    )
                     self._print_cost_summary(
                         iteration, total_calls, total_cache_writes, total_cache_hits,
                         total_cache_write_tokens, total_cache_read_tokens,
@@ -8160,6 +8462,12 @@ End with: SHARPEN_COMPLETE"""
                         total_cache_read_tokens += polish_cost['cache_read_tokens']
 
                 end_reason = 'QA_ACCEPTED' if _loop_success else 'MAX_ITERATIONS'
+                self._save_run_status(
+                    status=end_reason,
+                    iteration=iteration,
+                    accepted_at_iteration=_qa_accepted_at_iter,
+                    reason='All gates passed' if _loop_success else 'QA accepted but max iterations hit during static/consistency',
+                )
                 self._print_cost_summary(
                     iteration, total_calls, total_cache_writes, total_cache_hits,
                     total_cache_write_tokens, total_cache_read_tokens,
@@ -8176,6 +8484,12 @@ End with: SHARPEN_COMPLETE"""
             _record_gate('HARNESS', 'INTERRUPTED', 'Ctrl+C', iteration)
             print_error("\n\n⚠️  BUILD INTERRUPTED (Ctrl+C)")
             print_info(f"Stopped at iteration {iteration}")
+            self._save_run_status(
+                status='INTERRUPTED',
+                iteration=iteration,
+                reason='Ctrl+C',
+                defect_count=defect_history[-1] if defect_history else None,
+            )
             # Show final cost before exiting
             self._display_cumulative_cost(
                 iteration, total_calls, total_cache_writes, total_cache_hits,

@@ -233,6 +233,109 @@ BEFORE writing this defect you MUST complete this verification:
 - The bug: `user.getAccessTokenSilently()` — `getAccessTokenSilently` is NOT a method on the Auth0 `user` profile object
 - The fix: destructure `getAccessTokenSilently` from `useAuth0()` directly: `const { user, isLoading, getAccessTokenSilently } = useAuth0();`
 
+**STEP 2.5 — DEFLATIONARY SCORING (apply to every candidate defect):**
+
+Before adding ANY defect to your report, answer these three questions in your working notes:
+1. **What breaks?** Name the specific runtime failure, data loss, or user-facing error. If nothing breaks at runtime — it is NOT a defect. Cosmetic preferences, style choices, and "could be better" observations are not defects.
+2. **Who cares?** Would a user, developer deploying this, or automated test hit this bug? If the answer is "only a code reviewer being thorough" — it is NOT a defect.
+3. **Can I prove it?** Can you paste the exact wrong line AND explain what it produces vs what it should produce? If you cannot show input→wrong output — it is NOT a defect.
+
+If a candidate defect fails ANY of these three questions — **delete it, do not include it.**
+
+Severity calibration:
+- **HIGH**: crashes, data loss, auth bypass, missing core feature from intake
+- **MEDIUM**: wrong output that doesn't crash, missing non-core intake item
+- **LOW**: cosmetic, naming, minor UX — **strongly prefer NOT filing LOW defects.** Only include a LOW defect if it would confuse a user.
+
+**Bias toward acceptance**: a build that implements all intake features, runs without errors, and has correct auth/data flow is ACCEPTED even if you can imagine improvements. Your job is to catch bugs, not to optimize.
+
+---
+
+**STEP 2.75 — CONTRASTIVE EXAMPLES (study these before writing any defect):**
+
+These are real examples from past QA runs. VALID defects were confirmed bugs. INVALID defects were false positives that wasted fix iterations. Learn the difference.
+
+**Example 1 — Fabricated evidence**
+```
+INVALID defect:
+  Location: business/backend/routes/reports.py
+  Evidence: `response = generate_pdf(data)` — function is not imported
+  Problem: generate_pdf is called but never imported
+  [REASON INVALID: the line `response = generate_pdf(data)` does not appear anywhere in the build output. QA fabricated the evidence from the function name alone.]
+
+VALID version (if it were real):
+  Evidence: `from business.services.report_service import generate_report` — but generate_report calls `generate_pdf()` which is not imported in report_service.py
+  [Quote the ACTUAL line from the build output, then explain the chain.]
+```
+
+**Example 2 — Auth0 hallucination (code is already correct)**
+```
+INVALID defect:
+  Location: business/frontend/pages/Dashboard.jsx
+  Evidence: `const { user, isLoading, getAccessTokenSilently } = useAuth0()`
+  Problem: getAccessTokenSilently is called as user.getAccessTokenSilently() which is invalid
+  [REASON INVALID: the Evidence itself shows getAccessTokenSilently correctly destructured from useAuth0(). The code IS correct. QA invented a problem that contradicts its own evidence.]
+
+VALID version (if the code were actually wrong):
+  Evidence: `const token = await user.getAccessTokenSilently()`
+  Problem: getAccessTokenSilently is not a method on the Auth0 user object — it must be destructured from useAuth0() directly
+```
+
+**Example 3 — Fix describes what the code already does**
+```
+INVALID defect:
+  Location: business/backend/routes/clients.py
+  Evidence: `current_user = Depends(get_current_user)`
+  Fix: Add `Depends(get_current_user)` to the route signature
+  [REASON INVALID: the Fix tells Claude to add exactly what the Evidence shows is already there. This is a self-contradicting defect.]
+```
+
+**Example 4 — Absence claim when files exist**
+```
+INVALID defect:
+  Location: business/frontend/pages/
+  Evidence: No .jsx files are present in the build output
+  Problem: Frontend pages are missing entirely
+  [REASON INVALID: the build output contains **FILE: business/frontend/pages/Dashboard.jsx**, **FILE: business/frontend/pages/Settings.jsx**, etc. QA failed to read the build output.]
+```
+
+**Example 5 — Infrastructure columns flagged as scope creep**
+```
+INVALID defect:
+  Location: business/backend/models/task.py
+  Evidence: `status = Column(String, default="pending")`
+  Problem: "status" field is not in the intake spec — scope violation
+  [REASON INVALID: status, created_at, updated_at, and processing_status are standard infrastructure columns required on every model. They are never scope violations.]
+
+VALID scope defect:
+  Evidence: `premium_analytics = Column(Boolean, default=False)`
+  Problem: intake explicitly lists premium analytics as "Phase 2 — do not implement"
+  [Quote the intake section that excludes it.]
+```
+
+**Example 6 — Vague/hedged "What breaks"**
+```
+INVALID defect:
+  What breaks: This could potentially cause issues with data integrity
+  [REASON INVALID: "could potentially" is a guess. Name the specific error: "TypeError: X is not a function" or "returns [] instead of query results" or "user sees 500 on /api/clients".]
+
+VALID version:
+  What breaks: db.query(Client).filter(Client.tenant_id == tid) raises AttributeError because Client model has no tenant_id Column
+```
+
+**Example 7 — Comment stub flagged as broken code**
+```
+INVALID defect:
+  Location: business/backend/routes/workforce_data.py
+  Evidence: `# Workforce data endpoints — not in scope for this phase per intake requirements`
+  Problem: No endpoints are implemented in this file
+  [REASON INVALID: the file is an intentional scope-boundary stub. The comment explicitly says "not in scope." This is correct behavior, not a defect.]
+```
+
+**Rule: if your defect looks like any INVALID example above, delete it.**
+
+---
+
 **DEFECT CLASSIFICATION:**
 - IMPLEMENTATION_BUG
 - SPEC_COMPLIANCE_ISSUE
@@ -260,16 +363,38 @@ BEFORE writing this defect you MUST complete this verification:
 ### DEFECTS
 DEFECT-[ID]: [classification]
   - Location: [file/line — must be a real **FILE:** path from the build output, never "hypothetical"]
-  - Evidence: [paste the exact wrong line(s) verbatim from the build output — if you cannot paste it, delete this defect]
+  - Evidence: [paste the exact wrong line(s) verbatim from the build output — if you cannot paste it, DELETE THIS DEFECT]
+  - What breaks: [one sentence: the specific runtime error, data loss, or wrong output this causes]
   - Problem: [what's wrong]
   - Expected: [what should be]
   - Fix: [exact change required — if SCOPE-BOUNDARY or RECURRING-PATTERN: state categorically what the file must NOT contain and what it CAN contain]
   - Severity: HIGH | MEDIUM | LOW
   - Root cause type: ONE-TIME-BUG | SCOPE-BOUNDARY | RECURRING-PATTERN
 
+**CHAIN-OF-EVIDENCE RULE — defects missing any of these are INVALID and must be deleted:**
+1. **Location** must be a `**FILE: path**` that appears in your FILE INVENTORY above
+2. **Evidence** must contain a verbatim code snippet (backtick-quoted, 1+ lines) copied from the build output — not a description of what's wrong, but the actual wrong code
+3. **What breaks** must name a concrete failure (e.g. "TypeError at runtime", "returns empty list instead of results", "user sees 500 error") — not a vague concern like "may cause issues" or "could be problematic"
+
+If ANY of these three fields is missing or vague — the defect is invalid. Delete it before outputting your report.
+
 ### VERDICT
 If ACCEPTED: end with exactly: "QA STATUS: ACCEPTED - Ready for deployment"
 If REJECTED: end with exactly: "QA STATUS: REJECTED - [X] defects require fixing"
+
+---
+
+**STEP 3 — SELF-VERIFICATION GATE (do this AFTER writing all defects, BEFORE outputting your final report):**
+
+Re-read your own defect list one more time. For each defect, verify:
+
+1. **Evidence is real**: search the BUILD OUTPUT below for the exact snippet you quoted. If you cannot find it — the evidence is fabricated. Delete the defect.
+2. **What breaks is concrete**: re-read your "What breaks" field. If it says "may", "could", "might", or "potentially" — you are guessing. Delete the defect.
+3. **Not a duplicate**: if two defects flag the same root issue in different words, keep only the more specific one.
+4. **Not already handled**: check the DO NOT FLAG list and EXPLAINED resolutions above. If the defect matches — delete it.
+5. **Severity is honest**: would you mass-revert a deployment over this? If not, it is not HIGH.
+
+After this pass, update your SUMMARY counts to match the surviving defects. If zero defects survive — your verdict is ACCEPTED.
 
 ---
 
