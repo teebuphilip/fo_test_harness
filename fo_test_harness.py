@@ -6815,12 +6815,21 @@ End with: SHARPEN_COMPLETE"""
             print_info(f"  Feature tracking: {len(_feature_state)} feature(s) from phase planner")
         elif _mini_spec.get('acceptance_checks'):
             # Slice planner: single entity per slice, wrap as one feature entry
+            # Map short paths to actual artifact paths
+            def _expand_artifact_path(short: str) -> str:
+                if short.startswith('routes/'):
+                    return f"business/backend/{short}"
+                if short.startswith('pages/'):
+                    return f"business/frontend/{short}"
+                # models/, schemas/, services/ live directly under business/
+                return f"business/{short}"
+
+            _raw_allowed = _mini_spec.get('file_contract', {}).get('allowed_files', [])
             _feature_state = [{
                 'feature': _mini_spec.get('entity', 'unknown'),
                 'entity': _mini_spec.get('entity', 'unknown'),
                 'status': 'pending',
-                'allowed_files': [f"business/{f}" for f in
-                                  (_mini_spec.get('file_contract', {}).get('allowed_files', []))],
+                'allowed_files': [_expand_artifact_path(f) for f in _raw_allowed],
                 'acceptance_criteria': _mini_spec.get('acceptance_checks', []),
             }]
             print_info(f"  Feature tracking: 1 feature from slice planner ({_feature_state[0]['entity']})")

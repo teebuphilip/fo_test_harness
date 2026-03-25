@@ -559,16 +559,16 @@ def build_phase1_intake(intake: dict, assessment: dict) -> dict:
         plural = slug + 's' if not slug.endswith('s') else slug
         page_name = entity.rstrip('s') + 'Page'  # e.g. Horse → HorsePage
         allowed = [
-            f"models/{plural}.py",
-            f"schemas/{plural}.py",
-            f"services/{plural}_service.py",
-            f"routes/{plural}.py",
-            f"pages/{page_name}.jsx",
+            f"business/models/{plural}.py",
+            f"business/schemas/{plural}.py",
+            f"business/services/{plural}_service.py",
+            f"business/backend/routes/{plural}.py",
+            f"business/frontend/pages/{page_name}.jsx",
         ]
         criteria = [
-            f"SQLAlchemy model class exists in models/{plural}.py with appropriate Columns",
-            f"CRUD service in services/{plural}_service.py has create/get/list/update/delete methods",
-            f"FastAPI routes in routes/{plural}.py expose GET/POST/PUT/DELETE endpoints",
+            f"SQLAlchemy model class exists in business/models/{plural}.py with appropriate Columns",
+            f"CRUD service in business/services/{plural}_service.py has create/get/list/update/delete methods",
+            f"FastAPI routes in business/backend/routes/{plural}.py expose GET/POST/PUT/DELETE endpoints",
             f"{page_name}.jsx renders a list view and supports create/edit actions",
             f"All imports between model/schema/service/route resolve correctly",
         ]
@@ -582,7 +582,7 @@ def build_phase1_intake(intake: dict, assessment: dict) -> dict:
             'feature': feature_desc,
             'entity': entity,
             'status': 'pending',
-            'allowed_files': [f"business/{f}" for f in allowed],
+            'allowed_files': allowed,
             'acceptance_criteria': criteria,
         })
 
@@ -645,12 +645,12 @@ def build_phase2_intake(intake: dict, assessment: dict) -> dict:
         slug = re.sub(r'[^a-z0-9]+', '_', feat.lower()).strip('_')
         # Intelligence features typically need a service + route + possibly a page
         allowed = [
-            f"business/backend/services/{slug}_service.py",
+            f"business/services/{slug}_service.py",
             f"business/backend/routes/{slug}.py",
         ]
         criteria = [
-            f"Service in services/{slug}_service.py implements the core logic for: {feat}",
-            f"Route in routes/{slug}.py exposes API endpoint(s) for: {feat}",
+            f"Service in business/services/{slug}_service.py implements the core logic for: {feat}",
+            f"Route in business/backend/routes/{slug}.py exposes API endpoint(s) for: {feat}",
             f"All imports from Phase 1 models resolve correctly",
         ]
         # Add KPI-specific criteria if this feature involves scoring/KPIs
