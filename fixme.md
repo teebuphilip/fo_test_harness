@@ -301,17 +301,24 @@ If any answer reveals a problem, QA must revise its report.
 9. ✅ Contrastive rules (Steal 3.7) — 7 VALID/INVALID example pairs
 10. ✅ Grill-me pass (Steal 0.1) — done separately via Codex
 
+**🔲 IN PROGRESS — Session 17 continued (2026-03-25):**
+11. 4.1 Feature-level pass/fail state tracking (from Karpathy GAN article)
+    - phase_planner.py: emit `acceptance_criteria` + `allowed_files` per feature (slice_planner already does this)
+    - fo_test_harness.py: read feature state, map defects to features by file path, track pass/fail across iterations
+    - Fix preamble: "Features passing: [X]. Features failing: [Y with reasons]. Fix ONLY failing feature files."
+    - Pairs with existing `build_patch_first_file_lock.md` but scopes at feature level, not file level
+
 **🔲 NEXT — after validation builds:**
-11. 1.4/3.1 Targeted Re-Audit + Reference-First (collapsed — big change, validate current fixes first)
-12. 2.3 Pydantic Output Contracts (big rewrite — hold)
+12. 1.4/3.1 Targeted Re-Audit + Reference-First (collapsed — big change, validate current fixes first)
+13. 2.3 Pydantic Output Contracts (big rewrite — hold)
 
 **🔲 LATER (Week 5+):**
-13. 2.1 Pre-Build File Manifest Contract (low priority — existing reactive fixes cover it)
-14. 2.2 De-Sloppify Pass (needed for AFH production, not harness)
-15. 3.3 Non-Overlapping QA Scopes (skipped — overlap is tolerable, dedup at filter level)
-16. 1.2 Separate Reflexion call (evaluate after ROOT_CAUSE in triage proves out)
+14. 2.1 Pre-Build File Manifest Contract (low priority — existing reactive fixes cover it)
+15. 2.2 De-Sloppify Pass (needed for AFH production, not harness)
+16. 3.3 Non-Overlapping QA Scopes (skipped — overlap is tolerable, dedup at filter level)
+17. 1.2 Separate Reflexion call (evaluate after ROOT_CAUSE in triage proves out)
 
-**NOW: Run 10+ builds to validate changes before implementing anything else.**
+**AFTER 4.1: Run 10+ builds to validate all changes.**
 
 ---
 

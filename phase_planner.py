@@ -550,6 +550,42 @@ def build_phase1_intake(intake: dict, assessment: dict) -> dict:
     stripped_tasks = recursive_get_lists(p1, TASK_LIST_KEYS)
     stripped_count = len(orig_tasks) - len(stripped_tasks)
 
+    # ── Feature-level state: acceptance criteria + allowed files per entity ──
+    # Mirrors slice_planner's per-slice structure so the harness can track
+    # pass/fail per feature and scope fix prompts to failing features only.
+    feature_state = []
+    for entity in entities:
+        slug = entity.lower().rstrip('s')
+        plural = slug + 's' if not slug.endswith('s') else slug
+        page_name = entity.rstrip('s') + 'Page'  # e.g. Horse → HorsePage
+        allowed = [
+            f"models/{plural}.py",
+            f"schemas/{plural}.py",
+            f"services/{plural}_service.py",
+            f"routes/{plural}.py",
+            f"pages/{page_name}.jsx",
+        ]
+        criteria = [
+            f"SQLAlchemy model class exists in models/{plural}.py with appropriate Columns",
+            f"CRUD service in services/{plural}_service.py has create/get/list/update/delete methods",
+            f"FastAPI routes in routes/{plural}.py expose GET/POST/PUT/DELETE endpoints",
+            f"{page_name}.jsx renders a list view and supports create/edit actions",
+            f"All imports between model/schema/service/route resolve correctly",
+        ]
+        # Find the original feature description that maps to this entity
+        feature_desc = next(
+            (f for f in assessment['data_features']
+             if entity.lower() in f.lower() or slug in f.lower()),
+            entity
+        )
+        feature_state.append({
+            'feature': feature_desc,
+            'entity': entity,
+            'status': 'pending',
+            'allowed_files': [f"business/{f}" for f in allowed],
+            'acceptance_criteria': criteria,
+        })
+
     # Suffix startup_idea_id so Phase 1 and Phase 2 run dirs/ZIPs are distinct
     if 'startup_idea_id' in p1:
         p1['startup_idea_id'] = p1['startup_idea_id'].rstrip('_') + '_p1'
@@ -558,6 +594,7 @@ def build_phase1_intake(intake: dict, assessment: dict) -> dict:
         'of_phases': 2,
         'scope': 'DATA_LAYER — CRUD, entities, basic views only',
         'entities_to_build': entities,
+        'feature_state': feature_state,
         'deferred_to_phase2': deferred_items,
         'kpis_deferred': assessment['kpis'],
         'tasks_stripped': stripped_count,
@@ -602,6 +639,39 @@ def build_phase2_intake(intake: dict, assessment: dict) -> dict:
             p1_model_files.append(f'business/models/{slug.capitalize()}.py')
             p1_page_files.append(f'business/frontend/pages/{slug.capitalize()}.jsx')
 
+    # ── Feature-level state for Phase 2 intelligence features ──
+    p2_feature_state = []
+    for feat in assessment['intelligence_features']:
+        slug = re.sub(r'[^a-z0-9]+', '_', feat.lower()).strip('_')
+        # Intelligence features typically need a service + route + possibly a page
+        allowed = [
+            f"business/backend/services/{slug}_service.py",
+            f"business/backend/routes/{slug}.py",
+        ]
+        criteria = [
+            f"Service in services/{slug}_service.py implements the core logic for: {feat}",
+            f"Route in routes/{slug}.py exposes API endpoint(s) for: {feat}",
+            f"All imports from Phase 1 models resolve correctly",
+        ]
+        # Add KPI-specific criteria if this feature involves scoring/KPIs
+        feat_lower = feat.lower()
+        if any(kw in feat_lower for kw in ('kpi', 'scor', 'metric', 'analytic')):
+            criteria.append("KPI calculations produce numeric results, not stubs or placeholders")
+        if any(kw in feat_lower for kw in ('report', 'export', 'download', 'pdf')):
+            criteria.append("Export/download endpoint returns a file response, not just JSON")
+            allowed.append(f"business/frontend/pages/{slug.title().replace('_', '')}Page.jsx")
+        if any(kw in feat_lower for kw in ('dashboard', 'chart', 'visual')):
+            allowed.append(f"business/frontend/pages/{slug.title().replace('_', '')}Page.jsx")
+            criteria.append("Dashboard page renders data from API, not hardcoded values")
+
+        p2_feature_state.append({
+            'feature': feat,
+            'entity': slug,
+            'status': 'pending',
+            'allowed_files': allowed,
+            'acceptance_criteria': criteria,
+        })
+
     # Suffix startup_idea_id so Phase 1 and Phase 2 run dirs/ZIPs are distinct
     if 'startup_idea_id' in p2:
         p2['startup_idea_id'] = p2['startup_idea_id'].rstrip('_') + '_p2'
@@ -613,6 +683,7 @@ def build_phase2_intake(intake: dict, assessment: dict) -> dict:
         'phase1_do_not_regenerate': p1_route_files + p1_model_files + p1_page_files,
         'kpis_to_implement': assessment['kpis'],
         'phase2_new_features': assessment['intelligence_features'],
+        'feature_state': p2_feature_state,
         'note': (
             'Phase 1 (data layer) is already built and QA-accepted. '
             'DO NOT regenerate Phase 1 files. '

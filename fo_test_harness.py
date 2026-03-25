@@ -20,6 +20,7 @@ import sys
 import json
 import re
 import time
+import copy
 import zipfile
 import argparse
 import hashlib
@@ -6801,6 +6802,97 @@ End with: SHARPEN_COMPLETE"""
             except Exception:
                 pass
 
+        # ── Feature-level pass/fail tracking (Steal 4.1) ──────────────────
+        # Load feature state from intake if available (phase_planner or slice_planner).
+        # Sources: _phase_context.feature_state (phase planner) or _mini_spec.acceptance_checks (slice planner).
+        _feature_state = []  # list of {feature, entity, status, allowed_files, acceptance_criteria}
+
+        _phase_ctx = self.intake_data.get('_phase_context', {})
+        _mini_spec = self.intake_data.get('_mini_spec', {})
+
+        if _phase_ctx.get('feature_state'):
+            _feature_state = copy.deepcopy(_phase_ctx['feature_state'])
+            print_info(f"  Feature tracking: {len(_feature_state)} feature(s) from phase planner")
+        elif _mini_spec.get('acceptance_checks'):
+            # Slice planner: single entity per slice, wrap as one feature entry
+            _feature_state = [{
+                'feature': _mini_spec.get('entity', 'unknown'),
+                'entity': _mini_spec.get('entity', 'unknown'),
+                'status': 'pending',
+                'allowed_files': [f"business/{f}" for f in
+                                  (_mini_spec.get('file_contract', {}).get('allowed_files', []))],
+                'acceptance_criteria': _mini_spec.get('acceptance_checks', []),
+            }]
+            print_info(f"  Feature tracking: 1 feature from slice planner ({_feature_state[0]['entity']})")
+
+        def _update_feature_state(defects: list, iter_num: int):
+            """Map defects to features by file path and update pass/fail status."""
+            if not _feature_state:
+                return
+            # Collect defect file paths
+            defect_files = set()
+            for d in defects:
+                loc = d.get('location', '')
+                if loc.startswith('business/'):
+                    defect_files.add(loc)
+                # Also match partial paths (e.g. 'routes/clients.py' → 'business/backend/routes/clients.py')
+                elif '/' in loc:
+                    defect_files.add(loc)
+
+            for fs in _feature_state:
+                # Check if any allowed file for this feature has a defect
+                has_defect = False
+                for af in fs.get('allowed_files', []):
+                    if af in defect_files:
+                        has_defect = True
+                        break
+                    # Partial match: defect at 'routes/clients.py' matches 'business/backend/routes/clients.py'
+                    af_short = '/'.join(af.split('/')[-2:])  # e.g. 'routes/clients.py'
+                    if af_short in defect_files:
+                        has_defect = True
+                        break
+
+                if has_defect:
+                    fs['status'] = 'failing'
+                    fs['last_failed_iter'] = iter_num
+                elif fs['status'] == 'pending' or (fs['status'] == 'failing' and not has_defect):
+                    fs['status'] = 'passing'
+                    fs.setdefault('passed_since_iter', iter_num)
+
+        def _build_feature_preamble() -> str:
+            """Build a structured preamble showing feature pass/fail status for fix prompts."""
+            if not _feature_state:
+                return ''
+            passing = [fs for fs in _feature_state if fs['status'] == 'passing']
+            failing = [fs for fs in _feature_state if fs['status'] == 'failing']
+            pending = [fs for fs in _feature_state if fs['status'] == 'pending']
+
+            lines = [
+                "\n## FEATURE STATUS (do NOT touch passing features)",
+                f"Passing ({len(passing)}): {', '.join(fs['feature'] for fs in passing) or '(none yet)'}",
+                f"Failing ({len(failing)}): {', '.join(fs['feature'] for fs in failing) or '(none)'}",
+            ]
+            if pending:
+                lines.append(f"Pending ({len(pending)}): {', '.join(fs['feature'] for fs in pending)}")
+
+            if failing:
+                lines.append("\n**Fix ONLY these failing features:**")
+                for fs in failing:
+                    lines.append(f"- **{fs['feature']}**: files = {', '.join(fs.get('allowed_files', []))}")
+                    for ac in fs.get('acceptance_criteria', []):
+                        lines.append(f"  - [ ] {ac}")
+
+            if passing:
+                lines.append(f"\n**DO NOT modify files belonging to passing features:**")
+                pass_files = []
+                for fs in passing:
+                    pass_files.extend(fs.get('allowed_files', []))
+                if pass_files:
+                    lines.append(', '.join(pass_files))
+
+            lines.append("")
+            return '\n'.join(lines)
+
         def _run_final_consistency_if_needed(last_iter: int, governance_section: str = ''):
             """
             Final consistency pass on terminal failures (I).
@@ -8194,6 +8286,11 @@ End with: SHARPEN_COMPLETE"""
 
                     if "QA STATUS: ACCEPTED" in qa_report:
                         print_success(f"GATE 1 PASSED: Feature QA ACCEPTED on iteration {iteration}")
+                        # Mark all features as passing on acceptance
+                        for fs in _feature_state:
+                            if fs['status'] != 'passing':
+                                fs['status'] = 'passing'
+                                fs['passed_since_iter'] = iteration
                         _qa_accepted_at_iter = iteration
                         gate_locks['FEATURE_QA'] = True
 
@@ -8313,6 +8410,10 @@ End with: SHARPEN_COMPLETE"""
                         _flush_gate_trace()
                         return False, _cb_status
 
+                    # ── Feature state update (Steal 4.1) ──
+                    # Map defects to features by file path; mark features passing/failing.
+                    _update_feature_state(_cb_cur_defects, iteration)
+
                     # Check for convergence after several iterations.
                     # Use len(defect_history) — not the absolute iteration number — so that
                     # resumed runs aren't penalised for iterations from a previous process.
@@ -8365,6 +8466,13 @@ End with: SHARPEN_COMPLETE"""
                     )
 
                     previous_defects = self._enrich_defects_with_fix_context(qa_report)
+
+                    # ── Steal 4.1: Feature status preamble ──
+                    # Prepend feature pass/fail summary to defects so Claude knows
+                    # which features are working and which need fixing.
+                    _feat_preamble = _build_feature_preamble()
+                    if _feat_preamble:
+                        previous_defects = _feat_preamble + "\n" + previous_defects
 
                     # Track recurrence — promote to prohibition after 2+ appearances
                     for d in self._extract_defects_for_tracking(qa_report):
@@ -8441,6 +8549,18 @@ End with: SHARPEN_COMPLETE"""
                     _run_final_consistency_if_needed(iteration, governance_section if 'governance_section' in locals() else '')
                     _flush_gate_trace()
                     return False, "QA_VERDICT_UNCLEAR"
+
+            # ── Save feature state for post-mortem (Steal 4.1) ──
+            if _feature_state:
+                try:
+                    fs_path = self.run_dir / 'feature_state.json'
+                    with open(fs_path, 'w') as f:
+                        json.dump(_feature_state, f, indent=2)
+                    passing = sum(1 for fs in _feature_state if fs['status'] == 'passing')
+                    failing = sum(1 for fs in _feature_state if fs['status'] == 'failing')
+                    print_info(f"  Feature state saved: {passing} passing, {failing} failing → {fs_path}")
+                except Exception:
+                    pass
 
             # ── Post-loop: called only via break (all gates passed or max-iter during static/consistency) ──
             if _qa_accepted_at_iter is not None:
