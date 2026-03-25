@@ -1,5 +1,23 @@
 # Must Port to FO
 
+## Feature-Level Pass/Fail Tracking (2026-03-25 session 17 cont'd)
+
+Reference: https://www.anthropic.com/engineering/harness-design-long-running-apps?utm_source=tldrai
+Key ideas stolen: feature_list.json as state (not prose), structured preamble on every fix pass.
+
+133. feat: feature-level pass/fail state tracking in phase_planner + harness
+- phase_planner.py emits `feature_state` with acceptance_criteria + allowed_files per feature
+- fo_test_harness.py loads, tracks pass/fail across iterations, injects preamble into fix prompts
+- Saves `feature_state.json` to run dir
+- Files: `fo_test_harness.py`, `phase_planner.py`
+- ✅ DONE here, ⬜ TODO for FO
+
+134. fix: unified allowed_files paths — slice_planner now emits full `business/...` paths
+- Was short paths (`routes/foo.py`), now full (`business/backend/routes/foo.py`)
+- Matches phase_planner format, harness reads both directly
+- Files: `slice_planner.py`, `fo_test_harness.py`
+- ✅ DONE here, ⬜ TODO for FO
+
 ## Convergence + QA Accuracy Hardening (2026-03-24 session 17)
 
 127. feat: run_status.json — structured exit status on every harness exit path

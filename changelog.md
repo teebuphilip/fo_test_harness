@@ -1,5 +1,30 @@
 # Changelog
 
+## 2026-03-25 (session 17 cont'd — feature-level pass/fail tracking)
+
+### feat: feature-level pass/fail state tracking (Steal 4.1)
+Inspired by Anthropic's harness design article (https://www.anthropic.com/engineering/harness-design-long-running-apps?utm_source=tldrai):
+feature_list.json as state + structured session startup ritual → know what's passing/failing before each fix.
+
+- **phase_planner.py**: emits `feature_state` array in `_phase_context` for both Phase 1 and Phase 2 intakes.
+  Each entry has: feature name, entity, status (pending/passing/failing), allowed_files, acceptance_criteria.
+  Phase 1: per-entity CRUD criteria (model/schema/service/route/page).
+  Phase 2: per-intelligence-feature criteria (KPI/export/dashboard-specific).
+- **slice_planner.py**: already had `acceptance_criteria` + `file_contract.allowed_files` per slice.
+- **fo_test_harness.py**: loads feature state from intake (phase planner or slice planner),
+  maps defects to features by file path after each QA rejection, tracks pass/fail across iterations,
+  injects structured preamble into fix prompts: "Features passing: X. Features failing: Y. Fix ONLY failing."
+  Saves `feature_state.json` to run dir on exit. Marks all features passing on QA acceptance.
+
+### fix: unified allowed_files paths across all three files
+- slice_planner.py now emits full artifact paths (`business/backend/routes/`, `business/frontend/pages/`,
+  `business/models/`, etc.) — was previously using short paths (`routes/`, `pages/`).
+- phase_planner.py already used full paths after the initial 4.1 commit.
+- Harness no longer needs `_expand_artifact_path()` workaround — reads paths directly from both planners.
+- Build prompt injection has backward-compat guard for any remaining short paths.
+
+Files: `fo_test_harness.py`, `phase_planner.py`, `slice_planner.py`, `fixme.md`
+
 ## 2026-03-24 (session 17 — convergence + QA accuracy hardening)
 
 ### feat: run_status.json on every exit path

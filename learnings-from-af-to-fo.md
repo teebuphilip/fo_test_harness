@@ -1,5 +1,17 @@
 # Learnings From AF to FO
 
+## Latest Learnings (2026-03-25 session 17 cont'd — feature-level tracking)
+
+Reference: https://www.anthropic.com/engineering/harness-design-long-running-apps?utm_source=tldrai
+
+- **Feature state as JSON, not prose, is the right abstraction for fix scoping.** Defects keyed by file path are too granular — Claude fixes one file but breaks another in the same feature. Defects keyed by feature ("client profile management is failing") let the fix prompt scope to all files in a feature group while protecting passing features. The phase/slice planners already knew which files belong to which feature — the harness just wasn't consuming it.
+
+- **Path consistency across planners matters more than it looks.** slice_planner used short paths (`routes/foo.py`), phase_planner used full paths (`business/backend/routes/foo.py`). The harness had to translate, and any new consumer would get it wrong. Single source of truth: all planners emit full `business/...` paths, harness reads directly. The 5 minutes to unify saves hours of debugging mismatched file locks.
+
+- **Structured preamble > dumping defects.** "Features passing: 5. Failing: client_profiles (missing tenant filter). Fix ONLY failing." gives Claude a status dashboard before it sees the defect list. Without this, Claude on iteration 5 has no idea what's working — it only sees what's broken, and may "fix" things that weren't broken. The preamble is cheap (few tokens) and prevents collateral damage.
+
+---
+
 ## Latest Learnings (2026-03-24 session 17 — convergence + QA accuracy)
 
 - **Non-converging loops have three distinct failure modes**, each requiring different detection: (1) Stagnation — same artifact hash, nothing changing, Claude is stuck; (2) Oscillation — same defect fingerprint reappearing 5+ times, fix/reflag cycle; (3) Degradation — byte count drops sharply, Claude is destroying prior work. A single "defect count not decreasing" check misses modes 1 and 3.
