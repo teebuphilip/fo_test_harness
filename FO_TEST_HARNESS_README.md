@@ -68,7 +68,7 @@ export OPENAI_API_KEY='sk-your-openai-key-here'
 ## Pipeline Entry Points
 
 - Phase pipeline (factory/standard): `run_integration_and_feature_build.sh`
-- Slice pipeline (quality): `run_slicer_and_feature_build.sh`
+- Slice pipeline (quality): `run_slicer_and_feature_build.sh` (slice planner supports `--extra-repair` for one bounded repair pass)
 - Auto-router (slice vs phase): `run_auto_build.sh` (`--force slice|phase`)
 
 You only need to do this once per terminal session. If you close the terminal and reopen it, you need to set them again.

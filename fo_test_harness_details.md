@@ -86,6 +86,7 @@ The slice pipeline breaks the build into end-to-end vertical slices and chains t
 Entry points:
 - `run_slicer_and_feature_build.sh` — runs `slice_planner.py`, builds each slice intake in order, then runs integration check + ZIP merge.
 - `run_auto_build.sh` — auto-routes to slice vs phase pipeline using `planner_router.py` (`--force slice|phase` override).
+- `slice_planner.py` supports `--extra-repair` for one bounded additional repair pass before strict validation.
 
 
 ```bash

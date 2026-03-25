@@ -251,6 +251,8 @@ The split: during repair iterations the harness runs REPAIR MODE which skips QUA
 | Gate 3 | QUALITY — **SKIP** | QUALITY — always run (full 4 dimensions) |
 | Gate 4 | FEATURE_QA — run with repair rules (lockable) | FEATURE_QA — run with full rules |
 
+Note: `slice_planner.py` supports `--extra-repair` to allow one bounded additional AI repair pass before strict validation (no infinite loops).
+
 ## How to determine mode
 
 Add an `acceptance_threshold` parameter that defaults to `max_iterations - 2`. Any iteration below the threshold is REPAIR MODE. The last 2 iterations are ACCEPTANCE MODE.
