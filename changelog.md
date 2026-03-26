@@ -1,5 +1,39 @@
 # Changelog
 
+## 2026-03-26 (session 18 — post-deploy-qa fixes)
+
+### feat: SEO integration in generate_business_config.py
+- Added `load_seo(seo_path)` — loads seo.json, validates required keys (primary_keywords, content_plan,
+  site_structure), returns normalized dict with all 9 SEO fields. Missing file/invalid JSON/missing keys
+  all handled gracefully (log + empty dict, no crash).
+- Added `--seo` CLI flag (optional) — pass path to seo.json, merges into output as top-level `"seo"` key.
+- Config output now includes: `primary_keywords`, `secondary_keywords`, `long_tail_keywords`,
+  `search_intent`, `competitor_keywords`, `content_plan`, `site_structure`, `on_page_seo`, `programmatic_seo`.
+- No existing logic changed — SEO is purely additive. Omit `--seo` and output is identical to before.
+
+Files: `generate_business_config.py`
+
+### feat: test scaffolder — auto-generate Postman + Playwright tests from build artifacts
+Adapted from alirezarezvani/claude-skills playwright-pro + senior-qa patterns.
+- **generate_tests.py**: Scans `business/backend/routes/*.py` for FastAPI endpoints (method, path, auth, body schema)
+  and `business/frontend/pages/*.jsx` for React page features (forms, tables, modals, API calls).
+  Generates Newman-ready Postman collection (per-entity folders, smoke tests, response assertions)
+  + Playwright E2E suite (smoke, auth, per-entity CRUD + page tests, dashboard overview).
+  Accepts artifacts dir or ZIP + optional intake JSON. Stdlib-only, no dependencies.
+- **templates/playwright_golden_rules.md**: Playwright best practices reference (10 rules, locator priority,
+  FO-specific patterns for Auth0, API requests, dashboard navigation). From playwright-pro.
+- **README.md**: Updated with generate_tests.py usage, output structure, and pipeline integration docs.
+
+Files: `post-deploy-qa/generate_tests.py`, `post-deploy-qa/templates/playwright_golden_rules.md`, `post-deploy-qa/README.md`
+
+### fix: post-deploy-qa container bugs
+- **entrypoint.py**: Added `QA_REPORT_JSON:{json}` marker print after `write_report()` — trigger_qa.py
+  expects this marker to extract structured results from Railway logs but entrypoint.py never printed it.
+- **requirements.txt**: Created (was missing). Dockerfile line 13 `COPY requirements.txt .` would fail
+  at build time without it. Currently empty (entrypoint.py uses only stdlib), but file must exist.
+
+Files: `post-deploy-qa/entrypoint.py`, `post-deploy-qa/requirements.txt`
+
 ## 2026-03-25 (session 17 cont'd — feature-level pass/fail tracking)
 
 ### feat: feature-level pass/fail state tracking (Steal 4.1)

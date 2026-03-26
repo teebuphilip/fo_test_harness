@@ -236,6 +236,9 @@ def main():
     playwright_results = run_playwright()
     report             = write_report(newman_results, playwright_results)
 
+    # Print structured report to stdout so trigger_qa.py can extract it from Railway logs
+    print(f"QA_REPORT_JSON:{json.dumps(report)}", flush=True)
+
     # Exit non-zero if any tests failed (so Railway marks the job as failed)
     if not report["meta"]["overall_passed"]:
         log("One or more test suites FAILED.")

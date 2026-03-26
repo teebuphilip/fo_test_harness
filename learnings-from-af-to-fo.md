@@ -10,6 +10,8 @@ Reference: https://www.anthropic.com/engineering/harness-design-long-running-app
 
 - **Structured preamble > dumping defects.** "Features passing: 5. Failing: client_profiles (missing tenant filter). Fix ONLY failing." gives Claude a status dashboard before it sees the defect list. Without this, Claude on iteration 5 has no idea what's working — it only sees what's broken, and may "fix" things that weren't broken. The preamble is cheap (few tokens) and prevents collateral damage.
 
+- **Optional config augmentation should never break the existing path.** SEO integration into generate_business_config.py: `--seo` flag defaults to empty string, `load_seo('')` returns `{}` immediately, config output gets `"seo": {}` which is harmless. Every failure mode (missing file, bad JSON, missing keys) logs and returns empty dict. The pattern: load → validate → normalize → merge, with `{}` as the universal fallback.
+
 ---
 
 ## Latest Learnings (2026-03-24 session 17 — convergence + QA accuracy)

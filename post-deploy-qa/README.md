@@ -6,13 +6,65 @@ against a deployed app, then writes a combined JSON report.
 ## Files
 
 ```
-qa-container/
-  Dockerfile          # Container definition
-  entrypoint.py       # Runs Newman + Playwright, writes qa_report.json
-  clone_tests.sh      # Clones your test repo at container startup
-  trigger_qa.py       # Run from your build pipeline to trigger + poll the container
-  requirements.txt    # Python deps (requests only)
+post-deploy-qa/
+  Dockerfile              # Container definition
+  entrypoint.py           # Runs Newman + Playwright, writes qa_report.json
+  clone_tests.sh          # Clones your test repo at container startup
+  trigger_qa.py           # Run from your build pipeline to trigger + poll the container
+  requirements.txt        # Python deps for container (currently stdlib-only)
+  generate_tests.py       # Test scaffolder — generates tests from FO build artifacts
+  templates/
+    playwright_golden_rules.md  # Playwright best practices reference
 ```
+
+## Generating Tests from Build Artifacts
+
+`generate_tests.py` scans FO build artifacts and auto-generates both Postman
+collections and Playwright test suites. Run it after a successful build, before deploy.
+
+```bash
+# From artifacts directory
+python post-deploy-qa/generate_tests.py \
+  --artifacts fo_harness_runs/my_startup_BLOCK_B_*/build/iteration_19_artifacts \
+  --intake intake/intake_runs/my_startup/my_startup.json \
+  --output tests/
+
+# From a build ZIP
+python post-deploy-qa/generate_tests.py \
+  --zip fo_harness_runs/my_startup_BLOCK_B_*.zip \
+  --intake intake/intake_runs/my_startup/my_startup.json
+```
+
+### What it generates
+
+```
+tests/
+  postman/
+    api_collection.json       # Newman-ready: per-entity CRUD tests + smoke folder
+    environment.json          # {{baseUrl}} = TARGET_URL, {{authToken}} placeholder
+  playwright/
+    package.json              # Playwright project with @playwright/test
+    playwright.config.ts      # Reads TARGET_URL from env, JSON reporter for container
+    tests/
+      smoke.spec.ts           # Landing page + API health checks
+      auth.spec.ts            # Auth0 login/logout flows (if auth detected)
+      <entity>.spec.ts        # Per-entity: API CRUD + page interactions
+      dashboard.spec.ts       # Visits every dashboard page
+```
+
+### How it works
+
+1. Scans `business/backend/routes/*.py` — extracts `@router.get/post/put/delete` endpoints,
+   detects auth (`Depends(get_current_user)`), body schemas
+2. Scans `business/frontend/pages/*.jsx` — detects forms, tables, modals, API calls, auth
+3. Reads intake JSON (optional) — adds entity names, feature context, auth/Stripe detection
+4. Generates Postman collection with per-entity folders, test scripts, smoke folder
+5. Generates Playwright tests with `getByRole()` locators, proper async patterns
+
+### Feeding into the QA container
+
+The output matches the test repo structure the container expects. Push the generated
+`tests/` directory to your test repo, or bake it into the container at build time.
 
 ## Expected test repo structure
 

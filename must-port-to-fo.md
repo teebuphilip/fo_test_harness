@@ -1,5 +1,26 @@
 # Must Port to FO
 
+## Post-Deploy QA Fixes (2026-03-26 session 18)
+
+138. feat: SEO integration in generate_business_config.py — `--seo` flag, load_seo(), merges into config output
+- Validates required keys, graceful fallback on missing/invalid file
+- Files: `generate_business_config.py`
+- ✅ DONE here, ⬜ TODO for FO
+
+137. feat: generate_tests.py — auto-generate Postman + Playwright tests from FO build artifacts
+- Scans routes/*.py + pages/*.jsx, generates Newman collection + Playwright E2E suite
+- Adapted from alirezarezvani/claude-skills playwright-pro + senior-qa
+- Files: `post-deploy-qa/generate_tests.py`, `post-deploy-qa/templates/playwright_golden_rules.md`
+- ✅ DONE here, ⬜ TODO for FO
+
+135. fix: entrypoint.py missing QA_REPORT_JSON marker — trigger_qa.py could never extract structured report
+- Files: `post-deploy-qa/entrypoint.py`
+- ✅ DONE here, ⬜ TODO for FO
+
+136. fix: missing requirements.txt — Dockerfile COPY fails at build time
+- Files: `post-deploy-qa/requirements.txt`
+- ✅ DONE here, ⬜ TODO for FO
+
 ## Feature-Level Pass/Fail Tracking (2026-03-25 session 17 cont'd)
 
 Reference: https://www.anthropic.com/engineering/harness-design-long-running-apps?utm_source=tldrai

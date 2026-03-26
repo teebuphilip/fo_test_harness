@@ -1,0 +1,4 @@
+# Post-deploy QA container dependencies
+# Base image (playwright/python) already includes playwright
+# Newman is installed via npm in Dockerfile
+# entrypoint.py uses only stdlib — this file exists to satisfy the Dockerfile COPY

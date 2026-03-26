@@ -162,7 +162,48 @@ def discover_backend_routes(root_dir: str) -> list:
 
 
 # ── Config generation ─────────────────────────────────────────────────────────
-def generate_config(intake_path: str, root_dir: str) -> dict:
+def load_seo(seo_path: str) -> dict:
+    """Load and validate seo.json. Returns empty dict on any failure."""
+    if not seo_path:
+        return {}
+
+    if not os.path.isfile(seo_path):
+        print("[SEO] Skipped (not found)")
+        return {}
+
+    try:
+        with open(seo_path, 'r') as f:
+            data = json.load(f)
+    except (json.JSONDecodeError, OSError) as e:
+        print(f"[SEO] Invalid format: {e}")
+        return {}
+
+    if not isinstance(data, dict):
+        print("[SEO] Invalid format")
+        return {}
+
+    # Validate required keys — partial merge if some missing
+    required = ('primary_keywords', 'content_plan', 'site_structure')
+    missing = [k for k in required if k not in data]
+    if missing:
+        print(f"[SEO] Warning: missing keys {missing} — partial merge")
+
+    print(f"[SEO] Loaded {seo_path}")
+
+    return {
+        "primary_keywords": data.get("primary_keywords", []),
+        "secondary_keywords": data.get("secondary_keywords", []),
+        "long_tail_keywords": data.get("long_tail_keywords", []),
+        "search_intent": data.get("search_intent", {}),
+        "competitor_keywords": data.get("competitor_keywords", []),
+        "content_plan": data.get("content_plan", []),
+        "site_structure": data.get("site_structure", []),
+        "on_page_seo": data.get("on_page_seo", {}),
+        "programmatic_seo": data.get("programmatic_seo", {}),
+    }
+
+
+def generate_config(intake_path: str, root_dir: str, seo_path: str = '') -> dict:
     """Generate business_config.json from intake + actual built artifacts."""
 
     with open(intake_path) as f:
@@ -412,6 +453,7 @@ def generate_config(intake_path: str, root_dir: str) -> dict:
                 {"title": "Contact", "content": f"Questions? Email support@{slug}.com"},
             ],
         },
+        "seo": load_seo(seo_path),
         "marketing": {"enabled": False},
         "footer": {
             "tagline": tagline,
@@ -509,6 +551,7 @@ def main():
     parser.add_argument('--dir', help='Root directory containing built artifacts')
     parser.add_argument('--zip', help='ZIP file to process (extracts, generates, re-zips)')
     parser.add_argument('--intake', required=True, help='Path to intake JSON')
+    parser.add_argument('--seo', default='', help='Path to seo.json (optional)')
     parser.add_argument('--dry-run', action='store_true', help='Print config to stdout, do not write')
     args = parser.parse_args()
 
@@ -536,7 +579,7 @@ def main():
             print(f"ERROR: Directory not found: {root_dir}")
             sys.exit(1)
 
-        config = generate_config(args.intake, root_dir)
+        config = generate_config(args.intake, root_dir, seo_path=args.seo)
 
         if args.dry_run:
             print()
@@ -560,7 +603,7 @@ def main():
             with zipfile.ZipFile(zip_path, 'r') as zf:
                 zf.extractall(tmp)
 
-            config = generate_config(args.intake, tmp)
+            config = generate_config(args.intake, tmp, seo_path=args.seo)
 
             if args.dry_run:
                 print()
