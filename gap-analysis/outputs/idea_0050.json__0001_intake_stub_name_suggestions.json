@@ -1,0 +1,42 @@
+{
+  "picked": {
+    "name": "invoicetool",
+    "slug": "invoicetool",
+    "score": 96,
+    "price_usd": null
+  },
+  "top5": [
+    {
+      "name": "invoicetool",
+      "slug": "invoicetool",
+      "tagline": "Tools for invoicing success",
+      "score": 96
+    },
+    {
+      "name": "payform",
+      "slug": "payform",
+      "tagline": "Form your payment strategy",
+      "score": 96
+    },
+    {
+      "name": "autopayee",
+      "slug": "autopayee",
+      "tagline": "Automate your vendor payments",
+      "score": 94
+    },
+    {
+      "name": "payqueue",
+      "slug": "payqueue",
+      "tagline": "Queue your payments right",
+      "score": 94
+    },
+    {
+      "name": "invoicelab",
+      "slug": "invoicelab",
+      "tagline": "Experiment with invoices",
+      "score": 93
+    }
+  ],
+  "available_prices": {},
+  "report": "/Users/teebuphilip/Downloads/FO_TEST_HARNESS/gap-analysis/outputs/idea_0050.json__0001_intake_stub_name_report.json"
+}

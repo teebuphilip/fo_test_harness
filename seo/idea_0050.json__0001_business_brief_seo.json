@@ -1,0 +1,163 @@
+{
+  "schema_version": "1.0.0",
+  "primary_keywords": [
+    "etsy sellers invoice tracking",
+    "etsy sellers vendor invoices",
+    "invoice payments",
+    "invoice tracking",
+    "payment reminders",
+    "vendor invoices"
+  ],
+  "secondary_keywords": [
+    "vendor invoice tracker",
+    "payment schedule tool",
+    "invoice due reminders"
+  ],
+  "long_tail_keywords": [
+    "how to invoice payments",
+    "best invoice payments tool",
+    "invoice payments vs spreadsheets",
+    "invoice payments checklist",
+    "invoice payments pricing"
+  ],
+  "search_intent": {
+    "primary_intent": "commercial",
+    "secondary_intents": [
+      "informational",
+      "commercial"
+    ]
+  },
+  "competitor_keywords": [],
+  "marketing_seeds": [
+    "For Etsy sellers processing 5\u201315 invoices/month, delayed payments cause cash flow gaps. We streamline manual invoice tracking instead of spreadsheets.",
+    "Timely processing of vendor invoices",
+    "Etsy sellers processing 5\u201315 invoices/month"
+  ],
+  "content_plan": [
+    {
+      "title": "How To Invoice Payments",
+      "target_keyword": "how to invoice payments",
+      "intent": "informational",
+      "estimated_difficulty": "high"
+    },
+    {
+      "title": "Best Invoice Payments Tool",
+      "target_keyword": "best invoice payments tool",
+      "intent": "commercial",
+      "estimated_difficulty": "medium"
+    },
+    {
+      "title": "Invoice Payments Vs Spreadsheets",
+      "target_keyword": "invoice payments vs spreadsheets",
+      "intent": "commercial",
+      "estimated_difficulty": "medium"
+    },
+    {
+      "title": "Invoice Payments Checklist",
+      "target_keyword": "invoice payments checklist",
+      "intent": "informational",
+      "estimated_difficulty": "high"
+    },
+    {
+      "title": "Invoice Payments Pricing",
+      "target_keyword": "invoice payments pricing",
+      "intent": "commercial",
+      "estimated_difficulty": "high"
+    },
+    {
+      "title": "Vendor Invoice Tracker",
+      "target_keyword": "vendor invoice tracker",
+      "intent": "informational",
+      "estimated_difficulty": "high"
+    },
+    {
+      "title": "Payment Schedule Tool",
+      "target_keyword": "payment schedule tool",
+      "intent": "informational",
+      "estimated_difficulty": "high"
+    },
+    {
+      "title": "Invoice Due Reminders",
+      "target_keyword": "invoice due reminders",
+      "intent": "informational",
+      "estimated_difficulty": "high"
+    },
+    {
+      "title": "Invoice Payments",
+      "target_keyword": "invoice payments",
+      "intent": "informational",
+      "estimated_difficulty": "high"
+    },
+    {
+      "title": "Invoice Tracking",
+      "target_keyword": "invoice tracking",
+      "intent": "informational",
+      "estimated_difficulty": "high"
+    },
+    {
+      "title": "Payment Reminders",
+      "target_keyword": "payment reminders",
+      "intent": "informational",
+      "estimated_difficulty": "high"
+    },
+    {
+      "title": "Vendor Invoices",
+      "target_keyword": "vendor invoices",
+      "intent": "informational",
+      "estimated_difficulty": "high"
+    }
+  ],
+  "site_structure": [
+    {
+      "page": "homepage",
+      "target_keyword": "etsy sellers invoice tracking",
+      "purpose": "Overview and value proposition"
+    },
+    {
+      "page": "features",
+      "target_keyword": "invoice tracking features",
+      "purpose": "Explain core capabilities"
+    },
+    {
+      "page": "pricing",
+      "target_keyword": "invoice tracking pricing",
+      "purpose": "Pricing and plans"
+    },
+    {
+      "page": "blog",
+      "target_keyword": "invoice tracking guides",
+      "purpose": "Educational content"
+    },
+    {
+      "page": "programmatic",
+      "target_keyword": "invoice tracking templates",
+      "purpose": "Scalable keyword coverage"
+    }
+  ],
+  "on_page_seo": {
+    "title_templates": [
+      "{primary_keyword} | etsy sellers tool",
+      "etsy sellers tool - {primary_keyword}"
+    ],
+    "meta_description_templates": [
+      "etsy sellers tool helps with timely processing of vendor invoices."
+    ],
+    "header_patterns": [
+      "How to {primary_keyword}",
+      "Best {secondary_keyword} for {audience}"
+    ]
+  },
+  "programmatic_seo": {
+    "enabled": true,
+    "patterns": [
+      {
+        "type": "comparison",
+        "template": "{primary_keyword} vs {alt}"
+      },
+      {
+        "type": "use_case",
+        "template": "{primary_keyword} for {audience}"
+      }
+    ]
+  }
+}

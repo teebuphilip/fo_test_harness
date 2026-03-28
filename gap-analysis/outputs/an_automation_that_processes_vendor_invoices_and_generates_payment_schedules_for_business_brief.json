@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "name": "consulting agencies managing 5\u201315 vendor invoices/month tool",
+  "description": "Consulting agencies + manual invoice tracking pain + streamlined payment scheduling + manual entry.",
+  "target_audience": "consulting agencies managing 5\u201315 vendor invoices/month",
+  "problem_solved": "Manual vendor invoice tracking and payment scheduling leads to missed payments and cash flow issues.",
+  "features": [
+    "User-friendly invoice entry interface",
+    "Automated payment schedule generation",
+    "Vendor management dashboard"
+  ],
+  "pricing_model": "unknown",
+  "category": "saas"
+}

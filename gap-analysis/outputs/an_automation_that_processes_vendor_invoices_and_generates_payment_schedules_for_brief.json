@@ -1,0 +1,16 @@
+{
+  "locked_fields": {
+    "primary_user": "consulting agencies managing 5\u201315 vendor invoices/month",
+    "primary_problem": "Manual vendor invoice tracking and payment scheduling leads to missed payments and cash flow issues.",
+    "primary_gap_type": "workflow gap",
+    "mvp_wedge": "Consulting agencies + manual invoice tracking pain + streamlined payment scheduling + manual entry.",
+    "current_alternative": "Manual invoice entry and payment schedule generation.",
+    "must_have_features": [
+      "User-friendly invoice entry interface",
+      "Automated payment schedule generation",
+      "Vendor management dashboard"
+    ],
+    "must_not_build": true
+  },
+  "one_liner": null
+}

@@ -1,0 +1,42 @@
+{
+  "picked": {
+    "name": "invoicetool",
+    "slug": "invoicetool",
+    "score": 96,
+    "price_usd": null
+  },
+  "top5": [
+    {
+      "name": "invoicetool",
+      "slug": "invoicetool",
+      "tagline": "Tool for easy invoicing",
+      "score": 96
+    },
+    {
+      "name": "invoicedo",
+      "slug": "invoicedo",
+      "tagline": "Do invoices right",
+      "score": 95
+    },
+    {
+      "name": "invoicex",
+      "slug": "invoicex",
+      "tagline": "Invoice management redefined",
+      "score": 95
+    },
+    {
+      "name": "invoicehub",
+      "slug": "invoicehub",
+      "tagline": "Centralize your invoices",
+      "score": 93
+    },
+    {
+      "name": "invoicelab",
+      "slug": "invoicelab",
+      "tagline": "Lab for invoice magic",
+      "score": 93
+    }
+  ],
+  "available_prices": {},
+  "report": "/Users/teebuphilip/Downloads/FO_TEST_HARNESS/gap-analysis/outputs/an_automation_that_processes_vendor_invoices_and_generates_payment_schedules_for_name_report.json"
+}

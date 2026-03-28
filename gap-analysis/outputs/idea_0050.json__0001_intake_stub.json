@@ -1,0 +1,18 @@
+{
+  "startup_name": "An automation that processes vendor invoices and generates payment schedules for small businesses.",
+  "summary": "An automation that processes vendor invoices and generates payment schedules for small businesses.",
+  "block_a": {
+    "pass_1": {
+      "one_liner": "An automation that processes vendor invoices and generates payment schedules for small businesses.",
+      "target_user_persona": ""
+    },
+    "pass_3": {
+      "tier_1_core_features": []
+    }
+  },
+  "block_b": {
+    "pass_1": {
+      "one_liner": ""
+    }
+  }
+}

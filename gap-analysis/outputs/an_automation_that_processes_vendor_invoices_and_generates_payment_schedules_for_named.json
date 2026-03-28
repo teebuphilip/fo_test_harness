@@ -1,0 +1,257 @@
+{
+  "run_id": "invoicetool",
+  "startup_idea_id": "invoicetool",
+  "startup_name": "invoicetool",
+  "summary": "invoicetool - An automation that processes vendor invoices and generates payment schedules for small businesses.",
+  "block_a": {
+    "startup_idea_id": "invoicetool",
+    "block_id": "A",
+    "pass_1": {
+      "startup_name": "invoicetool",
+      "one_liner": "Manual invoice entry and payment schedule generator for small business vendor management",
+      "target_user_persona": "Small business owners and bookkeepers managing vendor payments",
+      "market_category": "Small business financial operations"
+    },
+    "pass_2": {
+      "problem_statement": "Small businesses struggle with manual vendor invoice tracking and payment scheduling, leading to missed payments and cash flow issues",
+      "solution_approach": "Manual invoice entry system with rule-based payment schedule generation",
+      "unique_value_prop": "Simple vendor payment organization with predefined scheduling rules",
+      "success_metrics": [
+        "Track 50 invoices monthly",
+        "Generate payment schedules within 5 minutes",
+        "Zero missed payment dates"
+      ]
+    },
+    "pass_3": {
+      "tier_1_core_features": [
+        "Manual invoice entry form",
+        "Vendor contact management",
+        "Payment schedule generator with preset rules",
+        "Basic invoice status tracking"
+      ],
+      "must_have_workflows": [
+        "Add new vendor invoice manually",
+        "Generate payment schedule based on terms",
+        "Mark invoices as paid/pending"
+      ],
+      "explicit_non_features": [
+        "No OCR or document scanning",
+        "No bank integrations",
+        "No automated invoice processing"
+      ]
+    },
+    "pass_4": {
+      "technical_approach": "Static web app with local storage, manual data entry only",
+      "data_strategy": "Hardcoded payment terms templates, manual invoice records",
+      "integration_plan": "No external integrations in tier 1",
+      "complexity_level": "Low - form-based data entry with basic calculations"
+    },
+    "pass_5": {
+      "build_timeline": "6 weeks part-time development",
+      "resource_requirements": "Single developer, basic hosting",
+      "launch_strategy": "Direct outreach to 10 local small businesses for feedback",
+      "success_criteria": "5 businesses using it for monthly invoice management"
+    },
+    "pass_6": {
+      "primary_risks": [
+        "Manual entry errors",
+        "Limited scalability",
+        "User adoption without automation"
+      ],
+      "mitigation_strategies": [
+        "Input validation",
+        "Clear user interface",
+        "Focus on simplicity over features"
+      ],
+      "next_iteration_potential": "Add basic integrations and automated reminders in tier 2"
+    }
+  },
+  "block_b": {
+    "startup_idea_id": "invoicetool",
+    "block_id": "B",
+    "pass_1": {
+      "startup_name": "invoicetool",
+      "one_liner": "Manual invoice processing with rule-based payment scheduling for consulting firms",
+      "target_user": "consulting firms, independent consultants, client ops",
+      "core_problem": "Managing multi-entity consulting engagements is messy and fragmented"
+    },
+    "pass_2": {
+      "success_metric": "First 30 days: track 20 engagements end-to-end with clean client handoffs",
+      "must_have_features": [
+        "Client and engagement records",
+        "Project milestone tracking",
+        "Document upload and notes"
+      ],
+      "non_goals": [
+        "Do not build a full enterprise suite in phase 1",
+        "Avoid custom integrations beyond the listed scope"
+      ],
+      "constraints": {
+        "brand_positioning": "Pragmatic, ops-focused, and measurable outcomes only",
+        "compliance": "Follow basic data privacy and access control expectations",
+        "promise_limits": "No guarantees beyond the defined scope and data sources",
+        "scale_limits": "Designed for early-stage usage, not massive scale in v1"
+      }
+    },
+    "pass_3": {
+      "data_sources": [
+        "client intake forms"
+      ],
+      "integrations": [
+        "Email"
+      ],
+      "risks": [
+        "Data duplication across clients",
+        "Permission leakage between tenants"
+      ],
+      "shipping_preference": "Ship a focused MVP with 2-3 core workflows and expand after validation"
+    },
+    "pass_4": {
+      "accounts_login": "Y",
+      "role_based_access": "Y",
+      "persistent_data": "Y",
+      "payments_inside_system": "N",
+      "reports_or_downloads": "Y",
+      "external_integrations": "Calendar integration; Accounting export",
+      "background_tasks": "Y",
+      "admin_management": "Y"
+    },
+    "pass_5": {
+      "calendar_days": "45",
+      "build_mode": "Part-time",
+      "manual_vs_automated_preference": "B"
+    },
+    "pass_6": {
+      "tier_classification": "Tier 2",
+      "complexity_drivers": [
+        "Multi-tenant data isolation",
+        "Calendar and accounting integrations",
+        "Background task processing"
+      ],
+      "technical_scope": "User accounts with role permissions, persistent database, email integration, calendar sync, accounting export, background job processing",
+      "validation_approach": "Deploy with 3-5 consulting firms, track engagement completion rates and client handoff quality"
+    }
+  },
+  "block_a_final": {
+    "block_a_version": "2.1.0",
+    "pricing": {
+      "pricing_model": "unknown",
+      "billing_frequency": "monthly",
+      "tiers": [
+        {
+          "tier_id": "T1",
+          "name": "Base",
+          "price_usd": 0,
+          "unit_limit": {
+            "unit": "users",
+            "max": 1
+          },
+          "notes": null
+        }
+      ],
+      "freemium": null
+    },
+    "architecture": {
+      "minimum_tier": 2,
+      "expected_timeline_days": 45,
+      "authentication_required": false,
+      "payments_required": false,
+      "subscription_billing": false,
+      "dashboard_reporting": false,
+      "pdf_generation": false,
+      "external_apis": [],
+      "background_jobs": false,
+      "admin_panel": false,
+      "tech_stack": null,
+      "deployment": null
+    },
+    "acceptance_criteria": [
+      {
+        "criteria_id": "C01",
+        "text": "Deliverable Core workflow is implemented and usable.",
+        "metric": null,
+        "deliverable_id": "D01"
+      }
+    ],
+    "integrations": [],
+    "quantitative_bounds": null
+  },
+  "block_b_final": {
+    "block_b_version": "2.1.0",
+    "deliverables": [
+      {
+        "deliverable_id": "D01",
+        "name": "Core workflow",
+        "maps_to_feature_ids": [
+          "F01"
+        ]
+      }
+    ],
+    "tasks": [
+      {
+        "task_id": "T01",
+        "title": "Implement Core workflow",
+        "maps_to_feature_ids": [
+          "F01"
+        ],
+        "estimated_hours": 4.0,
+        "parallel_group_id": null,
+        "dependencies": [],
+        "phase": null
+      }
+    ]
+  },
+  "build_contract": {
+    "contract_version": "2.1.0",
+    "pricing": {
+      "pricing_model": "unknown",
+      "billing_frequency": "monthly",
+      "tiers": [
+        {
+          "tier_id": "T1",
+          "name": "Base",
+          "price_usd": 0,
+          "unit_limit": {
+            "unit": "users",
+            "max": 1
+          },
+          "notes": null
+        }
+      ],
+      "freemium": null
+    },
+    "architecture": {
+      "minimum_tier": 2,
+      "expected_timeline_days": 45,
+      "authentication_required": false,
+      "payments_required": false,
+      "subscription_billing": false,
+      "dashboard_reporting": false,
+      "pdf_generation": false,
+      "external_apis": [],
+      "background_jobs": false,
+      "admin_panel": false,
+      "tech_stack": null,
+      "deployment": null
+    },
+    "integrations": [],
+    "deliverables": [
+      {
+        "deliverable_id": "D01",
+        "name": "Core workflow",
+        "maps_to_feature_ids": [
+          "F01"
+        ]
+      }
+    ],
+    "acceptance_criteria": [
+      {
+        "criteria_id": "C01",
+        "text": "Deliverable Core workflow is implemented and usable.",
+        "metric": null,
+        "deliverable_id": "D01"
+      }
+    ],
+    "quantitative_bounds": null
+  }
+}

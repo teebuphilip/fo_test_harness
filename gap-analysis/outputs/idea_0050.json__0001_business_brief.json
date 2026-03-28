@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "name": "Etsy sellers processing 5\u201315 invoices/month tool",
+  "description": "For Etsy sellers processing 5\u201315 invoices/month, delayed payments cause cash flow gaps. We streamline manual invoice tracking instead of spreadsheets.",
+  "target_audience": "Etsy sellers processing 5\u201315 invoices/month",
+  "problem_solved": "Timely processing of vendor invoices",
+  "features": [
+    "Email notifications for upcoming payments",
+    "Manual invoice entry form",
+    "Vendor list management"
+  ],
+  "pricing_model": "Subscription: $19/month for basic features, $29/month for premium features",
+  "category": "saas"
+}

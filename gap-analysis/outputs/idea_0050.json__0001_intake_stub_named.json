@@ -1,0 +1,24 @@
+{
+  "startup_name": "invoicetool",
+  "summary": "invoicetool",
+  "block_a": {
+    "pass_1": {
+      "one_liner": "An automation that processes vendor invoices and generates payment schedules for small businesses.",
+      "target_user_persona": "",
+      "startup_name": "invoicetool"
+    },
+    "pass_3": {
+      "tier_1_core_features": []
+    },
+    "startup_idea_id": "invoicetool"
+  },
+  "block_b": {
+    "pass_1": {
+      "one_liner": "",
+      "startup_name": "invoicetool"
+    },
+    "startup_idea_id": "invoicetool"
+  },
+  "run_id": "invoicetool",
+  "startup_idea_id": "invoicetool"
+}

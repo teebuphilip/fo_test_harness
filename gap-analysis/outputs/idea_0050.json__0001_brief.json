@@ -1,0 +1,16 @@
+{
+  "locked_fields": {
+    "primary_user": "Etsy sellers processing 5\u201315 invoices/month",
+    "primary_problem": "Timely processing of vendor invoices",
+    "primary_gap_type": "workflow gap",
+    "mvp_wedge": "For Etsy sellers processing 5\u201315 invoices/month, delayed payments cause cash flow gaps. We streamline manual invoice tracking instead of spreadsheets.",
+    "current_alternative": "Manual tracking and payment scheduling",
+    "must_have_features": [
+      "Email notifications for upcoming payments",
+      "Manual invoice entry form",
+      "Vendor list management"
+    ],
+    "must_not_build": false
+  },
+  "one_liner": "For Etsy sellers processing 5\u201315 invoices/month, delayed payments cause cash flow gaps. We streamline manual invoice tracking instead of spreadsheets."
+}

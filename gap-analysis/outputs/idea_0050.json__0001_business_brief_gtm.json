@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0.0",
+  "who": "Etsy sellers processing 5\u201315 invoices/month",
+  "offer": "For Etsy sellers processing 5\u201315 invoices/month, delayed payments cause cash flow gaps. We streamline manual invoice tracking instead of spreadsheets.",
+  "problem": "Timely processing of vendor invoices",
+  "channels_free": [
+    "Post in Reddit communities for Etsy sellers",
+    "Indie Hackers discussions on similar workflows",
+    "DM outreach to Etsy sellers with demo video",
+    "Community forums for sharing tools and tips"
+  ],
+  "try_it": "Let users try Email notifications and Manual invoice entry on 1-3 items",
+  "pay": "Subscription: $19/month for basic features, $29/month for premium features",
+  "cheap_execution_checklist": [
+    "Create a landing page with the one-liner and CTA",
+    "Make a short demo video of the workflow",
+    "Conduct 10 short interviews with target users",
+    "Provide early-access onboarding for first 10 users",
+    "Share weekly progress updates in relevant communities"
+  ],
+  "automation_simplification_ideas": [
+    "Save frequently used inputs as templates",
+    "Set default reminder schedules for users",
+    "Allow CSV import for existing vendor data",
+    "Enable one-click export of simple reports",
+    "Reduce steps required during onboarding"
+  ]
+}

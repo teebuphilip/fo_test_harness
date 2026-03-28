@@ -1,0 +1,44 @@
+{
+  "schema_version": "0.1.0",
+  "decision_status": "BUILD_APPROVED",
+  "scores": {
+    "persona_clarity": 100,
+    "alternative_mapping": 100,
+    "gap_thesis": 80,
+    "distribution_fit": 80,
+    "wedge_validity": 80,
+    "total": 88
+  },
+  "fatal_flags": [],
+  "warnings": [
+    "Current alternative inferred from idea text.",
+    "Primary gap type could not be inferred.",
+    "MVP wedge could not be deterministically generated.",
+    "Disqualifying signals: High volume of invoices (over 15/month); Existing automated solutions in place"
+  ],
+  "locked_fields": {
+    "primary_user": "Etsy sellers processing 5\u201315 invoices/month",
+    "primary_problem": "Timely processing of vendor invoices",
+    "primary_gap_type": "workflow gap",
+    "mvp_wedge": "For Etsy sellers processing 5\u201315 invoices/month, delayed payments cause cash flow gaps. We streamline manual invoice tracking instead of spreadsheets.",
+    "current_alternative": "Manual tracking and payment scheduling",
+    "must_have_features": [
+      "Email notifications for upcoming payments",
+      "Manual invoice entry form",
+      "Vendor list management"
+    ],
+    "must_not_build": false
+  },
+  "one_liner": "For Etsy sellers processing 5\u201315 invoices/month, delayed payments cause cash flow gaps. We streamline manual invoice tracking instead of spreadsheets.",
+  "research_summary": {
+    "enabled": true,
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "notes": "Etsy sellers represent a niche market with specific needs for invoice management, making them ideal for this automation.",
+    "saturation_signal": "MEDIUM",
+    "confidence": 90,
+    "input_tokens": 793,
+    "output_tokens": 288,
+    "cost_usd": 0.0048625000000000005
+  }
+}

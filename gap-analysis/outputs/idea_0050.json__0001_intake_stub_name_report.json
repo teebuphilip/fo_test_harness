@@ -1,0 +1,306 @@
+{
+  "provider": "chatgpt",
+  "model": "gpt-4o-mini",
+  "candidates": [
+    {
+      "name": "invoicely",
+      "slug": "invoicely",
+      "tagline": "Streamline your payments"
+    },
+    {
+      "name": "paygenius",
+      "slug": "paygenius",
+      "tagline": "Smart payments made easy"
+    },
+    {
+      "name": "autopayee",
+      "slug": "autopayee",
+      "tagline": "Automate your vendor payments"
+    },
+    {
+      "name": "schedulify",
+      "slug": "schedulify",
+      "tagline": "Schedule payments effortlessly"
+    },
+    {
+      "name": "vendormate",
+      "slug": "vendormate",
+      "tagline": "Your vendor payment partner"
+    },
+    {
+      "name": "invoicemint",
+      "slug": "invoicemint",
+      "tagline": "Fresh ideas for invoices"
+    },
+    {
+      "name": "payflow",
+      "slug": "payflow",
+      "tagline": "Control your cash flow"
+    },
+    {
+      "name": "invoicetap",
+      "slug": "invoicetap",
+      "tagline": "Tap into easy invoicing"
+    },
+    {
+      "name": "paymaster",
+      "slug": "paymaster",
+      "tagline": "Master your payments"
+    },
+    {
+      "name": "billbot",
+      "slug": "billbot",
+      "tagline": "Your billing assistant"
+    },
+    {
+      "name": "paytrackr",
+      "slug": "paytrackr",
+      "tagline": "Track your payments smartly"
+    },
+    {
+      "name": "schedulr",
+      "slug": "schedulr",
+      "tagline": "Payment schedules simplified"
+    },
+    {
+      "name": "invoicelyt",
+      "slug": "invoicelyt",
+      "tagline": "Illuminate your invoices"
+    },
+    {
+      "name": "autobiller",
+      "slug": "autobiller",
+      "tagline": "Automate your billing"
+    },
+    {
+      "name": "paypilot",
+      "slug": "paypilot",
+      "tagline": "Navigate your payments"
+    },
+    {
+      "name": "vendorloop",
+      "slug": "vendorloop",
+      "tagline": "Loop in your vendors"
+    },
+    {
+      "name": "billgenie",
+      "slug": "billgenie",
+      "tagline": "Your payment genie"
+    },
+    {
+      "name": "paywizard",
+      "slug": "paywizard",
+      "tagline": "Magically simple payments"
+    },
+    {
+      "name": "invoicelyze",
+      "slug": "invoicelyze",
+      "tagline": "Analyze your invoices"
+    },
+    {
+      "name": "billsync",
+      "slug": "billsync",
+      "tagline": "Sync your bills effortlessly"
+    },
+    {
+      "name": "autopayz",
+      "slug": "autopayz",
+      "tagline": "Payments on autopilot"
+    },
+    {
+      "name": "paycycle",
+      "slug": "paycycle",
+      "tagline": "Your payment cycle partner"
+    },
+    {
+      "name": "invoicetool",
+      "slug": "invoicetool",
+      "tagline": "Tools for invoicing success"
+    },
+    {
+      "name": "billflow",
+      "slug": "billflow",
+      "tagline": "Smooth payment flows"
+    },
+    {
+      "name": "payform",
+      "slug": "payform",
+      "tagline": "Form your payment strategy"
+    },
+    {
+      "name": "vendorwise",
+      "slug": "vendorwise",
+      "tagline": "Wisdom for vendor payments"
+    },
+    {
+      "name": "paylinker",
+      "slug": "paylinker",
+      "tagline": "Link your payments"
+    },
+    {
+      "name": "invoicetide",
+      "slug": "invoicetide",
+      "tagline": "Ride the tide of invoices"
+    },
+    {
+      "name": "payqueue",
+      "slug": "payqueue",
+      "tagline": "Queue your payments right"
+    },
+    {
+      "name": "billmate",
+      "slug": "billmate",
+      "tagline": "Your billing companion"
+    },
+    {
+      "name": "paycraft",
+      "slug": "paycraft",
+      "tagline": "Craft your payment plan"
+    },
+    {
+      "name": "invoicetree",
+      "slug": "invoicetree",
+      "tagline": "Grow your invoicing"
+    },
+    {
+      "name": "paygear",
+      "slug": "paygear",
+      "tagline": "Gear up your payments"
+    },
+    {
+      "name": "billgator",
+      "slug": "billgator",
+      "tagline": "Snap up your bills"
+    },
+    {
+      "name": "paychain",
+      "slug": "paychain",
+      "tagline": "Chain your payments smoothly"
+    },
+    {
+      "name": "invoicelab",
+      "slug": "invoicelab",
+      "tagline": "Experiment with invoices"
+    },
+    {
+      "name": "paynest",
+      "slug": "paynest",
+      "tagline": "Nest your payments safely"
+    },
+    {
+      "name": "billbridge",
+      "slug": "billbridge",
+      "tagline": "Bridge to better billing"
+    },
+    {
+      "name": "paybreeze",
+      "slug": "paybreeze",
+      "tagline": "Payments made breezy"
+    },
+    {
+      "name": "invoicetrail",
+      "slug": "invoicetrail",
+      "tagline": "Follow your invoices"
+    },
+    {
+      "name": "paystream",
+      "slug": "paystream",
+      "tagline": "Streamline your finances"
+    },
+    {
+      "name": "billhub",
+      "slug": "billhub",
+      "tagline": "Your hub for billing"
+    },
+    {
+      "name": "payloop",
+      "slug": "payloop",
+      "tagline": "Loop in your payments"
+    },
+    {
+      "name": "invoicematch",
+      "slug": "invoicematch",
+      "tagline": "Match invoices with ease"
+    },
+    {
+      "name": "paylink",
+      "slug": "paylink",
+      "tagline": "Linking your finances"
+    },
+    {
+      "name": "billgroove",
+      "slug": "billgroove",
+      "tagline": "Find your billing rhythm"
+    },
+    {
+      "name": "paynestle",
+      "slug": "paynestle",
+      "tagline": "Nestle your payments"
+    },
+    {
+      "name": "billcraft",
+      "slug": "billcraft",
+      "tagline": "Craft your billing process"
+    },
+    {
+      "name": "paymatrix",
+      "slug": "paymatrix",
+      "tagline": "Matrix of payment solutions"
+    },
+    {
+      "name": "invoicelink",
+      "slug": "invoicelink",
+      "tagline": "Link your invoices together"
+    },
+    {
+      "name": "payzone",
+      "slug": "payzone",
+      "tagline": "Zone into your payments"
+    },
+    {
+      "name": "billwhiz",
+      "slug": "billwhiz",
+      "tagline": "Whiz through your bills"
+    },
+    {
+      "name": "payfusion",
+      "slug": "payfusion",
+      "tagline": "Fusing payments and ease"
+    },
+    {
+      "name": "paygrid",
+      "slug": "paygrid",
+      "tagline": "Grid your payment process"
+    },
+    {
+      "name": "billwave",
+      "slug": "billwave",
+      "tagline": "Surf the billing wave"
+    },
+    {
+      "name": "payclerk",
+      "slug": "payclerk",
+      "tagline": "Your payment clerk"
+    },
+    {
+      "name": "invoicetune",
+      "slug": "invoicetune",
+      "tagline": "Tune your invoicing"
+    },
+    {
+      "name": "paynestor",
+      "slug": "paynestor",
+      "tagline": "Nest your financials"
+    },
+    {
+      "name": "billxpert",
+      "slug": "billxpert",
+      "tagline": "Expert billing solutions"
+    }
+  ],
+  "checked_domains": [],
+  "picked": null,
+  "notes": [
+    "No available domains found under price cap"
+  ]
+}

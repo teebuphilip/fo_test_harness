@@ -1,0 +1,44 @@
+{
+  "schema_version": "0.1.0",
+  "decision_status": "REPOSITION_AND_BUILD",
+  "scores": {
+    "persona_clarity": 100,
+    "alternative_mapping": 100,
+    "gap_thesis": 80,
+    "distribution_fit": 80,
+    "wedge_validity": 80,
+    "total": 88
+  },
+  "fatal_flags": [],
+  "warnings": [
+    "Current alternative inferred from idea text.",
+    "MVP wedge could not be deterministically generated.",
+    "Disqualifying signals: Agencies with fully automated accounting systems; Agencies with dedicated accounting staff",
+    "Numeric specificity missing in wedge."
+  ],
+  "locked_fields": {
+    "primary_user": "consulting agencies managing 5\u201315 vendor invoices/month",
+    "primary_problem": "Manual vendor invoice tracking and payment scheduling leads to missed payments and cash flow issues.",
+    "primary_gap_type": "workflow gap",
+    "mvp_wedge": "Consulting agencies + manual invoice tracking pain + streamlined payment scheduling + manual entry.",
+    "current_alternative": "Manual invoice entry and payment schedule generation.",
+    "must_have_features": [
+      "User-friendly invoice entry interface",
+      "Automated payment schedule generation",
+      "Vendor management dashboard"
+    ],
+    "must_not_build": true
+  },
+  "one_liner": null,
+  "research_summary": {
+    "enabled": true,
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "notes": "The target persona is well-defined, and the identified pain points are significant enough to warrant a solution.",
+    "saturation_signal": "MEDIUM",
+    "confidence": 85,
+    "input_tokens": 756,
+    "output_tokens": 279,
+    "cost_usd": 0.00468
+  }
+}

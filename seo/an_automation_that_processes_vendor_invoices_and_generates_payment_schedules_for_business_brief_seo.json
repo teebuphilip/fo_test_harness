@@ -1,0 +1,158 @@
+{
+  "schema_version": "1.0.0",
+  "primary_keywords": [
+    "manual vendor invoice tracking and payment scheduling leads to missed payments and cash flow issues",
+    "consulting agencies managing 5 15 vendor invoices month",
+    "saas",
+    "automated payment schedule generation",
+    "user-friendly invoice entry interface",
+    "vendor management dashboard",
+    "consulting agencies manual invoice tracking pain streamlined payment scheduling manual entry"
+  ],
+  "secondary_keywords": [
+    "saas for consulting agencies managing 5 15 vendor invoices month",
+    "manual vendor invoice tracking and payment scheduling leads to missed payments and cash flow issues saas"
+  ],
+  "long_tail_keywords": [
+    "how to manual vendor invoice tracking and payment scheduling leads to missed payments and cash flow issues for consulting agencies managing 5 15 vendor invoices month",
+    "best saas for consulting agencies managing 5 15 vendor invoices month",
+    "saas vs spreadsheets for consulting agencies managing 5 15 vendor invoices month",
+    "manual vendor invoice tracking and payment scheduling leads to missed payments and cash flow issues checklist for consulting agencies managing 5 15 vendor invoices month",
+    "consulting agencies managing 5 15 vendor invoices month saas pricing"
+  ],
+  "search_intent": {
+    "primary_intent": "commercial",
+    "secondary_intents": [
+      "informational",
+      "commercial"
+    ]
+  },
+  "competitor_keywords": [],
+  "content_plan": [
+    {
+      "title": "How To Manual Vendor Invoice Tracking And Payment Scheduling Leads To Missed Payments And Cash Flow Issues For Consulting Agencies Managing 5 15 Vendor Invoices Month",
+      "target_keyword": "how to manual vendor invoice tracking and payment scheduling leads to missed payments and cash flow issues for consulting agencies managing 5 15 vendor invoices month",
+      "intent": "informational",
+      "estimated_difficulty": "low"
+    },
+    {
+      "title": "Best Saas For Consulting Agencies Managing 5 15 Vendor Invoices Month",
+      "target_keyword": "best saas for consulting agencies managing 5 15 vendor invoices month",
+      "intent": "commercial",
+      "estimated_difficulty": "low"
+    },
+    {
+      "title": "Saas Vs Spreadsheets For Consulting Agencies Managing 5 15 Vendor Invoices Month",
+      "target_keyword": "saas vs spreadsheets for consulting agencies managing 5 15 vendor invoices month",
+      "intent": "commercial",
+      "estimated_difficulty": "low"
+    },
+    {
+      "title": "Manual Vendor Invoice Tracking And Payment Scheduling Leads To Missed Payments And Cash Flow Issues Checklist For Consulting Agencies Managing 5 15 Vendor Invoices Month",
+      "target_keyword": "manual vendor invoice tracking and payment scheduling leads to missed payments and cash flow issues checklist for consulting agencies managing 5 15 vendor invoices month",
+      "intent": "informational",
+      "estimated_difficulty": "low"
+    },
+    {
+      "title": "Consulting Agencies Managing 5 15 Vendor Invoices Month Saas Pricing",
+      "target_keyword": "consulting agencies managing 5 15 vendor invoices month saas pricing",
+      "intent": "commercial",
+      "estimated_difficulty": "low"
+    },
+    {
+      "title": "Saas For Consulting Agencies Managing 5 15 Vendor Invoices Month",
+      "target_keyword": "saas for consulting agencies managing 5 15 vendor invoices month",
+      "intent": "informational",
+      "estimated_difficulty": "low"
+    },
+    {
+      "title": "Manual Vendor Invoice Tracking And Payment Scheduling Leads To Missed Payments And Cash Flow Issues Saas",
+      "target_keyword": "manual vendor invoice tracking and payment scheduling leads to missed payments and cash flow issues saas",
+      "intent": "informational",
+      "estimated_difficulty": "low"
+    },
+    {
+      "title": "Manual Vendor Invoice Tracking And Payment Scheduling Leads To Missed Payments And Cash Flow Issues",
+      "target_keyword": "manual vendor invoice tracking and payment scheduling leads to missed payments and cash flow issues",
+      "intent": "informational",
+      "estimated_difficulty": "low"
+    },
+    {
+      "title": "Consulting Agencies Managing 5 15 Vendor Invoices Month",
+      "target_keyword": "consulting agencies managing 5 15 vendor invoices month",
+      "intent": "informational",
+      "estimated_difficulty": "low"
+    },
+    {
+      "title": "Saas",
+      "target_keyword": "saas",
+      "intent": "informational",
+      "estimated_difficulty": "high"
+    },
+    {
+      "title": "Automated Payment Schedule Generation",
+      "target_keyword": "automated payment schedule generation",
+      "intent": "informational",
+      "estimated_difficulty": "high"
+    },
+    {
+      "title": "User-Friendly Invoice Entry Interface",
+      "target_keyword": "user-friendly invoice entry interface",
+      "intent": "informational",
+      "estimated_difficulty": "high"
+    }
+  ],
+  "site_structure": [
+    {
+      "page": "homepage",
+      "target_keyword": "manual vendor invoice tracking and payment scheduling leads to missed payments and cash flow issues",
+      "purpose": "Overview and value proposition"
+    },
+    {
+      "page": "features",
+      "target_keyword": "saas features",
+      "purpose": "Explain core capabilities"
+    },
+    {
+      "page": "pricing",
+      "target_keyword": "saas pricing",
+      "purpose": "Pricing and plans"
+    },
+    {
+      "page": "blog",
+      "target_keyword": "saas guides",
+      "purpose": "Educational content"
+    },
+    {
+      "page": "programmatic",
+      "target_keyword": "saas templates",
+      "purpose": "Scalable keyword coverage"
+    }
+  ],
+  "on_page_seo": {
+    "title_templates": [
+      "{primary_keyword} | consulting agencies managing 5\u201315 vendor invoices/month tool",
+      "consulting agencies managing 5\u201315 vendor invoices/month tool - {primary_keyword}"
+    ],
+    "meta_description_templates": [
+      "consulting agencies managing 5\u201315 vendor invoices/month tool helps consulting agencies managing 5\u201315 vendor invoices/month with Manual vendor invoice tracking and payment scheduling leads to missed payments and cash flow issues.."
+    ],
+    "header_patterns": [
+      "How to {primary_keyword}",
+      "Best {secondary_keyword} for {audience}"
+    ]
+  },
+  "programmatic_seo": {
+    "enabled": true,
+    "patterns": [
+      {
+        "type": "comparison",
+        "template": "{primary_keyword} vs {alt}"
+      },
+      {
+        "type": "use_case",
+        "template": "{primary_keyword} for {audience}"
+      }
+    ]
+  }
+}

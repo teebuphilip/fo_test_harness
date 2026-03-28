@@ -1,0 +1,251 @@
+{
+  "provider": "chatgpt",
+  "model": "gpt-4o-mini",
+  "candidates": [
+    {
+      "name": "invoicely",
+      "slug": "invoicely",
+      "tagline": "Streamline your payments"
+    },
+    {
+      "name": "paygenius",
+      "slug": "paygenius",
+      "tagline": "Smart payment solutions"
+    },
+    {
+      "name": "vendormatic",
+      "slug": "vendormatic",
+      "tagline": "Automate your vendor tasks"
+    },
+    {
+      "name": "schedulify",
+      "slug": "schedulify",
+      "tagline": "Schedule payments with ease"
+    },
+    {
+      "name": "invoicehub",
+      "slug": "invoicehub",
+      "tagline": "Centralize your invoices"
+    },
+    {
+      "name": "paytrackr",
+      "slug": "paytrackr",
+      "tagline": "Track payments effortlessly"
+    },
+    {
+      "name": "vendorease",
+      "slug": "vendorease",
+      "tagline": "Ease your vendor management"
+    },
+    {
+      "name": "invoicify",
+      "slug": "invoicify",
+      "tagline": "Simplify your invoices"
+    },
+    {
+      "name": "paywise",
+      "slug": "paywise",
+      "tagline": "Wise payment scheduling"
+    },
+    {
+      "name": "schedulr",
+      "slug": "schedulr",
+      "tagline": "Your payment planner"
+    },
+    {
+      "name": "invosync",
+      "slug": "invosync",
+      "tagline": "Sync your invoices"
+    },
+    {
+      "name": "paycraft",
+      "slug": "paycraft",
+      "tagline": "Crafting payment solutions"
+    },
+    {
+      "name": "invoicetrak",
+      "slug": "invoicetrak",
+      "tagline": "Track invoices smartly"
+    },
+    {
+      "name": "vendoraid",
+      "slug": "vendoraid",
+      "tagline": "Aid for vendor payments"
+    },
+    {
+      "name": "payninja",
+      "slug": "payninja",
+      "tagline": "Ninja your payments"
+    },
+    {
+      "name": "invoicelab",
+      "slug": "invoicelab",
+      "tagline": "Lab for invoice magic"
+    },
+    {
+      "name": "payflow",
+      "slug": "payflow",
+      "tagline": "Smooth payment flow"
+    },
+    {
+      "name": "schedulink",
+      "slug": "schedulink",
+      "tagline": "Linking payments made easy"
+    },
+    {
+      "name": "vendormind",
+      "slug": "vendormind",
+      "tagline": "Mind your vendor payments"
+    },
+    {
+      "name": "invoicelyt",
+      "slug": "invoicelyt",
+      "tagline": "Light your invoicing"
+    },
+    {
+      "name": "paygen",
+      "slug": "paygen",
+      "tagline": "Generate your payments"
+    },
+    {
+      "name": "invoicex",
+      "slug": "invoicex",
+      "tagline": "Invoice management redefined"
+    },
+    {
+      "name": "paymatrix",
+      "slug": "paymatrix",
+      "tagline": "Matrix of payment solutions"
+    },
+    {
+      "name": "vendorkit",
+      "slug": "vendorkit",
+      "tagline": "Toolkit for vendors"
+    },
+    {
+      "name": "invoicedo",
+      "slug": "invoicedo",
+      "tagline": "Do invoices right"
+    },
+    {
+      "name": "paystream",
+      "slug": "paystream",
+      "tagline": "Stream your payments"
+    },
+    {
+      "name": "vendosync",
+      "slug": "vendosync",
+      "tagline": "Sync with your vendors"
+    },
+    {
+      "name": "innopay",
+      "slug": "innopay",
+      "tagline": "Innovative payment solutions"
+    },
+    {
+      "name": "invoicifyr",
+      "slug": "invoicifyr",
+      "tagline": "Your invoicing partner"
+    },
+    {
+      "name": "paymaster",
+      "slug": "paymaster",
+      "tagline": "Master your payments"
+    },
+    {
+      "name": "schedulist",
+      "slug": "schedulist",
+      "tagline": "List your payment schedules"
+    },
+    {
+      "name": "vendormatch",
+      "slug": "vendormatch",
+      "tagline": "Match with the right vendors"
+    },
+    {
+      "name": "invoicetribe",
+      "slug": "invoicetribe",
+      "tagline": "Join the invoicing tribe"
+    },
+    {
+      "name": "paylinker",
+      "slug": "paylinker",
+      "tagline": "Link your payments"
+    },
+    {
+      "name": "invoicetool",
+      "slug": "invoicetool",
+      "tagline": "Tool for easy invoicing"
+    },
+    {
+      "name": "paymentor",
+      "slug": "paymentor",
+      "tagline": "Mentoring your payments"
+    },
+    {
+      "name": "vendorgate",
+      "slug": "vendorgate",
+      "tagline": "Gateway to vendor management"
+    },
+    {
+      "name": "invoicelink",
+      "slug": "invoicelink",
+      "tagline": "Link your invoices"
+    },
+    {
+      "name": "payplan",
+      "slug": "payplan",
+      "tagline": "Plan your payments"
+    },
+    {
+      "name": "vendorman",
+      "slug": "vendorman",
+      "tagline": "Man your vendor payments"
+    },
+    {
+      "name": "invoicelane",
+      "slug": "invoicelane",
+      "tagline": "Your invoicing lane"
+    },
+    {
+      "name": "paytoolkit",
+      "slug": "paytoolkit",
+      "tagline": "Toolkit for payment success"
+    },
+    {
+      "name": "vendoreasy",
+      "slug": "vendoreasy",
+      "tagline": "Easy vendor management"
+    },
+    {
+      "name": "paypilot",
+      "slug": "paypilot",
+      "tagline": "Pilot your payments"
+    },
+    {
+      "name": "invoicetide",
+      "slug": "invoicetide",
+      "tagline": "Ride the invoicing tide"
+    },
+    {
+      "name": "payflowr",
+      "slug": "payflowr",
+      "tagline": "Flow through payments"
+    },
+    {
+      "name": "vendormate",
+      "slug": "vendormate",
+      "tagline": "Your vendor mate"
+    },
+    {
+      "name": "payzilla",
+      "slug": "payzilla",
+      "tagline": "Giant in payment solutions"
+    }
+  ],
+  "checked_domains": [],
+  "picked": null,
+  "notes": [
+    "No available domains found under price cap"
+  ]
+}
