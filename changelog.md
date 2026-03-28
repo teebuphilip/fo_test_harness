@@ -1,5 +1,29 @@
 # Changelog
 
+## 2026-03-28 (session 19 — gap-analysis pipeline)
+
+### feat: pre-intake gap-analysis pipeline (Pass0 → pricing → naming → SEO → marketing → GTM → hero JSON)
+- Added `gap-analysis/` module with deterministic + AI-assisted stages:
+  - Pass0 gap check, locked fields + one-liner
+  - Pricing modeler (writes back into business brief)
+  - Name picker + Porkbun availability
+  - Deterministic SEO generator
+  - Marketing copy generator (AI, manual-first)
+  - GTM plan generator (template + AI fill)
+  - AI hero answers + hero JSON in `intake/ai_text/`
+- New entrypoint: `gap-analysis/run_full_pipeline.sh`.
+- Added allowlist discovery tooling + external API keyword list.
+- Added cost logs for Pass0, pricing, marketing, GTM, and hero answers.
+
+### feat: hero conversion uses ChatGPT first, Claude fallback + cost logging
+- `intake/convert_hero_answers.py` now calls OpenAI first, falls back to Claude if needed.
+- Adds `--startup-id` and `--startup-name` overrides so hero JSON matches naming.
+- Logs costs to `intake/hero_answers_ai_costs.csv` and prints run cost.
+
+### docs: pre-intake gap analysis documented across repo
+- Updated `README.md`, `AGENTS.md`, `agent.md`, `FO_TEST_HARNESS_README.md`,
+  `fo_test_harness_details.md`, and `fo_harness_improvements_v2.md`.
+
 ## 2026-03-26 (session 18 — post-deploy-qa fixes)
 
 ### feat: SEO integration in generate_business_config.py

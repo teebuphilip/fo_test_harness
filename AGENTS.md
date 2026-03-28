@@ -16,6 +16,13 @@ Use this file as the base operating guide for any agent working in this codebase
 | 2. Build-QA | `run_integration_and_feature_build.sh` | Phase-by-phase BUILD + QA + integration check |
 | 3. Deploy | `deploy/zip_to_repo.py` → `deploy/pipeline_deploy.py` | ZIP → GitHub → Railway / Vercel |
 
+## Pre-Intake Gap Analysis (Pass0)
+Use `gap-analysis/` to convert a raw idea into a build-ready brief, pricing, and hero JSON.
+
+```
+./gap-analysis/run_full_pipeline.sh /path/to/preintake.json --verbose
+```
+
 ## Key Entry Points
 - `fo_test_harness.py`: Main orchestration pipeline (BUILD → QA → optional DEPLOY).
 - `intake/run_intake_v7.sh`: Generates intake JSON from hero answers.
@@ -41,6 +48,9 @@ Use this file as the base operating guide for any agent working in this codebase
 5. Add a feature to an existing build:
    - `./add_feature.sh --intake <intake.json> --feature "<feature name>" --existing-zip <zip>`
    - or `--existing-repo <path-or-github-url>`
+
+6. Pre-intake gap analysis:
+   - `./gap-analysis/run_full_pipeline.sh /path/to/preintake.json --verbose`
 
 ## Safety & Repo Hygiene
 - Never commit or expose API keys. Keys should only be in environment variables.

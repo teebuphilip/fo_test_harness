@@ -51,6 +51,20 @@ cd intake
 cd ..
 ```
 
+### Optional: Pre-Intake Gap Analysis (Pass0)
+
+If you start with a raw idea or pre-intake JSON, run the gap-analysis pipeline first. It produces:
+- a locked business brief,
+- pricing model,
+- name + domain check,
+- SEO + marketing + GTM,
+- hero answers + hero JSON in `intake/ai_text/`.
+
+```bash
+./gap-analysis/run_full_pipeline.sh /path/to/preintake.json --verbose
+# Hero JSON output: intake/ai_text/<picked_name>.json
+```
+
 ### Step 2: Run Build-QA Pipeline
 
 ```bash

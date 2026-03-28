@@ -16,6 +16,16 @@ You give it a JSON file and two ZIP files. It does the rest.
 
 If you pass `--deploy`, it deploys instead of zipping. But you probably don't want that yet.
 
+## Latest Changes (2026-03-28)
+
+### Pre-Intake Gap Analysis Pipeline
+- New `gap-analysis/` pipeline to turn raw ideas into:
+  - locked business brief + pricing model,
+  - name + domain check,
+  - SEO + marketing + GTM,
+  - AI hero answers + hero JSON (`intake/ai_text/`).
+- Entry point: `gap-analysis/run_full_pipeline.sh <preintake.json>`.
+
 ## Latest Changes (2026-03-26)
 
 ### Convergence + QA Accuracy Hardening (session 17)

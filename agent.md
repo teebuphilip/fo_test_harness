@@ -28,6 +28,17 @@ Primary near‑term goals:
 | 2. Build-QA | `run_integration_and_feature_build.sh` | Phase-by-phase BUILD + QA + integration check |
 | 3. Deploy | `deploy/zip_to_repo.py` → `deploy/pipeline_deploy.py` | ZIP → GitHub → Railway / Vercel |
 
+## Pre-Intake Gap Analysis (Pass0)
+Use the gap-analysis pipeline to turn a raw idea into a build-ready brief + hero JSON.
+
+```
+./gap-analysis/run_full_pipeline.sh /path/to/preintake.json --verbose
+```
+
+Outputs:
+- `gap-analysis/outputs/*_business_brief.json`
+- `intake/ai_text/<picked_name>.json` (hero JSON for `generate_intake.sh`)
+
 ## Primary Workflows
 Greenfield full pipeline (recommended):
 ```
@@ -42,6 +53,11 @@ Add a feature to an existing build:
   --intake <intake.json> \
   --feature "<feature name>" \
   --existing-zip <zip>
+```
+
+Pre-intake gap analysis:
+```
+./gap-analysis/run_full_pipeline.sh /path/to/preintake.json --verbose
 ```
 
 Direct harness run (manual control or resume):
