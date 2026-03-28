@@ -1,5 +1,12 @@
 # Learnings From AF to FO
 
+## Latest Learnings (2026-03-28 — pre-intake gap analysis)
+
+- **Pass0 before intake prevents wasted builds.** Lock persona, gap type, wedge, and alternatives before intake so downstream work stays consistent.
+- **Pricing belongs in the brief, not after.** If pricing is missing, every downstream artifact (SEO, GTM, hero answers) carries “unknown.”
+- **One brief should power all artifacts.** SEO, marketing, GTM, and hero answers must derive from the same brief to avoid divergence.
+- **Naming must propagate into hero JSON.** The picked name needs to override `startup_name` and `startup_idea_id` to prevent mismatches later.
+
 ## Latest Learnings (2026-03-25 session 17 cont'd — feature-level tracking)
 
 Reference: https://www.anthropic.com/engineering/harness-design-long-running-apps?utm_source=tldrai

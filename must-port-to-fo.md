@@ -1,5 +1,13 @@
 # Must Port to FO
 
+## Pre-Intake Gap Analysis (2026-03-28 session 19)
+
+139. feat: gap-analysis pipeline (Pass0 → pricing → naming → SEO → marketing → GTM → hero JSON)
+- New `gap-analysis/` module with deterministic + AI-assisted stages
+- Entry point: `gap-analysis/run_full_pipeline.sh`
+- Outputs: `gap-analysis/outputs/*_business_brief.json`, `intake/ai_text/<picked_name>.json`
+- ✅ DONE here, ⬜ TODO for FO
+
 ## Post-Deploy QA Fixes (2026-03-26 session 18)
 
 138. feat: SEO integration in generate_business_config.py — `--seo` flag, load_seo(), merges into config output
