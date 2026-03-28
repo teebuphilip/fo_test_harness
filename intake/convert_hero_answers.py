@@ -19,12 +19,92 @@ import os
 import sys
 import json
 import re
+from datetime import datetime
+from typing import Tuple, Dict, Any
+
+import requests
 from anthropic import Anthropic
 
 def read_raw_answers(file_path: str) -> str:
     """Read the raw text file with founder answers."""
     with open(file_path, 'r', encoding='utf-8') as f:
         return f.read()
+
+def _log_cost(provider: str, model: str, usage: Dict[str, Any]) -> float:
+    log_path = os.path.join(os.path.dirname(__file__), "hero_answers_ai_costs.csv")
+    if provider == "openai":
+        in_tokens = usage.get("prompt_tokens", 0) or 0
+        out_tokens = usage.get("completion_tokens", 0) or 0
+        in_rate = float(os.getenv("OPENAI_INPUT_PER_MTOK", "2.50"))
+        out_rate = float(os.getenv("OPENAI_OUTPUT_PER_MTOK", "10.00"))
+    else:
+        in_tokens = usage.get("input_tokens", 0) or 0
+        out_tokens = usage.get("output_tokens", 0) or 0
+        in_rate = float(os.getenv("ANTHROPIC_INPUT_PER_MTOK", "3.00"))
+        out_rate = float(os.getenv("ANTHROPIC_OUTPUT_PER_MTOK", "15.00"))
+
+    total = (in_tokens * in_rate + out_tokens * out_rate) / 1_000_000
+    new_file = not os.path.exists(log_path)
+    now = datetime.now()
+    with open(log_path, "a", encoding="utf-8") as f:
+        if new_file:
+            f.write("date,time,provider,model,input_tokens,output_tokens,cost_usd\n")
+        f.write(
+            f"{now.strftime('%Y-%m-%d')},{now.strftime('%H:%M:%S')},{provider},{model},"
+            f"{in_tokens},{out_tokens},{total:.6f}\n"
+        )
+    return total
+
+
+def _call_openai(prompt: str) -> Tuple[str, Dict[str, Any]]:
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise ValueError("OPENAI_API_KEY environment variable not set")
+    model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+    url = "https://api.openai.com/v1/chat/completions"
+    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": "You are a precise JSON-only assistant."},
+            {"role": "user", "content": prompt},
+        ],
+        "temperature": 0.3,
+        "max_tokens": 4096,
+    }
+    resp = requests.post(url, headers=headers, json=payload, timeout=60)
+    if resp.status_code >= 400:
+        raise RuntimeError(f"OpenAI error {resp.status_code}: {resp.text}")
+    data = resp.json()
+    content = data["choices"][0]["message"]["content"]
+    usage = data.get("usage", {})
+    cost = _log_cost("openai", model, usage)
+    return content, usage, cost
+
+
+def _call_claude(prompt: str) -> Tuple[str, Dict[str, Any]]:
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+    if not api_key:
+        raise ValueError("ANTHROPIC_API_KEY environment variable not set")
+    client = Anthropic(api_key=api_key)
+    model = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-20250514")
+    response = client.messages.create(
+        model=model,
+        max_tokens=4096,
+        temperature=0.3,
+        messages=[{"role": "user", "content": prompt}]
+    )
+    content = response.content[0].text.strip()
+    usage = getattr(response, "usage", None)
+    usage_dict = {}
+    if usage:
+        usage_dict = {
+            "input_tokens": getattr(usage, "input_tokens", 0) or 0,
+            "output_tokens": getattr(usage, "output_tokens", 0) or 0,
+        }
+    cost = _log_cost("anthropic", model, usage_dict)
+    return content, usage_dict, cost
+
 
 def extract_startup_info(raw_text: str) -> dict:
     """
@@ -42,12 +122,6 @@ def extract_startup_info(raw_text: str) -> dict:
     9. What does success look like in the first 30 days?
     10. What constraints or non-goals must we respect?
     """
-
-    api_key = os.getenv('ANTHROPIC_API_KEY')
-    if not api_key:
-        raise ValueError("ANTHROPIC_API_KEY environment variable not set")
-
-    client = Anthropic(api_key=api_key)
 
     prompt = f"""You are a structured data extractor. Convert the founder's raw answers into a structured JSON format.
 
@@ -98,15 +172,17 @@ The founder answered 10 questions about their startup. Parse their answers and e
 
 Extract and output ONLY the JSON. No explanation, no markdown, just valid JSON."""
 
-    response = client.messages.create(
-        model="claude-sonnet-4-20250514",
-        max_tokens=4096,
-        temperature=0.3,  # Lower for more consistent extraction
-        messages=[{"role": "user", "content": prompt}]
-    )
-
-    # Extract JSON from response
-    content = response.content[0].text.strip()
+    # Default to ChatGPT, fallback to Claude
+    content = ""
+    cost = 0.0
+    try:
+        content, _, cost = _call_openai(prompt)
+    except Exception as openai_err:
+        try:
+            content, _, cost = _call_claude(prompt)
+        except Exception as claude_err:
+            raise RuntimeError(f"OpenAI failed: {openai_err} | Claude failed: {claude_err}")
+    print(f"AI hero cost: ${cost:.2f}")
 
     # Remove markdown code blocks if present
     if content.startswith('```'):
@@ -126,23 +202,26 @@ def save_hero_json(data: dict, output_path: str):
         json.dump(data, f, indent=2, ensure_ascii=False)
 
 def main():
-    if len(sys.argv) < 2:
-        print("Usage: python convert_hero_answers.py <raw_answers.txt> [output.json]")
-        print("")
-        print("Examples:")
-        print("  python convert_hero_answers.py hero_text/jose_hernandez_02_11_2026.txt")
-        print("  python convert_hero_answers.py my_answers.txt hero_text/mystartup.json")
-        sys.exit(1)
+    import argparse
 
-    input_file = sys.argv[1]
+    parser = argparse.ArgumentParser(description="Convert raw founder answers to hero JSON")
+    parser.add_argument("input_file", help="Path to raw answers text file")
+    parser.add_argument("output_file", nargs="?", help="Optional output JSON file path")
+    parser.add_argument("--startup-id", dest="startup_id", default=None, help="Override startup_idea_id")
+    parser.add_argument("--startup-name", dest="startup_name", default=None, help="Override startup_name")
+    args = parser.parse_args()
+
+    input_file = args.input_file
+    startup_id_override = args.startup_id
+    startup_name_override = args.startup_name
 
     if not os.path.exists(input_file):
         print(f"Error: File not found: {input_file}")
         sys.exit(1)
 
     # Determine output filename
-    if len(sys.argv) >= 3:
-        output_file = sys.argv[2]
+    if args.output_file:
+        output_file = args.output_file
     else:
         # Auto-generate output filename
         base_name = os.path.splitext(os.path.basename(input_file))[0]
@@ -157,9 +236,15 @@ def main():
     print("📖 Reading raw answers...")
     raw_text = read_raw_answers(input_file)
 
-    # Extract structured data using Claude
-    print("🤖 Using Claude to extract structured data...")
+    # Extract structured data using ChatGPT (fallback to Claude)
+    print("🤖 Using ChatGPT to extract structured data (fallback to Claude)...")
     hero_data = extract_startup_info(raw_text)
+
+    # Override startup id/name if provided
+    if startup_id_override:
+        hero_data["startup_idea_id"] = startup_id_override
+    if startup_name_override:
+        hero_data["startup_name"] = startup_name_override
 
     # Save output
     print("💾 Saving hero JSON...")

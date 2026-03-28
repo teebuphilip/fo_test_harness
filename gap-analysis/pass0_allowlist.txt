@@ -1,0 +1,87 @@
+etsy
+shopify
+amazon
+fbm
+fba
+woocommerce
+bigcommerce
+magento
+squarespace
+wix
+webflow
+gumroad
+substack
+patreon
+teachable
+kajabi
+thinkific
+upwork
+fiverr
+freelancer
+indeed
+linkedin
+greenhouse
+lever
+workday
+bamboohr
+salesforce
+hubspot
+pipedrive
+zoho
+freshbooks
+quickbooks
+xero
+netsuite
+gusto
+stripe
+paypal
+square
+chargebee
+recurly
+zendesk
+intercom
+freshdesk
+jira
+asana
+trello
+notion
+clickup
+monday
+google workspace
+microsoft 365
+slack
+teams
+zoom
+calendly
+acuity
+mailchimp
+klaviyo
+sendgrid
+twilio
+shopify plus
+etsy sellers
+amazon sellers
+property managers
+real estate agents
+construction contractors
+home services
+marketing agencies
+consulting agencies
+accounting firms
+bookkeepers
+law firms
+medical clinics
+dental offices
+vet clinics
+logistics carriers
+freight brokers
+restaurants
+cafes
+gyms
+salons
+nonprofits
+churches
+schools
+universities
+insurance brokers
+mortgage brokers

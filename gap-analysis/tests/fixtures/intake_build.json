@@ -1,0 +1,20 @@
+{
+  "startup_name": "Invoice scheduler for Etsy makers",
+  "summary": "Manage supplier invoices and order due dates",
+  "block_a": {
+    "pass_1": {
+      "target_user_persona": "Etsy sellers making custom goods"
+    },
+    "pass_2": {
+      "problem_statement": "They miss supplier payment timing and delay customer orders",
+      "current_alternative": "Spreadsheets + calendar reminders"
+    },
+    "pass_3": {
+      "tier_1_core_features": [
+        "Vendor list",
+        "Invoice entry",
+        "Payment schedule"
+      ]
+    }
+  }
+}

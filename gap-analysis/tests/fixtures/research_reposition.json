@@ -1,0 +1,17 @@
+{
+  "recommended_primary_user": "Etsy sellers managing 5–15 vendor invoices/month",
+  "primary_problem": "Manual invoice tracking leads to missed payments",
+  "primary_gap_type": "unknown",
+  "current_alternative": "Spreadsheets + calendar reminders",
+  "mvp_wedge": "For Etsy sellers processing 5–15 vendor invoices/month, manual tracking causes late payments. We automate payment scheduling instead of spreadsheets.",
+  "must_have_features": ["Invoice entry", "Payment schedule", "Vendor list"],
+  "persona_channels": [
+    "Reddit r/EtsySellers",
+    "Facebook Groups (Etsy sellers)"
+  ],
+  "build_readiness": "BUILD",
+  "saturation_signal": "HIGH",
+  "disqualifying_signals": [],
+  "confidence": 70,
+  "notes": "High saturation; needs sharper gap definition."
+}

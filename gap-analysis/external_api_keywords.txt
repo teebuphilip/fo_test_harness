@@ -1,0 +1,20 @@
+# External API / Integration keywords (one per line)
+# Add or remove as needed. Lines starting with # are ignored.
+integrat
+integration
+sync
+api
+webhook
+import
+export
+shopify
+quickbooks
+xero
+stripe
+paypal
+gmail
+outlook
+slack
+zapier
+salesforce
+hubspot

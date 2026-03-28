@@ -1,0 +1,19 @@
+{
+  "startup_name": "Invoice scheduler for micro businesses",
+  "summary": "Manual invoice tracking for tiny teams",
+  "block_a": {
+    "pass_1": {
+      "target_user_persona": "Micro business owners"
+    },
+    "pass_2": {
+      "problem_statement": "Manual invoice tracking causes missed payments",
+      "current_alternative": "Spreadsheets + calendar reminders"
+    },
+    "pass_3": {
+      "tier_1_core_features": [
+        "Invoice entry",
+        "Payment schedule"
+      ]
+    }
+  }
+}

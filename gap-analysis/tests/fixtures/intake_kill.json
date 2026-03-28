@@ -1,0 +1,9 @@
+{
+  "startup_name": "Some idea without required fields",
+  "summary": "No clear persona or alternative",
+  "block_a": {
+    "pass_2": {
+      "problem_statement": "A vague problem"
+    }
+  }
+}

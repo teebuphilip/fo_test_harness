@@ -1,0 +1,19 @@
+{
+  "startup_name": "Generic invoice scheduler",
+  "summary": "AP scheduling for small teams",
+  "block_a": {
+    "pass_1": {
+      "target_user_persona": "Small business owners"
+    },
+    "pass_2": {
+      "problem_statement": "Manual invoice tracking leads to missed payments",
+      "current_alternative": "Spreadsheets + calendar reminders"
+    },
+    "pass_3": {
+      "tier_1_core_features": [
+        "Invoice entry",
+        "Payment schedule"
+      ]
+    }
+  }
+}

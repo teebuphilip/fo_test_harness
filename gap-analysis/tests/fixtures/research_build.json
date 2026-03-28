@@ -1,0 +1,24 @@
+{
+  "recommended_primary_user": "Etsy sellers making custom goods who manage 5–15 supplier invoices monthly",
+  "primary_problem": "They miss supplier payment timing, causing late materials and late customer orders",
+  "primary_gap_type": "workflow gap",
+  "current_alternative": "Spreadsheets + calendar reminders",
+  "mvp_wedge": "For Etsy makers processing 5–15 supplier invoices/month, manual tracking causes late supplier payments. We automate payment scheduling instead of spreadsheets.",
+  "must_have_features": [
+    "Vendor list",
+    "Invoice entry",
+    "Payment schedule generator",
+    "Supplier lead time field",
+    "Link invoices to order due dates"
+  ],
+  "persona_channels": [
+    "Reddit r/EtsySellers",
+    "Facebook Groups (Etsy sellers)",
+    "IndieHackers"
+  ],
+  "build_readiness": "BUILD",
+  "saturation_signal": "LOW",
+  "disqualifying_signals": [],
+  "confidence": 64,
+  "notes": "Narrow persona with clear workflow gap and accessible channels."
+}
