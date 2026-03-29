@@ -1,6 +1,6 @@
 # Gap Analysis Pipeline — Detailed Guide
 
-This document explains the full pipeline in `gap-analysis/` from pre‑intake idea → Pass0 → pricing → naming → AI hero answers → SEO → marketing copy → GTM plan.
+This document explains the full pipeline in `gap-analysis/` from pre‑intake idea → Pass0 → pricing → naming → AI hero answers → SEO → marketing copy → GTM plan, plus a hero‑input variant.
 
 ## What This Pipeline Does
 The pipeline is designed to take a raw idea (pre‑intake), decide if it’s worth building, then generate:
@@ -142,6 +142,16 @@ Flags:
 - `--verbose` — prints internal details
 - `--no-ai` — disables research (Pass0 likely HOLD)
 - `--force` — continue even if Pass0 not approved
+
+## Full Run from Hero JSON
+
+If you already have a hero JSON (Q1–Q11) and want to skip Pass0:
+
+```
+./run_full_pipeline_from_hero.sh intake/ai_text/<startup>.json
+```
+
+This builds a business brief + one‑liner from the hero answers, then runs pricing → naming → SEO → marketing → GTM.
 
 ## Cost Tracking
 AI calls log to:
