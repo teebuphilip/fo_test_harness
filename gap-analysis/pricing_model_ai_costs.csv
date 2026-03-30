@@ -1,0 +1,3 @@
+date,time,provider,model,input_tokens,output_tokens,cost_usd
+2026-03-28,08:26:59,openai,gpt-4o-mini,265,23,0.000892
+2026-03-28,09:42:02,openai,gpt-4o-mini,265,24,0.000902

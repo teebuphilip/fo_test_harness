@@ -1,2 +1,4 @@
 .claude/settings.local.json
 fo_harness_runs/
+__pycache__/
+agent-make/

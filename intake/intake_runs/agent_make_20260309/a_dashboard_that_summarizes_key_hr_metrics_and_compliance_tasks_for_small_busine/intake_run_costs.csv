@@ -1,0 +1,13 @@
+date,time,startup,stage,provider,input_tokens,output_tokens,cost
+2026-03-09,10:19:49,unknown,block_A,claude,,,0.0000
+2026-03-09,10:19:51,unknown,block_A,claude,,,0.0000
+2026-03-09,10:19:53,unknown,block_A,claude,,,0.0000
+2026-03-09,10:19:55,unknown,block_A,claude,,,0.0000
+2026-03-09,10:19:57,unknown,block_A,claude,,,0.0000
+2026-03-09,10:25:18,unknown,block_A,claude,,,0.0000
+2026-03-09,10:25:21,unknown,block_A,claude,,,0.0000
+2026-03-09,10:25:23,unknown,block_A,claude,,,0.0000
+2026-03-09,10:25:25,unknown,block_A,claude,,,0.0000
+2026-03-09,10:25:27,unknown,block_A,claude,,,0.0000
+2026-03-09,10:30:55,unknown,block_A,claude,1561,673,0.0148
+2026-03-09,10:31:07,unknown,block_B,claude,1566,770,0.0162

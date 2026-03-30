@@ -1,0 +1,43 @@
+timestamp,caller,model,input_tokens,output_tokens,cost_usd,duration_s,startup_id,note
+2026-03-19 14:11:29,slice_plan,gpt-4o,3592,260,0.011580,6.3,ai_workforce_intelligence.5,prompt 16307 chars
+2026-03-19 14:21:09,slice_plan,gpt-4o,3988,1404,0.024010,22.4,ai_workforce_intelligence.5,prompt 17966 chars
+2026-03-19 14:25:36,slice_plan,gpt-4o,5741,2373,0.038082,38.5,adversarial_ai_validator,prompt 25459 chars
+2026-03-19 14:40:08,slice_plan,gpt-4o,8021,2384,0.043893,57.2,adversarial_ai_validator,prompt 34684 chars
+2026-03-20 05:42:11,slice_plan,gpt-4o,8021,2525,0.045303,36.3,adversarial_ai_validator,prompt 34684 chars
+2026-03-20 05:51:40,slice_plan,gpt-4o,8021,2404,0.044092,40.5,adversarial_ai_validator,prompt 34684 chars
+2026-03-20 06:00:49,slice_plan,gpt-4o,8021,2470,0.044753,56.7,adversarial_ai_validator,prompt 34684 chars
+2026-03-20 06:00:52,slice_plan_repair,gpt-4o,2512,107,0.007350,3.3,adversarial_ai_validator,S07 issues: stack_violation (attempt 1)
+2026-03-20 06:00:54,slice_plan_repair,gpt-4o,2512,92,0.007200,1.9,adversarial_ai_validator,S07 issues: stack_violation (attempt 2)
+2026-03-20 06:23:11,slice_plan,gpt-4o,8021,2414,0.044193,30.6,adversarial_ai_validator,prompt 34684 chars
+2026-03-20 06:23:13,slice_plan_repair,gpt-4o,2503,93,0.007188,2.2,adversarial_ai_validator,S07 issues: stack_violation (attempt 1)
+2026-03-20 06:23:18,slice_plan_repair,gpt-4o,2509,145,0.007723,4.8,adversarial_ai_validator,S13 issues: generic_acceptance (attempt 1)
+2026-03-20 06:23:19,slice_plan_repair,gpt-4o,2503,92,0.007177,1.8,adversarial_ai_validator,S07 issues: stack_violation (attempt 2)
+2026-03-20 06:23:22,slice_plan_repair,gpt-4o,2509,126,0.007533,2.7,adversarial_ai_validator,S13 issues: generic_acceptance (attempt 2)
+2026-03-20 06:28:29,slice_plan,gpt-4o,8021,2440,0.044452,38.3,adversarial_ai_validator,prompt 34684 chars
+2026-03-20 06:28:31,slice_plan_repair,gpt-4o,2502,104,0.007295,1.7,adversarial_ai_validator,S07 issues: stack_violation (attempt 1)
+2026-03-20 06:28:33,slice_plan_repair,gpt-4o,2520,122,0.007520,1.9,adversarial_ai_validator,S08 issues: generic_acceptance (attempt 1)
+2026-03-20 06:28:35,slice_plan_repair,gpt-4o,2521,123,0.007533,2.3,adversarial_ai_validator,S09 issues: generic_acceptance (attempt 1)
+2026-03-20 06:28:38,slice_plan_repair,gpt-4o,2510,125,0.007525,2.6,adversarial_ai_validator,S13 issues: generic_acceptance (attempt 1)
+2026-03-20 06:28:40,slice_plan_repair,gpt-4o,2502,102,0.007275,2.4,adversarial_ai_validator,S07 issues: stack_violation (attempt 2)
+2026-03-20 06:28:43,slice_plan_repair,gpt-4o,2520,122,0.007520,2.6,adversarial_ai_validator,S08 issues: generic_acceptance (attempt 2)
+2026-03-20 06:28:46,slice_plan_repair,gpt-4o,2521,124,0.007542,2.8,adversarial_ai_validator,S09 issues: generic_acceptance (attempt 2)
+2026-03-20 06:28:51,slice_plan_repair,gpt-4o,2510,124,0.007515,4.9,adversarial_ai_validator,S13 issues: generic_acceptance (attempt 2)
+2026-03-20 06:32:03,slice_plan,gpt-4o,7058,2052,0.038165,27.7,wynwood_thoroughbreds,prompt 30314 chars
+2026-03-20 06:34:39,slice_plan,gpt-4o,6268,1430,0.029970,21.0,ai_workforce_intelligence.5,prompt 27191 chars
+2026-03-20 06:38:09,slice_plan,gpt-4o,8903,3012,0.052378,87.1,property_manager_maintenance_scheduler,prompt 39272 chars
+2026-03-20 06:38:11,slice_plan_repair,gpt-4o,2520,143,0.007730,2.8,property_manager_maintenance_scheduler,S11 issues: generic_acceptance (attempt 1)
+2026-03-20 06:38:14,slice_plan_repair,gpt-4o,2520,118,0.007480,2.2,property_manager_maintenance_scheduler,S11 issues: generic_acceptance (attempt 2)
+2026-03-20 07:38:28,slice_plan,gpt-4o,8360,2751,0.048410,54.4,property_manager_maintenance_scheduler,prompt 36500 chars
+2026-03-20 07:38:31,slice_plan_repair,gpt-4o,2522,132,0.007625,3.2,property_manager_maintenance_scheduler,S05 issues: generic_acceptance (attempt 1)
+2026-03-20 07:38:35,slice_plan_repair,gpt-4o,2522,167,0.007975,4.1,property_manager_maintenance_scheduler,S05 issues: generic_acceptance (attempt 2)
+2026-03-20 07:58:15,slice_plan,gpt-4o,8586,2570,0.047165,34.9,property_manager_maintenance_scheduler,prompt 37373 chars
+2026-03-20 07:58:18,slice_plan_repair,gpt-4o,2733,123,0.008063,2.9,property_manager_maintenance_scheduler,S05 issues: generic_acceptance (attempt 1)
+2026-03-20 07:58:20,slice_plan_repair,gpt-4o,2733,123,0.008063,2.6,property_manager_maintenance_scheduler,S05 issues: generic_acceptance (attempt 2)
+2026-03-20 10:11:56,slice_plan,gpt-4o,8798,2658,0.048575,70.8,property_manager_maintenance_scheduler,prompt 38066 chars
+2026-03-20 10:12:10,slice_plan_repair,gpt-4o,2946,125,0.008615,14.0,property_manager_maintenance_scheduler,S10 issues: non_boilerplate_integration (attempt 1)
+2026-03-20 10:12:13,slice_plan_repair,gpt-4o,2946,117,0.008535,2.4,property_manager_maintenance_scheduler,S10 issues: non_boilerplate_integration (attempt 2)
+2026-03-23 06:21:49,slice_plan,gpt-4o,8798,2598,0.047975,35.0,property_manager_maintenance_scheduler,prompt 38066 chars
+2026-03-23 06:21:52,slice_plan_repair,gpt-4o,2946,120,0.008565,2.7,property_manager_maintenance_scheduler,S05 issues: generic_acceptance (attempt 1)
+2026-03-23 06:21:53,slice_plan_repair,gpt-4o,2956,95,0.008340,1.5,property_manager_maintenance_scheduler,"S10 issues: generic_acceptance, non_boilerplate_integration (attempt 1)"
+2026-03-23 06:21:55,slice_plan_repair,gpt-4o,2946,126,0.008625,2.1,property_manager_maintenance_scheduler,S05 issues: generic_acceptance (attempt 2)
+2026-03-23 06:21:57,slice_plan_repair,gpt-4o,2956,112,0.008510,1.9,property_manager_maintenance_scheduler,"S10 issues: generic_acceptance, non_boilerplate_integration (attempt 2)"
