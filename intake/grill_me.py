@@ -247,6 +247,7 @@ def main() -> int:
     parser.add_argument("--report", default=None, help="Path for grill-me report JSON")
     parser.add_argument("--in-place", action="store_true", help="Overwrite intake JSON in place")
     parser.add_argument("--no-apply", action="store_true", help="Do not apply patches, only report")
+    parser.add_argument("--provide-answers", action="store_true", help="Auto-fill answers and re-run grill-me once")
     args = parser.parse_args()
 
     intake_path = Path(args.intake).expanduser().resolve()
@@ -254,35 +255,56 @@ def main() -> int:
         print(f"[ERROR] Intake not found: {intake_path}")
         return 1
 
+    def _run_ai(prompt: str, label: str) -> str:
+        print(f"[Grill‑Me] Provider: {args.provider}")
+        print(f"[Grill‑Me] Model: {args.model or (DEFAULT_OPENAI_MODEL if args.provider == 'chatgpt' else DEFAULT_CLAUDE_MODEL)}")
+        print(f"[Grill‑Me] Intake: {intake_path}")
+        print(f"[Grill‑Me] Prompt bytes: {len(prompt.encode('utf-8'))}")
+        print(f"[Grill‑Me] Calling AI ({label})...")
+        start = time.time()
+
+        model = args.model
+        if args.provider == "chatgpt":
+            model = model or DEFAULT_OPENAI_MODEL
+            raw, usage = _call_openai(prompt, model)
+        else:
+            model = model or DEFAULT_CLAUDE_MODEL
+            raw, usage = _call_claude(prompt, model)
+        elapsed = time.time() - start
+        in_tokens, out_tokens, cost = _compute_cost(args.provider, usage)
+        _append_cost_row(intake_path, args.provider, model, in_tokens, out_tokens, cost)
+        cumulative = _sum_total_cost()
+
+        print(f"[Grill‑Me] AI call complete in {elapsed:.2f}s")
+        print(f"[Grill‑Me] Tokens: in={in_tokens} out={out_tokens}")
+        print(f"[Grill‑Me] Cost: ${cost:.4f} (cumulative: ${cumulative:.4f})")
+        print(f"[Grill‑Me] Cost CSV: {GRILL_ME_COST_CSV.resolve()}")
+        print("[Grill‑Me] RAW OUTPUT BEGIN")
+        print(raw)
+        print("[Grill‑Me] RAW OUTPUT END")
+        return raw
+
+    def _build_answer_prompt(intake_obj: Dict[str, Any], report_obj: Dict[str, Any]) -> str:
+        intake_str = json.dumps(intake_obj, indent=2)
+        report_str = json.dumps(report_obj, indent=2)
+        return (
+            "You are fixing intake ambiguities. Propose concrete answers by PATCHING the intake JSON.\n"
+            "Return STRICT JSON only with this schema:\n"
+            "{\n"
+            "  \"patches\": [\n"
+            "    {\"json_path\": \"a.b[0].c\", \"new_value\": <JSON>, \"rationale\": \"...\"}\n"
+            "  ]\n"
+            "}\n\n"
+            "Rules:\n"
+            "- Only patch paths that exist in the intake.\n"
+            "- Prefer small, buildable, manual-first answers.\n"
+            "- Do not invent complex integrations unless implied.\n\n"
+            f"INTAKE JSON:\n{intake_str}\n\n"
+            f"GRILL REPORT:\n{report_str}\n"
+        )
+
     intake = _read_json(intake_path)
-    prompt = _build_prompt(intake)
-    print(f"[Grill‑Me] Provider: {args.provider}")
-    print(f"[Grill‑Me] Model: {args.model or (DEFAULT_OPENAI_MODEL if args.provider == 'chatgpt' else DEFAULT_CLAUDE_MODEL)}")
-    print(f"[Grill‑Me] Intake: {intake_path}")
-    print(f"[Grill‑Me] Prompt bytes: {len(prompt.encode('utf-8'))}")
-    print("[Grill‑Me] Calling AI...")
-    start = time.time()
-
-    model = args.model
-    if args.provider == "chatgpt":
-        model = model or DEFAULT_OPENAI_MODEL
-        raw, usage = _call_openai(prompt, model)
-    else:
-        model = model or DEFAULT_CLAUDE_MODEL
-        raw, usage = _call_claude(prompt, model)
-    elapsed = time.time() - start
-    in_tokens, out_tokens, cost = _compute_cost(args.provider, usage)
-    _append_cost_row(intake_path, args.provider, model, in_tokens, out_tokens, cost)
-    cumulative = _sum_total_cost()
-
-    print(f"[Grill‑Me] AI call complete in {elapsed:.2f}s")
-    print(f"[Grill‑Me] Tokens: in={in_tokens} out={out_tokens}")
-    print(f"[Grill‑Me] Cost: ${cost:.4f} (cumulative: ${cumulative:.4f})")
-    print(f"[Grill‑Me] Cost CSV: {GRILL_ME_COST_CSV.resolve()}")
-    print("[Grill‑Me] RAW OUTPUT BEGIN")
-    print(raw)
-    print("[Grill‑Me] RAW OUTPUT END")
-
+    raw = _run_ai(_build_prompt(intake), "review")
     report = _extract_json(raw)
 
     # Apply patches
@@ -323,6 +345,23 @@ def main() -> int:
                 out_path = intake_path.parent / f"{intake_path.stem}.grilled.json"
         _write_json(out_path, patched)
         print(f"[Grill‑Me] Patched intake saved: {out_path}")
+
+    if report.get("halt") and args.provide_answers and not args.no_apply:
+        print("[Grill‑Me] provide-answers enabled — attempting to auto-fill ambiguities")
+        answer_raw = _run_ai(_build_answer_prompt(patched, report), "answer-fill")
+        answer_report = _extract_json(answer_raw)
+        for p in answer_report.get("patches", []) or []:
+            path = p.get("json_path")
+            if not path:
+                continue
+            _set_by_path(patched, path, p.get("new_value"))
+        _write_json(out_path, patched)
+        print(f"[Grill‑Me] Patched intake saved: {out_path}")
+
+        raw2 = _run_ai(_build_prompt(patched), "recheck")
+        report = _extract_json(raw2)
+        _write_json(report_path, report)
+        print(f"[Grill‑Me] Report saved: {report_path}")
 
     if report.get("halt"):
         print(f"[Grill‑Me] HALT: {report.get('halt_reason', 'unspecified')}")
