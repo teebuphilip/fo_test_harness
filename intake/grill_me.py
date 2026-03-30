@@ -106,9 +106,9 @@ def _set_by_path(data: Any, path: str, new_value: Any) -> Tuple[bool, str, Any]:
     return False, path, None
 
 
-def _build_prompt(intake: Dict[str, Any]) -> str:
+def _build_prompt(intake: Dict[str, Any], arch_context: str = "") -> str:
     intake_str = json.dumps(intake, indent=2)
-    return (
+    base = (
         "You are an adversarial reviewer. Stress-test the intake spec before build. "
         "Find vagueness, contradictions, missing data model details, unclear integrations, "
         "or ambiguous workflows that could cause hallucinations. "
@@ -131,6 +131,9 @@ def _build_prompt(intake: Dict[str, Any]) -> str:
         "- Do not include commentary outside JSON.\n\n"
         f"INTAKE JSON:\n{intake_str}\n"
     )
+    if arch_context:
+        return base + "\nARCHITECTURE CONTEXT:\n" + arch_context + "\n"
+    return base
 
 
 def _call_openai(prompt: str, model: str) -> Tuple[str, Dict[str, Any]]:
@@ -248,6 +251,7 @@ def main() -> int:
     parser.add_argument("--in-place", action="store_true", help="Overwrite intake JSON in place")
     parser.add_argument("--no-apply", action="store_true", help="Do not apply patches, only report")
     parser.add_argument("--provide-answers", action="store_true", help="Auto-fill answers and re-run grill-me once")
+    parser.add_argument("--architecture-context", default=None, help="Path to architecture context file to append")
     args = parser.parse_args()
 
     intake_path = Path(args.intake).expanduser().resolve()
@@ -255,7 +259,7 @@ def main() -> int:
         print(f"[ERROR] Intake not found: {intake_path}")
         return 1
 
-    def _run_ai(prompt: str, label: str) -> str:
+    def _run_ai(prompt: str, label: str) -> Tuple[str, str]:
         print(f"[Grill‑Me] Provider: {args.provider}")
         print(f"[Grill‑Me] Model: {args.model or (DEFAULT_OPENAI_MODEL if args.provider == 'chatgpt' else DEFAULT_CLAUDE_MODEL)}")
         print(f"[Grill‑Me] Intake: {intake_path}")
@@ -282,7 +286,7 @@ def main() -> int:
         print("[Grill‑Me] RAW OUTPUT BEGIN")
         print(raw)
         print("[Grill‑Me] RAW OUTPUT END")
-        return raw
+        return raw, model
 
     def _build_answer_prompt(intake_obj: Dict[str, Any], report_obj: Dict[str, Any]) -> str:
         intake_str = json.dumps(intake_obj, indent=2)
@@ -304,7 +308,16 @@ def main() -> int:
         )
 
     intake = _read_json(intake_path)
-    raw = _run_ai(_build_prompt(intake), "review")
+    arch_context = ""
+    if args.architecture_context:
+        arch_path = Path(args.architecture_context).expanduser().resolve()
+        if not arch_path.exists():
+            print(f"[ERROR] Architecture context not found: {arch_path}")
+            return 1
+        arch_context = arch_path.read_text(encoding="utf-8", errors="replace")
+        print(f"[Grill‑Me] Architecture context: {arch_path}")
+
+    raw, model = _run_ai(_build_prompt(intake, arch_context), "review")
     report = _extract_json(raw)
 
     # Apply patches
@@ -348,7 +361,7 @@ def main() -> int:
 
     if report.get("halt") and args.provide_answers and not args.no_apply:
         print("[Grill‑Me] provide-answers enabled — attempting to auto-fill ambiguities")
-        answer_raw = _run_ai(_build_answer_prompt(patched, report), "answer-fill")
+        answer_raw, _ = _run_ai(_build_answer_prompt(patched, report), "answer-fill")
         answer_report = _extract_json(answer_raw)
         for p in answer_report.get("patches", []) or []:
             path = p.get("json_path")
@@ -358,8 +371,9 @@ def main() -> int:
         _write_json(out_path, patched)
         print(f"[Grill‑Me] Patched intake saved: {out_path}")
 
-        raw2 = _run_ai(_build_prompt(patched), "recheck")
+        raw2, model = _run_ai(_build_prompt(patched, arch_context), "recheck")
         report = _extract_json(raw2)
+        report["model"] = model
         _write_json(report_path, report)
         print(f"[Grill‑Me] Report saved: {report_path}")
 
