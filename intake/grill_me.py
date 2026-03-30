@@ -129,7 +129,9 @@ def _build_prompt(intake: Dict[str, Any], arch_context: str = "", block_b_only: 
         "- Only include patches you are confident about.\n"
         "- If more than 3 critical ambiguities remain, set halt=true.\n"
         "- Do not include commentary outside JSON.\n\n"
-        "- Treat block_b.hero_answers as authoritative. If it already answers an issue, do not raise it.\n\n"
+        "- Treat block_b.hero_answers and block_b.pass_1.economics_snapshot.payment_integration_details as authoritative.\n"
+        "- If roles/permissions or edge cases are already defined in block_b.pass_1.roles_permissions or block_b.pass_1.invoice_edge_cases, do not raise them.\n"
+        "- questions_for_hero is legacy; do not treat unanswered questions there as missing if answers exist elsewhere.\n\n"
         f"INTAKE JSON:\n{intake_str}\n"
     )
     if block_b_only:
@@ -298,7 +300,7 @@ def main() -> int:
         intake_str = json.dumps(intake_obj, indent=2)
         report_str = json.dumps(report_obj, indent=2)
         base = (
-            "You are fixing intake ambiguities. Provide concrete answers by populating block_b.hero_answers.\n"
+            "You are fixing intake ambiguities. Provide concrete answers.\n"
             "Return STRICT JSON only with this schema:\n"
             "{\n"
             "  \"hero_answers\": {\n"
@@ -317,6 +319,11 @@ def main() -> int:
             "    \"Q8_integrations\": [\"...\"],\n"
             "    \"Q9_risks\": [\"...\"],\n"
             "    \"Q10_shipping_preference\": \"...\"\n"
+            "  },\n"
+            "  \"supplemental\": {\n"
+            "    \"payment_integration_details\": \"...\",\n"
+            "    \"roles_permissions\": \"...\",\n"
+            "    \"invoice_edge_cases\": [\"...\"]\n"
             "  }\n"
             "}\n\n"
             "Rules:\n"
@@ -327,7 +334,7 @@ def main() -> int:
             f"GRILL REPORT:\n{report_str}\n"
         )
         if block_b_only:
-            base += "\nConstraints:\n- Only update block_b.hero_answers. Do not modify block_a.\n"
+            base += "\nConstraints:\n- Only update block_b fields. Do not modify block_a.\n"
         return base
 
     intake = _read_json(intake_path)
@@ -408,6 +415,19 @@ def main() -> int:
                     patched.setdefault("block_b", {})["hero_answers"] = hero_answers
                     print("[Grill‑Me] Applied hero_answers to block_b")
                     print(json.dumps(hero_answers, indent=2))
+                supplemental = answer_report.get("supplemental") or {}
+                if isinstance(supplemental, dict):
+                    pass1 = patched.setdefault("block_b", {}).setdefault("pass_1", {})
+                    econ = pass1.setdefault("economics_snapshot", {})
+                    payment_details = supplemental.get("payment_integration_details")
+                    if payment_details:
+                        econ["payment_integration_details"] = payment_details
+                    roles_permissions = supplemental.get("roles_permissions")
+                    if roles_permissions:
+                        pass1["roles_permissions"] = roles_permissions
+                    invoice_edge_cases = supplemental.get("invoice_edge_cases")
+                    if invoice_edge_cases:
+                        pass1["invoice_edge_cases"] = invoice_edge_cases
                 _write_json(out_path, patched)
                 print(f"[Grill‑Me] Patched intake saved: {out_path}")
                 current = deepcopy(patched)
