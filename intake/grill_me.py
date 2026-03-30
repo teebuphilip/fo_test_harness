@@ -106,7 +106,7 @@ def _set_by_path(data: Any, path: str, new_value: Any) -> Tuple[bool, str, Any]:
     return False, path, None
 
 
-def _build_prompt(intake: Dict[str, Any], arch_context: str = "") -> str:
+def _build_prompt(intake: Dict[str, Any], arch_context: str = "", block_b_only: bool = False) -> str:
     intake_str = json.dumps(intake, indent=2)
     base = (
         "You are an adversarial reviewer. Stress-test the intake spec before build. "
@@ -131,6 +131,8 @@ def _build_prompt(intake: Dict[str, Any], arch_context: str = "") -> str:
         "- Do not include commentary outside JSON.\n\n"
         f"INTAKE JSON:\n{intake_str}\n"
     )
+    if block_b_only:
+        base += "\nConstraints:\n- Only consider and patch block_b. Ignore block_a entirely.\n"
     if arch_context:
         return base + "\nARCHITECTURE CONTEXT:\n" + arch_context + "\n"
     return base
@@ -253,6 +255,8 @@ def main() -> int:
     parser.add_argument("--provide-answers", action="store_true", help="Auto-fill answers and re-run grill-me until max iterations (default: on)")
     parser.add_argument("--architecture-context", default=None, help="Path to architecture context file to append")
     parser.add_argument("--max-iterations", type=int, default=5, help="Max iterations before halting (default: 5)")
+    parser.add_argument("--block-b-only", action="store_true", help="Ignore block_a and only patch block_b")
+    parser.add_argument("--resume", action="store_true", help="Resume from existing *.grilled.json if present")
     args = parser.parse_args()
 
     intake_path = Path(args.intake).expanduser().resolve()
@@ -289,10 +293,10 @@ def main() -> int:
         print("[Grill‑Me] RAW OUTPUT END")
         return raw, model
 
-    def _build_answer_prompt(intake_obj: Dict[str, Any], report_obj: Dict[str, Any]) -> str:
+    def _build_answer_prompt(intake_obj: Dict[str, Any], report_obj: Dict[str, Any], block_b_only: bool = False) -> str:
         intake_str = json.dumps(intake_obj, indent=2)
         report_str = json.dumps(report_obj, indent=2)
-        return (
+        base = (
             "You are fixing intake ambiguities. Propose concrete answers by PATCHING the intake JSON.\n"
             "Return STRICT JSON only with this schema:\n"
             "{\n"
@@ -307,6 +311,9 @@ def main() -> int:
             f"INTAKE JSON:\n{intake_str}\n\n"
             f"GRILL REPORT:\n{report_str}\n"
         )
+        if block_b_only:
+            base += "\nConstraints:\n- Only patch block_b. Do not modify block_a.\n"
+        return base
 
     intake = _read_json(intake_path)
     # Default provide-answers to True unless explicitly disabled in future
@@ -333,10 +340,13 @@ def main() -> int:
 
     max_iters = max(1, args.max_iterations)
     current = deepcopy(intake)
+    if args.resume and out_path.exists():
+        current = _read_json(out_path)
+        print(f"[Grill‑Me] Resuming from: {out_path}")
 
     for iteration in range(1, max_iters + 1):
         print(f"[Grill‑Me] Iteration {iteration}/{max_iters}")
-        raw, model = _run_ai(_build_prompt(current, arch_context), "review")
+        raw, model = _run_ai(_build_prompt(current, arch_context, args.block_b_only), "review")
         report = _extract_json(raw)
 
         # Apply patches
@@ -348,6 +358,9 @@ def main() -> int:
             path = p.get("json_path")
             if not path:
                 failed.append({"json_path": path, "error": "missing json_path"})
+                continue
+            if args.block_b_only and not str(path).startswith("block_b."):
+                failed.append({"json_path": path, "error": "block_a skipped (block-b-only)"})
                 continue
             ok, _, old = _set_by_path(patched, path, p.get("new_value"))
             if ok:
@@ -370,11 +383,13 @@ def main() -> int:
         if report.get("halt"):
             if args.provide_answers and not args.no_apply and iteration < max_iters:
                 print("[Grill‑Me] provide-answers enabled — attempting to auto-fill ambiguities")
-                answer_raw, _ = _run_ai(_build_answer_prompt(patched, report), "answer-fill")
+                answer_raw, _ = _run_ai(_build_answer_prompt(patched, report, args.block_b_only), "answer-fill")
                 answer_report = _extract_json(answer_raw)
                 for p in answer_report.get("patches", []) or []:
                     path = p.get("json_path")
                     if not path:
+                        continue
+                    if args.block_b_only and not str(path).startswith("block_b."):
                         continue
                     _set_by_path(patched, path, p.get("new_value"))
                 _write_json(out_path, patched)

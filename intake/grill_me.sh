@@ -24,6 +24,10 @@ while [[ $# -gt 0 ]]; do
       ARCH_CONTEXT="--architecture-context $2"; shift 2;;
     --max-iterations)
       MAX_ITERS="--max-iterations $2"; shift 2;;
+    --block-b-only)
+      BLOCK_B_ONLY="--block-b-only"; shift;;
+    --resume)
+      RESUME="--resume"; shift;;
     --out)
       OUT="--out $2"; shift 2;;
     --report)
@@ -34,7 +38,7 @@ while [[ $# -gt 0 ]]; do
  done
 
 if [[ $# -lt 1 ]]; then
-  echo "Usage: ./grill_me.sh <intake.json> [--provider chatgpt|claude] [--model <model>] [--in-place] [--no-apply] [--provide-answers] [--max-iterations <n>] [--architecture-context <path>] [--out <path>] [--report <path>]"
+  echo "Usage: ./grill_me.sh <intake.json> [--provider chatgpt|claude] [--model <model>] [--in-place] [--no-apply] [--provide-answers] [--max-iterations <n>] [--block-b-only] [--resume] [--architecture-context <path>] [--out <path>] [--report <path>]"
   exit 1
 fi
 
@@ -50,5 +54,7 @@ if [[ -n "$REPORT" ]]; then CMD+=($REPORT); fi
 if [[ -n "${PROVIDE_ANSWERS:-}" ]]; then CMD+=($PROVIDE_ANSWERS); fi
 if [[ -n "${ARCH_CONTEXT:-}" ]]; then CMD+=($ARCH_CONTEXT); fi
 if [[ -n "${MAX_ITERS:-}" ]]; then CMD+=($MAX_ITERS); fi
+if [[ -n "${BLOCK_B_ONLY:-}" ]]; then CMD+=($BLOCK_B_ONLY); fi
+if [[ -n "${RESUME:-}" ]]; then CMD+=($RESUME); fi
 
 "${CMD[@]}"
