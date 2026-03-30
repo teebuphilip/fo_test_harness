@@ -250,9 +250,9 @@ def main() -> int:
     parser.add_argument("--report", default=None, help="Path for grill-me report JSON")
     parser.add_argument("--in-place", action="store_true", help="Overwrite intake JSON in place")
     parser.add_argument("--no-apply", action="store_true", help="Do not apply patches, only report")
-    parser.add_argument("--provide-answers", action="store_true", help="Auto-fill answers and re-run grill-me until max iterations")
+    parser.add_argument("--provide-answers", action="store_true", help="Auto-fill answers and re-run grill-me until max iterations (default: on)")
     parser.add_argument("--architecture-context", default=None, help="Path to architecture context file to append")
-    parser.add_argument("--max-iterations", type=int, default=1, help="Max iterations before halting (default: 1)")
+    parser.add_argument("--max-iterations", type=int, default=5, help="Max iterations before halting (default: 5)")
     args = parser.parse_args()
 
     intake_path = Path(args.intake).expanduser().resolve()
@@ -309,6 +309,9 @@ def main() -> int:
         )
 
     intake = _read_json(intake_path)
+    # Default provide-answers to True unless explicitly disabled in future
+    if not args.provide_answers:
+        args.provide_answers = True
     arch_context = ""
     if args.architecture_context:
         arch_path = Path(args.architecture_context).expanduser().resolve()
