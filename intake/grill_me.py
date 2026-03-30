@@ -106,6 +106,52 @@ def _set_by_path(data: Any, path: str, new_value: Any) -> Tuple[bool, str, Any]:
     return False, path, None
 
 
+def _has_non_empty(value: Any) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return bool(value.strip())
+    if isinstance(value, (list, dict)):
+        return len(value) > 0
+    return True
+
+
+def _filter_answered_issues(report: Dict[str, Any], intake_obj: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Drop issues that are already answered by authoritative fields.
+    """
+    block_b = intake_obj.get("block_b", {})
+    pass1 = block_b.get("pass_1", {})
+    hero = block_b.get("hero_answers", {})
+
+    payment_details = pass1.get("economics_snapshot", {}).get("payment_integration_details")
+    roles_permissions = pass1.get("roles_permissions")
+    invoice_edge_cases = pass1.get("invoice_edge_cases")
+    mvp_features = hero.get("Q4_must_have_features")
+    compliance = hero.get("Q6_constraints", {}).get("compliance")
+
+    filtered = []
+    for issue in report.get("issues", []) or []:
+        q = f"{issue.get('question','')} {issue.get('suggested_resolution','')}".lower()
+        if ("payment" in q or "integration" in q or "paypal" in q or "stripe" in q) and _has_non_empty(payment_details):
+            continue
+        if ("role" in q or "permission" in q) and _has_non_empty(roles_permissions):
+            continue
+        if ("edge case" in q or "edge-case" in q or "edgecase" in q) and _has_non_empty(invoice_edge_cases):
+            continue
+        if ("mvp" in q or "feature" in q) and _has_non_empty(mvp_features):
+            continue
+        if ("pci" in q or "compliance" in q) and _has_non_empty(compliance):
+            continue
+        filtered.append(issue)
+
+    report["issues"] = filtered
+    if not filtered:
+        report["halt"] = False
+        report["halt_reason"] = ""
+    return report
+
+
 def _build_prompt(intake: Dict[str, Any], arch_context: str = "", block_b_only: bool = False) -> str:
     intake_str = json.dumps(intake, indent=2)
     base = (
@@ -373,6 +419,7 @@ def main() -> int:
         print(f"[Grill‑Me] Iteration {iteration}/{max_iters}")
         raw, model = _run_ai(_build_prompt(current, arch_context, args.block_b_only), "review")
         report = _extract_json(raw)
+        report = _filter_answered_issues(report, current)
 
         # Apply patches
         patched = deepcopy(current)
@@ -383,6 +430,9 @@ def main() -> int:
             path = p.get("json_path")
             if not path:
                 failed.append({"json_path": path, "error": "missing json_path"})
+                continue
+            if "questions_for_hero" in str(path):
+                failed.append({"json_path": path, "error": "legacy questions_for_hero ignored"})
                 continue
             if args.block_b_only and not str(path).startswith("block_b."):
                 failed.append({"json_path": path, "error": "block_a skipped (block-b-only)"})
