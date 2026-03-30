@@ -255,8 +255,8 @@ def main() -> int:
     parser.add_argument("--provide-answers", action="store_true", help="Auto-fill answers and re-run grill-me until max iterations (default: on)")
     parser.add_argument("--architecture-context", default=None, help="Path to architecture context file to append")
     parser.add_argument("--max-iterations", type=int, default=5, help="Max iterations before halting (default: 5)")
-    parser.add_argument("--block-b-only", action="store_true", help="Ignore block_a and only patch block_b")
-    parser.add_argument("--resume", action="store_true", help="Resume from existing *.grilled.json if present")
+    parser.add_argument("--block-b-only", action="store_true", help="Ignore block_a and only patch block_b (default: on)")
+    parser.add_argument("--resume", action="store_true", help="Resume from existing *.grilled.json if present (default: on if file exists)")
     args = parser.parse_args()
 
     intake_path = Path(args.intake).expanduser().resolve()
@@ -339,8 +339,11 @@ def main() -> int:
         out_path = Path(args.out).expanduser().resolve() if args.out else intake_path.parent / f"{intake_path.stem}.grilled.json"
 
     max_iters = max(1, args.max_iterations)
+    # Default block-b-only to True unless explicitly disabled in future
+    if not args.block_b_only:
+        args.block_b_only = True
     current = deepcopy(intake)
-    if args.resume and out_path.exists():
+    if (args.resume or out_path.exists()) and out_path.exists():
         current = _read_json(out_path)
         print(f"[Grill‑Me] Resuming from: {out_path}")
 
