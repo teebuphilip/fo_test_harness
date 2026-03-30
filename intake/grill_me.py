@@ -250,8 +250,9 @@ def main() -> int:
     parser.add_argument("--report", default=None, help="Path for grill-me report JSON")
     parser.add_argument("--in-place", action="store_true", help="Overwrite intake JSON in place")
     parser.add_argument("--no-apply", action="store_true", help="Do not apply patches, only report")
-    parser.add_argument("--provide-answers", action="store_true", help="Auto-fill answers and re-run grill-me once")
+    parser.add_argument("--provide-answers", action="store_true", help="Auto-fill answers and re-run grill-me until max iterations")
     parser.add_argument("--architecture-context", default=None, help="Path to architecture context file to append")
+    parser.add_argument("--max-iterations", type=int, default=1, help="Max iterations before halting (default: 1)")
     args = parser.parse_args()
 
     intake_path = Path(args.intake).expanduser().resolve()
@@ -317,69 +318,70 @@ def main() -> int:
         arch_context = arch_path.read_text(encoding="utf-8", errors="replace")
         print(f"[Grill‑Me] Architecture context: {arch_path}")
 
-    raw, model = _run_ai(_build_prompt(intake, arch_context), "review")
-    report = _extract_json(raw)
-
-    # Apply patches
-    patched = deepcopy(intake)
-    applied: List[Dict[str, Any]] = []
-    failed: List[Dict[str, Any]] = []
-
-    for p in report.get("patches", []) or []:
-        path = p.get("json_path")
-        if not path:
-            failed.append({"json_path": path, "error": "missing json_path"})
-            continue
-        ok, _, old = _set_by_path(patched, path, p.get("new_value"))
-        if ok:
-            applied.append({"json_path": path, "old_value": old, "new_value": p.get("new_value"), "rationale": p.get("rationale", "")})
-        else:
-            failed.append({"json_path": path, "error": "path not found"})
-
-    report["patches_applied"] = applied
-    report["patches_failed"] = failed
-    report["provider"] = args.provider
-    report["model"] = model
-
     if args.report:
         report_path = Path(args.report).expanduser().resolve()
     else:
         report_path = intake_path.parent / f"{intake_path.stem}.grill_report.json"
-    _write_json(report_path, report)
-    print(f"[Grill‑Me] Report saved: {report_path}")
 
-    if not args.no_apply:
-        if args.in_place:
-            out_path = intake_path
-        else:
-            if args.out:
-                out_path = Path(args.out).expanduser().resolve()
-            else:
-                out_path = intake_path.parent / f"{intake_path.stem}.grilled.json"
-        _write_json(out_path, patched)
-        print(f"[Grill‑Me] Patched intake saved: {out_path}")
+    if args.in_place:
+        out_path = intake_path
+    else:
+        out_path = Path(args.out).expanduser().resolve() if args.out else intake_path.parent / f"{intake_path.stem}.grilled.json"
 
-    if report.get("halt") and args.provide_answers and not args.no_apply:
-        print("[Grill‑Me] provide-answers enabled — attempting to auto-fill ambiguities")
-        answer_raw, _ = _run_ai(_build_answer_prompt(patched, report), "answer-fill")
-        answer_report = _extract_json(answer_raw)
-        for p in answer_report.get("patches", []) or []:
+    max_iters = max(1, args.max_iterations)
+    current = deepcopy(intake)
+
+    for iteration in range(1, max_iters + 1):
+        print(f"[Grill‑Me] Iteration {iteration}/{max_iters}")
+        raw, model = _run_ai(_build_prompt(current, arch_context), "review")
+        report = _extract_json(raw)
+
+        # Apply patches
+        patched = deepcopy(current)
+        applied: List[Dict[str, Any]] = []
+        failed: List[Dict[str, Any]] = []
+
+        for p in report.get("patches", []) or []:
             path = p.get("json_path")
             if not path:
+                failed.append({"json_path": path, "error": "missing json_path"})
                 continue
-            _set_by_path(patched, path, p.get("new_value"))
-        _write_json(out_path, patched)
-        print(f"[Grill‑Me] Patched intake saved: {out_path}")
+            ok, _, old = _set_by_path(patched, path, p.get("new_value"))
+            if ok:
+                applied.append({"json_path": path, "old_value": old, "new_value": p.get("new_value"), "rationale": p.get("rationale", "")})
+            else:
+                failed.append({"json_path": path, "error": "path not found"})
 
-        raw2, model = _run_ai(_build_prompt(patched, arch_context), "recheck")
-        report = _extract_json(raw2)
+        report["patches_applied"] = applied
+        report["patches_failed"] = failed
+        report["provider"] = args.provider
         report["model"] = model
+
         _write_json(report_path, report)
         print(f"[Grill‑Me] Report saved: {report_path}")
 
-    if report.get("halt"):
-        print(f"[Grill‑Me] HALT: {report.get('halt_reason', 'unspecified')}")
-        return 2
+        if not args.no_apply:
+            _write_json(out_path, patched)
+            print(f"[Grill‑Me] Patched intake saved: {out_path}")
+
+        if report.get("halt"):
+            if args.provide_answers and not args.no_apply and iteration < max_iters:
+                print("[Grill‑Me] provide-answers enabled — attempting to auto-fill ambiguities")
+                answer_raw, _ = _run_ai(_build_answer_prompt(patched, report), "answer-fill")
+                answer_report = _extract_json(answer_raw)
+                for p in answer_report.get("patches", []) or []:
+                    path = p.get("json_path")
+                    if not path:
+                        continue
+                    _set_by_path(patched, path, p.get("new_value"))
+                _write_json(out_path, patched)
+                print(f"[Grill‑Me] Patched intake saved: {out_path}")
+                current = deepcopy(patched)
+                continue
+            if iteration >= max_iters:
+                print(f"[Grill‑Me] HALT: {report.get('halt_reason', 'unspecified')}")
+                return 2
+        current = deepcopy(patched)
 
     return 0
 
