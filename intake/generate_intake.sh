@@ -19,21 +19,26 @@ fi
 
 FIRST_ARG="$1"
 
-# Check if it's a hero file (exists and ends in .json)
-if [[ -f "hero_text/$FIRST_ARG" ]]; then
-  # Hero mode
+# Check if it's a hero file (absolute or relative path)
+if [[ -f "$FIRST_ARG" ]]; then
   echo "🚀 Generating intake for hero file: $FIRST_ARG"
+  ./run_intake_v7.sh \
+    "$FIRST_ARG" \
+    ./intake_runs \
+    ./inputs/chatgtp_directive.txt
+elif [[ -f "hero_text/$FIRST_ARG" ]]; then
+  echo "🚀 Generating intake for hero file: hero_text/$FIRST_ARG"
   ./run_intake_v7.sh \
     "hero_text/$FIRST_ARG" \
     ./intake_runs \
-    ./claude_directive.txt
+    ./inputs/chatgtp_directive.txt
 elif [[ "$FIRST_ARG" =~ ^[0-9]+$ ]]; then
   # Generate mode
   echo "🚀 Generating $FIRST_ARG random startup intakes"
   ./run_intake_v7.sh \
     "$FIRST_ARG" \
     ./intake_runs \
-    ./claude_directive.txt \
+    ./inputs/chatgtp_directive.txt \
     ./idea_generation_directive.txt
 else
   echo "❌ Invalid argument: $FIRST_ARG"

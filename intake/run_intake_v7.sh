@@ -101,6 +101,12 @@ RUN_LOG="./intake_run_costs.csv"
 
 mkdir -p "$FAILURES_DIR"
 
+# Fail fast if required API keys are missing
+if [[ -z "${ANTHROPIC_KEY}" && -z "${OPENAI_KEY}" ]]; then
+  echo "❌ Both ANTHROPIC_API_KEY and OPENAI_API_KEY are missing. Set at least one." >&2
+  exit 1
+fi
+
 # Store absolute path to inputs directory
 INPUTS_DIR=$(pwd)/inputs
 
@@ -232,7 +238,7 @@ call_chatgpt() {
     }')
 
   curl -s https://api.openai.com/v1/chat/completions \
-    -H "Authorization: Bearer '"$OPENAI_KEY"'" \
+    -H "Authorization: Bearer ${OPENAI_KEY}" \
     -H "Content-Type: application/json" \
     -d "$payload"
 }
@@ -646,6 +652,14 @@ ${mode_instruction}"
 
   local provider
   provider=$(select_provider "$PASS_DIRECTIVE")
+  if [[ "$provider" == "claude" && -z "${ANTHROPIC_KEY:-}" ]]; then
+    echo "❌ ANTHROPIC_API_KEY not set" >&2
+    exit 1
+  fi
+  if [[ "$provider" == "chatgpt" && -z "${OPENAI_KEY:-}" ]]; then
+    echo "❌ OPENAI_API_KEY not set" >&2
+    exit 1
+  fi
 
   local attempt
   for attempt in {1..5}; do
