@@ -129,6 +129,7 @@ def _build_prompt(intake: Dict[str, Any], arch_context: str = "", block_b_only: 
         "- Only include patches you are confident about.\n"
         "- If more than 3 critical ambiguities remain, set halt=true.\n"
         "- Do not include commentary outside JSON.\n\n"
+        "- Treat block_b.hero_answers as authoritative. If it already answers an issue, do not raise it.\n\n"
         f"INTAKE JSON:\n{intake_str}\n"
     )
     if block_b_only:
@@ -297,22 +298,36 @@ def main() -> int:
         intake_str = json.dumps(intake_obj, indent=2)
         report_str = json.dumps(report_obj, indent=2)
         base = (
-            "You are fixing intake ambiguities. Propose concrete answers by PATCHING the intake JSON.\n"
+            "You are fixing intake ambiguities. Provide concrete answers by populating block_b.hero_answers.\n"
             "Return STRICT JSON only with this schema:\n"
             "{\n"
-            "  \"patches\": [\n"
-            "    {\"json_path\": \"a.b[0].c\", \"new_value\": <JSON>, \"rationale\": \"...\"}\n"
-            "  ]\n"
+            "  \"hero_answers\": {\n"
+            "    \"Q1_problem_customer\": \"...\",\n"
+            "    \"Q2_target_user\": [\"...\"],\n"
+            "    \"Q3_success_metric\": \"...\",\n"
+            "    \"Q4_must_have_features\": [\"...\"],\n"
+            "    \"Q5_non_goals\": [\"...\"],\n"
+            "    \"Q6_constraints\": {\n"
+            "      \"brand_positioning\": \"...\",\n"
+            "      \"compliance\": \"...\",\n"
+            "      \"promise_limits\": \"...\",\n"
+            "      \"scale_limits\": \"...\"\n"
+            "    },\n"
+            "    \"Q7_data_sources\": [\"...\"],\n"
+            "    \"Q8_integrations\": [\"...\"],\n"
+            "    \"Q9_risks\": [\"...\"],\n"
+            "    \"Q10_shipping_preference\": \"...\"\n"
+            "  }\n"
             "}\n\n"
             "Rules:\n"
-            "- Only patch paths that exist in the intake.\n"
+            "- Use only information implied by the intake and the grill report.\n"
             "- Prefer small, buildable, manual-first answers.\n"
-            "- Do not invent complex integrations unless implied.\n\n"
+            "- Keep compliance realistic; if unknown, state 'none' or 'tbd'.\n\n"
             f"INTAKE JSON:\n{intake_str}\n\n"
             f"GRILL REPORT:\n{report_str}\n"
         )
         if block_b_only:
-            base += "\nConstraints:\n- Only patch block_b. Do not modify block_a.\n"
+            base += "\nConstraints:\n- Only update block_b.hero_answers. Do not modify block_a.\n"
         return base
 
     intake = _read_json(intake_path)
@@ -388,13 +403,9 @@ def main() -> int:
                 print("[Grill‑Me] provide-answers enabled — attempting to auto-fill ambiguities")
                 answer_raw, _ = _run_ai(_build_answer_prompt(patched, report, args.block_b_only), "answer-fill")
                 answer_report = _extract_json(answer_raw)
-                for p in answer_report.get("patches", []) or []:
-                    path = p.get("json_path")
-                    if not path:
-                        continue
-                    if args.block_b_only and not str(path).startswith("block_b."):
-                        continue
-                    _set_by_path(patched, path, p.get("new_value"))
+                hero_answers = answer_report.get("hero_answers")
+                if isinstance(hero_answers, dict):
+                    patched.setdefault("block_b", {})["hero_answers"] = hero_answers
                 _write_json(out_path, patched)
                 print(f"[Grill‑Me] Patched intake saved: {out_path}")
                 current = deepcopy(patched)
