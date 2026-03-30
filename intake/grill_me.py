@@ -406,6 +406,8 @@ def main() -> int:
                 hero_answers = answer_report.get("hero_answers")
                 if isinstance(hero_answers, dict):
                     patched.setdefault("block_b", {})["hero_answers"] = hero_answers
+                    print("[Grill‑Me] Applied hero_answers to block_b")
+                    print(json.dumps(hero_answers, indent=2))
                 _write_json(out_path, patched)
                 print(f"[Grill‑Me] Patched intake saved: {out_path}")
                 current = deepcopy(patched)
