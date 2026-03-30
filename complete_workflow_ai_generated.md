@@ -37,6 +37,50 @@ cd intake
 ```text
 intake/intake_runs/<picked_name>/<picked_name>.json
 ```
+3. Example output (from `invoicetool`):
+```text
+🚀 Generating intake for hero file: ai_text/invoicetool.json
+============================================================
+🚀 FOUNDEROPS INTAKE RUNNER v7
+Mode: hero
+Hero file: /Users/teebuphilip/Downloads/FO_TEST_HARNESS/intake/ai_text/invoicetool.json
+Output dir: /Users/teebuphilip/Downloads/FO_TEST_HARNESS/intake/intake_runs
+Pass directive: /Users/teebuphilip/Downloads/FO_TEST_HARNESS/intake/inputs/chatgpt_block_directive.txt
+============================================================
+
+============================================================
+🦸 HERO MODE
+ID:        invoicetool
+Name:      Invoicetool
+Run ID:    invoicetool
+Directory: /Users/teebuphilip/Downloads/FO_TEST_HARNESS/intake/intake_runs/invoicetool
+============================================================
+
+⚙️  Running Block A (Tier 1)...
+  ▶ Attempt 1/5 for block A
+🔎 OPENAI_API_KEY: prefix=sk-proj len=164
+💰 ChatGPT cost estimate: $0.0156 (in: 3157, out: 767)
+🔍 Token usage: 767 / 4096
+  ✅ Valid block A
+⚙️  Running Block B (Tier 2)...
+  ▶ Attempt 1/5 for block B
+🔎 OPENAI_API_KEY: prefix=sk-proj len=164
+💰 ChatGPT cost estimate: $0.0169 (in: 3158, out: 902)
+🔍 Token usage: 902 / 4096
+  ✅ Valid block B
+📄 Created: invoicetool.txt
+📦 Created: invoicetool.json
+
+============================================
+✅ HERO RUN COMPLETE
+Output: /Users/teebuphilip/Downloads/FO_TEST_HARNESS/intake/intake_runs/invoicetool/
+  block_a.json           → Tier 1 passes
+  block_b.json           → Tier 2 passes
+  invoicetool.txt      → Summary
+  invoicetool.json     → Combined blocks
+Total Costs: $0.03
+============================================
+```
 
 **Step 3 — Intake QA + Fit**
 1. Boilerplate fit check:
