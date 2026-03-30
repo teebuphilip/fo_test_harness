@@ -44,14 +44,22 @@ import requests
 # ============================================================
 
 class Config:
+    OPENAI_API_KEY    = os.getenv('OPENAI_API_KEY')
     ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY')
     ANTHROPIC_API     = 'https://api.anthropic.com/v1/messages'
     CLAUDE_MODEL      = 'claude-sonnet-4-20250514'
+    OPENAI_API        = 'https://api.openai.com/v1/chat/completions'
+    OPENAI_MODEL      = os.getenv('OPENAI_MODEL', 'gpt-4o-mini')
     CLAUDE_MAX_TOKENS = 8192
     REQUEST_TIMEOUT   = 180
     MAX_RETRIES       = 3
     RETRY_SLEEP       = 5
     OUTPUT_DIR        = Path('./boilerplate_checks')
+    COST_CSV          = Path('./boilerplate_checks/boilerplate_fit_ai_costs.csv')
+    OPENAI_INPUT_PER_MTOK = float(os.getenv("OPENAI_INPUT_PER_MTOK", "2.50"))
+    OPENAI_OUTPUT_PER_MTOK = float(os.getenv("OPENAI_OUTPUT_PER_MTOK", "10.00"))
+    CLAUDE_INPUT_PER_MTOK = float(os.getenv("CLAUDE_INPUT_PER_MTOK", "3.00"))
+    CLAUDE_OUTPUT_PER_MTOK = float(os.getenv("CLAUDE_OUTPUT_PER_MTOK", "15.00"))
 
 
 # ============================================================
@@ -83,6 +91,41 @@ def print_warning(text: str):
 
 def print_info(text: str):
     print(f"{Colors.CYAN}→ {text}{Colors.END}")
+
+
+# ============================================================
+# COST TRACKING
+# ============================================================
+
+def _append_cost_row(startup_id: str, provider: str, model: str, in_tokens: int, out_tokens: int, cost: float) -> None:
+    Config.OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    exists = Config.COST_CSV.exists()
+    with open(Config.COST_CSV, "a", encoding="utf-8") as f:
+        if not exists:
+            f.write("date,time,startup,provider,model,in_tokens,out_tokens,cost\n")
+        now = datetime.now()
+        f.write(
+            f"{now.date().isoformat()},{now.time().strftime('%H:%M:%S')},"
+            f"{startup_id},{provider},{model},{in_tokens},{out_tokens},{cost:.6f}\n"
+        )
+
+
+def _sum_total_cost() -> float:
+    if not Config.COST_CSV.exists():
+        return 0.0
+    total = 0.0
+    with open(Config.COST_CSV, "r", encoding="utf-8") as f:
+        for i, line in enumerate(f):
+            if i == 0:
+                continue
+            parts = line.strip().split(",")
+            if len(parts) < 8:
+                continue
+            try:
+                total += float(parts[7])
+            except ValueError:
+                continue
+    return total
 
 
 # ============================================================
@@ -211,7 +254,7 @@ def read_boilerplate_manifest(path: Path) -> str:
 # CLAUDE API CLIENT
 # ============================================================
 
-def call_claude(prompt: str) -> str:
+def call_claude(prompt: str) -> Tuple[str, Dict[str, int]]:
     """
     Call Claude API with retry logic.
     Returns extracted text content or raises on failure.
@@ -253,7 +296,9 @@ def call_claude(prompt: str) -> str:
 
             response.raise_for_status()
             data = response.json()
-            return data['content'][0]['text']
+            text = data['content'][0]['text']
+            usage = data.get("usage", {}) or {}
+            return text, usage
 
         except requests.exceptions.Timeout:
             print_warning(f"API timeout — retry {attempt}/{Config.MAX_RETRIES}")
@@ -273,6 +318,68 @@ def call_claude(prompt: str) -> str:
 # ============================================================
 # ANALYSIS PROMPT
 # ============================================================
+
+def call_openai(prompt: str) -> Tuple[str, Dict[str, int]]:
+    """
+    Call OpenAI Chat Completions with retry logic.
+    Returns (text, usage dict).
+    """
+    if not Config.OPENAI_API_KEY:
+        raise ValueError("OPENAI_API_KEY environment variable not set")
+
+    payload = {
+        "model": Config.OPENAI_MODEL,
+        "messages": [
+            {"role": "system", "content": "You are a precise JSON-only assistant."},
+            {"role": "user", "content": prompt},
+        ],
+        "temperature": 0.2,
+    }
+
+    headers = {
+        "content-type": "application/json",
+        "authorization": f"Bearer {Config.OPENAI_API_KEY}",
+    }
+
+    last_error = None
+    for attempt in range(1, Config.MAX_RETRIES + 1):
+        try:
+            response = requests.post(
+                Config.OPENAI_API,
+                json=payload,
+                headers=headers,
+                timeout=Config.REQUEST_TIMEOUT
+            )
+
+            if response.status_code in (400, 401, 403):
+                response.raise_for_status()
+
+            if response.status_code in (429, 500, 529):
+                wait = Config.RETRY_SLEEP * attempt
+                print_warning(f"API transient error {response.status_code} — retry {attempt}/{Config.MAX_RETRIES} in {wait}s")
+                time.sleep(wait)
+                last_error = f"HTTP {response.status_code}"
+                continue
+
+            response.raise_for_status()
+            data = response.json()
+            text = data["choices"][0]["message"]["content"]
+            usage = data.get("usage", {}) or {}
+            return text, usage
+
+        except requests.exceptions.Timeout:
+            print_warning(f"API timeout — retry {attempt}/{Config.MAX_RETRIES}")
+            last_error = "Timeout"
+            time.sleep(Config.RETRY_SLEEP)
+            continue
+
+        except requests.exceptions.RequestException as e:
+            print_warning(f"API error — retry {attempt}/{Config.MAX_RETRIES}: {e}")
+            last_error = str(e)
+            time.sleep(Config.RETRY_SLEEP)
+            continue
+
+    raise RuntimeError(f"OpenAI API failed after {Config.MAX_RETRIES} attempts: {last_error}")
 
 def build_analysis_prompt(intake_data: dict, boilerplate_manifest: str) -> str:
     """
@@ -572,7 +679,11 @@ Examples:
 
     args = parser.parse_args()
 
-    # Validate API key
+    # Validate API keys (ChatGPT default, Claude fallback)
+    if not Config.OPENAI_API_KEY:
+        print_error("OPENAI_API_KEY environment variable not set")
+        print_info("Set it with: export OPENAI_API_KEY='sk-...'")
+        sys.exit(1)
     if not Config.ANTHROPIC_API_KEY:
         print_error("ANTHROPIC_API_KEY environment variable not set")
         print_info("Set it with: export ANTHROPIC_API_KEY='sk-ant-...'")
@@ -629,16 +740,40 @@ Examples:
         f.write(f"[{datetime.now().isoformat()}]\n{prompt}\n")
     print_success(f"Prompt logged: {prompt_log.name}")
 
-    # Call Claude
-    print_info("Calling Claude for analysis...")
+    # Call ChatGPT (fallback to Claude)
+    print_info("Calling ChatGPT for analysis...")
     start_time = time.time()
     try:
-        raw_response = call_claude(prompt)
-        elapsed = time.time() - start_time
-        print_success(f"Analysis complete in {elapsed:.1f}s")
+        raw_response, usage = call_openai(prompt)
+        provider = "chatgpt"
+        model = Config.OPENAI_MODEL
     except Exception as e:
-        print_error(f"Claude API call failed: {e}")
-        sys.exit(1)
+        print_warning(f"ChatGPT API call failed: {e}")
+        print_info("Falling back to Claude for analysis...")
+        try:
+            raw_response, usage = call_claude(prompt)
+            provider = "claude"
+            model = Config.CLAUDE_MODEL
+        except Exception as e2:
+            print_error(f"Claude API call failed: {e2}")
+            sys.exit(1)
+
+    elapsed = time.time() - start_time
+    print_success(f"Analysis complete in {elapsed:.1f}s")
+
+    if provider == "chatgpt":
+        in_tokens = int(usage.get("prompt_tokens", 0) or 0)
+        out_tokens = int(usage.get("completion_tokens", 0) or 0)
+        cost = (in_tokens * Config.OPENAI_INPUT_PER_MTOK + out_tokens * Config.OPENAI_OUTPUT_PER_MTOK) / 1_000_000
+    else:
+        in_tokens = int(usage.get("input_tokens", 0) or 0)
+        out_tokens = int(usage.get("output_tokens", 0) or 0)
+        cost = (in_tokens * Config.CLAUDE_INPUT_PER_MTOK + out_tokens * Config.CLAUDE_OUTPUT_PER_MTOK) / 1_000_000
+
+    _append_cost_row(startup_id, provider, model, in_tokens, out_tokens, cost)
+    total_cost = _sum_total_cost()
+    print_info(f"AI cost: ${cost:.4f} (cumulative: ${total_cost:.4f})")
+    print_info(f"Cost CSV: {Config.COST_CSV.resolve()}")
 
     # Log raw response
     raw_log = Config.OUTPUT_DIR / f'{startup_id}_raw_response.log'
