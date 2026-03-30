@@ -18,9 +18,16 @@ from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 import requests
+import time
+from datetime import datetime
 
 DEFAULT_OPENAI_MODEL = "gpt-4o-mini"
 DEFAULT_CLAUDE_MODEL = "claude-3-5-sonnet-20240620"
+OPENAI_INPUT_PER_MTOK = float(os.getenv("OPENAI_INPUT_PER_MTOK", "2.50"))
+OPENAI_OUTPUT_PER_MTOK = float(os.getenv("OPENAI_OUTPUT_PER_MTOK", "10.00"))
+CLAUDE_INPUT_PER_MTOK = float(os.getenv("CLAUDE_INPUT_PER_MTOK", "3.00"))
+CLAUDE_OUTPUT_PER_MTOK = float(os.getenv("CLAUDE_OUTPUT_PER_MTOK", "15.00"))
+GRILL_ME_COST_CSV = Path(os.getenv("GRILL_ME_COST_CSV", "grill_me_ai_costs.csv"))
 
 
 def _read_json(path: Path) -> Dict[str, Any]:
@@ -126,7 +133,7 @@ def _build_prompt(intake: Dict[str, Any]) -> str:
     )
 
 
-def _call_openai(prompt: str, model: str) -> str:
+def _call_openai(prompt: str, model: str) -> Tuple[str, Dict[str, Any]]:
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         raise RuntimeError("OPENAI_API_KEY not set")
@@ -144,10 +151,11 @@ def _call_openai(prompt: str, model: str) -> str:
     if resp.status_code >= 400:
         raise RuntimeError(f"OpenAI error {resp.status_code}: {resp.text}")
     data = resp.json()
-    return data["choices"][0]["message"]["content"]
+    usage = data.get("usage", {})
+    return data["choices"][0]["message"]["content"], usage
 
 
-def _call_claude(prompt: str, model: str) -> str:
+def _call_claude(prompt: str, model: str) -> Tuple[str, Dict[str, Any]]:
     api_key = os.getenv("ANTHROPIC_API_KEY")
     if not api_key:
         raise RuntimeError("ANTHROPIC_API_KEY not set")
@@ -172,7 +180,50 @@ def _call_claude(prompt: str, model: str) -> str:
     # Claude returns list of content blocks
     parts = data.get("content", [])
     text = "".join(p.get("text", "") for p in parts)
-    return text
+    usage = data.get("usage", {})
+    return text, usage
+
+
+def _compute_cost(provider: str, usage: Dict[str, Any]) -> Tuple[int, int, float]:
+    if provider == "chatgpt":
+        in_tokens = int(usage.get("prompt_tokens", 0) or 0)
+        out_tokens = int(usage.get("completion_tokens", 0) or 0)
+        cost = (in_tokens * OPENAI_INPUT_PER_MTOK + out_tokens * OPENAI_OUTPUT_PER_MTOK) / 1_000_000
+        return in_tokens, out_tokens, cost
+    in_tokens = int(usage.get("input_tokens", 0) or 0)
+    out_tokens = int(usage.get("output_tokens", 0) or 0)
+    cost = (in_tokens * CLAUDE_INPUT_PER_MTOK + out_tokens * CLAUDE_OUTPUT_PER_MTOK) / 1_000_000
+    return in_tokens, out_tokens, cost
+
+
+def _append_cost_row(intake_path: Path, provider: str, model: str, in_tokens: int, out_tokens: int, cost: float) -> None:
+    exists = GRILL_ME_COST_CSV.exists()
+    with open(GRILL_ME_COST_CSV, "a", encoding="utf-8") as f:
+        if not exists:
+            f.write("date,time,intake,provider,model,in_tokens,out_tokens,cost\n")
+        now = datetime.now()
+        f.write(
+            f"{now.date().isoformat()},{now.time().strftime('%H:%M:%S')},"
+            f"{intake_path.name},{provider},{model},{in_tokens},{out_tokens},{cost:.6f}\n"
+        )
+
+
+def _sum_total_cost() -> float:
+    if not GRILL_ME_COST_CSV.exists():
+        return 0.0
+    total = 0.0
+    with open(GRILL_ME_COST_CSV, "r", encoding="utf-8") as f:
+        for i, line in enumerate(f):
+            if i == 0:
+                continue
+            parts = line.strip().split(",")
+            if len(parts) < 8:
+                continue
+            try:
+                total += float(parts[7])
+            except ValueError:
+                continue
+    return total
 
 
 def _extract_json(text: str) -> Dict[str, Any]:
@@ -205,14 +256,32 @@ def main() -> int:
 
     intake = _read_json(intake_path)
     prompt = _build_prompt(intake)
+    print(f"[Grill‑Me] Provider: {args.provider}")
+    print(f"[Grill‑Me] Model: {args.model or (DEFAULT_OPENAI_MODEL if args.provider == 'chatgpt' else DEFAULT_CLAUDE_MODEL)}")
+    print(f"[Grill‑Me] Intake: {intake_path}")
+    print(f"[Grill‑Me] Prompt bytes: {len(prompt.encode('utf-8'))}")
+    print("[Grill‑Me] Calling AI...")
+    start = time.time()
 
     model = args.model
     if args.provider == "chatgpt":
         model = model or DEFAULT_OPENAI_MODEL
-        raw = _call_openai(prompt, model)
+        raw, usage = _call_openai(prompt, model)
     else:
         model = model or DEFAULT_CLAUDE_MODEL
-        raw = _call_claude(prompt, model)
+        raw, usage = _call_claude(prompt, model)
+    elapsed = time.time() - start
+    in_tokens, out_tokens, cost = _compute_cost(args.provider, usage)
+    _append_cost_row(intake_path, args.provider, model, in_tokens, out_tokens, cost)
+    cumulative = _sum_total_cost()
+
+    print(f"[Grill‑Me] AI call complete in {elapsed:.2f}s")
+    print(f"[Grill‑Me] Tokens: in={in_tokens} out={out_tokens}")
+    print(f"[Grill‑Me] Cost: ${cost:.4f} (cumulative: ${cumulative:.4f})")
+    print(f"[Grill‑Me] Cost CSV: {GRILL_ME_COST_CSV.resolve()}")
+    print("[Grill‑Me] RAW OUTPUT BEGIN")
+    print(raw)
+    print("[Grill‑Me] RAW OUTPUT END")
 
     report = _extract_json(raw)
 
