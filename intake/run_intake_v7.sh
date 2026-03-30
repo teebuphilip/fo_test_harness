@@ -58,6 +58,7 @@ fi
 
 OUT_DIR="$2"
 PASS_DIRECTIVE="$3"
+BASE_DIR=$(pwd)
 
 # Convert to absolute paths before any cd operations
 PASS_DIRECTIVE=$(cd "$(dirname "$PASS_DIRECTIVE")" && pwd)/$(basename "$PASS_DIRECTIVE")
@@ -97,7 +98,8 @@ CLAUDE_OUTPUT_PER_MTOK="${CLAUDE_OUTPUT_PER_MTOK:-15.00}"
 OPENAI_INPUT_PER_MTOK="${OPENAI_INPUT_PER_MTOK:-2.50}"
 OPENAI_OUTPUT_PER_MTOK="${OPENAI_OUTPUT_PER_MTOK:-10.00}"
 FAILURES_DIR="./failures"
-RUN_LOG="./intake_run_costs.csv"
+RUN_LOG="$BASE_DIR/intake_run_costs.csv"
+START_TS=$(date +%s)
 
 mkdir -p "$FAILURES_DIR"
 
@@ -116,6 +118,38 @@ FAILED_RUNS=0
 
 # Current startup id for logging
 CURRENT_STARTUP_ID="unknown"
+
+sum_run_cost() {
+  if [[ ! -f "$RUN_LOG" ]]; then
+    return 0
+  fi
+  START_TS="$START_TS" STARTUP_ID="$CURRENT_STARTUP_ID" RUN_LOG="$RUN_LOG" python - <<'PY'
+import csv
+import os
+import time
+
+start_ts = int(os.environ.get("START_TS","0"))
+startup_id = os.environ.get("STARTUP_ID","").strip()
+total = 0.0
+path = os.environ.get("RUN_LOG","./intake_run_costs.csv")
+with open(path, "r", encoding="utf-8") as f:
+    reader = csv.DictReader(f)
+    for row in reader:
+        try:
+            ts = int(time.mktime(time.strptime(row["date"]+" "+row["time"], "%Y-%m-%d %H:%M:%S")))
+        except Exception:
+            continue
+        if ts < start_ts:
+            continue
+        if startup_id and row.get("startup") != startup_id:
+            continue
+        try:
+            total += float(row.get("cost","0") or 0)
+        except Exception:
+            pass
+print(f"Total Costs: ${total:.2f}")
+PY
+}
 
 # ------------------------------------------------------------
 # STARTUP BANNER
@@ -807,6 +841,7 @@ if [[ "$MODE" == "hero" ]]; then
     echo "❌ Hero file missing: startup_idea_id"
     exit 1
   fi
+  CURRENT_STARTUP_ID="$STARTUP_ID"
 
   if [[ -z "$STARTUP_NAME" ]]; then
     echo "❌ Hero file missing: startup_name"
@@ -866,6 +901,7 @@ if [[ "$MODE" == "hero" ]]; then
   echo "  block_b.json           → Tier 2 passes"
   echo "  ${STARTUP_ID}.txt      → Summary"
   echo "  ${STARTUP_ID}.json     → Combined blocks"
+  sum_run_cost
   echo "============================================"
   exit 0
 fi
