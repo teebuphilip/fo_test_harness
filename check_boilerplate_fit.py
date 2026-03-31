@@ -817,11 +817,16 @@ Examples:
     print(f"{Colors.BOLD}Output saved:{Colors.END} {output_file}")
     print()
 
-    if verdict == 'YES':
+    score = result.get('fit_score', 0)
+    if verdict == 'YES' and score >= 7:
         print(f"{Colors.BOLD}{Colors.GREEN}Next step:{Colors.END} Run the test harness with --use-boilerplate")
         print(f"  Pass this file to the harness: {output_file}")
         print()
         sys.exit(0)
+    if verdict == 'YES' and score < 7:
+        print(f"{Colors.BOLD}{Colors.YELLOW}Next step:{Colors.END} Fit score below 7 — treat as NO for automation")
+        print()
+        sys.exit(1)
     else:
         print(f"{Colors.BOLD}{Colors.YELLOW}Next step:{Colors.END} Review blockers above and plan custom build")
         print()
