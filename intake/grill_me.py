@@ -129,11 +129,14 @@ def _filter_answered_issues(report: Dict[str, Any], intake_obj: Dict[str, Any]) 
     invoice_edge_cases = pass1.get("invoice_edge_cases")
     mvp_features = hero.get("Q4_must_have_features")
     compliance = hero.get("Q6_constraints", {}).get("compliance")
+    integrations = hero.get("Q8_integrations") or []
+    has_stripe = any(str(i).lower() == "stripe" for i in integrations)
+    payment_details_has_stripe = _has_non_empty(payment_details) and "stripe" in str(payment_details).lower()
 
     filtered = []
     for issue in report.get("issues", []) or []:
         q = f"{issue.get('question','')} {issue.get('suggested_resolution','')}".lower()
-        if ("payment" in q or "integration" in q or "paypal" in q or "stripe" in q) and _has_non_empty(payment_details):
+        if ("payment" in q or "integration" in q or "paypal" in q or "stripe" in q) and has_stripe and payment_details_has_stripe:
             continue
         if ("role" in q or "permission" in q) and _has_non_empty(roles_permissions):
             continue
@@ -146,10 +149,114 @@ def _filter_answered_issues(report: Dict[str, Any], intake_obj: Dict[str, Any]) 
         filtered.append(issue)
 
     report["issues"] = filtered
+    if _acceptance_complete(intake_obj):
+        report["issues"] = []
+        report["halt"] = False
+        report["halt_reason"] = ""
+        return report
     if not filtered:
         report["halt"] = False
         report["halt_reason"] = ""
     return report
+
+
+def _acceptance_complete(intake_obj: Dict[str, Any]) -> bool:
+    block_b = intake_obj.get("block_b", {})
+    pass1 = block_b.get("pass_1", {})
+    hero = block_b.get("hero_answers", {})
+
+    features = hero.get("Q4_must_have_features") or []
+    has_features = isinstance(features, list) and len([f for f in features if f]) >= 2
+    has_compliance = _has_non_empty(hero.get("Q6_constraints", {}).get("compliance"))
+    integrations = hero.get("Q8_integrations") or []
+    has_integrations = isinstance(integrations, list) and any(str(i).lower() == "stripe" for i in integrations)
+    has_payment_details = _has_non_empty(pass1.get("economics_snapshot", {}).get("payment_integration_details"))
+    roles_permissions = pass1.get("roles_permissions")
+    has_roles = (
+        isinstance(roles_permissions, dict)
+        and "admin" in roles_permissions
+        and "seller" in roles_permissions
+    )
+    edge_cases = pass1.get("invoice_edge_cases") or []
+    has_edge_cases = isinstance(edge_cases, list) and len([e for e in edge_cases if e]) >= 3
+
+    return all([has_features, has_compliance, has_integrations, has_payment_details, has_roles, has_edge_cases])
+
+
+def _dedup_list(values: Any) -> Any:
+    if not isinstance(values, list):
+        return values
+    seen = set()
+    deduped = []
+    for item in values:
+        key = item if isinstance(item, str) else json.dumps(item, sort_keys=True)
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(item)
+    return deduped
+
+
+def _normalize_block_b(intake_obj: Dict[str, Any]) -> None:
+    block_b = intake_obj.get("block_b", {})
+    pass1 = block_b.get("pass_1", {})
+    pass2 = block_b.get("pass_2", {})
+    pass3 = block_b.get("pass_3", {})
+    pass6 = block_b.get("pass_6", {})
+
+    # 1) Dedup questions_for_hero
+    if "questions_for_hero" in pass1:
+        pass1["questions_for_hero"] = _dedup_list(pass1.get("questions_for_hero"))
+
+    # Enforce Stripe-only integration
+    hero = block_b.get("hero_answers", {})
+    integrations = hero.get("Q8_integrations")
+    if isinstance(integrations, list):
+        hero["Q8_integrations"] = ["Stripe"]
+    elif integrations is not None:
+        hero["Q8_integrations"] = ["Stripe"]
+    econ = pass1.get("economics_snapshot", {})
+    payment_details = econ.get("payment_integration_details")
+    if payment_details:
+        lower = str(payment_details).lower()
+        if "stripe" not in lower or "paypal" in lower:
+            econ["payment_integration_details"] = (
+                "Stripe only. Use Stripe Checkout or Payment Intents. "
+                "Handle failures with user notification and retry."
+            )
+
+    # 2) integration_count at least 1 when payments are needed
+    arch = pass1.get("architecture_flags", {})
+    if arch.get("needs_payments"):
+        metrics = pass1.setdefault("tier_enforcement_metrics", {})
+        metrics["integration_count"] = max(1, int(metrics.get("integration_count", 0) or 0))
+
+    # 3) Dedup engineering and QA questions
+    if "engineering_questions" in pass2:
+        pass2["engineering_questions"] = _dedup_list(pass2.get("engineering_questions"))
+    if "qa_questions_for_engineering" in pass3:
+        pass3["qa_questions_for_engineering"] = _dedup_list(pass3.get("qa_questions_for_engineering"))
+
+    # 4) needs_auth should be true when roles/permissions exist
+    roles_permissions = pass1.get("roles_permissions")
+    if isinstance(roles_permissions, str) or roles_permissions is None:
+        pass1["roles_permissions"] = {
+            "admin": {
+                "access": "full",
+                "capabilities": ["manage_users", "configure_settings"],
+            },
+            "seller": {
+                "access": "limited",
+                "capabilities": ["view_invoices", "make_payments"],
+            },
+        }
+    if pass1.get("roles_permissions"):
+        pass1.setdefault("architecture_flags", {})["needs_auth"] = True
+
+    # 5) Clear hero_questions when hero_answers already define features
+    hero_answers = block_b.get("hero_answers", {})
+    if hero_answers.get("Q4_must_have_features"):
+        pass6["hero_questions"] = []
 
 
 def _build_prompt(intake: Dict[str, Any], arch_context: str = "", block_b_only: bool = False) -> str:
@@ -178,6 +285,14 @@ def _build_prompt(intake: Dict[str, Any], arch_context: str = "", block_b_only: 
         "- Treat block_b.hero_answers and block_b.pass_1.economics_snapshot.payment_integration_details as authoritative.\n"
         "- If roles/permissions or edge cases are already defined in block_b.pass_1.roles_permissions or block_b.pass_1.invoice_edge_cases, do not raise them.\n"
         "- questions_for_hero is legacy; do not treat unanswered questions there as missing if answers exist elsewhere.\n\n"
+        "- Intake-level sufficiency only. Do NOT ask for implementation-level details like exact API endpoints, full data schemas, or validation rules.\n"
+        "- If payment integrations and compliance are described at a high level, treat them as resolved.\n"
+        "- If the intake explicitly defers specifics to build (e.g., 'to be finalized during build'), treat that as resolved.\n"
+        "- If block_b.hero_answers and block_b.pass_1 (payment_integration_details, roles_permissions, invoice_edge_cases) are populated, return no issues and halt=false.\n\n"
+        "- Payment integration must be Stripe only. Do not require or suggest PayPal.\n"
+        "- Require at least 2 must-have features in hero_answers.\n"
+        "- Require roles_permissions as a structured object with at least admin and seller roles.\n"
+        "- Require at least 3 invoice_edge_cases (intake-level, short list).\n\n"
         f"INTAKE JSON:\n{intake_str}\n"
     )
     if block_b_only:
@@ -376,6 +491,10 @@ def main() -> int:
             "- Use only information implied by the intake and the grill report.\n"
             "- Prefer small, buildable, manual-first answers.\n"
             "- Keep compliance realistic; if unknown, state 'none' or 'tbd'.\n\n"
+            "- Payment integration must be Stripe only.\n"
+            "- Provide at least 2 must-have features.\n"
+            "- Provide roles_permissions as a structured object with at least admin and seller roles.\n"
+            "- Provide at least 3 invoice_edge_cases.\n\n"
             f"INTAKE JSON:\n{intake_str}\n\n"
             f"GRILL REPORT:\n{report_str}\n"
         )
@@ -448,12 +567,19 @@ def main() -> int:
         report["provider"] = args.provider
         report["model"] = model
 
+        _normalize_block_b(patched)
+
         _write_json(report_path, report)
         print(f"[Grill‑Me] Report saved: {report_path}")
 
         if not args.no_apply:
             _write_json(out_path, patched)
             print(f"[Grill‑Me] Patched intake saved: {out_path}")
+
+        if not report.get("halt") and not report.get("issues"):
+            print("[Grill‑Me] No issues remain — stopping")
+            print("============================================================")
+            break
 
         if report.get("halt"):
             if args.provide_answers and not args.no_apply and iteration < max_iters:
@@ -478,14 +604,22 @@ def main() -> int:
                     invoice_edge_cases = supplemental.get("invoice_edge_cases")
                     if invoice_edge_cases:
                         pass1["invoice_edge_cases"] = invoice_edge_cases
+                _normalize_block_b(patched)
                 _write_json(out_path, patched)
                 print(f"[Grill‑Me] Patched intake saved: {out_path}")
+                if _acceptance_complete(patched):
+                    print("[Grill‑Me] Acceptance criteria met — stopping early")
+                    print("============================================================")
+                    return 0
                 current = deepcopy(patched)
+                print("============================================================")
                 continue
             if iteration >= max_iters:
                 print(f"[Grill‑Me] HALT: {report.get('halt_reason', 'unspecified')}")
+                print("============================================================")
                 return 2
         current = deepcopy(patched)
+        print("============================================================")
 
     return 0
 
