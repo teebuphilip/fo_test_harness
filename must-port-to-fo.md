@@ -1,5 +1,18 @@
 # Must Port to FO
 
+## Munger Loop + Low-Issue Cleanup (2026-03-31 session 21)
+
+142. feat: full munger loop + AI fixer convergence
+- Added `munger/run_munger_full.sh` (munger → fixer → munger loop) with resume, max loops, and end-of-run separators
+- Munger now generates LOW-issue clarifications on later loops and dedups template requests
+- AI fixer prints per-template responses and continues cleanup even when status is PASS but LOW issues remain
+- Added missing-field clarification templates (data_sources, integrations, risks) + mapping fallback
+- Normalizes integrations (drops `"None"` when real integrations exist)
+- Fixed PDF library/email verification rules to match patched fields and stop oscillation
+- Files: `munger/munger.py`, `munger/munger_ai_fixer.py`, `munger/detection_rules.v2.0.json`,
+  `munger/clarification_templates.v2.0.json`, `munger/run_munger_full.sh`
+- ✅ DONE here, ⬜ TODO for FO
+
 ## Intake QA + Boilerplate Fit (2026-03-31 session 20)
 
 141. feat: grill-me intake QA hardening

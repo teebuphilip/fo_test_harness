@@ -1,5 +1,12 @@
 # Learnings From AF to FO
 
+## Latest Learnings (2026-03-31 — munger loop + low-issue cleanup)
+
+- **Low-issue cleanup needs explicit logic.** If PASS short-circuits, LOW issues never get fixed. Generate clarifications on later loops and allow the fixer to run even after PASS when LOWs remain.
+- **Template/field alignment prevents oscillation.** Clarifications must update the exact fields that the detection rules check (e.g., PDF library choice in `constraints.tech_requirements`), or the loop will never converge.
+- **Dedup clarifications by template.** Multiple rules can trigger the same template; dedup to avoid redundant calls and oscillation.
+- **Normalize integrations at the boundary.** If `"None"` appears alongside real integrations, strip `"None"` to keep checks stable.
+
 ## Latest Learnings (2026-03-31 — intake QA + boilerplate fit)
 
 - **Prompt size is a first-order failure mode.** Boilerplate fit checks will 429/400 if the manifest is too large. Use exact high-signal files only; avoid repo-wide listings or tree dumps.
