@@ -19,6 +19,7 @@ import os
 import re
 import sys
 from datetime import datetime
+import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -36,6 +37,25 @@ FILES = {
     "output_schema": ROOT / "MUNGER_OUTPUT_SCHEMA.json",
     "canonical_schema": ROOT / "HERO_CANONICAL_SCHEMA.json",
 }
+
+AI_COST_LOG = ROOT / "munger_ai_costs.csv"
+
+
+def _append_ai_cost(provider: str, model: str, input_tokens: int, output_tokens: int, cost: float) -> None:
+    new_file = not AI_COST_LOG.exists()
+    with AI_COST_LOG.open("a", newline="") as f:
+        if new_file:
+            f.write("date,time,provider,model,input_tokens,output_tokens,cost\n")
+        now = datetime.now()
+        f.write(",".join([
+            now.strftime("%Y-%m-%d"),
+            now.strftime("%H:%M:%S"),
+            provider,
+            model,
+            str(input_tokens),
+            str(output_tokens),
+            f"{cost:.6f}",
+        ]) + "\n")
 
 
 def _load_json(path: Path) -> dict:
@@ -890,10 +910,18 @@ def main():
     parser.add_argument("--loop", type=int, default=1, choices=[1, 2], help="Clarification loop number")
     args = parser.parse_args()
 
+    start = time.time()
     input_path = Path(args.input_json)
     if not input_path.exists():
         print(f"Error: {input_path} not found")
         sys.exit(1)
+
+    print(f"[Munger] Input: {input_path}")
+    if args.out:
+        print(f"[Munger] Output: {Path(args.out)}")
+    if args.clarifications:
+        print(f"[Munger] Clarifications: {args.clarifications}")
+    print(f"[Munger] Loop: {args.loop}")
 
     input_data = _load_json(input_path)
     missing = [k for k in ("startup_idea_id", "startup_name", "startup_description", "hero_answers") if k not in input_data]
@@ -909,6 +937,10 @@ def main():
             sys.exit(3)
 
     output = run_munger(input_data, clarifications, args.loop)
+    report = output.get("munger_report", {})
+    issues = report.get("issues", []) or []
+    critical = report.get("critical_issues", 0)
+    patches = report.get("applied_patches", []) or []
 
     output_json = json.dumps(output, indent=2, ensure_ascii=False)
     if args.out:
@@ -916,6 +948,24 @@ def main():
         print(f"Wrote: {args.out}")
     else:
         print(output_json)
+
+    elapsed = time.time() - start
+    print(f"[Munger] Status: {report.get('status', 'UNKNOWN')}")
+    print(f"[Munger] Score: {report.get('score', 0)}")
+    print(f"[Munger] Issues: {len(issues)} (critical: {critical})")
+    if issues:
+        print("[Munger] Issues detail:")
+        for i, issue in enumerate(issues, 1):
+            issue_id = issue.get("issue_id", f"ISSUE_{i:02d}")
+            severity = issue.get("severity", "unknown")
+            message = issue.get("message", "").strip()
+            print(f"  - {issue_id} [{severity}] {message}")
+    print(f"[Munger] Applied patches: {len(patches)}")
+    print(f"[Munger] Duration: {elapsed:.2f}s")
+
+    _append_ai_cost("deterministic", "munger", 0, 0, 0.0)
+    print(f"[Munger] Cost: $0.0000 (deterministic)")
+    print(f"[Munger] Cost CSV: {AI_COST_LOG.resolve()}")
 
 
 if __name__ == "__main__":

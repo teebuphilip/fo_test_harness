@@ -27,7 +27,53 @@ gap-analysis/outputs/*_business_brief_marketing_copy.json
 gap-analysis/outputs/*_business_brief_gtm.json
 ```
 
-**Step 2 — Hero JSON → Intake**
+**Step 2 — Munger (Hero Answers QA)**
+Run Munger on the hero JSON from gap-analysis before intake:
+```bash
+python munger/munger.py intake/ai_text/<picked_name>.json --out munger/<picked_name>_munger_out.json
+```
+Output:
+```text
+munger/<picked_name>_munger_out.json
+```
+Example output (from `invoicetool`):
+```text
+(cd39) Teebus-MacBook-Pro:munger teebuphilip$ python munger.py ../intake/ai_text/invoicetool.json --out ../munger/invoicetool_munger_out.json
+[Munger] Input: ../intake/ai_text/invoicetool.json
+[Munger] Output: ../munger/invoicetool_munger_out.json
+[Munger] Loop: 1
+Wrote: ../munger/invoicetool_munger_out.json
+[Munger] Status: NEEDS_CLARIFICATION
+[Munger] Score: 0
+[Munger] Issues: 20 (critical: 18)
+[Munger] Issues detail:
+  - ISSUE_01 [CRITICAL] Missing or empty: hero.architecture
+  - ISSUE_02 [MEDIUM] Feature implies architecture flag 'payments_required'
+  - ISSUE_03 [LOW] hero.risks missing recommended pattern
+  - ISSUE_04 [CRITICAL] Missing required field: data_sources
+  - ISSUE_05 [CRITICAL] Missing required field: integrations
+  - ISSUE_06 [CRITICAL] Missing required field: risks
+  - ISSUE_07 [CRITICAL] Missing required field: architecture
+  - ISSUE_08 [CRITICAL] Missing architecture field: authentication_required
+  - ISSUE_09 [CRITICAL] Missing architecture field: role_based_access
+  - ISSUE_10 [CRITICAL] Missing architecture field: multi_tenant
+  - ISSUE_11 [CRITICAL] Missing architecture field: persistent_database
+  - ISSUE_12 [CRITICAL] Missing architecture field: payments_required
+  - ISSUE_13 [CRITICAL] Missing architecture field: subscription_billing
+  - ISSUE_14 [CRITICAL] Missing architecture field: dashboard_reporting
+  - ISSUE_15 [CRITICAL] Missing architecture field: pdf_generation
+  - ISSUE_16 [CRITICAL] Missing architecture field: external_apis
+  - ISSUE_17 [CRITICAL] Missing architecture field: background_jobs
+  - ISSUE_18 [CRITICAL] Missing architecture field: admin_panel
+  - ISSUE_19 [CRITICAL] Missing architecture field: expected_timeline_days
+  - ISSUE_20 [CRITICAL] Missing architecture field: minimum_tier
+[Munger] Applied patches: 0
+[Munger] Duration: 0.01s
+[Munger] Cost: $0.0000 (deterministic)
+[Munger] Cost CSV: /Users/teebuphilip/Downloads/FO_TEST_HARNESS/munger/munger_ai_costs.csv
+```
+
+**Step 3 — Hero JSON → Intake**
 1. If you already have a hero JSON:
 ```bash
 cd intake
@@ -82,7 +128,7 @@ Total Costs: $0.03
 ============================================
 ```
 
-**Step 3 — Intake QA + Fit**
+**Step 4 — Intake QA + Fit**
 1. Boilerplate fit check (original intake):
 ```bash
 python check_boilerplate_fit.py intake/intake_runs/<picked_name>/<picked_name>.json
@@ -302,7 +348,7 @@ Next step: Run the test harness with --use-boilerplate
   Pass this file to the harness: boilerplate_checks/invoicetool_boilerplate_check.json
 ```
 
-**Step 4 — Build + QA**
+**Step 5 — Build + QA**
 1. Full greenfield pipeline:
 ```bash
 ./run_integration_and_feature_build.sh \
@@ -314,7 +360,7 @@ Next step: Run the test harness with --use-boilerplate
 fo_harness_runs/<picked_name>_BLOCK_B_full_<timestamp>.zip
 ```
 
-**Step 5 — Deploy**
+**Step 6 — Deploy**
 1. Convert ZIP to repo:
 ```bash
 python deploy/zip_to_repo.py fo_harness_runs/<picked_name>_BLOCK_B_full_<timestamp>.zip
