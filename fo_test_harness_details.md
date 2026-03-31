@@ -18,6 +18,20 @@ Outputs:
 
 See `gap-analysis/README_DETAILED.md` for the full flow.
 
+## 0.1 Intake QA + Boilerplate Fit
+
+After intake generation, run boilerplate fit and grill-me QA:
+
+```
+python check_boilerplate_fit.py intake/intake_runs/<startup>/<startup>.json
+cd intake
+./grill_me.sh intake_runs/<startup>/<startup>.json
+```
+
+Notes:
+- `check_boilerplate_fit.py` uses a slim manifest (exact high-signal files only) and logs prompt size.
+- `grill_me.sh` defaults to block B only, auto-resume, and auto-answer with Stripe-only assumptions and minimal roles/edge cases.
+
 ## 1. Architecture Overview
 
 The harness orchestrates two competing AI systems in a GAN-like loop:

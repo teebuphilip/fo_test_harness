@@ -21,6 +21,9 @@
 ## NOTE (2026-03-28)
 Pre-intake gap analysis now lives in `gap-analysis/` and is documented in `gap-analysis/README_DETAILED.md`. It is separate from the harness improvements tracked here.
 
+## NOTE (2026-03-31)
+Intake QA tooling was hardened outside this doc: `intake/grill_me.py` now auto-resumes, targets block B only, and enforces Stripe-only + minimal roles/edge cases. `check_boilerplate_fit.py` now uses a slim manifest and logs prompt size with a scoring rubric.
+
 ## CONTEXT — WHY THESE CHANGES
 
 The harness currently runs three AI QA gates on every build iteration regardless of build state. This causes two problems:

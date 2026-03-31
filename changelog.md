@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-03-31 (session 20 — intake QA + boilerplate fit hardening)
+
+### feat: grill-me intake QA hardening
+- Default block-b-only + auto-resume; auto-answer loop with acceptance criteria.
+- Enforced Stripe-only integrations, minimum 2 must-have features, structured roles (admin+seller), and 3+ edge cases.
+- Normalizes block B (dedup questions, integration_count floor, needs_auth derived from roles).
+- Added early-stop when no issues remain.
+
+Files: `intake/grill_me.py`
+
+### feat: boilerplate fit prompt slimming + scoring rubric
+- Slim manifest now uses exact high-signal files only; removed file listings and tree.
+- Default boilerplate path set to `~/Documents/work/teebu-saas-platform` with `--boilerplate-path` override.
+- Added manifest/prompt size logging and hard cap via `MAX_MANIFEST_CHARS`.
+- Added fit score rubric + `fit_score_breakdown` in JSON output.
+
+Files: `check_boilerplate_fit.py`
+
 ## 2026-03-28 (session 19 — gap-analysis pipeline)
 
 ### feat: pre-intake gap-analysis pipeline (Pass0 → pricing → naming → SEO → marketing → GTM → hero JSON)

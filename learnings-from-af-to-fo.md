@@ -1,5 +1,11 @@
 # Learnings From AF to FO
 
+## Latest Learnings (2026-03-31 — intake QA + boilerplate fit)
+
+- **Prompt size is a first-order failure mode.** Boilerplate fit checks will 429/400 if the manifest is too large. Use exact high-signal files only; avoid repo-wide listings or tree dumps.
+- **Acceptance criteria beat open-ended QA.** Grill-me converges when it has explicit minima (e.g., 2 must-have features, Stripe-only integration, roles object, 3 edge cases).
+- **Normalize at the boundary.** Auto-dedup questions and fill minimal roles prevents downstream tools from receiving malformed structures.
+
 ## Latest Learnings (2026-03-28 — pre-intake gap analysis)
 
 - **Pass0 before intake prevents wasted builds.** Lock persona, gap type, wedge, and alternatives before intake so downstream work stays consistent.

@@ -35,7 +35,7 @@ import argparse
 import hashlib
 from pathlib import Path
 from datetime import datetime
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple
 import requests
 
 
@@ -54,6 +54,7 @@ class Config:
     REQUEST_TIMEOUT   = 180
     MAX_RETRIES       = 3
     RETRY_SLEEP       = 5
+    MAX_MANIFEST_CHARS = int(os.getenv("MAX_MANIFEST_CHARS", "300000"))
     OUTPUT_DIR        = Path('./boilerplate_checks')
     COST_CSV          = Path('./boilerplate_checks/boilerplate_fit_ai_costs.csv')
     OPENAI_INPUT_PER_MTOK = float(os.getenv("OPENAI_INPUT_PER_MTOK", "2.50"))
@@ -141,24 +142,25 @@ def read_boilerplate_manifest(path: Path) -> str:
     if not path.exists():
         raise FileNotFoundError(f"Boilerplate not found: {path}")
 
-    # Files we want to read in full
-    FULL_READ_PATTERNS = [
-        'directives/BUILD_DIRECTIVE.md',
-        'directives/backend_directive.md',
-        'directives/frontend_directive.md',
-        'directives/testing_directive.md',
-        'saas-boilerplate/README.md',
-        'teebu-shared-libs/README.md',
+    # Files we want to read in full (exact paths only)
+    FULL_READ_FILES = {
         'README.md',
-    ]
+        'PLATFORM_CAPABILITIES.md',
+        'CLAUDE_BUILD_DIRECTIVE.md',
+        'P0_KERNEL_BUILD_DIRECTIVE.md',
+        'saas-boilerplate/README.md',
+        'saas-boilerplate/QUICKSTART.md',
+        'saas-boilerplate/PLUGIN_ARCHITECTURE.md',
+        'saas-boilerplate/DELIVERY_MANIFEST.md',
+        'saas-boilerplate/directives/BUILD_DIRECTIVE.md',
+        'saas-boilerplate/directives/backend_directive.md',
+        'saas-boilerplate/directives/frontend_directive.md',
+        'saas-boilerplate/directives/testing_directive.md',
+        'teebu-shared-libs/README.md',
+        'teebu-shared-libs/README_STRIPE_LIB.md',
+        'teebu-shared-libs/GA4_SETUP_GUIDE.md',
+    }
 
-    # Files we only want a listing of (not full content)
-    LIST_ONLY_PATTERNS = [
-        'saas-boilerplate/backend/',
-        'saas-boilerplate/frontend/src/pages/',
-        'saas-boilerplate/frontend/src/components/',
-        'teebu-shared-libs/lib/',
-    ]
 
     def normalize(p: str) -> str:
         return p.replace('\\', '/').lstrip('./')
@@ -180,33 +182,17 @@ def read_boilerplate_manifest(path: Path) -> str:
         bundle.append("## FULL CONTENT: KEY DIRECTIVE AND README FILES")
         bundle.append("")
         for name in sorted(all_names):
-            for pattern in FULL_READ_PATTERNS:
-                if name.endswith(pattern) or name.endswith(pattern.lstrip('/')):
-                    try:
-                        content = (path / name).read_text(encoding='utf-8', errors='replace')
-                        bundle.append(f"<<<BEGIN_FILE: {name}>>>")
-                        bundle.append(content)
-                        bundle.append(f"<<<END_FILE: {name}>>>")
-                        bundle.append("")
-                    except Exception as e:
-                        bundle.append(f"<<<SKIP: {name} — {e}>>>")
-                    break
+            if name in FULL_READ_FILES:
+                try:
+                    content = (path / name).read_text(encoding='utf-8', errors='replace')
+                    bundle.append(f"<<<BEGIN_FILE: {name}>>>")
+                    bundle.append(content)
+                    bundle.append(f"<<<END_FILE: {name}>>>")
+                    bundle.append("")
+                except Exception as e:
+                    bundle.append(f"<<<SKIP: {name} — {e}>>>")
 
-        # Add file listings for structural context
-        bundle.append("## FILE LISTINGS: BOILERPLATE STRUCTURE")
-        bundle.append("")
-        for pattern in LIST_ONLY_PATTERNS:
-            matching = [n for n in all_names if pattern in n and not n.endswith('/')]
-            if matching:
-                bundle.append(f"### Files under {pattern}")
-                for f in sorted(matching):
-                    bundle.append(f"  {f}")
-                bundle.append("")
-
-        # Full file tree for complete picture
-        bundle.append("## COMPLETE FILE TREE")
-        for name in sorted(all_names):
-            bundle.append(f"  {name}")
+        # Intentionally omit file listings and full file tree to keep prompt size small
 
     else:
         # ZIP mode
@@ -217,37 +203,26 @@ def read_boilerplate_manifest(path: Path) -> str:
             bundle.append("## FULL CONTENT: KEY DIRECTIVE AND README FILES")
             bundle.append("")
             for name in sorted(all_names):
-                for pattern in FULL_READ_PATTERNS:
-                    if name.endswith(pattern) or name.endswith(pattern.lstrip('/')):
-                        try:
-                            content = zf.read(name).decode('utf-8', errors='replace')
-                            bundle.append(f"<<<BEGIN_FILE: {name}>>>")
-                            bundle.append(content)
-                            bundle.append(f"<<<END_FILE: {name}>>>")
-                            bundle.append("")
-                        except Exception as e:
-                            bundle.append(f"<<<SKIP: {name} — {e}>>>")
-                        break
+                if name in FULL_READ_FILES:
+                    try:
+                        content = zf.read(name).decode('utf-8', errors='replace')
+                        bundle.append(f"<<<BEGIN_FILE: {name}>>>")
+                        bundle.append(content)
+                        bundle.append(f"<<<END_FILE: {name}>>>")
+                        bundle.append("")
+                    except Exception as e:
+                        bundle.append(f"<<<SKIP: {name} — {e}>>>")
 
-            # Add file listings for structural context
-            bundle.append("## FILE LISTINGS: BOILERPLATE STRUCTURE")
-            bundle.append("")
-            for pattern in LIST_ONLY_PATTERNS:
-                matching = [n for n in all_names if pattern in n and not n.endswith('/')]
-                if matching:
-                    bundle.append(f"### Files under {pattern}")
-                    for f in sorted(matching):
-                        bundle.append(f"  {f}")
-                    bundle.append("")
-
-            # Full file tree for complete picture
-            bundle.append("## COMPLETE FILE TREE")
-            for name in sorted(all_names):
-                bundle.append(f"  {name}")
+            # Intentionally omit file listings and full file tree to keep prompt size small
 
     bundle.append("")
     bundle.append("<<<END_BOILERPLATE_MANIFEST>>>")
-    return '\n'.join(bundle)
+    manifest = '\n'.join(bundle)
+    if len(manifest) > Config.MAX_MANIFEST_CHARS:
+        truncated = manifest[:Config.MAX_MANIFEST_CHARS]
+        truncated += "\n\n<<<TRUNCATED: BOILERPLATE MANIFEST EXCEEDED MAX SIZE>>>\n"
+        return truncated
+    return manifest
 
 
 # ============================================================
@@ -459,6 +434,18 @@ deterministic implementation. Be specific about what is missing.
 
 ---
 
+## FIT SCORE RUBRIC
+Start at 10. Subtract:
+-1 if auth is NOT needed
+-1 if payments/subscriptions are NOT needed
+-1 if email marketing is NOT needed
+-1 if analytics are NOT needed
+-1 if there are any ambiguities
+-1 if any external dependencies are required beyond what the boilerplate provides
+-2 if the core value is NOT standard CRUD/workflow (e.g., heavy realtime, mobile-only, video, blockchain)
+
+You MUST show a brief score breakdown and compute the final fit_score.
+
 ## OUTPUT FORMAT
 
 You MUST respond with ONLY a JSON object. No preamble. No explanation outside the JSON.
@@ -470,6 +457,7 @@ The JSON must parse cleanly.
   "analyzed_at": "ISO_TIMESTAMP",
   "verdict": "YES" or "NO",
   "fit_score": 0-10,
+  "fit_score_breakdown": ["Start 10", "-1 no auth", "...", "Final = X"],
   "fit_summary": "One sentence explaining the verdict",
 
   "boilerplate_covers": [
@@ -673,8 +661,22 @@ Examples:
     )
     parser.add_argument(
         'boilerplate_path',
+        nargs='?',
         type=Path,
+        default=Path('~/Documents/work/teebu-saas-platform').expanduser(),
         help='Path to teebu-saas-platform.zip or teebu-saas-platform/ directory'
+    )
+    parser.add_argument(
+        '--boilerplate-path',
+        dest='boilerplate_path_override',
+        type=Path,
+        default=None,
+        help='Override boilerplate path (defaults to ~/Documents/work/teebu-saas-platform)'
+    )
+    parser.add_argument(
+        '--verbose',
+        action='store_true',
+        help='Print raw model response to stdout'
     )
 
     args = parser.parse_args()
@@ -694,8 +696,10 @@ Examples:
         print_error(f"Intake file not found: {args.intake_file}")
         sys.exit(1)
 
-    if not args.boilerplate_path.exists():
-        print_error(f"Boilerplate not found: {args.boilerplate_path}")
+    boilerplate_path = args.boilerplate_path_override or args.boilerplate_path
+
+    if not boilerplate_path.exists():
+        print_error(f"Boilerplate not found: {boilerplate_path}")
         sys.exit(1)
 
     # Create output directory
@@ -703,7 +707,7 @@ Examples:
 
     print_header("BOILERPLATE FIT CHECKER")
     print_info(f"Intake:     {args.intake_file}")
-    print_info(f"Boilerplate: {args.boilerplate_path}")
+    print_info(f"Boilerplate: {boilerplate_path}")
 
     # Load intake JSON
     print_info("Loading intake JSON...")
@@ -725,14 +729,17 @@ Examples:
     # Read boilerplate manifest
     print_info("Reading boilerplate (ZIP or directory)...")
     try:
-        boilerplate_manifest = read_boilerplate_manifest(args.boilerplate_path)
+        boilerplate_manifest = read_boilerplate_manifest(boilerplate_path)
         print_success("Boilerplate manifest built")
+        print_info(f"Boilerplate manifest size: {len(boilerplate_manifest):,} chars")
     except Exception as e:
         print_error(f"Failed to read boilerplate: {e}")
         sys.exit(1)
 
     # Build prompt
     prompt = build_analysis_prompt(intake_data, boilerplate_manifest)
+    prompt_bytes = len(prompt.encode("utf-8"))
+    print_info(f"Prompt size: {prompt_bytes:,} bytes")
 
     # Log prompt for debugging
     prompt_log = Config.OUTPUT_DIR / f'{startup_id}_analysis_prompt.log'
@@ -779,6 +786,10 @@ Examples:
     raw_log = Config.OUTPUT_DIR / f'{startup_id}_raw_response.log'
     with open(raw_log, 'w') as f:
         f.write(f"[{datetime.now().isoformat()}]\n{raw_response}\n")
+    if args.verbose:
+        print_info("RAW OUTPUT BEGIN")
+        print(raw_response)
+        print_info("RAW OUTPUT END")
 
     # Parse verdict
     print_info("Parsing verdict...")

@@ -1,5 +1,22 @@
 # Must Port to FO
 
+## Intake QA + Boilerplate Fit (2026-03-31 session 20)
+
+141. feat: grill-me intake QA hardening
+- block-b-only + auto-resume + auto-answer with acceptance criteria
+- Stripe-only integration, minimal roles (admin/seller), 3+ edge cases, 2+ must-have features
+- Normalizes block B (dedup questions, integration_count floor, needs_auth from roles)
+- Files: `intake/grill_me.py`
+- ✅ DONE here, ⬜ TODO for FO
+
+140. feat: boilerplate fit prompt slimming + scoring rubric
+- Exact high-signal file list only; removed repo-wide listings/tree
+- Default boilerplate path + `--boilerplate-path` override
+- Manifest/prompt size logging + hard cap via `MAX_MANIFEST_CHARS`
+- Fit score rubric + `fit_score_breakdown`
+- Files: `check_boilerplate_fit.py`
+- ✅ DONE here, ⬜ TODO for FO
+
 ## Pre-Intake Gap Analysis (2026-03-28 session 19)
 
 139. feat: gap-analysis pipeline (Pass0 → pricing → naming → SEO → marketing → GTM → hero JSON)
