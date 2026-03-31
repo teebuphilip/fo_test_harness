@@ -91,6 +91,93 @@
       ]
     },
     {
+      "template_id": "CT005_data_sources",
+      "title": "List required data sources",
+      "question": "List the data sources the MVP will use (2\u20135 items). Use short phrases.",
+      "response_schema": {
+        "type": "object",
+        "required": [
+          "data_sources"
+        ],
+        "properties": {
+          "data_sources": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 3
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "apply_patch": [
+        {
+          "op": "replace",
+          "path": "hero.data_sources",
+          "from_answer": "data_sources"
+        }
+      ]
+    },
+    {
+      "template_id": "CT006_integrations",
+      "title": "List required integrations",
+      "question": "List the external integrations needed for the MVP (use \"None\" if no integrations).",
+      "response_schema": {
+        "type": "object",
+        "required": [
+          "integrations"
+        ],
+        "properties": {
+          "integrations": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 2
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "apply_patch": [
+        {
+          "op": "replace",
+          "path": "hero.integrations",
+          "from_answer": "integrations"
+        }
+      ]
+    },
+    {
+      "template_id": "CT007_risks",
+      "title": "List key risks",
+      "question": "List 2\u20135 key risks or failure modes for the MVP. Use short phrases.",
+      "response_schema": {
+        "type": "object",
+        "required": [
+          "risks"
+        ],
+        "properties": {
+          "risks": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 3
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "apply_patch": [
+        {
+          "op": "replace",
+          "path": "hero.risks",
+          "from_answer": "risks"
+        }
+      ]
+    },
+    {
       "template_id": "CT010_clarity_cleanup",
       "title": "Remove placeholders / vague wording",
       "question": "Rewrite the flagged text(s) to remove placeholders and vague words. Keep meaning; add specifics where missing.",

@@ -36,6 +36,36 @@
       "clarification_template_id": "CT004_must_have_features"
     },
     {
+      "rule_id": "DR003A_missing_data_sources",
+      "category": "completeness",
+      "severity": "CRITICAL",
+      "mode": "missing_or_empty",
+      "target_paths": [
+        "hero.data_sources"
+      ],
+      "clarification_template_id": "CT005_data_sources"
+    },
+    {
+      "rule_id": "DR003B_missing_integrations",
+      "category": "completeness",
+      "severity": "CRITICAL",
+      "mode": "missing_or_empty",
+      "target_paths": [
+        "hero.integrations"
+      ],
+      "clarification_template_id": "CT006_integrations"
+    },
+    {
+      "rule_id": "DR003C_missing_risks",
+      "category": "completeness",
+      "severity": "CRITICAL",
+      "mode": "missing_or_empty",
+      "target_paths": [
+        "hero.risks"
+      ],
+      "clarification_template_id": "CT007_risks"
+    },
+    {
       "rule_id": "DR004_missing_architecture",
       "category": "completeness",
       "severity": "CRITICAL",
@@ -213,14 +243,11 @@
       "rule_id": "DR065_authentication_required_but_no_verification",
       "category": "consistency",
       "severity": "LOW",
-      "mode": "cross_field",
-      "description": "Auth required but no mention of email verification",
-      "primary_path": "hero.architecture.authentication_required",
-      "check_path": "hero.must_have_features",
-      "predicate": {
-        "equals": true
-      },
-      "should_contain_regex": "(email verification|verify email|confirm email|activation)",
+      "mode": "missing_or_empty",
+      "description": "Email verification requirement not specified",
+      "target_paths": [
+        "hero.architecture.email_verification_required"
+      ],
       "clarification_template_id": "CT054_email_verification",
       "target_paths": []
     },
@@ -467,22 +494,42 @@
       "target_paths": []
     },
     {
+      "rule_id": "DR084B_risks_deliverability_pattern",
+      "category": "quality",
+      "severity": "LOW",
+      "mode": "cross_field",
+      "description": "Ensure risks mention email deliverability when relevant",
+      "primary_path": "hero.risks",
+      "check_path": "hero.risks",
+      "should_contain_regex": "(deliverability|spam|SPF|DKIM|email)",
+      "clarification_template_id": "CT053_add_email_risk",
+      "target_paths": []
+    },
+    {
       "rule_id": "DR085_pdf_generation_without_library_choice",
       "category": "constraint",
       "severity": "LOW",
       "mode": "cross_field",
       "description": "PDF generation enabled but no library specified",
       "primary_path": "hero.architecture.pdf_generation",
-      "check_paths": [
-        "hero.integrations",
-        "hero.shipping_preference"
-      ],
+      "check_path": "hero.constraints.tech_requirements.pdf_library_choice",
       "predicate": {
         "equals": true
       },
       "should_contain_regex": "(ReportLab|WeasyPrint|pdfkit|wkhtmltopdf|Puppeteer|PDF)",
       "clarification_template_id": "CT036_pdf_library_choice",
       "target_paths": []
+    },
+    {
+      "rule_id": "DR085C_pdf_library_choice_missing",
+      "category": "constraint",
+      "severity": "LOW",
+      "mode": "missing_or_empty",
+      "description": "PDF library choice missing",
+      "target_paths": [
+        "hero.constraints.tech_requirements.pdf_library_choice"
+      ],
+      "clarification_template_id": "CT036_pdf_library_choice"
     },
     {
       "rule_id": "DR086_q11_external_apis_missing_from_q8",

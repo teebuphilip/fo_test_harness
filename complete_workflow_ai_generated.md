@@ -28,49 +28,43 @@ gap-analysis/outputs/*_business_brief_gtm.json
 ```
 
 **Step 2 — Munger (Hero Answers QA)**
-Run Munger on the hero JSON from gap-analysis before intake:
+Run the full munger loop (deterministic + AI fixer) on the hero JSON before intake:
 ```bash
-python munger/munger.py intake/ai_text/<picked_name>.json --out munger/<picked_name>_munger_out.json
+./munger/run_munger_full.sh intake/ai_text/<picked_name>.json
 ```
-Output:
+Outputs:
 ```text
+munger/<picked_name>.munged.json
 munger/<picked_name>_munger_out.json
+munger/<picked_name>_munger_ai_fixed.json
 ```
 Example output (from `invoicetool`):
 ```text
-(cd39) Teebus-MacBook-Pro:munger teebuphilip$ python munger.py ../intake/ai_text/invoicetool.json --out ../munger/invoicetool_munger_out.json
-[Munger] Input: ../intake/ai_text/invoicetool.json
-[Munger] Output: ../munger/invoicetool_munger_out.json
+(cd39) Teebus-MacBook-Pro:munger teebuphilip$ ./run_munger_full.sh ../intake/ai_text/invoicetool.json --resume
+[MungerFull] Input: ../intake/ai_text/invoicetool.json
+[MungerFull] Munged output: /Users/teebuphilip/Downloads/FO_TEST_HARNESS/munger/invoicetool.munged.json
+[MungerFull] Fixer output: /Users/teebuphilip/Downloads/FO_TEST_HARNESS/munger/invoicetool_munger_ai_fixed.json
+[MungerFull] Report output: /Users/teebuphilip/Downloads/FO_TEST_HARNESS/munger/invoicetool_munger_out.json
+[MungerFull] Python: /Users/teebuphilip/venvs/cd39/bin/python
+[MungerFull] Max loops: 5
+[MungerFull] Resume: enabled
+[MungerFull] Resume enabled and munged output exists — starting from munged file
+[MungerFull] Loop 1/5
+[Munger] Input: /Users/teebuphilip/Downloads/FO_TEST_HARNESS/munger/invoicetool.munged.json
+[Munger] Output: /Users/teebuphilip/Downloads/FO_TEST_HARNESS/munger/invoicetool_munger_out.json
 [Munger] Loop: 1
-Wrote: ../munger/invoicetool_munger_out.json
-[Munger] Status: NEEDS_CLARIFICATION
-[Munger] Score: 0
-[Munger] Issues: 20 (critical: 18)
-[Munger] Issues detail:
-  - ISSUE_01 [CRITICAL] Missing or empty: hero.architecture
-  - ISSUE_02 [MEDIUM] Feature implies architecture flag 'payments_required'
-  - ISSUE_03 [LOW] hero.risks missing recommended pattern
-  - ISSUE_04 [CRITICAL] Missing required field: data_sources
-  - ISSUE_05 [CRITICAL] Missing required field: integrations
-  - ISSUE_06 [CRITICAL] Missing required field: risks
-  - ISSUE_07 [CRITICAL] Missing required field: architecture
-  - ISSUE_08 [CRITICAL] Missing architecture field: authentication_required
-  - ISSUE_09 [CRITICAL] Missing architecture field: role_based_access
-  - ISSUE_10 [CRITICAL] Missing architecture field: multi_tenant
-  - ISSUE_11 [CRITICAL] Missing architecture field: persistent_database
-  - ISSUE_12 [CRITICAL] Missing architecture field: payments_required
-  - ISSUE_13 [CRITICAL] Missing architecture field: subscription_billing
-  - ISSUE_14 [CRITICAL] Missing architecture field: dashboard_reporting
-  - ISSUE_15 [CRITICAL] Missing architecture field: pdf_generation
-  - ISSUE_16 [CRITICAL] Missing architecture field: external_apis
-  - ISSUE_17 [CRITICAL] Missing architecture field: background_jobs
-  - ISSUE_18 [CRITICAL] Missing architecture field: admin_panel
-  - ISSUE_19 [CRITICAL] Missing architecture field: expected_timeline_days
-  - ISSUE_20 [CRITICAL] Missing architecture field: minimum_tier
+Wrote: /Users/teebuphilip/Downloads/FO_TEST_HARNESS/munger/invoicetool_munger_out.json
+[Munger] Status: PASS
+[Munger] Score: 100
+[Munger] Issues: 0 (critical: 0)
 [Munger] Applied patches: 0
 [Munger] Duration: 0.01s
 [Munger] Cost: $0.0000 (deterministic)
 [Munger] Cost CSV: /Users/teebuphilip/Downloads/FO_TEST_HARNESS/munger/munger_ai_costs.csv
+[MungerFull] Status PASS — writing munged file from clean_hero_answers
+Wrote: /Users/teebuphilip/Downloads/FO_TEST_HARNESS/munger/invoicetool.munged.json
+=======================
+=======================
 ```
 
 **Step 3 — Hero JSON → Intake**

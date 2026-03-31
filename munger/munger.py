@@ -810,17 +810,35 @@ def _score_issues(issues: List[dict]) -> Tuple[int, int]:
 def _build_clarifications(issues: List[dict], templates: dict, loop: int) -> List[dict]:
     template_map = {t["template_id"]: t for t in templates.get("templates", [])}
     max_items = 5
-    if loop == 1:
+    if loop <= 1:
         sev_allowed = {"CRITICAL"}
-    else:
+    elif loop == 2:
         sev_allowed = {"CRITICAL", "HIGH", "MEDIUM"}
+    else:
+        sev_allowed = {"CRITICAL", "HIGH", "MEDIUM", "LOW"}
 
     clarifications = []
+    seen_templates = set()
     for issue in issues:
         if issue.get("severity") not in sev_allowed:
             continue
         tid = issue.get("clarification_template_id")
+        if not tid:
+            msg = (issue.get("message") or "").lower()
+            if msg.startswith("missing required field:"):
+                field = msg.split(":", 1)[1].strip()
+                field_map = {
+                    "data_sources": "CT005_data_sources",
+                    "integrations": "CT006_integrations",
+                    "risks": "CT007_risks",
+                    "architecture": "CT011_architecture",
+                }
+                tid = field_map.get(field)
+            elif "missing architecture field" in msg:
+                tid = "CT011_architecture"
         if not tid or tid not in template_map:
+            continue
+        if tid in seen_templates:
             continue
         tmpl = template_map[tid]
         clarifications.append({
@@ -830,6 +848,7 @@ def _build_clarifications(issues: List[dict], templates: dict, loop: int) -> Lis
             "response_schema": tmpl.get("response_schema"),
             "issue": issue,
         })
+        seen_templates.add(tid)
         if len(clarifications) >= max_items:
             break
     return clarifications
@@ -892,6 +911,11 @@ def run_munger(input_data: dict, clarifications: Optional[List[dict]], loop: int
 
     if status == "NEEDS_CLARIFICATION":
         report["clarifications"] = _build_clarifications(issues, templates, loop)
+    elif status == "PASS":
+        # Allow low-issue cleanup on later loops
+        has_low = any(i.get("severity") == "LOW" for i in issues)
+        if loop >= 3 and has_low:
+            report["clarifications"] = _build_clarifications(issues, templates, loop)
 
     return {
         "startup_idea_id": input_data.get("startup_idea_id", ""),

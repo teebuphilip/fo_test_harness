@@ -13,6 +13,7 @@ import os
 import re
 import sys
 from datetime import datetime
+import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -30,7 +31,7 @@ DEFAULT_CLAUDE_MODEL = "claude-sonnet-4-20250514"
 AI_COST_LOG = ROOT / "munger_ai_costs.csv"
 
 
-def _append_ai_cost(provider: str, model: str, input_tokens: int, output_tokens: int):
+def _append_ai_cost(provider: str, model: str, input_tokens: int, output_tokens: int) -> float:
     in_rate = float(os.getenv("OPENAI_INPUT_PER_MTOK", "2.50"))
     out_rate = float(os.getenv("OPENAI_OUTPUT_PER_MTOK", "10.00"))
     if provider == "claude":
@@ -55,6 +56,25 @@ def _append_ai_cost(provider: str, model: str, input_tokens: int, output_tokens:
             str(output_tokens),
             f"{total:.6f}",
         ]) + "\n")
+    return total
+
+
+def _sum_total_cost() -> float:
+    if not AI_COST_LOG.exists():
+        return 0.0
+    total = 0.0
+    with AI_COST_LOG.open("r", encoding="utf-8") as f:
+        for i, line in enumerate(f):
+            if i == 0:
+                continue
+            parts = line.strip().split(",")
+            if len(parts) < 7:
+                continue
+            try:
+                total += float(parts[6])
+            except ValueError:
+                continue
+    return total
 
 
 def _load_munger_module():
@@ -123,12 +143,14 @@ def _call_chatgpt(prompt: str, model: str) -> dict:
     resp.raise_for_status()
     data = resp.json()
     usage = data.get("usage", {})
-    _append_ai_cost(
+    cost = _append_ai_cost(
         "chatgpt",
         model,
         int(usage.get("prompt_tokens", 0) or 0),
         int(usage.get("completion_tokens", 0) or 0),
     )
+    print(f"[MungerFixer] Tokens: in={usage.get('prompt_tokens', 0)} out={usage.get('completion_tokens', 0)}")
+    print(f"[MungerFixer] Cost: ${cost:.4f}")
     text = data["choices"][0]["message"]["content"].strip()
     return _extract_json(text)
 
@@ -155,12 +177,14 @@ def _call_claude(prompt: str, model: str) -> dict:
     resp.raise_for_status()
     data = resp.json()
     usage = data.get("usage", {})
-    _append_ai_cost(
+    cost = _append_ai_cost(
         "claude",
         model,
         int(usage.get("input_tokens", 0) or 0),
         int(usage.get("output_tokens", 0) or 0),
     )
+    print(f"[MungerFixer] Tokens: in={usage.get('input_tokens', 0)} out={usage.get('output_tokens', 0)}")
+    print(f"[MungerFixer] Cost: ${cost:.4f}")
     text = data["content"][0]["text"].strip()
     return _extract_json(text)
 
@@ -272,12 +296,20 @@ def run_fixer(input_data: dict, max_loops: int, provider: str,
     while loops < max_loops:
         status = munger_output.get("munger_report", {}).get("status")
         if status == "PASS":
-            break
+            issues = munger_output.get("munger_report", {}).get("issues", [])
+            if not any(i.get("severity") == "LOW" for i in issues):
+                break
         if status == "REJECTED":
             break
 
-        # Pull loop-2 clarifications to include MEDIUM issues
-        clarifications = munger.run_munger(input_data, None, 2).get("munger_report", {}).get("clarifications", [])
+        # Prefer loop-1 clarifications; fall back to loop-2/3 to include HIGH/MEDIUM/LOW
+        clarifications = munger_output.get("munger_report", {}).get("clarifications", [])
+        if not clarifications:
+            clarifications = munger.run_munger(input_data, None, 1).get("munger_report", {}).get("clarifications", [])
+        if not clarifications:
+            clarifications = munger.run_munger(input_data, None, 2).get("munger_report", {}).get("clarifications", [])
+        if not clarifications:
+            clarifications = munger.run_munger(input_data, None, 3).get("munger_report", {}).get("clarifications", [])
         if not clarifications:
             break
 
@@ -286,6 +318,7 @@ def run_fixer(input_data: dict, max_loops: int, provider: str,
             issue = item.get("issue", {})
             response_schema = item.get("response_schema", {})
 
+            print(f"[MungerFixer] Calling AI for template {item.get('template_id')} (provider={provider})")
             raw = _generate_clarification(original_q1_q11, issue, item, provider, openai_model, claude_model)
             response = raw.get("response")
             reasoning = raw.get("reasoning", "")
@@ -305,6 +338,7 @@ def run_fixer(input_data: dict, max_loops: int, provider: str,
                 "reasoning": reasoning,
                 "confidence": confidence,
             })
+            print(f"[MungerFixer] AI response for {item.get('template_id')}: {json.dumps(response, ensure_ascii=False)}")
             confidences.append(float(confidence) if confidence is not None else 0.0)
             clarifications_generated += 1
 
@@ -344,6 +378,7 @@ def main():
     parser.add_argument("--claude-model", default=DEFAULT_CLAUDE_MODEL)
     args = parser.parse_args()
 
+    start = time.time()
     if args.provider == "chatgpt" and not os.getenv("OPENAI_API_KEY"):
         print("Error: OPENAI_API_KEY not set")
         sys.exit(2)
@@ -356,6 +391,16 @@ def main():
         print(f"Error: {input_path} not found")
         sys.exit(1)
 
+    print(f"[MungerFixer] Input: {input_path}")
+    if args.out:
+        print(f"[MungerFixer] Output: {Path(args.out)}")
+    print(f"[MungerFixer] Provider: {args.provider}")
+    print(f"[MungerFixer] OpenAI model: {args.openai_model}")
+    print(f"[MungerFixer] Claude model: {args.claude_model}")
+    print(f"[MungerFixer] Max loops: {args.max_loops}")
+
+    total_before = _sum_total_cost()
+
     input_data = json.loads(input_path.read_text(encoding="utf-8"))
 
     output = run_fixer(input_data, args.max_loops, args.provider, args.openai_model, args.claude_model)
@@ -366,6 +411,20 @@ def main():
         print(f"Wrote: {args.out}")
     else:
         print(output_json)
+
+    elapsed = time.time() - start
+    total_after = _sum_total_cost()
+    print(f"[MungerFixer] Status: {output.get('status', 'UNKNOWN')}")
+    print(f"[MungerFixer] Loops: {output.get('loops', 0)}")
+    print(f"[MungerFixer] Clarifications generated: {output.get('clarifications_generated', 0)}")
+    print(f"[MungerFixer] Confidence avg: {output.get('confidence_avg', 0)}")
+    print(f"[MungerFixer] Duration: {elapsed:.2f}s")
+    print(f"[MungerFixer] Cost: ${total_after - total_before:.4f} (cumulative: ${total_after:.4f})")
+    print(f"[MungerFixer] Cost CSV: {AI_COST_LOG.resolve()}")
+
+    if output.get("status") == "SUCCESS":
+        sys.exit(0)
+    sys.exit(1)
 
 
 if __name__ == "__main__":
