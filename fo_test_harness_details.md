@@ -18,6 +18,19 @@ Outputs:
 
 See `gap-analysis/README_DETAILED.md` for the full flow.
 
+## 0.05 Munger (Hero Answers QA)
+
+Run the munger full loop on the hero JSON before intake:
+
+```
+./munger/run_munger_full.sh intake/ai_text/<picked_name>.json
+```
+
+Outputs:
+- `munger/<picked_name>.munged.json` (use this as the hero JSON for intake)
+- `munger/<picked_name>_munger_out.json`
+- `munger/<picked_name>_munger_ai_fixed.json`
+
 ## 0.1 Intake QA + Boilerplate Fit
 
 After intake generation, run boilerplate fit and grill-me QA:

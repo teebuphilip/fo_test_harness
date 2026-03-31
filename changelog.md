@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-03-31 (session 21 — munger loop + low-issue cleanup)
+
+### feat: full munger loop + AI fixer convergence
+- Added `run_munger_full.sh` with iterative munger → AI fixer → munger loop, resume support, and end-of-run separators.
+- Munger now generates clarifications for LOW issues on later loops and dedups clarification templates.
+- AI fixer prints per-template responses and continues cleanup even after PASS when LOW issues remain.
+- Added missing-field clarification templates (data_sources, integrations, risks) and mapping fallback.
+- Normalizes integrations (drops `"None"` when real integrations exist).
+- Fixed PDF library / email verification rules to align with patched fields and stop oscillation.
+
+### docs: workflow update
+- Updated `complete_workflow_ai_generated.md` to use `run_munger_full.sh` and show PASS example.
+
+Files: `munger/munger.py`, `munger/munger_ai_fixer.py`, `munger/detection_rules.v2.0.json`,
+`munger/clarification_templates.v2.0.json`, `munger/run_munger_full.sh`,
+`complete_workflow_ai_generated.md`
+
 ## 2026-03-31 (session 20 — intake QA + boilerplate fit hardening)
 
 ### feat: grill-me intake QA hardening
