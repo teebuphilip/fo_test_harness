@@ -62,3 +62,5 @@ else
   echo "   Expected: hero JSON filename (e.g., twofacedai.json) or number (e.g., 5)"
   exit 1
 fi
+
+exit 0

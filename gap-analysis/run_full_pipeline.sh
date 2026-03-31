@@ -128,7 +128,7 @@ PY
 )
   if [[ "$STATUS" != "BUILD_APPROVED" && $FORCE -eq 0 ]]; then
     echo "Pass0 status is $STATUS. Halting pipeline. Use --force to override."
-    exit 2
+    exit 1
   fi
 fi
 
@@ -183,3 +183,5 @@ fi
 echo "[pipeline] run_gtm_plan.sh"
 "${GTM_CMD[@]}"
 echo "============================================================"
+
+exit 0
