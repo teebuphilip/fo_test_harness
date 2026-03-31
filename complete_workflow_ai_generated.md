@@ -87,10 +87,156 @@ Total Costs: $0.03
 ```bash
 python check_boilerplate_fit.py --intake intake/intake_runs/<picked_name>/<picked_name>.json
 ```
-2. Optional grill-me pass:
+2. Grill-me pass (auto-resume, block B only, auto-answer):
 ```bash
 cd intake
 ./grill_me.sh intake_runs/<picked_name>/<picked_name>.json
+```
+3. Outputs:
+```text
+intake/intake_runs/<picked_name>/<picked_name>.grill_report.json
+intake/intake_runs/<picked_name>/<picked_name>.grilled.json
+```
+4. Example output (from `invoicetool`):
+```text
+(cd39) Teebus-MacBook-Pro:intake teebuphilip$   ./grill_me.sh intake_runs/invoicetool/invoicetool.json
+[Grill‑Me] Iteration 1/5
+[Grill‑Me] Provider: chatgpt
+[Grill‑Me] Model: gpt-4o-mini
+[Grill‑Me] Intake: /Users/teebuphilip/Downloads/FO_TEST_HARNESS/intake/intake_runs/invoicetool/invoicetool.json
+[Grill‑Me] Prompt bytes: 8975
+[Grill‑Me] Calling AI (review)...
+[Grill‑Me] AI call complete in 4.98s
+[Grill‑Me] Tokens: in=2229 out=276
+[Grill‑Me] Cost: $0.0083 (cumulative: $1.0863)
+[Grill‑Me] Cost CSV: /Users/teebuphilip/Downloads/FO_TEST_HARNESS/intake/grill_me_ai_costs.csv
+[Grill‑Me] RAW OUTPUT BEGIN
+{
+  "issues": [
+    {
+      "severity": "high",
+      "area": "feature",
+      "question": "What are the two must-have features for the MVP?",
+      "risk": "Without clear identification of must-have features, the MVP may lack essential functionality.",
+      "suggested_resolution": "Define at least two must-have features for the MVP in block_b.pass_1."
+    },
+    {
+      "severity": "high",
+      "area": "roles",
+      "question": "Is there a structured roles_permissions object with at least admin and seller roles?",
+      "risk": "Lack of defined roles may lead to permission issues during implementation.",
+      "suggested_resolution": "Add a structured roles_permissions object in block_b.pass_1."
+    },
+    {
+      "severity": "high",
+      "area": "invoice_edge_cases",
+      "question": "What are the three invoice edge cases that need to be considered?",
+      "risk": "Insufficient edge case coverage may lead to unexpected behavior during invoice processing.",
+      "suggested_resolution": "Define at least three invoice edge cases in block_b.pass_1."
+    }
+  ],
+  "patches": [],
+  "halt": true,
+  "halt_reason": "Critical ambiguities remain regarding must-have features, roles_permissions, and invoice edge cases."
+}
+[Grill‑Me] RAW OUTPUT END
+[Grill‑Me] Report saved: /Users/teebuphilip/Downloads/FO_TEST_HARNESS/intake/intake_runs/invoicetool/invoicetool.grill_report.json
+[Grill‑Me] Patched intake saved: /Users/teebuphilip/Downloads/FO_TEST_HARNESS/intake/intake_runs/invoicetool/invoicetool.grilled.json
+[Grill‑Me] provide-answers enabled — attempting to auto-fill ambiguities
+[Grill‑Me] Provider: chatgpt
+[Grill‑Me] Model: gpt-4o-mini
+[Grill‑Me] Intake: /Users/teebuphilip/Downloads/FO_TEST_HARNESS/intake/intake_runs/invoicetool/invoicetool.json
+[Grill‑Me] Prompt bytes: 9798
+[Grill‑Me] Calling AI (answer-fill)...
+[Grill‑Me] AI call complete in 7.98s
+[Grill‑Me] Tokens: in=2459 out=358
+[Grill‑Me] Cost: $0.0097 (cumulative: $1.0960)
+[Grill‑Me] Cost CSV: /Users/teebuphilip/Downloads/FO_TEST_HARNESS/intake/grill_me_ai_costs.csv
+[Grill‑Me] RAW OUTPUT BEGIN
+```json
+{
+  "hero_answers": {
+    "Q1_problem_customer": "Etsy sellers struggle with timely processing of vendor invoices.",
+    "Q2_target_user": ["Etsy sellers"],
+    "Q3_success_metric": "Reduction in invoice processing time by 50%.",
+    "Q4_must_have_features": ["Manual invoice entry form", "Email notifications for invoice status"],
+    "Q5_non_goals": ["Automated invoice processing", "Advanced reporting features"],
+    "Q6_constraints": {
+      "brand_positioning": "Affordable and user-friendly solution for small business owners.",
+      "compliance": "none",
+      "promise_limits": "Limited to manual processing capabilities.",
+      "scale_limits": "Designed for small-scale operations."
+    },
+    "Q7_data_sources": ["User input for invoices", "Vendor list management"],
+    "Q8_integrations": ["Stripe"],
+    "Q9_risks": ["Potential delays in invoice processing", "User error in manual entry", "Payment processing failures"],
+    "Q10_shipping_preference": "none"
+  },
+  "supplemental": {
+    "payment_integration_details": "Stripe integration for payment processing.",
+    "roles_permissions": {
+      "admin": {
+        "access": "full",
+        "capabilities": [
+          "manage_users",
+          "configure_settings"
+        ]
+      },
+      "seller": {
+        "access": "limited",
+        "capabilities": [
+          "view_invoices",
+          "make_payments"
+        ]
+      }
+    },
+    "invoice_edge_cases": [
+      "Handling duplicate invoices",
+      "Processing invoices with missing vendor information",
+      "Managing invoices that exceed payment limits"
+    ]
+  }
+}
+```
+[Grill‑Me] RAW OUTPUT END
+[Grill‑Me] Applied hero_answers to block_b
+{
+  "Q1_problem_customer": "Etsy sellers struggle with timely processing of vendor invoices.",
+  "Q2_target_user": [
+    "Etsy sellers"
+  ],
+  "Q3_success_metric": "Reduction in invoice processing time by 50%.",
+  "Q4_must_have_features": [
+    "Manual invoice entry form",
+    "Email notifications for invoice status"
+  ],
+  "Q5_non_goals": [
+    "Automated invoice processing",
+    "Advanced reporting features"
+  ],
+  "Q6_constraints": {
+    "brand_positioning": "Affordable and user-friendly solution for small business owners.",
+    "compliance": "none",
+    "promise_limits": "Limited to manual processing capabilities.",
+    "scale_limits": "Designed for small-scale operations."
+  },
+  "Q7_data_sources": [
+    "User input for invoices",
+    "Vendor list management"
+  ],
+  "Q8_integrations": [
+    "Stripe"
+  ],
+  "Q9_risks": [
+    "Potential delays in invoice processing",
+    "User error in manual entry",
+    "Payment processing failures"
+  ],
+  "Q10_shipping_preference": "none"
+}
+[Grill‑Me] Patched intake saved: /Users/teebuphilip/Downloads/FO_TEST_HARNESS/intake/intake_runs/invoicetool/invoicetool.grilled.json
+[Grill‑Me] Acceptance criteria met — stopping early
+============================================================
 ```
 
 **Step 4 — Build + QA**
