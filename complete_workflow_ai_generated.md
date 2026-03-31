@@ -38,7 +38,7 @@ munger/<picked_name>.munged.json
 munger/<picked_name>_munger_out.json
 munger/<picked_name>_munger_ai_fixed.json
 ```
-Example output (from `invoicetool`):
+Example output (from `invoicetool`, with low-issue cleanup):
 ```text
 (cd39) Teebus-MacBook-Pro:munger teebuphilip$ ./run_munger_full.sh ../intake/ai_text/invoicetool.json --resume
 [MungerFull] Input: ../intake/ai_text/invoicetool.json
@@ -55,12 +55,24 @@ Example output (from `invoicetool`):
 [Munger] Loop: 1
 Wrote: /Users/teebuphilip/Downloads/FO_TEST_HARNESS/munger/invoicetool_munger_out.json
 [Munger] Status: PASS
-[Munger] Score: 100
-[Munger] Issues: 0 (critical: 0)
+[Munger] Score: 99
+[Munger] Issues: 1 (critical: 0)
+[Munger] Issues detail:
+  - ISSUE_01 [LOW] None missing recommended pattern
 [Munger] Applied patches: 0
 [Munger] Duration: 0.01s
 [Munger] Cost: $0.0000 (deterministic)
 [Munger] Cost CSV: /Users/teebuphilip/Downloads/FO_TEST_HARNESS/munger/munger_ai_costs.csv
+[MungerFull] Status PASS with 1 LOW issues — attempting low-issue cleanup
+[MungerFixer] Calling AI for template CT036_pdf_library_choice (provider=chatgpt)
+[MungerFixer] Tokens: in=771 out=60
+[MungerFixer] Cost: $0.0025
+[MungerFixer] AI response for CT036_pdf_library_choice: {"pdf_library_choice": "WeasyPrint"}
+[MungerFixer] Status: SUCCESS
+[MungerFull] Loop 2/5
+[Munger] Status: PASS
+[Munger] Score: 100
+[Munger] Issues: 0 (critical: 0)
 [MungerFull] Status PASS — writing munged file from clean_hero_answers
 Wrote: /Users/teebuphilip/Downloads/FO_TEST_HARNESS/munger/invoicetool.munged.json
 =======================
@@ -68,10 +80,10 @@ Wrote: /Users/teebuphilip/Downloads/FO_TEST_HARNESS/munger/invoicetool.munged.js
 ```
 
 **Step 3 — Hero JSON → Intake**
-1. If you already have a hero JSON:
+1. Use the munged hero JSON:
 ```bash
 cd intake
-./generate_intake.sh ai_text/<picked_name>.json
+./generate_intake.sh ../munger/<picked_name>.munged.json
 ```
 2. Output:
 ```text
@@ -79,11 +91,11 @@ intake/intake_runs/<picked_name>/<picked_name>.json
 ```
 3. Example output (from `invoicetool`):
 ```text
-🚀 Generating intake for hero file: ai_text/invoicetool.json
+🚀 Generating intake for hero file: /Users/teebuphilip/Downloads/FO_TEST_HARNESS/munger/invoicetool.munged.json
 ============================================================
 🚀 FOUNDEROPS INTAKE RUNNER v7
 Mode: hero
-Hero file: /Users/teebuphilip/Downloads/FO_TEST_HARNESS/intake/ai_text/invoicetool.json
+Hero file: /Users/teebuphilip/Downloads/FO_TEST_HARNESS/munger/invoicetool.munged.json
 Output dir: /Users/teebuphilip/Downloads/FO_TEST_HARNESS/intake/intake_runs
 Pass directive: /Users/teebuphilip/Downloads/FO_TEST_HARNESS/intake/inputs/chatgpt_block_directive.txt
 ============================================================
@@ -118,7 +130,7 @@ Output: /Users/teebuphilip/Downloads/FO_TEST_HARNESS/intake/intake_runs/invoicet
   block_b.json           → Tier 2 passes
   invoicetool.txt      → Summary
   invoicetool.json     → Combined blocks
-Total Costs: $0.03
+Total Costs: $0.04
 ============================================
 ```
 
@@ -141,6 +153,58 @@ python check_boilerplate_fit.py intake/intake_runs/<picked_name>/<picked_name>.g
 intake/intake_runs/<picked_name>/<picked_name>.grill_report.json
 intake/intake_runs/<picked_name>/<picked_name>.grilled.json
 boilerplate_checks/<picked_name>_boilerplate_check.json
+```
+
+Example output (boilerplate fit after intake, from `invoicetool`):
+```text
+======================================================================
+BOILERPLATE FIT CHECKER
+======================================================================
+
+→ Intake:     /Users/teebuphilip/Downloads/FO_TEST_HARNESS/intake/intake_runs/invoicetool/invoicetool.json
+→ Boilerplate: /Users/teebuphilip/Documents/work/teebu-saas-platform
+→ Loading intake JSON...
+✓ Loaded intake: invoicetool
+→ Reading boilerplate (ZIP or directory)...
+✓ Boilerplate manifest built
+→ Boilerplate manifest size: 232,307 chars
+→ Prompt size: 246,995 bytes
+✓ Prompt logged: invoicetool_analysis_prompt.log
+→ Calling ChatGPT for analysis...
+✓ Analysis complete in 18.4s
+→ AI cost: $0.1593 (cumulative: $0.1593)
+→ Cost CSV: /Users/teebuphilip/Downloads/FO_TEST_HARNESS/intake/boilerplate_checks/boilerplate_fit_ai_costs.csv
+→ Parsing verdict...
+
+======================================================================
+BOILERPLATE FIT CHECK — Invoicetool
+======================================================================
+
+VERDICT: YES — USE BOILERPLATE
+Fit Score: 10/10
+Summary:   The business idea fits perfectly with the capabilities of the boilerplate, requiring no additional dependencies or features outside its scope.
+
+Boilerplate Already Handles:
+✓ User authentication via Auth0
+✓ Payment processing via Stripe
+✓ Email marketing via MailerLite
+✓ Analytics tracking via GA4
+
+Backend Routes to Build (1 files):
+  [HIGH] business/backend/routes/vendor_invoices.py → /api/vendor_invoices
+         Manage vendor invoices for Etsy sellers
+
+Frontend Pages to Build (1 files):
+  [HIGH] business/frontend/pages/VendorInvoices.jsx → /dashboard/vendor-invoices
+         Display and manage vendor invoices for Etsy sellers
+
+Recommendation:
+  Proceed with building the backend routes and frontend pages as outlined. Ensure to set up the necessary Stripe products and test the integration thoroughly.
+
+Output saved: boilerplate_checks/invoicetool_boilerplate_check.json
+
+Next step: Run the test harness with --use-boilerplate
+  Pass this file to the harness: boilerplate_checks/invoicetool_boilerplate_check.json
 ```
 5. Example output (grill-me, from `invoicetool`):
 ```text
