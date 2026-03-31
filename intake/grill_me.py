@@ -617,7 +617,7 @@ def main() -> int:
             if iteration >= max_iters:
                 print(f"[Grill‑Me] HALT: {report.get('halt_reason', 'unspecified')}")
                 print("============================================================")
-                return 2
+                return 1
         current = deepcopy(patched)
         print("============================================================")
 
