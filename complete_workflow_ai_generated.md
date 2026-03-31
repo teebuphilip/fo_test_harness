@@ -83,21 +83,26 @@ Total Costs: $0.03
 ```
 
 **Step 3 — Intake QA + Fit**
-1. Boilerplate fit check:
+1. Boilerplate fit check (original intake):
 ```bash
-python check_boilerplate_fit.py --intake intake/intake_runs/<picked_name>/<picked_name>.json
+python check_boilerplate_fit.py intake/intake_runs/<picked_name>/<picked_name>.json
 ```
 2. Grill-me pass (auto-resume, block B only, auto-answer):
 ```bash
 cd intake
 ./grill_me.sh intake_runs/<picked_name>/<picked_name>.json
 ```
-3. Outputs:
+3. Boilerplate fit check (grilled intake):
+```bash
+python check_boilerplate_fit.py intake/intake_runs/<picked_name>/<picked_name>.grilled.json
+```
+4. Outputs:
 ```text
 intake/intake_runs/<picked_name>/<picked_name>.grill_report.json
 intake/intake_runs/<picked_name>/<picked_name>.grilled.json
+boilerplate_checks/<picked_name>_boilerplate_check.json
 ```
-4. Example output (from `invoicetool`):
+5. Example output (grill-me, from `invoicetool`):
 ```text
 (cd39) Teebus-MacBook-Pro:intake teebuphilip$   ./grill_me.sh intake_runs/invoicetool/invoicetool.json
 [Grill‑Me] Iteration 1/5
@@ -237,6 +242,64 @@ intake/intake_runs/<picked_name>/<picked_name>.grilled.json
 [Grill‑Me] Patched intake saved: /Users/teebuphilip/Downloads/FO_TEST_HARNESS/intake/intake_runs/invoicetool/invoicetool.grilled.json
 [Grill‑Me] Acceptance criteria met — stopping early
 ============================================================
+```
+6. Example output (boilerplate fit after grilled intake, from `invoicetool`):
+```text
+(cd39) Teebus-MacBook-Pro:FO_TEST_HARNESS teebuphilip$ python check_boilerplate_fit.py  /Users/teebuphilip/Downloads/FO_TEST_HARNESS/intake/intake_runs/invoicetool/invoicetool.grilled.json 
+
+======================================================================
+BOILERPLATE FIT CHECKER
+======================================================================
+
+→ Intake:     /Users/teebuphilip/Downloads/FO_TEST_HARNESS/intake/intake_runs/invoicetool/invoicetool.grilled.json
+→ Boilerplate: /Users/teebuphilip/Documents/work/teebu-saas-platform
+→ Loading intake JSON...
+✓ Loaded intake: invoicetool
+→ Reading boilerplate (ZIP or directory)...
+✓ Boilerplate manifest built
+→ Boilerplate manifest size: 232,307 chars
+→ Prompt size: 247,979 bytes
+✓ Prompt logged: invoicetool_analysis_prompt.log
+→ Calling ChatGPT for analysis...
+✓ Analysis complete in 31.0s
+→ AI cost: $0.1608 (cumulative: $0.3208)
+→ Cost CSV: /Users/teebuphilip/Downloads/FO_TEST_HARNESS/boilerplate_checks/boilerplate_fit_ai_costs.csv
+→ Parsing verdict...
+
+======================================================================
+BOILERPLATE FIT CHECK — Invoicetool
+======================================================================
+
+VERDICT: YES — USE BOILERPLATE
+Fit Score: 9/10
+Summary:   The business idea fits well with the boilerplate capabilities, with minor adjustments needed for email marketing and analytics integration.
+
+Boilerplate Already Handles:
+✓ User authentication via Auth0
+✓ Payment processing via Stripe
+✓ Basic CRUD operations for invoices
+✓ User onboarding flow
+
+Backend Routes to Build (1 files):
+  [HIGH] business/backend/routes/vendor_invoices.py → /api/vendor_invoices
+         Manage vendor invoices for Etsy sellers
+
+Frontend Pages to Build (1 files):
+  [HIGH] business/frontend/pages/VendorInvoices.jsx → /dashboard/vendor-invoices
+         Display and manage vendor invoices for Etsy sellers
+
+Ambiguities (1 items):
+  [MEDIUM] Email notifications for invoice status
+         Missing: Details on what triggers notifications and the content of the emails.
+         Ask: Ask the founder what specific events should trigger email notifications and what the email content should include.
+
+Recommendation:
+  Proceed with building the backend routes for invoice management and the corresponding frontend pages. Clarify the email notification requirements with the founder to ensure complete functionality.
+
+Output saved: boilerplate_checks/invoicetool_boilerplate_check.json
+
+Next step: Run the test harness with --use-boilerplate
+  Pass this file to the harness: boilerplate_checks/invoicetool_boilerplate_check.json
 ```
 
 **Step 4 — Build + QA**
