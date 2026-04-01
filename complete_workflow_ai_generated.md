@@ -152,7 +152,32 @@ python check_boilerplate_fit.py intake/intake_runs/<picked_name>/<picked_name>.g
 ```bash
 python check_block_b.py intake/intake_runs/<picked_name>/<picked_name>.grilled.json
 ```
-5. Outputs:
+5. Auto-route build pipeline (slice vs phase):
+```bash
+./run_auto_build.sh --intake intake/intake_runs/<picked_name>/<picked_name>.grilled.json
+```
+This uses `planner_router.py` to choose between:
+- `run_slicer_and_feature_build.sh` (slice pipeline)
+- `run_integration_and_feature_build.sh` (phase pipeline)
+
+**What `run_auto_build.sh` does**
+- Reads `planner_router.py` recommendation and routes accordingly.
+- `slice` route runs `run_slicer_and_feature_build.sh` (vertical slices).
+- `phase` route runs `run_integration_and_feature_build.sh` (phase + feature loop).
+- You can override routing with `--force slice|phase`.
+
+**What `planner_router.py` looks for**
+- Feature count, integration signals, analytics/reporting signals, multi-role signals, and subjective-polish signals.
+- Score ≥ 2 → `slice`, otherwise → `phase`.
+
+**Key options for both pipelines**
+- `--mode quality|factory` (default: quality)
+- `--max-iterations N`
+- `--clean` (remove final ZIP only)
+- `--fullclean` (remove all ZIPs for this startup)
+- `--start-from-feature N` (resume partial run)
+
+6. Outputs:
 ```text
 intake/intake_runs/<picked_name>/<picked_name>.grill_report.json
 intake/intake_runs/<picked_name>/<picked_name>.grilled.json
