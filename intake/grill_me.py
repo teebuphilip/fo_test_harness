@@ -418,6 +418,7 @@ def main() -> int:
     parser.add_argument("--no-apply", action="store_true", help="Do not apply patches, only report")
     parser.add_argument("--provide-answers", action="store_true", help="Auto-fill answers and re-run grill-me until max iterations (default: on)")
     parser.add_argument("--architecture-context", default=None, help="Path to architecture context file to append")
+    parser.add_argument("--quality", action="store_true", help="Quality mode: tighten answers beyond minimums")
     parser.add_argument("--max-iterations", type=int, default=5, help="Max iterations before halting (default: 5)")
     parser.add_argument("--block-b-only", action="store_true", help="Ignore block_a and only patch block_b (default: on)")
     parser.add_argument("--resume", action="store_true", help="Resume from existing *.grilled.json if present (default: on if file exists)")
@@ -457,7 +458,7 @@ def main() -> int:
         print("[Grill‑Me] RAW OUTPUT END")
         return raw, model
 
-    def _build_answer_prompt(intake_obj: Dict[str, Any], report_obj: Dict[str, Any], block_b_only: bool = False) -> str:
+    def _build_answer_prompt(intake_obj: Dict[str, Any], report_obj: Dict[str, Any], block_b_only: bool = False, quality: bool = False) -> str:
         intake_str = json.dumps(intake_obj, indent=2)
         report_str = json.dumps(report_obj, indent=2)
         base = (
@@ -498,6 +499,15 @@ def main() -> int:
             f"INTAKE JSON:\n{intake_str}\n\n"
             f"GRILL REPORT:\n{report_str}\n"
         )
+        if quality:
+            base += (
+                "\nQuality mode (tighten answers):\n"
+                "- Replace generic risks with 2–4 specific, plausible risks tied to the intake domain.\n"
+                "- Make success metric measurable and time-bound (e.g., adoption %, processing time reduction).\n"
+                "- Make constraints concrete (scope limits, scale limits, and manual-first boundaries).\n"
+                "- Keep answers consistent with Stripe-only payments and manual-first MVP.\n"
+                "- Avoid placeholder phrases like 'limited feature set' or 'low adoption' without specifics.\n"
+            )
         if block_b_only:
             base += "\nConstraints:\n- Only update block_b fields. Do not modify block_a.\n"
         return base
@@ -530,7 +540,9 @@ def main() -> int:
     if not args.block_b_only:
         args.block_b_only = True
     current = deepcopy(intake)
-    if (args.resume or out_path.exists()) and out_path.exists():
+    if args.quality:
+        args.resume = False
+    if ((args.resume or out_path.exists()) and not args.quality) and out_path.exists():
         current = _read_json(out_path)
         print(f"[Grill‑Me] Resuming from: {out_path}")
 
@@ -577,6 +589,31 @@ def main() -> int:
             print(f"[Grill‑Me] Patched intake saved: {out_path}")
 
         if not report.get("halt") and not report.get("issues"):
+            if args.quality and args.provide_answers and not args.no_apply:
+                print("[Grill‑Me] Quality mode — running answer-fill even with no issues")
+                answer_raw, _ = _run_ai(_build_answer_prompt(patched, report, args.block_b_only, args.quality), "answer-fill")
+                answer_report = _extract_json(answer_raw)
+                hero_answers = answer_report.get("hero_answers")
+                if isinstance(hero_answers, dict):
+                    patched.setdefault("block_b", {})["hero_answers"] = hero_answers
+                    print("[Grill‑Me] Applied hero_answers to block_b")
+                    print(json.dumps(hero_answers, indent=2))
+                supplemental = answer_report.get("supplemental") or {}
+                if isinstance(supplemental, dict):
+                    pass1 = patched.setdefault("block_b", {}).setdefault("pass_1", {})
+                    econ = pass1.setdefault("economics_snapshot", {})
+                    payment_details = supplemental.get("payment_integration_details")
+                    if payment_details:
+                        econ["payment_integration_details"] = payment_details
+                    roles_permissions = supplemental.get("roles_permissions")
+                    if roles_permissions:
+                        pass1["roles_permissions"] = roles_permissions
+                    invoice_edge_cases = supplemental.get("invoice_edge_cases")
+                    if invoice_edge_cases:
+                        pass1["invoice_edge_cases"] = invoice_edge_cases
+                _normalize_block_b(patched)
+                _write_json(out_path, patched)
+                print(f"[Grill‑Me] Patched intake saved: {out_path}")
             print("[Grill‑Me] No issues remain — stopping")
             print("============================================================")
             break
@@ -584,7 +621,7 @@ def main() -> int:
         if report.get("halt"):
             if args.provide_answers and not args.no_apply and iteration < max_iters:
                 print("[Grill‑Me] provide-answers enabled — attempting to auto-fill ambiguities")
-                answer_raw, _ = _run_ai(_build_answer_prompt(patched, report, args.block_b_only), "answer-fill")
+                answer_raw, _ = _run_ai(_build_answer_prompt(patched, report, args.block_b_only, args.quality), "answer-fill")
                 answer_report = _extract_json(answer_raw)
                 hero_answers = answer_report.get("hero_answers")
                 if isinstance(hero_answers, dict):

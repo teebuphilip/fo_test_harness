@@ -7,6 +7,7 @@ IN_PLACE=""
 NO_APPLY=""
 OUT=""
 REPORT=""
+INTAKE=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -28,21 +29,30 @@ while [[ $# -gt 0 ]]; do
       BLOCK_B_ONLY="--block-b-only"; shift;;
     --resume)
       RESUME="--resume"; shift;;
+    --quality)
+      QUALITY="--quality"; shift;;
     --out)
       OUT="--out $2"; shift 2;;
     --report)
       REPORT="--report $2"; shift 2;;
+    --*)
+      echo "Unknown argument: $1" >&2
+      exit 1;;
     *)
-      break;;
+      if [[ -z "$INTAKE" ]]; then
+        INTAKE="$1"; shift
+      else
+        echo "Unknown argument: $1" >&2
+        exit 1
+      fi
+      ;;
   esac
  done
 
-if [[ $# -lt 1 ]]; then
-  echo "Usage: ./grill_me.sh <intake.json> [--provider chatgpt|claude] [--model <model>] [--in-place] [--no-apply] [--provide-answers] [--max-iterations <n>] [--block-b-only] [--resume] [--architecture-context <path>] [--out <path>] [--report <path>]"
+if [[ -z "$INTAKE" ]]; then
+  echo "Usage: ./grill_me.sh <intake.json> [--provider chatgpt|claude] [--model <model>] [--in-place] [--no-apply] [--provide-answers] [--max-iterations <n>] [--block-b-only] [--resume] [--quality] [--architecture-context <path>] [--out <path>] [--report <path>]"
   exit 1
 fi
-
-INTAKE="$1"; shift || true
 
 CMD=("python" "$(dirname "$0")/grill_me.py" --intake "$INTAKE" --provider "$PROVIDER")
 
@@ -56,5 +66,6 @@ if [[ -n "${ARCH_CONTEXT:-}" ]]; then CMD+=($ARCH_CONTEXT); fi
 if [[ -n "${MAX_ITERS:-}" ]]; then CMD+=($MAX_ITERS); fi
 if [[ -n "${BLOCK_B_ONLY:-}" ]]; then CMD+=($BLOCK_B_ONLY); fi
 if [[ -n "${RESUME:-}" ]]; then CMD+=($RESUME); fi
+if [[ -n "${QUALITY:-}" ]]; then CMD+=($QUALITY); fi
 
 "${CMD[@]}"
