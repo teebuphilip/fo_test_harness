@@ -326,10 +326,12 @@ CONSISTENCY (Gate 3) catches obvious cross-file structural bugs cheaply before t
 | `planner_router.py` | Intake router: recommends slice vs phase |
 | `feature_adder.py` | Generates scoped feature intake from existing ZIP or repo |
 | `generate_business_config.py` | Post-merge config generator — scans built pages, writes `business_config.json` |
+| `generate_feature_spec.py` | Generates feature specs used by build pipelines (internal helper) |
 | `check_openai.py` | Pre-run API health check (Claude + OpenAI, TPM quota) |
 | `check_boilerplate_fit.py` | Checks if intake suits the boilerplate (YES/NO + file list) |
 | `aggregate_ai_costs.py` | Merges all cost CSVs into `ai_costs_aggregated.csv` |
 | `summarize_harness_runs.py` | Generates run summary table from `fo_run_log.csv` |
+| `inject_spec.py` | Injects feature specs into intake before build (internal helper) |
 | `deploy/zip_to_repo.py` | ZIP extraction → git init → GitHub push |
 | `deploy/pipeline_deploy.py` | Full deploy orchestrator (Railway + Vercel) |
 | `deploy/pipeline_prepare.py` | Config-only mode (AI config gen + git push, no deploy) |
