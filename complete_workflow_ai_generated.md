@@ -388,6 +388,21 @@ Branch 'main' set up to track remote branch 'main' from 'origin'.
 [INFO] Pushed: https://github.com/teebuphilip/invoicetool.grilled
 ```
 
+**Step 8 — Check Business Imports**
+```bash
+python deploy/check_business_imports.py --repo ~/Documents/work/<startup>
+```
+Example output:
+```text
+(cd39) Teebus-MacBook-Pro:FO_TEST_HARNESS teebuphilip$   python deploy/check_business_imports.py --repo ~/Documents/work/invoicetool.grilled
+Checking business page imports...
+  Repo: /Users/teebuphilip/Documents/work/invoicetool.grilled
+  Extensions: .js, .jsx, .ts, .tsx, .json
+  Report all: enabled
+  Scanning business/frontend/pages/*.jsx ...
+OK: No unresolved relative imports after copy.
+```
+
 **What `check_block_b.py` does**
 - Deterministic Block B quality checker (no AI).
 - Validates passes 1–6, core fields, and basic coverage.
