@@ -148,12 +148,22 @@ cd intake
 ```bash
 python check_boilerplate_fit.py intake/intake_runs/<picked_name>/<picked_name>.grilled.json
 ```
-4. Outputs:
+4. Block B quality check (deterministic, no AI):
+```bash
+python check_block_b.py intake/intake_runs/<picked_name>/<picked_name>.grilled.json
+```
+5. Outputs:
 ```text
 intake/intake_runs/<picked_name>/<picked_name>.grill_report.json
 intake/intake_runs/<picked_name>/<picked_name>.grilled.json
 boilerplate_checks/<picked_name>_boilerplate_check.json
 ```
+
+**What `check_block_b.py` does**
+- Deterministic Block B quality checker (no AI).
+- Validates passes 1–6, core fields, and basic coverage.
+- Outputs a score and PASS/WARN/FAIL status.
+- Exit codes: `0=PASS`, `1=WARN`, `2=FAIL`, `3=ERROR`.
 
 Example output (boilerplate fit after intake, from `invoicetool`):
 ```text
@@ -206,8 +216,23 @@ Output saved: boilerplate_checks/invoicetool_boilerplate_check.json
 Next step: Run the test harness with --use-boilerplate
   Pass this file to the harness: boilerplate_checks/invoicetool_boilerplate_check.json
 ```
-5. Example output (boilerplate fit before grill-me, from `invoicetool`): see above.
-6. Example output (grill-me, from `invoicetool`):
+6. Example output (boilerplate fit before grill-me, from `invoicetool`): see above.
+7. Example output (check_block_b, from `invoicetool`):
+```text
+(cd39) Teebus-MacBook-Pro:FO_TEST_HARNESS teebuphilip$ python check_block_b.py /Users/teebuphilip/Downloads/FO_TEST_HARNESS/intake/intake_runs/invoicetool/invoicetool.grilled.json
+
+Block B Quality Check — invoicetool
+====================================================
+Score  : 86 / 100
+Status : PASS
+Issues : 2
+
+  [MEDIUM  ] pass_3 / test_vectors
+             Only 1 test vector(s) — at least 2 recommended
+  [HIGH    ] pass_4 / combined_task_list
+             Only 2 task(s) — suspiciously sparse for a real product
+```
+8. Example output (grill-me, from `invoicetool`):
 ```text
 (cd39) Teebus-MacBook-Pro:intake teebuphilip$   ./grill_me.sh intake_runs/invoicetool/invoicetool.json
 [Grill‑Me] Iteration 1/5
