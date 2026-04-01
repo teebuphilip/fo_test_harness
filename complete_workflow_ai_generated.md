@@ -206,7 +206,8 @@ Output saved: boilerplate_checks/invoicetool_boilerplate_check.json
 Next step: Run the test harness with --use-boilerplate
   Pass this file to the harness: boilerplate_checks/invoicetool_boilerplate_check.json
 ```
-5. Example output (grill-me, from `invoicetool`):
+5. Example output (boilerplate fit before grill-me, from `invoicetool`): see above.
+6. Example output (grill-me, from `invoicetool`):
 ```text
 (cd39) Teebus-MacBook-Pro:intake teebuphilip$   ./grill_me.sh intake_runs/invoicetool/invoicetool.json
 [Grill‑Me] Iteration 1/5
