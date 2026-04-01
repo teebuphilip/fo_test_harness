@@ -5,6 +5,8 @@
 - Add two-mode flow for intake → pre-planner:
   - Shared steps (factory + quality): Intake → PRD structuring → Grill-me pass → Patch intake + freeze decisions → Pre-planner slices (vertical tracer bullets) → Build.
   - Quality-only add-on: Vision/positioning + audience feel + "what must be surprisingly good?"
+- Gap-analysis outputs should use the startup slug (not the raw idea filename) for SEO, marketing, and GTM files.
+- Add auto-discovery in `generate_business_config.py` to pick newest matching SEO/marketing/GTM files when flags aren’t passed.
 - Reference/inspiration: mattpocock/skills (write-a-prd, grill-me, prd-to-plan)
   - https://github.com/mattpocock/skills
 - Triage enhancement (do NOT implement yet): add a lightweight root-cause note to the existing ChatGPT triage step (not Feature QA).
@@ -99,5 +101,4 @@
   required files; forces completeness.
 - QA: add calibration on hallucinated defects by checking evidence snippets against file contents; if evidence
   lines are missing, auto-drop the defect before sending to Claude.
-- QA: enforce "single-source-of-truth" for business_config defaults (home/footer) in harness generation so
-  QA doesn't flag missing UI sections repeatedly.
+- ✅ FIXED 2026-03-20: QA business_config single-source-of-truth — `generate_business_config.py` now generates all sections (home/footer/dashboard/pricing/etc.) from intake + actual built pages post-merge.
