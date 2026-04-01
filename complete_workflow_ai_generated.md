@@ -9,6 +9,21 @@ Ideas come from AFH:
 
 These are AI-generated ideas that still need enrichment and a market gap check.
 
+**Step 0 — API Health Check (Required)**
+```bash
+python check_openai.py
+```
+Example output:
+```text
+(cd39) Teebus-MacBook-Pro:FO_TEST_HARNESS teebuphilip$ python check_openai.py
+✓ Claude  — UP  (reply: 'UP')
+✓ OpenAI  — UP  (reply: 'DOWN')
+   Requests: 499/500 remaining
+   Tokens  : 29992/30000 remaining  (resets in 16ms)
+(cd39) Teebus-MacBook-Pro:FO_TEST_HARNESS teebuphilip$ echo $?
+0
+```
+
 **Step 1 — Raw Idea → Pre-Intake (Pass0)**
 Run the gap analysis pipeline on a raw AFH idea JSON:
 ```bash
