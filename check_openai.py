@@ -40,6 +40,12 @@ def check_openai():
             r = requests.post(url, json=payload, headers=headers, timeout=20)
             if r.status_code == 200:
                 reply = r.json()['choices'][0]['message']['content'].strip()
+                if reply.strip().upper() != "UP":
+                    msg = r.json().get('choices', [{}])[0].get('message', {})
+                    print(f"⚠ OpenAI  — unexpected reply (reply: {reply!r})")
+                    print(f"   Response message: {msg}")
+                    print("   Hint: Expected 'UP'. Treating as UP for OpenAI health checks.")
+                    return True
                 print(f"✓ OpenAI  — UP  (reply: {reply!r})")
                 # Show remaining quota so you know if a big QA call will succeed
                 rpm_rem = r.headers.get('x-ratelimit-remaining-requests', '?')
@@ -88,6 +94,12 @@ def check_claude():
             r = requests.post(url, json=payload, headers=headers, timeout=20)
             if r.status_code == 200:
                 reply = r.json()['content'][0]['text'].strip()
+                if reply.strip().upper() != "UP":
+                    content = r.json().get('content', [])
+                    print(f"✗ Claude  — unexpected reply (reply: {reply!r})")
+                    print(f"   Response content: {content}")
+                    print("   Hint: Expected 'UP'. If you still have quota, this may be transient or a soft failure.")
+                    return False
                 print(f"✓ Claude  — UP  (reply: {reply!r})")
                 return True
             elif r.status_code == 529:
