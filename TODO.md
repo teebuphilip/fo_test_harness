@@ -7,6 +7,7 @@
   - Quality-only add-on: Vision/positioning + audience feel + "what must be surprisingly good?"
 - Gap-analysis outputs should use the startup slug (not the raw idea filename) for SEO, marketing, and GTM files.
 - Add auto-discovery in `generate_business_config.py` to pick newest matching SEO/marketing/GTM files when flags aren’t passed.
+- Build a utility to consolidate all artifacts for a startup slug into one folder (or create symlinks): intake JSONs, SEO, marketing, GTM, business_config, and relevant logs.
 - Reference/inspiration: mattpocock/skills (write-a-prd, grill-me, prd-to-plan)
   - https://github.com/mattpocock/skills
 - Triage enhancement (do NOT implement yet): add a lightweight root-cause note to the existing ChatGPT triage step (not Feature QA).
