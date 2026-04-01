@@ -934,6 +934,26 @@ NOT `_phase_context.feature`. Any code that extracts a feature/slice name must c
 (e.g. `ai_workforce_intelligence_s01_secure_authentication`) instead of the human-readable
 name (e.g. `Secure Authentication`).
 
+### Planners must propagate integration requirements all the way to Claude
+
+The slice planner correctly identifies integrations in the slice assessment (`mode_reason:
+"Requires integration with Stripe for payment processing"`) but `_slice_to_mini_spec()`
+silently dropped `mode`, `mode_reason`, and all integration info. The `_mini_spec` passed
+to the harness had no mention of Stripe. Claude saw "Make Payments" with a generic CRUD
+operation and built a DB-insert placeholder — no `from lib.stripe_lib import load_stripe_lib`.
+
+Same problem in phase planner: Phase 1 correctly defers integrations to Phase 2, but Phase 2's
+`_phase_context` never listed which integrations to implement. The info was buried in
+`block_b.hero_answers.Q8_integrations` — Claude would have to dig through raw intake JSON.
+
+Fix: both planners now extract integration keywords and populate `required_integrations` with
+exact boilerplate import/init patterns. The harness injects these as a non-negotiable block
+in the build prompt. The integration map covers: Stripe, MailerLite, Auth0, Meilisearch.
+
+Lesson: every piece of information that should influence the build must be explicitly surfaced
+in `_mini_spec` or `_phase_context`. If it's only in the raw intake JSON, Claude will ignore
+it — the intake is too large and the signal gets buried.
+
 ### Circuit breaker manifest hash must handle arbitrary value types
 
 `artifact_manifest.json` can contain nested lists and dicts (e.g. file metadata, checksums).

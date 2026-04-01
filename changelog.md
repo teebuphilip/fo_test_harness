@@ -2,6 +2,21 @@
 
 ## 2026-04-01 (session 22 — pre-build feature spec generation)
 
+### fix: propagate required integrations (Stripe, MailerLite, etc.) into build prompts
+- Root cause: slice planner identified integrations in `mode_reason` (e.g. "Requires integration
+  with Stripe") but `_slice_to_mini_spec()` silently dropped `mode`, `mode_reason`, and all
+  integration info when building `_mini_spec`. Claude never saw "use Stripe" → built generic CRUD.
+- `slice_planner.py`: `_slice_to_mini_spec()` now parses `mode_reason` for known integration
+  keywords and populates `required_integrations` with exact boilerplate `import`/`init` patterns.
+- `phase_planner.py`: `_build_phase2_intake()` scans full intake for integration keywords and
+  populates `_phase_context['required_integrations']` for Phase 2 builds.
+- `fo_test_harness.py`: `build_prompt()` reads `required_integrations` from both `_mini_spec`
+  (slice path) and `_phase_context` (phase planner Phase 2 path). Injects exact library import
+  patterns into Claude's build prompt as "REQUIRED INTEGRATIONS — you MUST use these."
+- Known integrations mapped: Stripe, MailerLite, Auth0, Meilisearch (with exact `from lib.X import`).
+
+Files: `slice_planner.py`, `phase_planner.py`, `fo_test_harness.py`
+
 ### fix: circuit breaker manifest hash crash on nested types
 - `_cb_check()` in `execute_build_qa_loop()` used `hash(tuple(sorted(manifest.items())))` which
   crashes with `TypeError: unhashable type: 'list'` or `'dict'` when the artifact manifest

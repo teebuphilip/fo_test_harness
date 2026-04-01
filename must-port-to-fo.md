@@ -520,6 +520,31 @@ Key ideas stolen: feature_list.json as state (not prose), structured preamble on
 - Files: `fo_test_harness.py`, `integration_check.py`
 ⬜ TODO for FO codebase (integration_check.py --fast flag is harness-only; gate logic is FO-relevant)
 
+## Integration Propagation (2026-04-01 session 22)
+
+94. fix: slice_planner drops integration requirements from _mini_spec
+- `_slice_to_mini_spec()` now extracts `mode` and `mode_reason` from slice assessment.
+  Parses `mode_reason` for Stripe/MailerLite/Auth0/Meilisearch keywords and populates
+  `required_integrations` with exact boilerplate import/init patterns.
+- Without this, Claude never sees "use Stripe" and builds generic CRUD placeholders.
+- Files: `slice_planner.py`
+✅ DONE here — ⬜ TODO for FO codebase (critical — causes missing integrations in all slice builds)
+
+95. fix: phase_planner Phase 2 missing integration context
+- `_build_phase2_intake()` now scans intake for integration keywords and populates
+  `_phase_context['required_integrations']` for Phase 2 builds.
+- Phase 1 correctly defers integrations, but Phase 2 never told Claude which ones to implement.
+- Files: `phase_planner.py`
+✅ DONE here — ⬜ TODO for FO codebase
+
+96. feat: fo_test_harness reads required_integrations in build_prompt()
+- Reads from `_mini_spec.required_integrations` (slice path) and
+  `_phase_context.required_integrations` (phase planner Phase 2 path).
+- Injects "REQUIRED INTEGRATIONS — you MUST use these boilerplate libraries"
+  with exact `from lib.stripe_lib import load_stripe_lib` patterns.
+- Files: `fo_test_harness.py`
+✅ DONE here — ⬜ TODO for FO codebase (critical — without this the integration info is invisible to Claude)
+
 ## Bug Fixes (2026-04-01 session 22)
 
 91. fix: circuit breaker manifest hash crash on nested types
