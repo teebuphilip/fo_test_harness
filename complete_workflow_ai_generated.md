@@ -180,6 +180,7 @@ This uses `planner_router.py` to choose between:
 - `slice` route runs `run_slicer_and_feature_build.sh` (vertical slices).
 - `phase` route runs `run_integration_and_feature_build.sh` (phase + feature loop).
 - You can override routing with `--force slice|phase`.
+- Exit codes: `0` = success; non‑zero = build failed or aborted (no deliverable produced).
 
 **What `planner_router.py` looks for**
 - Feature count, integration signals, analytics/reporting signals, multi-role signals, and subjective-polish signals.
@@ -279,6 +280,299 @@ Issues : 2
              Only 1 test vector(s) — at least 2 recommended
   [HIGH    ] pass_4 / combined_task_list
              Only 2 task(s) — suspiciously sparse for a real product
+```
+9. Example output (run_auto_build / slice pipeline success + integration check + final ZIP):
+```text
+→   → Generated 5 file(s)
+→   → Total polish cost: $0.2107
+→ ═══════════════════════════════════════════════════════════
+→ 
+→ 
+→ ═══════════════════════════════════════════════════════════
+→ FULL RUN COST ANALYSIS
+→ ═══════════════════════════════════════════════════════════
+→ Total iterations: 3
+→ Total Claude calls: 10 (3 builds + 7 continuations)
+→ 
+→ Cache performance:
+→   → Cache writes: 0
+→   → Cache hits: 5
+✓   → Cache hit rate: 50.0%
+✓   → Total tokens read from cache: 36,230 tokens
+→ 
+→ Token usage:
+→   → Cache write tokens: 0 tokens
+→   → Cache read tokens: 36,230 tokens
+→   → Non-cached input tokens: 43,192 tokens
+→   → Output tokens: 24,539 tokens
+→ 
+→ Cost breakdown:
+✓   → Cache reads: $0.0109
+→   → Non-cached input: $0.1296
+→   → Output: $0.3681
+→   → Total with caching: $0.5085
+→ 
+✓ Without caching: $0.6064
+✓ Total saved: $0.0978 (16% reduction)
+→ 
+→ Dynamic token limiting:
+→   → Estimated additional savings: $0.0552 (15% of output)
+✓   → Combined Claude savings: $0.1530
+→ 
+→ ChatGPT (QA) costs:
+→   → Total QA calls: 2
+→   → Input tokens: 35,208 tokens
+→   → Output tokens: 1,342 tokens
+→   → Input cost: $0.0880
+→   → Output cost: $0.0134
+→   → Total ChatGPT: $0.1014
+→ 
+✓ TOTAL COST (Claude + ChatGPT): $0.6100
+✓   → Claude: $0.5085
+✓   → ChatGPT: $0.1014
+✓ Total saved from caching: $0.1530
+→ ═══════════════════════════════════════════════════════════
+→ Run logged to: /Users/teebuphilip/Downloads/FO_TEST_HARNESS/fo_run_log.csv
+✓ Generated artifact manifest: artifact_manifest.json
+→ Packaging output ZIP: invoicetool_s08_email_notifications_for_invoice_status_BLOCK_B_20260401_105556.zip
+→ Including boilerplate: /Users/teebuphilip/Documents/work/teebu-saas-platform
+✓ ZIP created: fo_harness_runs/invoicetool_s08_email_notifications_for_invoice_status_BLOCK_B_20260401_105556.zip (0.74 MB)
+
+======================================================================
+EXECUTION SUMMARY
+======================================================================
+
+Startup:        invoicetool_s08_email_notifications_for_invoice_status
+Block:          BLOCK_B
+Status:         ✓ SUCCESS
+Total time:     377.4s (6.3 minutes)
+Deployed:       No
+Claude cost:    $0.51
+ChatGPT cost:   $0.10
+Total cost:     $0.61
+ZIP output:     fo_harness_runs/invoicetool_s08_email_notifications_for_invoice_status_BLOCK_B_20260401_105556.zip
+
+Run directory:  fo_harness_runs/invoicetool_s08_email_notifications_for_invoice_status_BLOCK_B_20260401_105556
+
+Generated files:
+  - BUILD outputs:   94
+  - QA reports:      1
+  - DEPLOY outputs:  0
+  - Logs:            15
+
+✓ PIPELINE COMPLETED SUCCESSFULLY
+✓ Slice ZIP: fo_harness_runs/invoicetool_s08_email_notifications_for_invoice_status_BLOCK_B_20260401_105556.zip
+
+════════════════════════════════════════════════════════
+  ✓ SLICE 8/8 COMPLETE: Email Notifications for Invoice Status
+════════════════════════════════════════════════════════
+
+▶ STEP 10 — Integration Check
+────────────────────────────────────────────────────────
+  Using artifacts dir: fo_harness_runs/invoicetool_s08_email_notifications_for_invoice_status_BLOCK_B_20260401_105556/build/iteration_03_artifacts
+
+Loading artifacts...
+  10 file(s) loaded
+
+  Running Check 1: Route inventory...
+    → 0 issue(s)
+  Running Check 2: Model field refs...
+    → 0 issue(s)
+  Running Check 3: Spec compliance...
+    → 3 issue(s)
+  Running Check 4: Import chains...
+    → 0 issue(s)
+  Running Check 5: Route decorator double-path...
+    → 0 issue(s)
+  Running Check 6: Auth contract (route auth vs frontend headers)...
+    → 0 issue(s)
+  Running Check 7: Async misuse (await on non-async functions)...
+    → 0 issue(s)
+  Running Check 8: asyncio.gather with sync function args...
+    → 0 issue(s)
+  Running Check 9: npm package integrity (imports vs package.json)...
+    → 0 issue(s)
+  Running Check 10: Bare except / silent error swallow in services...
+    → 0 issue(s)
+  Running Check 11: Unbounded polling loops in frontend...
+    → 0 issue(s)
+  Running Check 12: Background task timeout vs intake SLA...
+    → 0 issue(s)
+  Running Check 13: Config object rendered as text in JSX...
+    → 0 issue(s)
+  Running Check 14: Dead buttons (no onClick / placeholder href)...
+    → 0 issue(s)
+  Running Check 15: Form state fields not in config form definition...
+    → 0 issue(s)
+  Running Check 16: Hollow service methods (no DB interaction)...
+    → 0 issue(s)
+  Running Check 17: Orphaned pages (UI with no backend coverage)...
+    → 0 issue(s)
+
+  Output written: fo_harness_runs/invoicetool_s08_email_notifications_for_invoice_status_BLOCK_B_20260401_105556/integration_issues.json
+
+============================================================
+INTEGRATION CHECK COMPLETE
+============================================================
+  Total issues: 3  (HIGH: 0  MEDIUM: 3)
+  Verdict: INTEGRATION_REJECTED
+
+  Issues found:
+    [MEDIUM] INT-SPEC-KPI-MVP (SPEC_COMPLIANCE)
+           KPI 'MVP' defined in intake but not referenced anywhere in artifacts
+    [MEDIUM] INT-SPEC-KPI-HLD (SPEC_COMPLIANCE)
+           KPI 'HLD' defined in intake but not referenced anywhere in artifacts
+    [MEDIUM] INT-SPEC-KPI-QA (SPEC_COMPLIANCE)
+           KPI 'QA' defined in intake but not referenced anywhere in artifacts
+
+  Fix target files:
+    - business/services/ScoringService.py
+
+  Run harness fix pass:
+    python fo_test_harness.py <intake> --resume-run <run_dir> --resume-iteration <N> --integration-issues integration_issues.json
+============================================================
+
+ℹ Integration issues are MEDIUM-only — skipping fix pass (not worth burning iterations)
+✓ Integration check clean.
+
+▶ FINAL STEP — Merging 8 ZIP(s) into final deliverable
+────────────────────────────────────────────────────────
+  ZIPs to merge (in order):
+    fo_harness_runs/invoicetool_s01_manage_users_BLOCK_B_20260401_093633.zip
+    fo_harness_runs/invoicetool_s02_configure_settings_BLOCK_B_20260401_094449.zip
+    fo_harness_runs/invoicetool_s03_view_all_invoices_BLOCK_B_20260401_101823.zip
+    fo_harness_runs/invoicetool_s04_view_invoices_BLOCK_B_20260401_102749.zip
+    fo_harness_runs/invoicetool_s05_make_payments_BLOCK_B_20260401_103502.zip
+    fo_harness_runs/invoicetool_s06_submit_invoices_BLOCK_B_20260401_104124.zip
+    fo_harness_runs/invoicetool_s07_manual_invoice_entry_form_BLOCK_B_20260401_104736.zip
+    fo_harness_runs/invoicetool_s08_email_notifications_for_invoice_status_BLOCK_B_20260401_105556.zip
+
+========================================================
+  SLICE BUILD COMPLETE
+
+  Slice 1: fo_harness_runs/invoicetool_s01_manage_users_BLOCK_B_20260401_093633.zip
+  Slice 2: fo_harness_runs/invoicetool_s02_configure_settings_BLOCK_B_20260401_094449.zip
+  Slice 3: fo_harness_runs/invoicetool_s03_view_all_invoices_BLOCK_B_20260401_101823.zip
+  Slice 4: fo_harness_runs/invoicetool_s04_view_invoices_BLOCK_B_20260401_102749.zip
+  Slice 5: fo_harness_runs/invoicetool_s05_make_payments_BLOCK_B_20260401_103502.zip
+  Slice 6: fo_harness_runs/invoicetool_s06_submit_invoices_BLOCK_B_20260401_104124.zip
+  Slice 7: fo_harness_runs/invoicetool_s07_manual_invoice_entry_form_BLOCK_B_20260401_104736.zip
+  Slice 8: fo_harness_runs/invoicetool_s08_email_notifications_for_invoice_status_BLOCK_B_20260401_105556.zip
+
+  FINAL ZIP : fo_harness_runs/invoicetool.grilled_BLOCK_B_full_20260401_110213.zip  (6.3M)
+========================================================
+
+Running final quality check...
+
+
+══════════════════════════════════════════════════════════════
+  CHECK FINAL ZIP
+  invoicetool.grilled_BLOCK_B_full_20260401_110213.zip
+══════════════════════════════════════════════════════════════
+
+Merging entity artifacts...
+  Extracting: invoicetool.grilled_BLOCK_B_full_20260401_110213.zip
+  [iteration_04_artifacts] invoicetool_s01_manage_users  →  10 file(s)
+  [iteration_04_artifacts] invoicetool_s02_configure_settings  →  10 file(s)
+  [iteration_02_artifacts] invoicetool_s03_view_all_invoices  →  10 file(s)
+  [iteration_04_artifacts] invoicetool_s04_view_invoices  →  10 file(s)
+  [iteration_03_artifacts] invoicetool_s05_make_payments  →  10 file(s)
+  [iteration_02_artifacts] invoicetool_s06_submit_invoices  →  10 file(s)
+  [iteration_05_artifacts] invoicetool_s07_manual_invoice_entry_form  →  10 file(s)
+  [iteration_03_artifacts] invoicetool_s08_email_notifications_for_invoice_status  →  10 file(s)
+
+  Total merged files: 45
+
+──────────────────────────────────────────────────────────────
+GATE 1 — STATIC CHECK
+──────────────────────────────────────────────────────────────
+  RESULT: PASS
+
+──────────────────────────────────────────────────────────────
+GATE 2 — INTEGRATION CHECK
+──────────────────────────────────────────────────────────────
+
+  Running Check 1: Route inventory...
+    → 0 issue(s)
+  Running Check 2: Model field refs...
+    → 0 issue(s)
+  Running Check 3: Spec compliance...
+    → 3 issue(s)
+  Running Check 4: Import chains...
+    → 0 issue(s)
+  Running Check 5: Route decorator double-path...
+    → 0 issue(s)
+  Running Check 6: Auth contract (route auth vs frontend headers)...
+    → 0 issue(s)
+  Running Check 7: Async misuse (await on non-async functions)...
+    → 0 issue(s)
+  Running Check 8: asyncio.gather with sync function args...
+    → 0 issue(s)
+  Running Check 9: npm package integrity (imports vs package.json)...
+    → 0 issue(s)
+  Running Check 10: Bare except / silent error swallow in services...
+    → 0 issue(s)
+  Running Check 11: Unbounded polling loops in frontend...
+    → 0 issue(s)
+  Running Check 12: Background task timeout vs intake SLA...
+    → 0 issue(s)
+  Running Check 13: Config object rendered as text in JSX...
+    → 0 issue(s)
+  Running Check 14: Dead buttons (no onClick / placeholder href)...
+    → 0 issue(s)
+  Running Check 15: Form state fields not in config form definition...
+    → 0 issue(s)
+  Running Check 16: Hollow service methods (no DB interaction)...
+    → 0 issue(s)
+  Running Check 17: Orphaned pages (UI with no backend coverage)...
+    → 0 issue(s)
+  Output written: fo_harness_runs/invoicetool.grilled_BLOCK_B_full_20260401_110213_check.json
+
+
+============================================================
+INTEGRATION CHECK COMPLETE
+============================================================
+  Total issues: 3  (HIGH: 0  MEDIUM: 3)
+  Verdict: INTEGRATION_REJECTED
+
+  Issues found:
+    [MEDIUM] INT-SPEC-KPI-MVP (SPEC_COMPLIANCE)
+           KPI 'MVP' defined in intake but not referenced anywhere in artifacts
+    [MEDIUM] INT-SPEC-KPI-HLD (SPEC_COMPLIANCE)
+           KPI 'HLD' defined in intake but not referenced anywhere in artifacts
+    [MEDIUM] INT-SPEC-KPI-QA (SPEC_COMPLIANCE)
+           KPI 'QA' defined in intake but not referenced anywhere in artifacts
+
+  Fix target files:
+    - business/services/ScoringService.py
+
+  Run harness fix pass:
+    python fo_test_harness.py <intake> --resume-run <run_dir> --resume-iteration <N> --integration-issues integration_issues.json
+============================================================
+
+
+══════════════════════════════════════════════════════════════
+  COMBINED RESULT
+══════════════════════════════════════════════════════════════
+
+  Entities merged: 8
+    invoicetool_s01_manage_users  (iteration_04_artifacts, 10 files)
+    invoicetool_s02_configure_settings  (iteration_04_artifacts, 10 files)
+    invoicetool_s03_view_all_invoices  (iteration_02_artifacts, 10 files)
+    invoicetool_s04_view_invoices  (iteration_04_artifacts, 10 files)
+    invoicetool_s05_make_payments  (iteration_03_artifacts, 10 files)
+    invoicetool_s06_submit_invoices  (iteration_02_artifacts, 10 files)
+    invoicetool_s07_manual_invoice_entry_form  (iteration_05_artifacts, 10 files)
+    invoicetool_s08_email_notifications_for_invoice_status  (iteration_03_artifacts, 10 files)
+
+  Static check     : PASS  (0 defect(s))
+  Integration check: INTEGRATION_REJECTED  (HIGH:0  MED:3  Total:3)
+
+  ✗ CHECKS FAILED — review issues above
+
+
+Next step — deploy:
+  python deploy/zip_to_repo.py fo_harness_runs/invoicetool.grilled_BLOCK_B_full_20260401_110213.zip
 ```
 8. Example output (grill-me, from `invoicetool`):
 ```text
