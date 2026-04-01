@@ -134,8 +134,8 @@ This calls `planner_router.py` and routes to:
 - `run_integration_and_feature_build.sh` otherwise
 
 **Phase vs Slice execution chains**
-- **Phase chain:** `run_auto_build.sh` → `planner_router.py` → `run_integration_and_feature_build.sh` → `phase_planner.py` → `generate_feature_spec.py` → `feature_adder.py --spec-file` → `fo_test_harness.py` → `integration_check.py` → merge ZIPs → `check_final_zip.py` (optional)
-- **Slice chain:** `run_auto_build.sh` → `planner_router.py` → `run_slicer_and_feature_build.sh` → `slice_planner.py` → `generate_feature_spec.py` → `inject_spec.py` → `fo_test_harness.py` → `integration_check.py` → merge ZIPs → `check_final_zip.py` (optional)
+- **Phase chain:** `run_auto_build.sh` → `planner_router.py` → `run_integration_and_feature_build.sh` → `ubiquity.py` → `phase_planner.py` → `generate_feature_spec.py` → `feature_adder.py --spec-file` → `fo_test_harness.py` → `integration_check.py` → merge ZIPs → `check_final_zip.py` (optional)
+- **Slice chain:** `run_auto_build.sh` → `planner_router.py` → `run_slicer_and_feature_build.sh` → `ubiquity.py` → `slice_planner.py` → `generate_feature_spec.py` → `inject_spec.py` → `fo_test_harness.py` → `integration_check.py` → merge ZIPs → `check_final_zip.py` (optional)
 
 ### Step 3: Deploy
 
