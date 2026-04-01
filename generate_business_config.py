@@ -203,7 +203,27 @@ def load_seo(seo_path: str) -> dict:
     }
 
 
-def generate_config(intake_path: str, root_dir: str, seo_path: str = '') -> dict:
+def _load_json(path: str, label: str) -> dict:
+    if not path:
+        return {}
+    if not os.path.isfile(path):
+        print(f"[{label}] Skipped (not found)")
+        return {}
+    try:
+        with open(path, 'r') as f:
+            data = json.load(f)
+    except (json.JSONDecodeError, OSError) as e:
+        print(f"[{label}] Invalid format: {e}")
+        return {}
+    if not isinstance(data, dict):
+        print(f"[{label}] Invalid format")
+        return {}
+    print(f"[{label}] Loaded {path}")
+    return data
+
+
+def generate_config(intake_path: str, root_dir: str, seo_path: str = '',
+                    marketing_path: str = '', gtm_path: str = '') -> dict:
     """Generate business_config.json from intake + actual built artifacts."""
 
     with open(intake_path) as f:
@@ -454,7 +474,8 @@ def generate_config(intake_path: str, root_dir: str, seo_path: str = '') -> dict
             ],
         },
         "seo": load_seo(seo_path),
-        "marketing": {"enabled": False},
+        "marketing": _load_json(marketing_path, "MARKETING") if marketing_path else {"enabled": False},
+        "gtm": _load_json(gtm_path, "GTM") if gtm_path else {},
         "footer": {
             "tagline": tagline,
             "columns": [
@@ -487,7 +508,7 @@ def generate_config(intake_path: str, root_dir: str, seo_path: str = '') -> dict
     return config
 
 
-def write_config(config: dict, root_dir: str) -> list:
+def write_config(config: dict, root_dir: str, include_harness_build: bool = False) -> list:
     """Write business_config.json to all config locations.
 
     Writes to:
@@ -540,6 +561,13 @@ def write_config(config: dict, root_dir: str) -> list:
     for bp_be in root.glob('*/saas-boilerplate/backend/config'):
         _write_target(bp_be / 'business_config.json')
 
+    # ── Optional: _harness/build copies (iteration artifacts) ───────────────
+    if include_harness_build:
+        for cfg_dir in root.rglob('_harness/build/iteration_*_artifacts/business/frontend/config'):
+            _write_target(cfg_dir / 'business_config.json')
+        for cfg_dir in root.rglob('_harness/build/iteration_*_artifacts/business/backend/config'):
+            _write_target(cfg_dir / 'business_config.json')
+
     return written
 
 
@@ -552,6 +580,10 @@ def main():
     parser.add_argument('--zip', help='ZIP file to process (extracts, generates, re-zips)')
     parser.add_argument('--intake', required=True, help='Path to intake JSON')
     parser.add_argument('--seo', default='', help='Path to seo.json (optional)')
+    parser.add_argument('--marketing', default='', help='Path to marketing copy json (optional)')
+    parser.add_argument('--gtm', default='', help='Path to gtm plan json (optional)')
+    parser.add_argument('--include-harness-build', action='store_true',
+                        help='Also write business_config.json into _harness/build iteration artifacts')
     parser.add_argument('--dry-run', action='store_true', help='Print config to stdout, do not write')
     args = parser.parse_args()
 
@@ -579,7 +611,13 @@ def main():
             print(f"ERROR: Directory not found: {root_dir}")
             sys.exit(1)
 
-        config = generate_config(args.intake, root_dir, seo_path=args.seo)
+        config = generate_config(
+            args.intake,
+            root_dir,
+            seo_path=args.seo,
+            marketing_path=args.marketing,
+            gtm_path=args.gtm,
+        )
 
         if args.dry_run:
             print()
@@ -587,7 +625,7 @@ def main():
         else:
             print()
             print("  Writing config files:")
-            written = write_config(config, root_dir)
+        written = write_config(config, root_dir, include_harness_build=args.include_harness_build)
             print(f"\n  Done — wrote {len(written)} file(s)")
 
     elif args.zip:
@@ -603,7 +641,13 @@ def main():
             with zipfile.ZipFile(zip_path, 'r') as zf:
                 zf.extractall(tmp)
 
-            config = generate_config(args.intake, tmp, seo_path=args.seo)
+            config = generate_config(
+                args.intake,
+                tmp,
+                seo_path=args.seo,
+                marketing_path=args.marketing,
+                gtm_path=args.gtm,
+            )
 
             if args.dry_run:
                 print()
@@ -611,7 +655,7 @@ def main():
             else:
                 print()
                 print("  Writing config files:")
-                written = write_config(config, tmp)
+            written = write_config(config, tmp, include_harness_build=args.include_harness_build)
                 print(f"\n  Re-packing ZIP: {zip_path}")
 
                 # Re-create ZIP with updated config

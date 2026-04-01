@@ -330,6 +330,20 @@ INTEGRATION CHECK COMPLETE
   ✓ ALL CHECKS PASSED
 ```
 
+**Step 6 — Generate business_config.json (Post-build)**
+```bash
+python generate_business_config.py \
+  --zip fo_harness_runs/<startup>_BLOCK_B_full_<timestamp>.zip \
+  --intake intake/intake_runs/<startup>/<startup>_phase_assessment.json \
+  --seo seo/<startup>_business_brief_seo.json \
+  --marketing gap-analysis/outputs/<startup>_business_brief_marketing_copy.json \
+  --gtm gap-analysis/outputs/<startup>_business_brief_gtm.json \
+  --include-harness-build
+```
+Notes:
+- `--seo`, `--marketing`, `--gtm` are optional; if omitted they are skipped.
+- `--include-harness-build` also writes into `_harness/build` iteration artifacts (optional).
+
 **What `check_block_b.py` does**
 - Deterministic Block B quality checker (no AI).
 - Validates passes 1–6, core fields, and basic coverage.

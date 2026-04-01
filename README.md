@@ -193,6 +193,20 @@ Deploy notes:
 - `gap-analysis/seo_generator.py` — SEO generator.
 - `gap-analysis/tests/test_pass0_gap_check.py` — Tests for pass‑0 gap check.
 
+## Post-Build Config
+
+Generate `business_config.json` from a final ZIP (optionally include `_harness/build` copies):
+
+```bash
+python generate_business_config.py \
+  --zip fo_harness_runs/<startup>_BLOCK_B_full_<timestamp>.zip \
+  --intake intake/intake_runs/<startup>/<startup>_phase_assessment.json \
+  --seo seo/<startup>_business_brief_seo.json \
+  --marketing gap-analysis/outputs/<startup>_business_brief_marketing_copy.json \
+  --gtm gap-analysis/outputs/<startup>_business_brief_gtm.json \
+  --include-harness-build
+```
+
 ## Adding a Feature to an Existing Build
 
 Use `add_feature.sh` when the codebase is already built and deployed. This is distinct from `run_integration_and_feature_build.sh` which is for greenfield builds.
