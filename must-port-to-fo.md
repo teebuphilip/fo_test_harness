@@ -542,6 +542,50 @@ Key ideas stolen: feature_list.json as state (not prose), structured preamble on
 - Files: `add_feature.sh`
 ✅ DONE here — N/A for FO codebase port (harness tooling)
 
+## Pre-Build Spec Injection (2026-04-01 session 22)
+
+86. feat: generate_feature_spec.py v2 — GPT→Claude spec negotiation before build
+- Replaces the manual questions-only/answers-file flow with automated 2-3 round negotiation.
+- Round 1: GPT drafts HLD/LLD from scoped intake. Round 2: Claude reviews, accepts/overrides.
+  Round 3 (only if conflicts): Claude closes all conflicts using frozen architectural decisions.
+  HALT only on UNRESOLVABLE: (exit 1, writes _spec_HALT.json).
+- Output: `<stem>_spec.txt` (consumed by harness), `<stem>_spec_rounds.json` (audit trail).
+- Why: Claude was inventing feature structure from ambiguous intake → oscillation.
+  Pre-agreed specs eliminate ambiguity before the build loop starts.
+- Files: `generate_feature_spec.py` (rewritten)
+✅ DONE here — ⬜ TODO for FO codebase
+
+87. feat: inject_spec.py — standalone spec injector for slicer pipeline
+- Mirrors `feature_adder.py apply_spec_file()` but works standalone for slice intakes
+  (slicer doesn't use feature_adder.py).
+- Writes to `_phase_context['feature_spec']` and appends to `_phase_context['note']`.
+- Files: `inject_spec.py` (new)
+✅ DONE here — ⬜ TODO for FO codebase
+
+88. fix: fo_test_harness.py — read feature_spec in build_prompt()
+- `build_prompt()` now reads `intake_data['_phase_context']['feature_spec']` and injects it
+  into the dynamic section as "FEATURE SPEC — IMPLEMENT THIS EXACTLY (NON-NEGOTIABLE)".
+- Inserted between `_mini_spec` injection and ubiquitous language block.
+- Without this, specs were embedded in intake JSON but never reached Claude's build prompt —
+  `_phase_context` fields are not auto-forwarded.
+- Files: `fo_test_harness.py`
+✅ DONE here — ⬜ TODO for FO codebase (critical — without this the spec is invisible to Claude)
+
+89. feat: shell pipeline spec injection wiring
+- `run_integration_and_feature_build.sh`: generates spec via `generate_feature_spec.py`,
+  then re-runs `feature_adder.py --spec-file` to embed spec before harness call.
+- `run_slicer_and_feature_build.sh`: generates spec, then runs `inject_spec.py` to embed
+  spec before harness call.
+- Both pipelines halt immediately on SPEC_EXIT != 0 with pointer to HALT json.
+- Files: `run_integration_and_feature_build.sh`, `run_slicer_and_feature_build.sh`
+✅ DONE here — ⬜ TODO for FO codebase
+
+90. fix: generate_feature_spec.py — _extract_feature_name fallback for slice intakes
+- Added `_mini_spec.entity` fallback. Slice intakes use `_mini_spec.entity` not
+  `_phase_context.feature` for the human-readable feature name.
+- Files: `generate_feature_spec.py`
+✅ DONE here — ⬜ TODO for FO codebase
+
 ## Frontend Integration Checks (2026-03-15 session 2)
 
 76. feat: integration_check.py — Check 13: CONFIG_OBJECT_AS_TEXT

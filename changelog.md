@@ -1,5 +1,38 @@
 # Changelog
 
+## 2026-04-01 (session 22 — pre-build feature spec generation)
+
+### feat: generate_feature_spec.py — GPT→Claude spec negotiation before build
+- New `generate_feature_spec.py` generates HLD/LLD spec per feature/slice before harness runs.
+- Round 1: GPT drafts HLD/LLD from scoped intake. Round 2: Claude reviews, accepts or overrides.
+  Round 3 (only if conflicts): Claude closes all conflicts himself using frozen architectural decisions.
+  HALT only if Claude writes UNRESOLVABLE: in round 3.
+- Output: `<stem>_spec.txt`, `<stem>_spec_rounds.json`, `<stem>_spec_HALT.json` (HALT only).
+- Why: Claude was inventing feature structure from ambiguous intake → QA flagged → Claude reinvented differently
+  → oscillation. Pre-agreed specs eliminate ambiguity before the build loop starts.
+
+### feat: inject_spec.py — standalone spec injector for slicer pipeline
+- Mirrors `feature_adder.py apply_spec_file()` but works standalone for slice intakes.
+- Writes spec to `_phase_context['feature_spec']` and appends to `_phase_context['note']`.
+
+### fix: fo_test_harness.py — wire feature_spec into build prompt
+- `build_prompt()` now reads `intake_data['_phase_context']['feature_spec']` and injects it
+  into the dynamic section as a non-negotiable block between `_mini_spec` and pre-output checklist.
+- Without this, specs were embedded in intake JSON but never reached Claude's build prompt.
+
+### feat: shell pipeline spec injection
+- `run_integration_and_feature_build.sh`: spec gen + `feature_adder.py --spec-file` re-run before each harness call.
+- `run_slicer_and_feature_build.sh`: spec gen + `inject_spec.py` before each harness call.
+- Both pipelines halt on SPEC_EXIT != 0 with pointer to HALT json for human review.
+
+### fix: generate_feature_spec.py — _extract_feature_name fallback for slice intakes
+- Added `_mini_spec.entity` fallback. Slice intakes from `slice_planner.py` don't populate
+  `_phase_context.feature` — they use `_mini_spec.entity` (e.g. "Secure Authentication").
+  Without fallback, slice specs got the ugly technical startup_idea_id as the feature name.
+
+Files: `generate_feature_spec.py` (new), `inject_spec.py` (new), `fo_test_harness.py`,
+`run_integration_and_feature_build.sh`, `run_slicer_and_feature_build.sh`
+
 ## 2026-03-31 (session 21 — munger loop + low-issue cleanup)
 
 ### feat: full munger loop + AI fixer convergence

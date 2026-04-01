@@ -24,6 +24,9 @@ Pre-intake gap analysis now lives in `gap-analysis/` and is documented in `gap-a
 ## NOTE (2026-03-31)
 Intake QA tooling was hardened outside this doc: `intake/grill_me.py` now auto-resumes, targets block B only, and enforces Stripe-only + minimal roles/edge cases. `check_boilerplate_fit.py` now uses a slim manifest and logs prompt size with a scoring rubric.
 
+## NOTE (2026-04-01)
+Pre-build feature spec generation is now live. `generate_feature_spec.py` runs GPT→Claude spec negotiation before each feature/slice build. Both shell pipelines (`run_integration_and_feature_build.sh`, `run_slicer_and_feature_build.sh`) auto-generate and inject specs. `fo_test_harness.py` `build_prompt()` reads `_phase_context['feature_spec']` and injects it as a non-negotiable build constraint. New file: `inject_spec.py` (standalone injector for slicer pipeline). This reduces ambiguity-driven QA churn by pre-agreeing feature structure before the build loop.
+
 ## NOTE (2026-03-31)
 Munger now runs via `munger/run_munger_full.sh` (deterministic + AI fixer loop) and converges to a PASSed munged hero JSON (`munger/<slug>.munged.json`). This lives outside the harness improvements tracked here.
 

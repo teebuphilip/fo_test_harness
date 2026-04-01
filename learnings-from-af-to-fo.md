@@ -905,3 +905,31 @@ assuming savings.
 Access pattern for plain-dict ChatGPT responses (NOT SDK objects):
 `usage.get('prompt_tokens_details', {}).get('cached_tokens', 0)`
 Not: `response.usage.prompt_tokens_details.cached_tokens` (SDK object — wrong here).
+
+### Ambiguous intake causes oscillation — pre-agree specs before build
+
+Claude invents feature structure (file layout, schema names, endpoint shapes) from ambiguous
+intake JSON. QA flags the invented structure as wrong. Claude reinvents differently. QA flags
+again. This oscillation burns 5-10 iterations with zero convergence because the "right" answer
+was never defined.
+
+Root cause: the intake describes WHAT the feature does but not HOW it should be structured.
+Claude fills the gap by guessing, and each guess is different.
+
+Fix: `generate_feature_spec.py` runs a GPT→Claude spec negotiation BEFORE the build loop.
+GPT drafts HLD/LLD, Claude reviews and closes. The agreed spec is injected into the intake
+and read by the harness as a non-negotiable build constraint. Claude no longer guesses —
+it implements the spec.
+
+Key detail: the harness (`fo_test_harness.py`) must explicitly read `_phase_context['feature_spec']`
+in `build_prompt()` and inject it into the dynamic section. Embedding the spec in the intake
+JSON alone is not enough — `_phase_context` fields are NOT automatically passed to Claude.
+Only `block_data` (block_a/block_b) and `_mini_spec` are injected by default.
+
+### Slice intakes use different field names than feature intakes
+
+`slice_planner.py` populates `_mini_spec.entity` and `_phase_context.current_entity` but
+NOT `_phase_context.feature`. Any code that extracts a feature/slice name must check
+`_mini_spec.entity` as a fallback, or it will get the technical `startup_idea_id` slug
+(e.g. `ai_workforce_intelligence_s01_secure_authentication`) instead of the human-readable
+name (e.g. `Secure Authentication`).

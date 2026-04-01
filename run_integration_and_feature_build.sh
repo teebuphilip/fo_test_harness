@@ -532,6 +532,32 @@ import re; print(re.sub(r'[^a-z0-9]+','_','$FEATURE'.lower()).strip('_')[:40])
     echo "  (intermediate feature — polish OFF)"
   fi
 
+  # ── Spec generation: GPT drafts, Claude closes ──────────────────────────────
+  echo "▶ Generating feature spec: $FEATURE"
+  SPEC_EXIT=0
+  python generate_feature_spec.py --intake "$FEATURE_INTAKE" || SPEC_EXIT=$?
+  if [[ $SPEC_EXIT -ne 0 ]]; then
+    echo ""
+    echo "✗ SPEC GENERATION HALTED for feature '$FEATURE'"
+    echo "  Review: ${FEATURE_INTAKE%.json}_spec_HALT.json"
+    echo "  Fix the intake ambiguities then rerun."
+    exit 1
+  fi
+  SPEC_FILE="${FEATURE_INTAKE%.json}_spec.txt"
+  if [[ ! -f "$SPEC_FILE" ]]; then
+    echo "ERROR: spec file not found after generation: $SPEC_FILE"
+    exit 1
+  fi
+
+  # Re-run feature_adder with spec embedded into the intake
+  python feature_adder.py \
+    --intake "$INTAKE" \
+    --manifest "$LATEST_ZIP" \
+    --feature "$FEATURE" \
+    --spec-file "$SPEC_FILE" \
+    --output "$FEATURE_INTAKE"
+
+  # ── Harness build ────────────────────────────────────────────────────────────
   FEAT_EXIT=0
   python fo_test_harness.py \
     "$FEATURE_INTAKE" \

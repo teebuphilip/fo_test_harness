@@ -2086,6 +2086,18 @@ class PromptTemplates:
 
             dynamic_section += '\n'.join(ms_lines)
 
+        # FEATURE SPEC INJECTION: if intake contains a pre-generated HLD/LLD spec
+        # from generate_feature_spec.py (via feature_adder --spec-file or inject_spec.py),
+        # inject it as a hard constraint. This overrides ambiguity in the broader intake.
+        feature_spec = intake_data.get('_phase_context', {}).get('feature_spec')
+        if feature_spec:
+            dynamic_section += (
+                "\n\n## FEATURE SPEC — IMPLEMENT THIS EXACTLY (NON-NEGOTIABLE)\n"
+                "This spec was pre-agreed by the architect and builder. "
+                "Do not deviate from it. Do not invent alternatives.\n\n"
+                + feature_spec
+            )
+
         # UBIQUITOUS LANGUAGE: locked terminology from ubiquity.py
         if ubiquitous_language_block:
             dynamic_section += "\n\n" + ubiquitous_language_block

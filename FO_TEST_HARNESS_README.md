@@ -16,6 +16,17 @@ You give it a JSON file and two ZIP files. It does the rest.
 
 If you pass `--deploy`, it deploys instead of zipping. But you probably don't want that yet.
 
+## Latest Changes (2026-04-01)
+
+### Pre-Build Feature Spec Generation
+- New `generate_feature_spec.py` — generates HLD/LLD spec for each feature/slice BEFORE the harness builds it.
+- Flow: GPT drafts HLD/LLD (round 1) → Claude reviews + overrides (round 2) → Claude closes conflicts (round 3, only if needed) → HALT only on UNRESOLVABLE.
+- Output: `<stem>_spec.txt` (consumed by harness), `<stem>_spec_rounds.json` (audit trail), `<stem>_spec_HALT.json` (on HALT only).
+- New `inject_spec.py` — standalone spec injector for slice pipeline (mirrors `feature_adder.py --spec-file`).
+- Both `run_integration_and_feature_build.sh` and `run_slicer_and_feature_build.sh` now generate and inject specs automatically before each harness call.
+- `fo_test_harness.py` `build_prompt()` now reads `_phase_context['feature_spec']` and injects it into the build prompt as a non-negotiable block.
+- Why: Claude was inventing feature structure from ambiguous intake JSON. Pre-agreed specs between GPT (architect) and Claude (builder) eliminate ambiguity before the build loop starts, reducing wasted QA iterations.
+
 ## Latest Changes (2026-03-28)
 
 ### Pre-Intake Gap Analysis Pipeline
@@ -209,8 +220,13 @@ START
   ↓
 Load governance ZIPs into memory (Claude reads these as rules)
   ↓
+FOR EACH FEATURE/SLICE:
+  ├─→ GPT drafts HLD/LLD spec from scoped intake
+  ├─→ Claude reviews, accepts or overrides, resolves conflicts
+  ├─→ Spec injected into intake → harness reads it as hard constraint
+  ↓
 ITERATION 1:
-  ├─→ Claude reads governance + your intake data → builds everything
+  ├─→ Claude reads governance + intake + feature spec → builds everything
   ├─→ Check: Did Claude ask questions instead of building?
   │     └─ YES → Save questions to logs/claude_questions.txt → STOP
   ├─→ ChatGPT checks Claude's work against your intake

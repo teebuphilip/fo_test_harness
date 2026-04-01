@@ -323,6 +323,30 @@ while IFS= read -r SLICE_INTAKE_FILE; do
     PRIOR_RUN_FLAG="--prior-run $LATEST_RUN_DIR"
   fi
 
+  # ── Spec generation: GPT drafts, Claude closes ──────────────────────────────
+  echo "▶ Generating slice spec: $SLICE_NAME"
+  SPEC_EXIT=0
+  python generate_feature_spec.py --intake "$SLICE_INTAKE_FILE" || SPEC_EXIT=$?
+  if [[ $SPEC_EXIT -ne 0 ]]; then
+    echo ""
+    echo "✗ SPEC GENERATION HALTED for slice '$SLICE_NAME'"
+    echo "  Review: ${SLICE_INTAKE_FILE%.json}_spec_HALT.json"
+    echo "  Fix the intake ambiguities then rerun."
+    exit 1
+  fi
+  SPEC_FILE="${SLICE_INTAKE_FILE%.json}_spec.txt"
+  if [[ ! -f "$SPEC_FILE" ]]; then
+    echo "ERROR: spec file not found after generation: $SPEC_FILE"
+    exit 1
+  fi
+
+  # Inject spec into slice intake JSON in place
+  python inject_spec.py \
+    --intake "$SLICE_INTAKE_FILE" \
+    --spec-file "$SPEC_FILE" \
+    --output "$SLICE_INTAKE_FILE"
+
+  # ── Harness build ────────────────────────────────────────────────────────────
   python fo_test_harness.py \
     "$SLICE_INTAKE_FILE" \
     "$BUILD_GOV" \
