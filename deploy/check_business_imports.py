@@ -130,6 +130,9 @@ def main() -> int:
         print(f"[ERROR] Repo path not found: {repo_path}")
         return 2
 
+    print("Checking business page imports...")
+    print(f"  Repo: {repo_path}")
+
     exts = list(DEFAULT_EXTS)
     if args.include_assets:
         exts.extend(ASSET_EXTS)
@@ -138,6 +141,15 @@ def main() -> int:
             ext = "." + ext
         if ext not in exts:
             exts.append(ext)
+
+    print(f"  Extensions: {', '.join(exts)}")
+    if args.report_all:
+        print("  Report all: enabled")
+    if args.include_assets:
+        print("  Include assets: enabled")
+    if args.ext:
+        print(f"  Extra extensions: {', '.join(args.ext)}")
+    print("  Scanning business/frontend/pages/*.jsx ...")
 
     issues, errors, all_rel = _collect_issues(repo_path, exts, args.report_all)
     if errors:
