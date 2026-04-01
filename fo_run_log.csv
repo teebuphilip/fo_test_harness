@@ -139,3 +139,11 @@ date,time,startup,iterations,cost_claude,cost_chatgpt,total_cost,run_end_reason
 2026-03-18,10:25:46,wynwood_thoroughbreds_p1_contactformsubmission,1,0.1503,0.0931,0.2433,QA_ACCEPTED
 2026-03-18,10:34:36,wynwood_thoroughbreds_p1_member,6,0.9639,0.2686,1.2325,QA_ACCEPTED
 2026-03-18,10:39:28,wynwood_thoroughbreds_p1_contentpage,3,0.5082,0.1977,0.7059,QA_ACCEPTED
+2026-04-01,09:44:27,invoicetool_s01_manage_users,4,0.6935,0.1010,0.7944,QA_ACCEPTED
+2026-04-01,09:51:27,invoicetool_s02_configure_settings,4,0.5850,0.0842,0.6692,QA_ACCEPTED
+2026-04-01,10:23:57,invoicetool_s03_view_all_invoices,2,0.4950,0.1021,0.5971,QA_ACCEPTED
+2026-04-01,10:34:43,invoicetool_s04_view_invoices,4,0.6218,0.1546,0.7764,QA_ACCEPTED
+2026-04-01,10:41:03,invoicetool_s05_make_payments,3,0.4844,0.1616,0.6460,QA_ACCEPTED
+2026-04-01,10:47:17,invoicetool_s06_submit_invoices,2,0.4534,0.0939,0.5472,QA_ACCEPTED
+2026-04-01,10:55:35,invoicetool_s07_manual_invoice_entry_form,5,0.7653,0.1596,0.9249,QA_ACCEPTED
+2026-04-01,11:02:11,invoicetool_s08_email_notifications_for_invoice_status,3,0.5085,0.1014,0.6100,QA_ACCEPTED

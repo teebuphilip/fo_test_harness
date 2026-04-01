@@ -6685,7 +6685,7 @@ End with: SHARPEN_COMPLETE"""
             nonlocal _cb_defect_fingerprints, _cb_prev_byte_count
 
             # ── Detector A: Stagnation (no file changes) ──
-            manifest_hash = hash(tuple(sorted(current_manifest.items()))) if current_manifest else 0
+            manifest_hash = hash(str(sorted(current_manifest.items()))) if current_manifest else 0
             if _cb_prev_manifest_hash is not None and manifest_hash == _cb_prev_manifest_hash:
                 _cb_no_change_count += 1
             else:
@@ -7103,6 +7103,7 @@ End with: SHARPEN_COMPLETE"""
         try:
             while iteration <= self.max_qa_iterations:
                 print_header(f"ITERATION {iteration}/{self.max_qa_iterations}")
+                print_info(f"Intake: {self.intake_file}")
 
                 # Warm-start QA mode: skip Claude BUILD for this specific iteration,
                 # load existing artifacts from the resume run directory.

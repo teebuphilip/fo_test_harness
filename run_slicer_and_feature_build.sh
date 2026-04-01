@@ -231,7 +231,7 @@ UBIQUITOUS_LANG="${INTAKE_DIR}/${INTAKE_STEM}_ubiquitous_language.json"
 echo "▶ STEP 0 — Ubiquitous Language (locking terminology)"
 echo "────────────────────────────────────────────────────────"
 
-if [[ -f "$UBIQUITOUS_LANG" && ( -n "$PHASE1_ZIP_OVERRIDE" || $START_FROM_FEATURE -gt 0 ) ]]; then
+if [[ -f "$UBIQUITOUS_LANG" && ( -n "${PHASE1_ZIP_OVERRIDE:-}" || $START_FROM_FEATURE -gt 0 ) ]]; then
   echo "  ↩ Skipping ubiquity — glossary already exists and resuming"
 else
   python ubiquity.py --intake "$INTAKE" $NO_AI
