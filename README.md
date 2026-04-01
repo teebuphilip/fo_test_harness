@@ -80,6 +80,18 @@ Exit codes:
 - `2` FAIL (< 60)
 - `3` ERROR (file missing/invalid)
 
+### Optional: HERO (QUALITY) — Apply AI Fixes to Hero JSON
+
+**Special build step for quality mode (not factory mode).**
+
+If you already ran `munger_ai_fixer.py` and want to apply its output to a hero JSON:
+
+```bash
+munger/write_aifixed.sh intake/ai_text/<startup>.json munger/<startup>_munger_ai_fixed.json
+```
+
+This writes `aifixed.<startup>.json` next to the original hero file with `hero_answers` replaced by the fixer output.
+
 ### Step 2: Run Build-QA Pipeline
 
 ```bash
