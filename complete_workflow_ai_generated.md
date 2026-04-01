@@ -196,6 +196,10 @@ This uses `planner_router.py` to choose between:
 - `--fullclean` (remove all ZIPs for this startup)
 - `--start-from-feature N` (resume partial run)
 
+**Internal helpers used by the pipelines (not called directly)**
+- `generate_feature_spec.py` — Generates a scoped feature spec from intake/plan context to guide feature builds.
+- `inject_spec.py` — Injects/merges a generated spec into artifacts/build context before build/QA.
+
 6. Outputs:
 ```text
 intake/intake_runs/<picked_name>/<picked_name>.grill_report.json
