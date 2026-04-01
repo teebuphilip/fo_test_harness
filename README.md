@@ -154,6 +154,45 @@ Deploy notes:
 
 ---
 
+## Gap-Analysis Tools
+
+**Primary pipelines**
+- `gap-analysis/run_full_pipeline.sh` — Full gap-analysis pipeline from raw idea JSON.
+- `gap-analysis/run_full_pipeline_from_hero.sh` — Full gap-analysis pipeline from hero JSON.
+
+**Pipeline chain (run_full_pipeline.sh)**
+- `run_full_pipeline.sh`
+  - `run_pass0.sh` → `pass0_gap_check.py` (writes pass0 + brief + one-liner)
+  - `run_pricing_modeler.sh` → `pricing_modeler.py` (updates business brief)
+  - `run_name_picker.sh` → `auto_name_picker.py` (writes named + suggestions)
+  - `run_ai_hero_answers.sh` → `generate_ai_hero_answers.py` → `intake/convert_hero_answers.py`
+  - `run_seo_generator.sh` → `seo_generator.py`
+  - `run_marketing_copy.sh` → `base_marketing_copy.py`
+  - `run_gtm_plan.sh` → `base_gtm_plan.py`
+
+**Gap-analysis scripts (details)**
+- `gap-analysis/auto_name_picker.py` — Auto name picker.
+- `gap-analysis/base_gtm_plan.py` — Base GTM plan template.
+- `gap-analysis/base_marketing_copy.py` — Base marketing copy template.
+- `gap-analysis/build_brief_from_hero.py` — Build brief from hero input.
+- `gap-analysis/discover_allowlist.py` — Discovery allowlist builder.
+- `gap-analysis/generate_ai_hero_answers.py` — AI hero answers generator.
+- `gap-analysis/pass0_gap_check.py` — Pass‑0 gap check.
+- `gap-analysis/pass0_research.py` — Pass‑0 research.
+- `gap-analysis/pricing_modeler.py` — Pricing modeler.
+- `gap-analysis/run_ai_hero_answers.sh` — Runs AI hero answers generator.
+- `gap-analysis/run_discover_allowlist.sh` — Runs discover allowlist pipeline.
+- `gap-analysis/run_full_pipeline.sh` — Full gap‑analysis pipeline.
+- `gap-analysis/run_full_pipeline_from_hero.sh` — Full pipeline from hero input.
+- `gap-analysis/run_gtm_plan.sh` — Runs GTM plan generation.
+- `gap-analysis/run_marketing_copy.sh` — Runs marketing copy generation.
+- `gap-analysis/run_name_picker.sh` — Runs name picker.
+- `gap-analysis/run_pass0.sh` — Runs pass‑0 steps.
+- `gap-analysis/run_pricing_modeler.sh` — Runs pricing modeler.
+- `gap-analysis/run_seo_generator.sh` — Runs SEO generator.
+- `gap-analysis/seo_generator.py` — SEO generator.
+- `gap-analysis/tests/test_pass0_gap_check.py` — Tests for pass‑0 gap check.
+
 ## Adding a Feature to an Existing Build
 
 Use `add_feature.sh` when the codebase is already built and deployed. This is distinct from `run_integration_and_feature_build.sh` which is for greenfield builds.
