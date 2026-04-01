@@ -208,6 +208,114 @@ intake/intake_runs/<picked_name>/<picked_name>.grilled.json
 boilerplate_checks/<picked_name>_boilerplate_check.json
 ```
 
+**Step 5 — Final ZIP Quality Check (Required for deploy)**
+```bash
+python check_final_zip.py \
+  --zip fo_harness_runs/<startup>_BLOCK_B_full_<timestamp>.zip \
+  --intake intake/intake_runs/<startup>/<startup>_phase_assessment.json
+```
+What it does:
+- Extracts the final ZIP
+- Merges entity `business/**` artifacts
+- Runs static + integration checks
+- Exits `0` on pass, `1` on failure
+
+Example output:
+```text
+(cd39) Teebus-MacBook-Pro:FO_TEST_HARNESS teebuphilip$ python check_final_zip.py --zip fo_harness_runs/invoicetool.grilled_BLOCK_B_full_20260401_110213.zip --intake intake/intake_runs/invoicetool/invoicetool.grilled_slice_assessment.json 
+
+══════════════════════════════════════════════════════════════
+  CHECK FINAL ZIP
+  invoicetool.grilled_BLOCK_B_full_20260401_110213.zip
+══════════════════════════════════════════════════════════════
+
+Merging entity artifacts...
+  Extracting: invoicetool.grilled_BLOCK_B_full_20260401_110213.zip
+  [iteration_04_artifacts] invoicetool_s01_manage_users  →  10 file(s)
+  [iteration_04_artifacts] invoicetool_s02_configure_settings  →  10 file(s)
+  [iteration_02_artifacts] invoicetool_s03_view_all_invoices  →  10 file(s)
+  [iteration_04_artifacts] invoicetool_s04_view_invoices  →  10 file(s)
+  [iteration_03_artifacts] invoicetool_s05_make_payments  →  10 file(s)
+  [iteration_02_artifacts] invoicetool_s06_submit_invoices  →  10 file(s)
+  [iteration_05_artifacts] invoicetool_s07_manual_invoice_entry_form  →  10 file(s)
+  [iteration_03_artifacts] invoicetool_s08_email_notifications_for_invoice_status  →  10 file(s)
+
+  Total merged files: 45
+
+──────────────────────────────────────────────────────────────
+GATE 1 — STATIC CHECK
+──────────────────────────────────────────────────────────────
+  RESULT: PASS
+
+──────────────────────────────────────────────────────────────
+GATE 2 — INTEGRATION CHECK
+──────────────────────────────────────────────────────────────
+
+  Running Check 1: Route inventory...
+    → 0 issue(s)
+  Running Check 2: Model field refs...
+    → 0 issue(s)
+  Running Check 3: Spec compliance...
+    → 0 issue(s)
+  Running Check 4: Import chains...
+    → 0 issue(s)
+  Running Check 5: Route decorator double-path...
+    → 0 issue(s)
+  Running Check 6: Auth contract (route auth vs frontend headers)...
+    → 0 issue(s)
+  Running Check 7: Async misuse (await on non-async functions)...
+    → 0 issue(s)
+  Running Check 8: asyncio.gather with sync function args...
+    → 0 issue(s)
+  Running Check 9: npm package integrity (imports vs package.json)...
+    → 0 issue(s)
+  Running Check 10: Bare except / silent error swallow in services...
+    → 0 issue(s)
+  Running Check 11: Unbounded polling loops in frontend...
+    → 0 issue(s)
+  Running Check 12: Background task timeout vs intake SLA...
+    → 0 issue(s)
+  Running Check 13: Config object rendered as text in JSX...
+    → 0 issue(s)
+  Running Check 14: Dead buttons (no onClick / placeholder href)...
+    → 0 issue(s)
+  Running Check 15: Form state fields not in config form definition...
+    → 0 issue(s)
+  Running Check 16: Hollow service methods (no DB interaction)...
+    → 0 issue(s)
+  Running Check 17: Orphaned pages (UI with no backend coverage)...
+    → 0 issue(s)
+  Output written: fo_harness_runs/invoicetool.grilled_BLOCK_B_full_20260401_110213_check.json
+
+
+============================================================
+INTEGRATION CHECK COMPLETE
+============================================================
+  Total issues: 0  (HIGH: 0  MEDIUM: 0)
+  Verdict: INTEGRATION_PASS
+============================================================
+
+
+══════════════════════════════════════════════════════════════
+  COMBINED RESULT
+══════════════════════════════════════════════════════════════
+
+  Entities merged: 8
+    invoicetool_s01_manage_users  (iteration_04_artifacts, 10 files)
+    invoicetool_s02_configure_settings  (iteration_04_artifacts, 10 files)
+    invoicetool_s03_view_all_invoices  (iteration_02_artifacts, 10 files)
+    invoicetool_s04_view_invoices  (iteration_04_artifacts, 10 files)
+    invoicetool_s05_make_payments  (iteration_03_artifacts, 10 files)
+    invoicetool_s06_submit_invoices  (iteration_02_artifacts, 10 files)
+    invoicetool_s07_manual_invoice_entry_form  (iteration_05_artifacts, 10 files)
+    invoicetool_s08_email_notifications_for_invoice_status  (iteration_03_artifacts, 10 files)
+
+  Static check     : PASS  (0 defect(s))
+  Integration check: INTEGRATION_PASS  (HIGH:0  MED:0  Total:0)
+
+  ✓ ALL CHECKS PASSED
+```
+
 **What `check_block_b.py` does**
 - Deterministic Block B quality checker (no AI).
 - Validates passes 1–6, core fields, and basic coverage.
