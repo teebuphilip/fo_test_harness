@@ -329,6 +329,37 @@ def _slice_to_mini_spec(slice_obj: dict) -> dict:
             f"business/services/{group_key}_service.py",
         ] + allowed_files
 
+    # Extract required integrations from mode_reason
+    mode = slice_obj.get('mode', 'AFK')
+    mode_reason = slice_obj.get('mode_reason', '')
+    required_integrations = []
+    integration_map = {
+        'stripe': {
+            'name': 'Stripe',
+            'import': 'from lib.stripe_lib import load_stripe_lib',
+            'init': 'stripe = load_stripe_lib("config/stripe_config.json")',
+        },
+        'mailerlite': {
+            'name': 'MailerLite',
+            'import': 'from lib.mailerlite_lib import load_mailerlite_lib',
+            'init': 'mailer = load_mailerlite_lib("config/mailerlite_config.json")',
+        },
+        'auth0': {
+            'name': 'Auth0',
+            'import': 'from lib.auth0_lib import load_auth0_lib',
+            'init': 'auth0 = load_auth0_lib("config/auth0_config.json")',
+        },
+        'meilisearch': {
+            'name': 'Meilisearch',
+            'import': 'from lib.meilisearch_lib import load_meilisearch_lib',
+            'init': 'search = load_meilisearch_lib("config/meilisearch_config.json")',
+        },
+    }
+    mode_reason_lower = mode_reason.lower()
+    for key, info in integration_map.items():
+        if key in mode_reason_lower:
+            required_integrations.append(info)
+
     mini_spec = {
         "entity": slice_obj.get('title', slice_obj['feature']),
         "build_order": int(slice_obj['id'].lstrip('S')) if str(slice_obj['id']).lstrip('S').isdigit() else 99,
@@ -353,6 +384,9 @@ def _slice_to_mini_spec(slice_obj: dict) -> dict:
             "Do not create any file outside the allowed_files list.",
         ],
         "open_questions": [],
+        "mode": mode,
+        "mode_reason": mode_reason,
+        "required_integrations": required_integrations,
     }
     return mini_spec
 

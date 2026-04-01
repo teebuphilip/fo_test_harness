@@ -675,6 +675,35 @@ def build_phase2_intake(intake: dict, assessment: dict) -> dict:
     # Suffix startup_idea_id so Phase 1 and Phase 2 run dirs/ZIPs are distinct
     if 'startup_idea_id' in p2:
         p2['startup_idea_id'] = p2['startup_idea_id'].rstrip('_') + '_p2'
+    # Extract required integrations from intake for Phase 2
+    _integration_map = {
+        'stripe': {
+            'name': 'Stripe',
+            'import': 'from lib.stripe_lib import load_stripe_lib',
+            'init': 'stripe = load_stripe_lib("config/stripe_config.json")',
+        },
+        'mailerlite': {
+            'name': 'MailerLite',
+            'import': 'from lib.mailerlite_lib import load_mailerlite_lib',
+            'init': 'mailer = load_mailerlite_lib("config/mailerlite_config.json")',
+        },
+        'auth0': {
+            'name': 'Auth0',
+            'import': 'from lib.auth0_lib import load_auth0_lib',
+            'init': 'auth0 = load_auth0_lib("config/auth0_config.json")',
+        },
+        'meilisearch': {
+            'name': 'Meilisearch',
+            'import': 'from lib.meilisearch_lib import load_meilisearch_lib',
+            'init': 'search = load_meilisearch_lib("config/meilisearch_config.json")',
+        },
+    }
+    _intake_blob = json.dumps(intake, ensure_ascii=False).lower()
+    p2_required_integrations = []
+    for key, info in _integration_map.items():
+        if key in _intake_blob:
+            p2_required_integrations.append(info)
+
     p2['_phase_context'] = {
         'phase': 2,
         'of_phases': 2,
@@ -682,6 +711,7 @@ def build_phase2_intake(intake: dict, assessment: dict) -> dict:
         'phase1_completed_features': assessment['data_features'],
         'phase1_do_not_regenerate': p1_route_files + p1_model_files + p1_page_files,
         'kpis_to_implement': assessment['kpis'],
+        'required_integrations': p2_required_integrations,
         'phase2_new_features': assessment['intelligence_features'],
         'feature_state': p2_feature_state,
         'note': (

@@ -2084,6 +2084,19 @@ class PromptTemplates:
                 for fe in mini_spec['forbidden_expansions']:
                     ms_lines.append(f"- {fe}")
 
+            if mini_spec.get('required_integrations'):
+                ms_lines.append("")
+                ms_lines.append("### REQUIRED INTEGRATIONS — you MUST use these boilerplate libraries:")
+                ms_lines.append("Do NOT write placeholder CRUD. Use the actual library calls below.")
+                for integ in mini_spec['required_integrations']:
+                    ms_lines.append(f"")
+                    ms_lines.append(f"**{integ['name']}:**")
+                    ms_lines.append(f"```python")
+                    ms_lines.append(f"{integ['import']}")
+                    ms_lines.append(f"{integ['init']}")
+                    ms_lines.append(f"```")
+                    ms_lines.append(f"Use this in the service layer. The library is already installed.")
+
             dynamic_section += '\n'.join(ms_lines)
 
         # FEATURE SPEC INJECTION: if intake contains a pre-generated HLD/LLD spec
@@ -2097,6 +2110,24 @@ class PromptTemplates:
                 "Do not deviate from it. Do not invent alternatives.\n\n"
                 + feature_spec
             )
+
+        # REQUIRED INTEGRATIONS from _phase_context (Phase 2 builds via phase_planner)
+        # This covers the case where mini_spec doesn't exist (phase planner Phase 2)
+        phase_ctx_integrations = intake_data.get('_phase_context', {}).get('required_integrations', [])
+        if phase_ctx_integrations and not (mini_spec and mini_spec.get('required_integrations')):
+            integ_lines = [
+                "\n\n## REQUIRED INTEGRATIONS — you MUST use these boilerplate libraries:",
+                "Do NOT write placeholder CRUD. Use the actual library calls below.",
+            ]
+            for integ in phase_ctx_integrations:
+                integ_lines.append(f"")
+                integ_lines.append(f"**{integ['name']}:**")
+                integ_lines.append(f"```python")
+                integ_lines.append(f"{integ['import']}")
+                integ_lines.append(f"{integ['init']}")
+                integ_lines.append(f"```")
+                integ_lines.append(f"Use this in the service layer. The library is already installed.")
+            dynamic_section += '\n'.join(integ_lines)
 
         # UBIQUITOUS LANGUAGE: locked terminology from ubiquity.py
         if ubiquitous_language_block:
