@@ -1,6 +1,6 @@
 # Changelog
 
-## 2026-04-01 (session 22 — pre-build feature spec generation)
+## 2026-04-01 (session 22 continued — spec wiring + integration propagation)
 
 ### fix: propagate required integrations (Stripe, MailerLite, etc.) into build prompts
 - Root cause: slice planner identified integrations in `mode_reason` (e.g. "Requires integration
@@ -61,8 +61,16 @@ Files: `slice_planner.py`, `phase_planner.py`, `fo_test_harness.py`
   `_phase_context.feature` — they use `_mini_spec.entity` (e.g. "Secure Authentication").
   Without fallback, slice specs got the ugly technical startup_idea_id as the feature name.
 
+### feat: add_feature.sh — auto spec generation when --spec-file not provided
+- Step 1b inserted between feature intake generation and harness build.
+- If `--spec-file` omitted: checks `feature_specs/<slug>/` for existing spec (reuse),
+  otherwise runs `generate_feature_spec.py` (GPT→Claude negotiation), then injects into
+  feature intake via `inject_spec.py`.
+- Graceful fallback: if spec gen or injection fails, continues build without spec.
+- All three pipelines now auto-generate specs: phase, slice, and add_feature.
+
 Files: `generate_feature_spec.py` (new), `inject_spec.py` (new), `fo_test_harness.py`,
-`run_integration_and_feature_build.sh`, `run_slicer_and_feature_build.sh`
+`run_integration_and_feature_build.sh`, `run_slicer_and_feature_build.sh`, `add_feature.sh`
 
 ## 2026-03-31 (session 21 — munger loop + low-issue cleanup)
 

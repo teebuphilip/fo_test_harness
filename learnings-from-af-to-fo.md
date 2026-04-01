@@ -1,5 +1,9 @@
 # Learnings From AF to FO
 
+## Latest Learnings (2026-04-01 — add_feature spec wiring)
+
+- **All pipeline entry points must generate specs, not just the main two.** `add_feature.sh` was the third entry point into the harness and was skipped during initial spec wiring. Any path that calls `fo_test_harness.py` without a spec loses the pre-agreed HLD/LLD constraint, and Claude invents structure from scratch — which is exactly what specs exist to prevent.
+
 ## Latest Learnings (2026-03-31 — grill-me quality mode)
 
 - **Quality mode must run even when there are no issues.** If the review step returns empty, the answer-fill never triggers, so “quality” is a no-op. Force a single quality answer-fill pass when `--quality` is set.

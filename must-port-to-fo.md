@@ -1,5 +1,14 @@
 # Must Port to FO
 
+## Auto Spec in add_feature.sh (2026-04-01 session 22)
+
+97. feat: add_feature.sh auto spec generation
+- Step 1b: if `--spec-file` not provided, auto-generates via `generate_feature_spec.py` then injects via `inject_spec.py`
+- Reuses existing spec from `feature_specs/<slug>/` if present
+- Graceful fallback on failure — build continues without spec
+- Files: `add_feature.sh`
+- ✅ DONE here, ⬜ TODO for FO
+
 ## Munger Loop + Low-Issue Cleanup (2026-03-31 session 21)
 
 142. feat: full munger loop + AI fixer convergence
