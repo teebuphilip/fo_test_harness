@@ -36,6 +36,7 @@
 #   --startup-id       Base name for run dirs (default: derived from intake stem)
 #   --build-gov        Path to FOBUILFINALLOCKED*.zip (default: auto-detected in cwd)
 #   --max-iterations N Per-run iteration cap (default: 20)
+#   --spec-file        Pre-generated spec file. If omitted, auto-generates via GPT→Claude negotiation
 #
 # Resume behaviour (automatic):
 #   - Feature intake JSON already exists → skip generation
@@ -237,6 +238,40 @@ else
     exit 1
   fi
   echo "✓ Feature intake: $FEATURE_INTAKE"
+fi
+echo ""
+
+# ── Step 1b: Generate feature spec (if not provided) ─────────────────────────
+if [[ -z "$SPEC_FILE" ]]; then
+  SPEC_DIR="feature_specs/${STARTUP_SLUG}"
+  EXISTING_SPEC=$(ls -t "${SPEC_DIR}/"*_spec.txt 2>/dev/null | head -1 || true)
+
+  if [[ -n "$EXISTING_SPEC" ]]; then
+    echo "  ↩ Spec already exists — reusing: $EXISTING_SPEC"
+    SPEC_FILE="$EXISTING_SPEC"
+  else
+    echo "▶ STEP 1b — Generate Feature Spec (GPT→Claude negotiation)"
+    echo "────────────────────────────────────────────────────────"
+    python generate_feature_spec.py \
+      --intake "$FEATURE_INTAKE" \
+      --feature "$FEATURE" || true
+
+    GENERATED_SPEC=$(ls -t "${SPEC_DIR}/"*_spec.txt 2>/dev/null | head -1 || true)
+    if [[ -n "$GENERATED_SPEC" ]]; then
+      SPEC_FILE="$GENERATED_SPEC"
+      echo "✓ Spec generated: $SPEC_FILE"
+    else
+      echo "⚠ Spec generation failed — continuing without spec"
+    fi
+  fi
+
+  # Inject spec into feature intake if we have one
+  if [[ -n "$SPEC_FILE" && -f "$SPEC_FILE" && -f "$FEATURE_INTAKE" ]]; then
+    echo "  → Injecting spec into feature intake"
+    python inject_spec.py \
+      --intake "$FEATURE_INTAKE" \
+      --spec "$SPEC_FILE" || echo "⚠ Spec injection failed — continuing without spec"
+  fi
 fi
 echo ""
 
