@@ -344,6 +344,50 @@ Notes:
 - `--seo`, `--marketing`, `--gtm` are optional; if omitted they are skipped.
 - `--include-harness-build` also writes into `_harness/build` iteration artifacts (optional).
 
+**Step 7 — ZIP → Repo (GitHub)**
+```bash
+python deploy/zip_to_repo.py fo_harness_runs/<startup>_BLOCK_B_full_<timestamp>.zip
+```
+Example output (invoicetool):
+```text
+(cd39) Teebus-MacBook-Pro:FO_TEST_HARNESS teebuphilip$ python deploy/zip_to_repo.py fo_harness_runs/invoicetool.grilled_BLOCK_B_full_20260401_110213.zip
+[ERROR] Missing required environment variables:
+  - GITHUB_TOKEN not set
+  - GITHUB_USERNAME not set
+(cd39) Teebus-MacBook-Pro:FO_TEST_HARNESS teebuphilip$ export GITHUB_USERNAME=teebuphilip
+(cd39) Teebus-MacBook-Pro:FO_TEST_HARNESS teebuphilip$ export GITHUB_TOKEN=`cat ~/Downloads/ACCESSKEYS/TEEBUGITHUBPERSONALACCESSTOKEN `
+(cd39) Teebus-MacBook-Pro:FO_TEST_HARNESS teebuphilip$ python deploy/zip_to_repo.py fo_harness_runs/invoicetool.grilled_BLOCK_B_full_20260401_110213.zip
+[INFO] Copied saas-boilerplate/backend/ → repo/backend/
+[INFO] Copied saas-boilerplate/frontend/ → repo/frontend/
+[INFO] Copied teebu-shared-libs/lib/ → repo/backend/libs/
+[INFO] Merged business/ artifacts → repo/business/ (45 files)
+[INFO]   invoicetool_s01_manage_users (iteration_04_artifacts) → 10 file(s)
+[INFO]   invoicetool_s02_configure_settings (iteration_04_artifacts) → 10 file(s)
+[INFO]   invoicetool_s03_view_all_invoices (iteration_02_artifacts) → 10 file(s)
+[INFO]   invoicetool_s04_view_invoices (iteration_04_artifacts) → 10 file(s)
+[INFO]   invoicetool_s05_make_payments (iteration_03_artifacts) → 10 file(s)
+[INFO]   invoicetool_s06_submit_invoices (iteration_02_artifacts) → 10 file(s)
+[INFO]   invoicetool_s07_manual_invoice_entry_form (iteration_05_artifacts) → 10 file(s)
+[INFO]   invoicetool_s08_email_notifications_for_invoice_status (iteration_03_artifacts) → 10 file(s)
+[INFO] Repo path: /Users/teebuphilip/Documents/work/invoicetool.grilled
+Initialized empty Git repository in /Users/teebuphilip/Documents/work/invoicetool.grilled/.git/
+[master (root-commit) f526c6c] Initial Invoicetool.Grilled integration from harness zip
+ 149 files changed, 48315 insertions(+)
+...
+[INFO] Creating GitHub repo: invoicetool.grilled
+Enumerating objects: 178, done.
+Counting objects: 100% (178/178), done.
+Delta compression using up to 8 threads
+Compressing objects: 100% (172/172), done.
+Writing objects: 100% (178/178), 412.25 KiB | 6.87 MiB/s, done.
+Total 178 (delta 16), reused 0 (delta 0)
+remote: Resolving deltas: 100% (16/16), done.
+To https://github.com/teebuphilip/invoicetool.grilled.git
+ * [new branch]      main -> main
+Branch 'main' set up to track remote branch 'main' from 'origin'.
+[INFO] Pushed: https://github.com/teebuphilip/invoicetool.grilled
+```
+
 **What `check_block_b.py` does**
 - Deterministic Block B quality checker (no AI).
 - Validates passes 1–6, core fields, and basic coverage.
