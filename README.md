@@ -65,6 +65,21 @@ If you start with a raw idea or pre-intake JSON, run the gap-analysis pipeline f
 # Hero JSON output: intake/ai_text/<picked_name>.json
 ```
 
+### Optional: Block B Quality Check (Deterministic)
+
+After intake (or grilled intake), you can run a deterministic quality check:
+
+```bash
+python check_block_b.py intake/intake_runs/<startup>/<startup>.json
+python check_block_b.py intake/intake_runs/<startup>/<startup>.grilled.json
+```
+
+Exit codes:
+- `0` PASS (score ≥ 80)
+- `1` WARN (60–79)
+- `2` FAIL (< 60)
+- `3` ERROR (file missing/invalid)
+
 ### Step 2: Run Build-QA Pipeline
 
 ```bash

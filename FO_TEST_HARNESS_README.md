@@ -26,6 +26,15 @@ If you pass `--deploy`, it deploys instead of zipping. But you probably don't wa
   - AI hero answers + hero JSON (`intake/ai_text/`).
 - Entry point: `gap-analysis/run_full_pipeline.sh <preintake.json>`.
 
+## Latest Changes (2026-03-31)
+
+### Block B Deterministic Quality Check
+- New `check_block_b.py` for fast Block B scoring (no AI).
+- Usage:
+  - `python check_block_b.py intake/intake_runs/<startup>/<startup>.json`
+  - `python check_block_b.py intake/intake_runs/<startup>/<startup>.grilled.json`
+- Exit codes: `0` PASS, `1` WARN, `2` FAIL, `3` ERROR.
+
 ## Latest Changes (2026-03-26)
 
 ### Convergence + QA Accuracy Hardening (session 17)
