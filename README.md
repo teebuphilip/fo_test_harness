@@ -92,6 +92,16 @@ munger/write_aifixed.sh intake/ai_text/<startup>.json munger/<startup>_munger_ai
 
 This writes `aifixed.<startup>.json` next to the original hero file with `hero_answers` replaced by the fixer output.
 
+### Optional: HERO (QUALITY) — Proposal From Blocks
+
+**HERO (QUALITY) / SPECIAL BUILD step (not factory mode).**
+
+Generates a proposal document to send to the hero based on Block A + Block B:
+
+```bash
+intake/generate_proposal_from_blocks.sh intake/intake_runs/<startup>
+```
+
 ### Step 2: Run Build-QA Pipeline
 
 ```bash
@@ -110,6 +120,18 @@ This script handles everything automatically:
 **Output:** `fo_harness_runs/my_startup_BLOCK_B_full_<timestamp>.zip`
 
 **Auto-resume:** If the run is interrupted, rerun the exact same command — the script detects which ZIPs already exist and picks up where it left off.
+
+### Optional: Auto-Route Build (Slice vs Phase)
+
+If you want the system to choose the build pipeline for you:
+
+```bash
+./run_auto_build.sh --intake intake/intake_runs/<startup>/<startup>.json
+```
+
+This calls `planner_router.py` and routes to:
+- `run_slicer_and_feature_build.sh` when a slice plan is recommended
+- `run_integration_and_feature_build.sh` otherwise
 
 ### Step 3: Deploy
 
@@ -296,6 +318,7 @@ CONSISTENCY (Gate 3) catches obvious cross-file structural bugs cheaply before t
 | `integration_check.py` | 15-check deterministic post-build validator |
 | `phase_planner.py` | Splits intake into data layer + intelligence feature list |
 | `slice_planner.py` | Builds vertical slice plans + runnable slice intakes (`--extra-repair` optional second repair pass) |
+| `ubiquity.py` | Extracts canonical domain terms from intake and writes a ubiquitous language glossary |
 | `planner_router.py` | Intake router: recommends slice vs phase |
 | `feature_adder.py` | Generates scoped feature intake from existing ZIP or repo |
 | `generate_business_config.py` | Post-merge config generator — scans built pages, writes `business_config.json` |

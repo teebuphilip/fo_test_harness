@@ -170,6 +170,10 @@ This uses `planner_router.py` to choose between:
 - Feature count, integration signals, analytics/reporting signals, multi-role signals, and subjective-polish signals.
 - Score ≥ 2 → `slice`, otherwise → `phase`.
 
+**Where `ubiquity.py` runs**
+- Called inside `run_slicer_and_feature_build.sh` and `run_integration_and_feature_build.sh`.
+- Extracts canonical domain terms from intake and writes a ubiquitous language glossary used by planner → build → QA.
+
 **Key options for both pipelines**
 - `--mode quality|factory` (default: quality)
 - `--max-iterations N`
