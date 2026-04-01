@@ -183,6 +183,10 @@ Use `add_feature.sh` when the codebase is already built and deployed. This is di
 
 **Auto-resume:** If interrupted, rerun the same command — skips any stage already completed.
 
+**Spec injection notes (used by the build pipelines):**
+- `run_integration_and_feature_build.sh`: generates a feature spec and passes it into `feature_adder.py --spec-file`, which embeds it into the feature intake before `fo_test_harness.py`.
+- `run_slicer_and_feature_build.sh`: generates a spec and runs `inject_spec.py` to embed it into the slice intake before `fo_test_harness.py`.
+
 ---
 
 ## Running the Harness Directly
