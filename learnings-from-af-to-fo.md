@@ -1,5 +1,10 @@
 # Learnings From AF to FO
 
+## Latest Learnings (2026-03-31 — grill-me quality mode)
+
+- **Quality mode must run even when there are no issues.** If the review step returns empty, the answer-fill never triggers, so “quality” is a no-op. Force a single quality answer-fill pass when `--quality` is set.
+- **CLI wrappers must accept flags after positional args.** If flags are ignored due to parse order, the behavior silently stays in factory mode.
+
 ## Latest Learnings (2026-03-31 — munger loop + low-issue cleanup)
 
 - **Low-issue cleanup needs explicit logic.** If PASS short-circuits, LOW issues never get fixed. Generate clarifications on later loops and allow the fixer to run even after PASS when LOWs remain.

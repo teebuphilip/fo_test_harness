@@ -13,6 +13,15 @@
   `munger/clarification_templates.v2.0.json`, `munger/run_munger_full.sh`
 - ✅ DONE here, ⬜ TODO for FO
 
+## Grill‑Me Quality Mode (2026-03-31 session 21)
+
+143. feat: grill-me `--quality` mode
+- Forces a quality answer-fill even when no issues remain
+- Disables resume automatically to avoid stale grilled data
+- Fixes `grill_me.sh` to accept flags after the intake path
+- Files: `intake/grill_me.py`, `intake/grill_me.sh`
+- ✅ DONE here, ⬜ TODO for FO
+
 ## Intake QA + Boilerplate Fit (2026-03-31 session 20)
 
 141. feat: grill-me intake QA hardening

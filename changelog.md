@@ -17,6 +17,13 @@ Files: `munger/munger.py`, `munger/munger_ai_fixer.py`, `munger/detection_rules.
 `munger/clarification_templates.v2.0.json`, `munger/run_munger_full.sh`,
 `complete_workflow_ai_generated.md`
 
+### feat: grill-me quality mode
+- Added `--quality` flag to run a tightening pass even when no issues remain.
+- Quality mode disables resume, runs answer-fill once, and enforces higher-quality answers.
+- Fixed `grill_me.sh` arg parsing so flags can appear after the intake path.
+
+Files: `intake/grill_me.py`, `intake/grill_me.sh`
+
 ## 2026-03-31 (session 20 — intake QA + boilerplate fit hardening)
 
 ### feat: grill-me intake QA hardening
