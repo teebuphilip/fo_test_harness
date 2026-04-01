@@ -32,6 +32,16 @@ Run the gap analysis pipeline on a raw AFH idea JSON:
   --verbose
 ```
 
+**Gap-analysis execution chain (run_full_pipeline.sh)**
+- `run_full_pipeline.sh`
+  - `run_pass0.sh` → `pass0_gap_check.py` (writes pass0 + brief + one‑liner)
+  - `run_pricing_modeler.sh` → `pricing_modeler.py` (updates business brief)
+  - `run_name_picker.sh` → `auto_name_picker.py` (writes named + suggestions)
+  - `run_ai_hero_answers.sh` → `generate_ai_hero_answers.py` → `intake/convert_hero_answers.py`
+  - `run_seo_generator.sh` → `seo_generator.py` (writes `seo/*_seo.json`)
+  - `run_marketing_copy.sh` → `base_marketing_copy.py`
+  - `run_gtm_plan.sh` → `base_gtm_plan.py`
+
 Sample (key outputs from the above run):
 ```text
 gap-analysis/outputs/*_business_brief.json
