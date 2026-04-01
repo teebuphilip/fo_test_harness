@@ -520,6 +520,25 @@ Key ideas stolen: feature_list.json as state (not prose), structured preamble on
 - Files: `fo_test_harness.py`, `integration_check.py`
 ⬜ TODO for FO codebase (integration_check.py --fast flag is harness-only; gate logic is FO-relevant)
 
+## Bug Fixes (2026-04-01 session 22)
+
+91. fix: circuit breaker manifest hash crash on nested types
+- `_cb_check()` used `hash(tuple(sorted(manifest.items())))` — crashes on list/dict values
+  in artifact manifest. Changed to `hash(str(sorted(...)))`.
+- Files: `fo_test_harness.py`
+✅ DONE here — ⬜ TODO for FO codebase
+
+92. fix: unbound PHASE1_ZIP_OVERRIDE in slicer resume
+- `run_slicer_and_feature_build.sh` referenced `$PHASE1_ZIP_OVERRIDE` without default under
+  `set -u`. Every resume blew up. Fixed: `${PHASE1_ZIP_OVERRIDE:-}`.
+- Files: `run_slicer_and_feature_build.sh`
+✅ DONE here — ⬜ TODO for FO codebase
+
+93. feat: intake file path printed at iteration header
+- Shows which JSON the harness is building at each `ITERATION N/M` header.
+- Files: `fo_test_harness.py`
+✅ DONE here — ⬜ TODO for FO codebase (nice-to-have)
+
 ## Feature Spec Pipeline (2026-03-15 session 3)
 
 79. feat: generate_feature_spec.py — pre-build feature definition tool

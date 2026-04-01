@@ -2,6 +2,22 @@
 
 ## 2026-04-01 (session 22 — pre-build feature spec generation)
 
+### fix: circuit breaker manifest hash crash on nested types
+- `_cb_check()` in `execute_build_qa_loop()` used `hash(tuple(sorted(manifest.items())))` which
+  crashes with `TypeError: unhashable type: 'list'` or `'dict'` when the artifact manifest
+  contains nested values. Changed to `hash(str(sorted(...)))` which handles any type.
+- Files: `fo_test_harness.py`
+
+### fix: unbound PHASE1_ZIP_OVERRIDE in slicer resume path
+- `run_slicer_and_feature_build.sh` line 234 referenced `$PHASE1_ZIP_OVERRIDE` without a
+  default under `set -u` (nounset). Blew up on every resume. Fixed: `${PHASE1_ZIP_OVERRIDE:-}`.
+- Files: `run_slicer_and_feature_build.sh`
+
+### feat: intake file path printed at each iteration header
+- Added `print_info(f"Intake: {self.intake_file}")` after the `ITERATION N/M` header so you
+  can see which JSON file the harness is working on at a glance.
+- Files: `fo_test_harness.py`
+
 ### feat: generate_feature_spec.py — GPT→Claude spec negotiation before build
 - New `generate_feature_spec.py` generates HLD/LLD spec per feature/slice before harness runs.
 - Round 1: GPT drafts HLD/LLD from scoped intake. Round 2: Claude reviews, accepts or overrides.

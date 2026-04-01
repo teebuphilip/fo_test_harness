@@ -933,3 +933,18 @@ NOT `_phase_context.feature`. Any code that extracts a feature/slice name must c
 `_mini_spec.entity` as a fallback, or it will get the technical `startup_idea_id` slug
 (e.g. `ai_workforce_intelligence_s01_secure_authentication`) instead of the human-readable
 name (e.g. `Secure Authentication`).
+
+### Circuit breaker manifest hash must handle arbitrary value types
+
+`artifact_manifest.json` can contain nested lists and dicts (e.g. file metadata, checksums).
+`hash(tuple(sorted(manifest.items())))` crashes with `TypeError: unhashable type` on any
+non-primitive value. Use `hash(str(sorted(manifest.items())))` instead — `str()` serializes
+any type. The hash is only used for equality comparison across iterations, not cryptographic,
+so string-based hashing is fine.
+
+### set -u (nounset) kills shell scripts on optional variables
+
+Any variable that might not be set must use `${VAR:-default}` syntax when `set -u` is active.
+`$PHASE1_ZIP_OVERRIDE` was referenced without a default in `run_slicer_and_feature_build.sh` —
+every resume path blew up before reaching the build. This is easy to miss because the variable
+works fine on the first run (where it's never evaluated due to short-circuit `&&`).
