@@ -980,6 +980,11 @@ def main():
         help="AI provider for config generation (default: chatgpt)"
     )
     parser.add_argument(
+        "--auth0-env-file",
+        default=None,
+        help="Path to Auth0 env file (optional). Used to load AUTH0_MGMT_TOKEN/AUTH0_KEY."
+    )
+    parser.add_argument(
         "--openai-model",
         default=DEFAULT_OPENAI_MODEL,
         help="OpenAI model for config generation"
@@ -996,6 +1001,20 @@ def main():
     if not repo_path.exists():
         print(f"[ERROR] Repo path not found: {repo_path}")
         sys.exit(1)
+
+    # Load Auth0 mgmt token from env file if provided
+    if args.auth0_env_file:
+        auth0_env_path = Path(args.auth0_env_file).expanduser().resolve()
+        if not auth0_env_path.exists():
+            print(f"[ERROR] Auth0 env file not found: {auth0_env_path}")
+            sys.exit(1)
+        for line in auth0_env_path.read_text().splitlines():
+            if "=" in line and not line.startswith("#"):
+                k, _, v = line.partition("=")
+                k = k.strip()
+                v = v.strip()
+                if k and v:
+                    os.environ.setdefault(k, v)
 
     # Auto-detect frontend directory if not explicitly provided
     if args.frontend_dir == "auto":
@@ -1324,7 +1343,7 @@ def main():
     # ── Step 4b: Update Auth0 callback URLs with Vercel frontend URL ──────────
     if final_frontend_url and vercel_succeeded:
         app_name    = repo_path.name
-        mgmt_token  = os.getenv("AUTH0_MGMT_TOKEN")
+        mgmt_token  = os.getenv("AUTH0_MGMT_TOKEN") or os.getenv("AUTH0_KEY")
         keys_file   = Path.home() / "Downloads" / "ACCESSKEYS" / f"auth0_{app_name}.env"
         if mgmt_token and keys_file.exists():
             print("\n  [Auth0] Updating callback/logout/origin URLs with Vercel production URL...")
@@ -1347,7 +1366,7 @@ def main():
                 print(f"  [Auth0] WARNING: URL update failed — {e}")
                 print(f"  [Auth0] Run manually: python deploy/auth0_update_urls.py --app-name {app_name} --base-url {final_frontend_url}")
         elif keys_file.exists() and not mgmt_token:
-            print(f"\n  [Auth0] Skipping URL update — set AUTH0_MGMT_TOKEN env var to enable")
+            print(f"\n  [Auth0] Skipping URL update — set AUTH0_MGMT_TOKEN or AUTH0_KEY (or pass --auth0-env-file)")
 
     # ── Print summary ────────────────────────────────────────
     print_summary(
