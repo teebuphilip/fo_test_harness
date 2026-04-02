@@ -403,6 +403,88 @@ Checking business page imports...
 OK: No unresolved relative imports after copy.
 ```
 
+**Step 9 — Prepare Deploy Configs (No Deploy)**
+```bash
+python deploy/pipeline_prepare.py --repo ~/Documents/work/<startup>
+```
+Example output:
+```text
+(cd39) Teebus-MacBook-Pro:FO_TEST_HARNESS teebuphilip$   python deploy/pipeline_prepare.py --repo ~/Documents/work/invoicetool.grilled
+
+Loading credentials from environment variables
+[ERROR] Missing required environment variables:
+  - RAILWAY_TOKEN not set
+  - VERCEL_TOKEN not set
+(cd39) Teebus-MacBook-Pro:FO_TEST_HARNESS teebuphilip$ export RAILWAY_TOKEN=`cat ~/Downloads/ACCESSKEYS/RAILWAYKEY `
+(cd39) Teebus-MacBook-Pro:FO_TEST_HARNESS teebuphilip$ export VERCEL_TOKEN=`cat ~/Downloads/ACCESSKEYS/VERCELKEY `
+(cd39) Teebus-MacBook-Pro:FO_TEST_HARNESS teebuphilip$   python deploy/pipeline_prepare.py --repo ~/Documents/work/invoicetool.grilled
+
+Loading credentials from environment variables
+  [pipeline] No railway.deploy.json found - will create new Railway project
+  [pipeline] No vercel.deploy.json found - will create new Vercel project
+  [prepare] railway.deploy.json: project=invoicetool.grilled
+  [prepare] vercel.deploy.json: project=invoicetool.grilled-frontend
+
+============================================================
+STEP 0/2: Generate deploy config(s) via AI (railway + vercel)
+============================================================
+  [pipeline] Updated railway.deploy.json with project IDs
+  [pipeline] Updated vercel.deploy.json with project IDs
+
+============================================================
+STEP 1/3: Push to GitHub
+============================================================
+  Repo: teebuphilip/invoicetool.grilled
+  Updated .gitignore with 2 entries
+  [pipeline] Ensured frontend business_config.json is staged for push
+  [pipeline] Created analytics_config.json from example
+  [pipeline] Created auth0_config.json from example
+  [pipeline] Created mailerlite_config.json from example
+  [pipeline] Created stripe_config.json from example
+  [pipeline] Force-staged all backend/config/*.json for push
+  [pipeline] Copied business pages into frontend/src/business/pages/ (8 .jsx files)
+  [pipeline] Patched loader.js: require.context path → ../business/pages
+[main cae8a31] deploy: automated build commit
+ 19 files changed, 3400 insertions(+), 3 deletions(-)
+ create mode 100644 backend/config/analytics_config.json
+ create mode 100644 backend/config/auth0_config.json
+ create mode 100644 backend/config/business_config.json
+ create mode 100644 backend/config/capabilities.json
+ create mode 100644 backend/config/mailerlite_config.json
+ create mode 100644 backend/config/stripe_config.json
+ create mode 100644 frontend/src/business/pages/ConfigureSettings.jsx
+ create mode 100644 frontend/src/business/pages/EmailNotificationsForInvoiceStatus.jsx
+ create mode 100644 frontend/src/business/pages/MakePayments.jsx
+ create mode 100644 frontend/src/business/pages/ManageUsers.jsx
+ create mode 100644 frontend/src/business/pages/ManualInvoiceEntryForm.jsx
+ create mode 100644 frontend/src/business/pages/SubmitInvoices.jsx
+ create mode 100644 frontend/src/business/pages/ViewAllInvoices.jsx
+ create mode 100644 frontend/src/business/pages/ViewInvoices.jsx
+ create mode 100644 frontend/src/config/business_config.json
+ create mode 100644 railway.deploy.json
+ create mode 100644 vercel.deploy.json
+Enumerating objects: 24, done.
+Counting objects: 100% (24/24), done.
+Delta compression using up to 8 threads
+Compressing objects: 100% (14/14), done.
+Writing objects: 100% (15/15), 11.38 KiB | 5.69 MiB/s, done.
+Total 15 (delta 6), reused 0 (delta 0)
+remote: Resolving deltas: 100% (6/6), completed with 6 local objects.
+To https://github.com/teebuphilip/invoicetool.grilled.git
+   f526c6c..cae8a31  main -> main
+Branch 'main' set up to track remote branch 'main' from 'origin'.
+  Pushed to: https://github.com/teebuphilip/invoicetool.grilled
+
+============================================================
+PREP COMPLETE (NO DEPLOY)
+============================================================
+  Repo path: /Users/teebuphilip/Documents/work/invoicetool.grilled
+  GitHub:    https://github.com/teebuphilip/invoicetool.grilled
+  Repo:      teebuphilip/invoicetool.grilled
+  Next:      python deploy/pipeline_deploy.py --repo /Users/teebuphilip/Documents/work/invoicetool.grilled
+============================================================
+```
+
 **What `check_block_b.py` does**
 - Deterministic Block B quality checker (no AI).
 - Validates passes 1–6, core fields, and basic coverage.
