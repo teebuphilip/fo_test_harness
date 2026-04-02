@@ -64,6 +64,9 @@ Outputs:
 - `analysis_output/gate_breakdown.csv`
 - `analysis_output/iteration_heatmap.csv`
 - `analysis_output/qa_report.md`
+Notes:
+- If `riaf-logs/` are missing, gate counts fall back to QA + integration signals.
+- Status falls back to the latest `build_state.json`.
 
 ## 1. Architecture Overview
 

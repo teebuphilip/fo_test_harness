@@ -442,6 +442,7 @@ Outputs:
 Notes:
 - If `riaf-logs/riaf_*.log` are missing, gate counts fall back to QA and integration signals.
 - Per-startup analysis writes to `analysis_output/by_startup/<startup_id>/` when using the prefix script.
+- Status falls back to the latest `build_state.json` if `riaf-logs/` are missing.
 
 ---
 
