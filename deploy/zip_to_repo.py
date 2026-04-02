@@ -3,12 +3,13 @@
 zip_to_repo.py
 ==============
 1) Take a zip file from fo_test_harness.py
-2) Extract into ~/Documents/work/<startup_name>
+2) Extract into ~/Documents/work/<startup_name> (or --target dir)
 3) Init/commit git repo (or commit updates if already exists)
 4) Create/push to GitHub (if repo exists, just push)
 
 Usage:
   python deploy/zip_to_repo.py /path/to/run.zip
+  python deploy/zip_to_repo.py /path/to/run.zip --target ~/Documents/work/my-existing-repo
 """
 
 import argparse
@@ -110,7 +111,7 @@ def _find_latest_business_artifacts(run_root: Path) -> Path:
     return None
 
 
-def extract_zip(zip_path: Path, dest_root: Path) -> Path:
+def extract_zip(zip_path: Path, dest_root: Path, target_path: Path = None) -> Path:
     """
     Produces a flat repo layout:
       repo/
@@ -121,10 +122,13 @@ def extract_zip(zip_path: Path, dest_root: Path) -> Path:
 
     Railway root dir = backend/
     Vercel root dir  = frontend/
+
+    If target_path is set, merges into that existing directory instead of
+    creating a new one derived from the ZIP name.
     """
     import tempfile
     dest_root.mkdir(parents=True, exist_ok=True)
-    repo_path = _repo_path_from_zip(zip_path, dest_root)
+    repo_path = target_path if target_path else _repo_path_from_zip(zip_path, dest_root)
     repo_path.mkdir(parents=True, exist_ok=True)
 
     with tempfile.TemporaryDirectory(dir=dest_root) as tmp:
@@ -180,8 +184,13 @@ def extract_zip(zip_path: Path, dest_root: Path) -> Path:
         merged, report = merge_business_artifacts(run_root)
         if merged:
             biz_dest = repo_path / "business"
-            if biz_dest.exists():
-                shutil.rmtree(biz_dest)
+            if target_path:
+                # --target mode: overlay new files onto existing business/, don't wipe
+                print(f"[INFO] Overlay mode (--target): keeping existing business/ files")
+            else:
+                # Fresh repo: clean slate
+                if biz_dest.exists():
+                    shutil.rmtree(biz_dest)
             for rel, content in merged.items():
                 dest = repo_path / rel
                 dest.parent.mkdir(parents=True, exist_ok=True)
@@ -271,6 +280,10 @@ def _derive_repo_name(repo_path: Path) -> str:
 def main():
     parser = argparse.ArgumentParser(description="Extract zip to ~/Documents/work and push to GitHub")
     parser.add_argument("zip_path", help="Path to build zip")
+    parser.add_argument(
+        "--target",
+        help="Merge into this existing repo directory instead of creating a new one",
+    )
     cleanup_group = parser.add_mutually_exclusive_group()
     cleanup_group.add_argument(
         "--clean-existing",
@@ -289,23 +302,29 @@ def main():
         print(f"[ERROR] Zip not found: {zip_path}")
         sys.exit(1)
 
+    target_path = Path(args.target).expanduser().resolve() if args.target else None
+
     config = load_config()
     github_token = config["github"]["token"]
     github_username = config["github"]["username"]
 
-    target_repo_path = _repo_path_from_zip(zip_path, WORK_ROOT)
+    target_repo_path = target_path if target_path else _repo_path_from_zip(zip_path, WORK_ROOT)
     _preclean_repo_path(
         target_repo_path,
         clean_existing=args.clean_existing,
         hard_delete_existing=args.hard_delete_existing,
     )
 
-    repo_path = extract_zip(zip_path, WORK_ROOT)
+    repo_path = extract_zip(zip_path, WORK_ROOT, target_path=target_path)
     print(f"[INFO] Repo path: {repo_path}")
 
     ensure_git_repo(repo_path)
     repo_name = _derive_repo_name(repo_path)
-    commit_all(repo_path, f"Initial {repo_name.replace('-', ' ').title()} integration from harness zip")
+    if target_path and _has_commits(repo_path):
+        commit_msg = f"Merge feature from harness zip into {repo_name}"
+    else:
+        commit_msg = f"Initial {repo_name.replace('-', ' ').title()} integration from harness zip"
+    commit_all(repo_path, commit_msg)
     exists = github_repo_exists(github_token, github_username, repo_name)
     if not exists:
         print(f"[INFO] Creating GitHub repo: {repo_name}")

@@ -309,6 +309,7 @@ Examples:
         intake = json.load(f)
 
     # Extract existing files — from ZIP or from repo directory
+    manifest_path = None
     if args.repo:
         repo_path = os.path.abspath(args.repo)
         if not os.path.isdir(repo_path):
@@ -387,7 +388,8 @@ Examples:
     print(f"\nOutput: {out_path}")
     print(f"startup_idea_id: {startup_id}")
     print(f"\nRun harness:")
-    print(f"  python fo_test_harness.py {out_path} --prior-run {Path(manifest_path).with_suffix('')} --max-iterations 30 --no-polish")
+    prior_hint = f"--prior-run {Path(manifest_path).with_suffix('')} " if manifest_path else ""
+    print(f"  python fo_test_harness.py {out_path} {prior_hint}--max-iterations 30 --no-polish")
     print(f"\nAfter this run succeeds, chain the next feature:")
     print(f"  python feature_adder.py --intake {intake_path} --manifest {manifest_zip} --feature \"<next feature name>\"")
 
