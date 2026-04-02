@@ -27,6 +27,15 @@ If you pass `--deploy`, it deploys instead of zipping. But you probably don't wa
 - `fo_test_harness.py` `build_prompt()` now reads `_phase_context['feature_spec']` and injects it into the build prompt as a non-negotiable block.
 - Why: Claude was inventing feature structure from ambiguous intake JSON. Pre-agreed specs between GPT (architect) and Claude (builder) eliminate ambiguity before the build loop starts, reducing wasted QA iterations.
 
+## Latest Changes (2026-04-02)
+
+### Run Analysis Tooling
+- New `analyze_runs.py` mines `fo_harness_runs/` + QA reports into summary outputs.
+- New `analyze_by_prefix.sh` runs per-startup analysis and writes `analysis_output/by_startup/<startup_id>/`.
+- Outputs: `analysis_output/runs_summary.json`, `failure_patterns.txt`, `gate_breakdown.csv`,
+  `iteration_heatmap.csv`, `qa_report.md`.
+- Gate breakdown falls back to QA + integration signals when `riaf-logs/` are missing.
+
 ## Latest Changes (2026-03-28)
 
 ### Pre-Intake Gap Analysis Pipeline

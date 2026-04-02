@@ -389,6 +389,8 @@ CONSISTENCY (Gate 3) catches obvious cross-file structural bugs cheaply before t
 | `aggregate_ai_costs.py` | Merges all cost CSVs into `ai_costs_aggregated.csv` |
 | `summarize_harness_runs.py` | Generates run summary table from `fo_run_log.csv` |
 | `inject_spec.py` | Injects feature specs into intake before build (internal helper) |
+| `analyze_runs.py` | Mines harness runs + QA defects into summary reports |
+| `analyze_by_prefix.sh` | Runs analysis per startup prefix (writes per-startup output dirs) |
 | `deploy/zip_to_repo.py` | ZIP extraction → git init → GitHub push |
 | `deploy/pipeline_deploy.py` | Full deploy orchestrator (Railway + Vercel) |
 | `deploy/pipeline_prepare.py` | Config-only mode (AI config gen + git push, no deploy) |
@@ -415,6 +417,31 @@ fo_harness_runs/<startup>_BLOCK_B_<timestamp>/
 ├── artifact_manifest.json              # File checksums
 └── build_state.json                    # Run metadata
 ```
+
+---
+
+## Run Analysis (Post-Build)
+
+Use the analysis tool to mine run directories and QA defects into a global report set.
+
+```bash
+# Global summary
+python analyze_runs.py
+
+# Per-startup summaries (prefix match)
+./analyze_by_prefix.sh invoicetool
+```
+
+Outputs:
+- `analysis_output/runs_summary.json`
+- `analysis_output/failure_patterns.txt`
+- `analysis_output/gate_breakdown.csv`
+- `analysis_output/iteration_heatmap.csv`
+- `analysis_output/qa_report.md`
+
+Notes:
+- If `riaf-logs/riaf_*.log` are missing, gate counts fall back to QA and integration signals.
+- Per-startup analysis writes to `analysis_output/by_startup/<startup_id>/` when using the prefix script.
 
 ---
 

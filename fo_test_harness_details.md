@@ -45,6 +45,26 @@ Notes:
 - `check_boilerplate_fit.py` uses a slim manifest (exact high-signal files only) and logs prompt size.
 - `grill_me.sh` defaults to block B only, auto-resume, and auto-answer with Stripe-only assumptions and minimal roles/edge cases.
 
+## 0.2 Run Analysis (Post-Build)
+
+After builds complete, use the run analysis tool to mine QA defects, integration issues,
+and iteration counts into summary reports.
+
+```
+# Global summary
+python analyze_runs.py
+
+# Per-startup summaries (prefix match)
+./analyze_by_prefix.sh invoicetool
+```
+
+Outputs:
+- `analysis_output/runs_summary.json`
+- `analysis_output/failure_patterns.txt`
+- `analysis_output/gate_breakdown.csv`
+- `analysis_output/iteration_heatmap.csv`
+- `analysis_output/qa_report.md`
+
 ## 1. Architecture Overview
 
 The harness orchestrates two competing AI systems in a GAN-like loop:

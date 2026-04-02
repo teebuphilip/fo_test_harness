@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-04-02 (session 23 — run analysis tooling)
+
+### feat: run analysis tooling + per-startup reports
+- Added `analyze_runs.py` to mine `fo_harness_runs/` and QA reports into summary outputs.
+- Added `analyze_by_prefix.sh` to run per-startup analysis and write `analysis_output/by_startup/<startup_id>/`.
+- Outputs: `analysis_output/runs_summary.json`, `failure_patterns.txt`, `gate_breakdown.csv`,
+  `iteration_heatmap.csv`, `qa_report.md`.
+- Gate breakdown falls back to QA + integration signals when `riaf-logs/` are absent.
+
+Files: `analyze_runs.py`, `analyze_by_prefix.sh`, `analysis_output/*`
+
 ## 2026-04-01 (session 22 continued — spec wiring + integration propagation)
 
 ### fix: propagate required integrations (Stripe, MailerLite, etc.) into build prompts
