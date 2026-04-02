@@ -485,6 +485,579 @@ PREP COMPLETE (NO DEPLOY)
 ============================================================
 ```
 
+---
+
+**Addendum — Rerun a Slice / Feature (use add_feature.sh)**
+```bash
+./add_feature.sh \
+  --intake intake/intake_runs/<startup>/<startup>_sXX_<feature>.json \
+  --feature "<feature description>" \
+  --existing-repo ~/Documents/work/<startup> \
+  --spec-file intake/intake_runs/<startup>/<startup>_sXX_<feature>_spec.txt
+```
+Example output:
+```text
+(cd39) Teebus-MacBook-Pro:FO_TEST_HARNESS teebuphilip$ ./add_feature.sh --intake intake/intake_runs/invoicetool/invoicetool.grilled_s05_make_payments.json --feature "Wire Stripe payment processing using boilerplate stripe_lib for invoice payments"  --existing-repo ~/Documents/work/invoicetool.grilled  --spec-file intake/intake_runs/invoicetool/invoicetool.grilled_s05_make_payments_spec.txt 
+========================================================
+  ADD FEATURE PIPELINE
+  Intake        : intake/intake_runs/invoicetool/invoicetool.grilled_s05_make_payments.json
+  Feature       : Wire Stripe payment processing using boilerplate stripe_lib for invoice payments
+  Feature slug  : wire_stripe_payment_processing_using_boi
+  Base (repo)   : /Users/teebuphilip/Documents/work/invoicetool.grilled
+  Max iter      : 20
+  Build GOV     : FOBUILFINALLOCKED100.zip
+========================================================
+
+▶ STEP 1 — Generate Feature Intake
+────────────────────────────────────────────────────────
+  ↩ Feature intake already exists — skipping:
+    intake/intake_runs/invoicetool/invoicetool.grilled_s05_make_payments_feature_wire_stripe_payment_processing_using_boi.json
+
+
+▶ STEP 2 — Build Feature: Wire Stripe payment processing using boilerplate stripe_lib for invoice payments
+────────────────────────────────────────────────────────
+→ Loading BUILD governance ZIP...
+✓ BUILD governance loaded
+→ Tech stack override loaded (stack: lowcode)
+→ External integration override loaded
+→ QA override loaded (tightened evaluation criteria)
+→ QA_POLISH_2 directive: directives/qa_polish_2_doc_recovery.md
+→ QA_TESTCASE directive: directives/qa_testcase_doc_directive.md
+
+======================================================================
+FO HARNESS INITIALIZED
+======================================================================
+
+→ Startup:       invoicetool_s05_make_payments_wire_stripe_payment_processing_using_boi
+→ Block:         BLOCK_B
+→ Tech stack:    lowcode (effective: lowcode)
+→ Boilerplate:   YES
+→ Max iterations:20
+→ Build caps:    max_parts=10, max_continuations=9
+→ Quality gate:  ON
+→ Factory mode:  OFF
+→ Polish:        ON
+→ Deploy:        NO — ZIP output only
+→ Run directory: fo_harness_runs/invoicetool_s05_make_payments_wire_stripe_payment_processing_using_boi_BLOCK_B_20260402_061746
+
+======================================================================
+STARTING BUILD → QA LOOP (BLOCK_B)
+======================================================================
+
+→   Feature tracking: 1 feature from slice planner (Make Payments)
+→ Warm-start: rebuilding prohibition tracker from 12 prior QA report(s)...
+✓ Warm-start tracker rebuilt: 14 defect(s) tracked, 14 prohibition(s) active
+
+======================================================================
+ITERATION 1/20
+======================================================================
+
+→ Intake: intake/intake_runs/invoicetool/invoicetool.grilled_s05_make_payments_feature_wire_stripe_payment_processing_using_boi.json
+→ ═══════════════════════════════════════════════════════════
+→ ITERATION 1 - CLAUDE BUILD CALL
+→ ═══════════════════════════════════════════════════════════
+→ Prompt structure:
+→   → Cacheable section: 22,596 chars (governance ZIP)
+→   → Dynamic section: 94,590 chars (intake + defects)
+→   → Total prompt size: 117,186 chars
+→ Token limit: 16,384 tokens (iteration 1)
+→ Request timeout: 600s (10 minutes)
+→ Cache enabled: YES
+→ ───────────────────────────────────────────────────────────
+→ Calling Claude API...
+→ [2026-04-02 06:17:46] → Claude API request sent
+→ [2026-04-02 06:18:20] ← Claude API response received (34.0s)
+✓ Claude responded in 34.0s
+→ ═══════════════════════════════════════════════════════════
+→ CLAUDE API USAGE BREAKDOWN - ITERATION 1
+→ ═══════════════════════════════════════════════════════════
+→ Input tokens:
+→   → Cache creation (write): 7,246 tokens
+→   → Non-cached input: 28,173 tokens
+→   → Total input: 35,419 tokens
+→   → Cache status: FIRST WRITE (will be cached for 5 minutes)
+→ Output tokens: 2,854 tokens
+→ Cost estimate:
+→   → Cache write: $0.0272
+→   → Non-cached input: $0.0845
+→   → Output: $0.0428
+→   → Total this call: $0.1545
+→ ═══════════════════════════════════════════════════════════
+✓ BUILD completed in 34.0s
+✓ Build complete — 7 files extracted
+✓ Saved BUILD output: build/iteration_01_build.txt
+→   → Extracted: business/models/make_payments.py
+→   → Extracted: business/schemas/make_payments.py
+→   → Extracted: business/services/make_payments_service.py
+→   → Extracted: business/backend/routes/make_payments.py
+→   → Extracted: business/frontend/pages/MakePayments.jsx
+→   → Extracted: business/README-INTEGRATION.md
+→   → Extracted: business/package.json
+→   → Generated: build_state.json (COMPLETED_CLOSED)
+→   → Generated: artifact_manifest.json (7 files)
+✓ Extracted 7 artifact(s) from BUILD output
+→ ═══════════════════════════════════════════════════════════
+→ PRE-QA VALIDATION - Checking build completeness
+→ ═══════════════════════════════════════════════════════════
+⚠   → README.md not in manifest (will be flagged by QA as HIGH severity)
+⚠   → .env.example not in manifest (will be flagged by QA as HIGH severity)
+⚠   → .gitignore not in manifest (will be flagged by QA as HIGH severity)
+⚠   → test not in manifest (will be flagged by QA as HIGH severity)
+⚠   → spec not in manifest (will be flagged by QA as HIGH severity)
+✓ ✓ Build validation passed - all critical artifacts present
+→ ───────────────────────────────────────────────────────────
+→ 
+→ ═══════════════════════════════════════════════════════════
+→ GATE 0: COMPILE CHECK — Mandatory pre-QA compile pass
+→ ═══════════════════════════════════════════════════════════
+✓   [COMPILE] PASS — compile checks succeeded
+→ 
+→ ═══════════════════════════════════════════════════════════
+→ GATE 2: STATIC CHECK — Deterministic code quality pass
+→ ═══════════════════════════════════════════════════════════
+✓   [STATIC] PASS — no static defects
+→ 
+→ ═══════════════════════════════════════════════════════════
+→ GATE 1.5: INTEGRATION_FAST — Structural pre-check (checks 1,2,4,6,7)
+→ ═══════════════════════════════════════════════════════════
+✓   [INTEGRATION_FAST] PASS — no structural issues found
+→ 
+→ ═══════════════════════════════════════════════════════════
+→ GATE 3: AI CONSISTENCY CHECK — Cross-file analysis
+→ ═══════════════════════════════════════════════════════════
+→   [CONSISTENCY] Sending 6 file(s) (filtered from 11 total — models/services/routes/schemas only)
+→ [2026-04-02 06:18:20] → ChatGPT API request sent
+→ [2026-04-02 06:18:23] ← ChatGPT API response received (2.2s)
+→   [CONSISTENCY] ChatGPT responded ($0.0112)
+→ CACHE CHECK [CONSISTENCY] iteration 1: cached=0 / total_prompt=4409 (0% cached)
+✓   [CONSISTENCY] PASS — no cross-file consistency issues
+→ 
+→ ═══════════════════════════════════════════════════════════
+→ GATE 4: QUALITY GATE — Completeness/Quality/Enhanceability/Deployability
+→ ═══════════════════════════════════════════════════════════
+→   [QUALITY] SKIPPED — repair mode, iteration 1 of 20
+→ Calling ChatGPT for QA...
+→ [2026-04-02 06:18:23] → ChatGPT API request sent
+→ [2026-04-02 06:18:42] ← ChatGPT API response received (19.4s)
+✓ QA completed in 19.4s
+→ ═══════════════════════════════════════════════════════════
+→ CHATGPT API USAGE - ITERATION 1 QA
+→ ═══════════════════════════════════════════════════════════
+→ Input tokens:  22,604 tokens
+→ Output tokens: 646 tokens
+→ Total tokens:  23,250 tokens
+→ 
+→ Cost estimate:
+→   → Input:  $0.0565
+→   → Output: $0.0065
+→   → Total:  $0.0630
+→ CACHE CHECK [FEATURE_QA] iteration 1: cached=0 / total_prompt=22604 (0% cached)
+→ ═══════════════════════════════════════════════════════════
+⚠   [FILTER] Removed DEFECT-1: Evidence only references standard infrastructure column(s) (status/created_at/updated_at) — these are required on every model and must never be flagged as scope violations
+⚠   [FILTER] Removed DEFECT-2: Evidence ['javascript\n    const token = await user.getAccessTokenSilently();'] not found in build output — fabricated
+⚠   [FILTER] Removed DEFECT-3: Chain-of-evidence: no backtick-quoted code snippet in Evidence — defect has no proof
+→   [FILTER] QA report filtered: 3 defect(s) removed, 1 remaining
+→ [2026-04-02 06:18:42] → ChatGPT API request sent
+→ [2026-04-02 06:18:45] ← ChatGPT API response received (3.2s)
+→   [TRIAGE] DEFECT-1 [SURGICAL] business/models/make_payments.py — This issue results from unnecessary reimplementation of core database utilities that shoul
+→            ROOT_CAUSE: The code imports `Base` from `core.database` which is not needed, leading to redundancy.
+→   [TRIAGE] DEFECT-1 Fix field sharpened
+→   [TRIAGE] Strategy: SURGICAL (1 surgical, 0 systemic, 0 invalid)
+✓ Saved QA report: qa/iteration_01_qa_report.txt
+⚠ QA REJECTED — defects found
+⚠   → 1 defects to fix
+→ 
+→ ═══════════════════════════════════════════════════════════
+→ ITERATION 1 - DEFECTS FOUND
+→ ═══════════════════════════════════════════════════════════
+→ ## ROOT CAUSE ANALYSIS (from triage — fix the cause, not just the symptom)
+- DEFECT-1 (business/models/make_payments.py): The code imports `Base` from `core.database` which is not needed, leading to redundancy.
+
+Fix the root cause FIRST. Individual defects should resolve as a consequence.
+
+DEFECT-1: SPEC_COMPLIANCE_ISSUE
+  - Location: business/models/make_payments.py
+  - Evidence: `from core.database import Base` appears but not needed.
+  - What breaks: This implies redundancy in model definition.
+  - Problem: The model should not reimplement any core base expectations provided by the framework.
+  - Expected: Stick to definitions relying on the base framework utilities already available.
+  - Fix: In business/models/make_payments.py, remove the line `from core.database import Base`.
+  - Severity: MEDIUM
+  - Root cause type: ONE-TIME-BUG
+→ ═══════════════════════════════════════════════════════════
+→ 
+→ 
+→ ═══════════════════════════════════════════════════════════
+→ CUMULATIVE COST AFTER ITERATION 1
+→ ═══════════════════════════════════════════════════════════
+→ Claude API:
+→   → Calls: 1
+→   → Cache writes: 1, Cache hits: 0
+→   → Total cost: $0.1545
+→ ChatGPT API:
+→   → Calls: 1
+→   → Total cost: $0.0630
+✓ TOTAL COST SO FAR: $0.2175
+→ ═══════════════════════════════════════════════════════════
+→ 
+⚠   [PROHIBITIONS] 14 recurring defect(s) promoted to hard prohibition
+→ Starting iteration 2 with defect fixes...
+
+======================================================================
+ITERATION 2/20
+======================================================================
+
+→ Intake: intake/intake_runs/invoicetool/invoicetool.grilled_s05_make_payments_feature_wire_stripe_payment_processing_using_boi.json
+→   [QA] Loaded 5 current file(s) for surgical QA patch
+→   [QA] Using surgical patch for 5 targeted QA defect file(s)
+→ ═══════════════════════════════════════════════════════════
+→ ITERATION 2 - CLAUDE BUILD CALL
+→ ═══════════════════════════════════════════════════════════
+→ Prompt structure:
+→   → Cacheable section: 22,596 chars (governance ZIP)
+→   → Dynamic section: 14,046 chars (intake + defects)
+→   → Total prompt size: 36,642 chars
+→ Token limit: 16,384 tokens (iteration 2)
+→ Request timeout: 300s (5 minutes)
+→ Cache enabled: YES (expecting hit)
+→ ───────────────────────────────────────────────────────────
+→ Calling Claude API...
+→ [2026-04-02 06:18:45] → Claude API request sent
+→ [2026-04-02 06:19:08] ← Claude API response received (22.9s)
+✓ Claude responded in 22.9s
+→ ═══════════════════════════════════════════════════════════
+→ CLAUDE API USAGE BREAKDOWN - ITERATION 2
+→ ═══════════════════════════════════════════════════════════
+✓ Input tokens:
+✓   → Cache read (hit): 7,246 tokens ✓ CACHE HIT!
+✓   → Non-cached input: 4,000 tokens
+✓   → Total input: 11,246 tokens
+✓   → Cache savings: $0.0196 (90% cheaper than write)
+→ Output tokens: 2,372 tokens
+→ Cost estimate:
+✓   → Cache read: $0.0022 (vs $0.0217 without cache)
+→   → Non-cached input: $0.0120
+→   → Output: $0.0356
+→   → Total this call: $0.0498
+→ ═══════════════════════════════════════════════════════════
+✓ BUILD completed in 22.9s
+⚠ BIG BUILD DETECTED: standard fallback continuation mode active (max continuations=9)
+⚠ Output still truncated - requesting continuation 1/9...
+→ CONTINUATION 1 - fallback mode
+→ [2026-04-02 06:19:08] → Claude API request sent
+→ [2026-04-02 06:20:00] ← Claude API response received (52.1s)
+✓ Continuation 1 completed in 52.1s
+→ ═══════════════════════════════════════════════════════════
+→ CLAUDE API USAGE BREAKDOWN - CONTINUATION 1
+→ ═══════════════════════════════════════════════════════════
+✓ Input tokens:
+✓   → Cache read (hit): 7,246 tokens ✓ CACHE HIT!
+✓   → Non-cached input: 624 tokens
+✓   → Total input: 7,870 tokens
+✓   → Cache savings: $0.0196 (90% cheaper than write)
+→ Output tokens: 5,859 tokens
+→ Cost estimate:
+✓   → Cache read: $0.0022 (vs $0.0217 without cache)
+→   → Non-cached input: $0.0019
+→   → Output: $0.0879
+→   → Total this call: $0.0919
+→ ═══════════════════════════════════════════════════════════
+✓ Build complete — 10 files extracted
+⚠   [PATCH_SET_COMPLETE] Truncated 5 collateral file(s) Claude output after marker — ignored: business/frontend/pages/InvoicesPage.jsx, business/frontend/pages/PaymentsPage.jsx, business/frontend/pages/CreateInvoicePage.jsx, core/main.py, alembic/versions/001_initial_schema.py
+✓ Saved BUILD output: build/iteration_02_build.txt
+→   → Extracted: business/models/make_payments.py
+→   → Extracted: business/schemas/make_payments.py
+→   → Extracted: business/services/make_payments_service.py
+→   → Extracted: business/backend/routes/make_payments.py
+→   → Extracted: business/frontend/pages/MakePayments.jsx
+→   → Generated: build_state.json (COMPLETED_CLOSED)
+→   → Generated: artifact_manifest.json (5 files)
+✓ Extracted 5 artifact(s) from BUILD output
+→   → Carried forward: business/README-INTEGRATION.md
+→   → Carried forward: business/package.json
+→   → Carried forward 2 unchanged file(s) from iteration 01 (listed above)
+→   → Generated: artifact_manifest.json (7 files)
+✓ Saved defect fix: build/iteration_02_fix.txt
+→ ═══════════════════════════════════════════════════════════
+→ PRE-QA VALIDATION - Checking build completeness
+→ ═══════════════════════════════════════════════════════════
+⚠   → README.md not in manifest (will be flagged by QA as HIGH severity)
+⚠   → .env.example not in manifest (will be flagged by QA as HIGH severity)
+⚠   → .gitignore not in manifest (will be flagged by QA as HIGH severity)
+⚠   → test not in manifest (will be flagged by QA as HIGH severity)
+⚠   → spec not in manifest (will be flagged by QA as HIGH severity)
+✓ ✓ Build validation passed - all critical artifacts present
+→ ───────────────────────────────────────────────────────────
+→ 
+→ ═══════════════════════════════════════════════════════════
+→ GATE 0: COMPILE CHECK — Mandatory pre-QA compile pass
+→ ═══════════════════════════════════════════════════════════
+✓   [COMPILE] PASS — compile checks succeeded
+→ 
+→ ═══════════════════════════════════════════════════════════
+→ GATE 2: STATIC CHECK — Deterministic code quality pass
+→ ═══════════════════════════════════════════════════════════
+✓   [STATIC] PASS — no static defects
+→ 
+→ ═══════════════════════════════════════════════════════════
+→ GATE 1.5: INTEGRATION_FAST — Structural pre-check (checks 1,2,4,6,7)
+→ ═══════════════════════════════════════════════════════════
+✓   [INTEGRATION_FAST] PASS — no structural issues found
+→ 
+→ ═══════════════════════════════════════════════════════════
+→ GATE 3: AI CONSISTENCY CHECK — Cross-file analysis
+→ ═══════════════════════════════════════════════════════════
+→   [CONSISTENCY] LOCKED — skipped, no relevant files changed
+→ 
+→ ═══════════════════════════════════════════════════════════
+→ GATE 4: QUALITY GATE — Completeness/Quality/Enhanceability/Deployability
+→ ═══════════════════════════════════════════════════════════
+→   [QUALITY] SKIPPED — repair mode, iteration 2 of 20
+→ Calling ChatGPT for QA...
+→ [2026-04-02 06:20:01] → ChatGPT API request sent
+→ [2026-04-02 06:20:23] ← ChatGPT API response received (22.5s)
+✓ QA completed in 22.5s
+→ ═══════════════════════════════════════════════════════════
+→ CHATGPT API USAGE - ITERATION 2 QA
+→ ═══════════════════════════════════════════════════════════
+→ Input tokens:  25,847 tokens
+→ Output tokens: 935 tokens
+→ Total tokens:  26,782 tokens
+→ 
+→ Cost estimate:
+→   → Input:  $0.0646
+→   → Output: $0.0093
+→   → Total:  $0.0740
+→ CACHE CHECK [FEATURE_QA] iteration 2: cached=18560 / total_prompt=25847 (71% cached)
+→ ═══════════════════════════════════════════════════════════
+⚠   [FILTER] Removed DEFECT-1: Chain-of-evidence: 'What breaks' uses hedge phrase 'could ' — defect is speculative
+⚠   [FILTER] Removed DEFECT-2: Chain-of-evidence: 'What breaks' uses hedge phrase 'may ' — defect is speculative
+⚠   [FILTER] Removed DEFECT-3: Chain-of-evidence: 'What breaks' uses hedge phrase 'may ' — defect is speculative
+⚠   [FILTER] Removed DEFECT-4: Evidence ['jsx\n    const [formData, setFormData] = useState({\n      amount: "",\n      payment_method: "card"\n    });'] not found in build output — fabricated
+⚠   [FILTER] Removed DEFECT-5: Evidence ['python\n    class MakePaymentsResponse(BaseModel):\n        status: str'] not found in build output — fabricated
+→   [FILTER] QA report filtered: 5 defect(s) removed, 0 remaining
+✓ Saved QA report: qa/iteration_02_qa_report.txt
+✓ GATE 1 PASSED: Feature QA ACCEPTED on iteration 2
+⚠   [ACCEPTANCE] QUALITY gate has not run in acceptance mode yet — forcing acceptance mode now
+→   [QUALITY] Evaluating 10 artifact(s) (filtered from 11 total) across 4 quality dimensions...
+→ [2026-04-02 06:20:23] → ChatGPT API request sent
+→ [2026-04-02 06:20:30] ← ChatGPT API response received (6.6s)
+→   [QUALITY] ChatGPT responded ($0.0280)
+→ CACHE CHECK [QUALITY] iteration 2: cached=0 / total_prompt=9958 (0% cached)
+→   [QUALITY] LOW accepted for Completeness/Code Quality/Deployability — treating gate as PASS
+✓   [QUALITY] Forced acceptance-mode run: PASS
+✓ 
+✓ ══════════════════════════════════════════════════════════
+✓ ALL QA GATES PASSED: Compile + Static + AI Consistency + Quality + Feature QA
+✓ ══════════════════════════════════════════════════════════
+→   Feature state saved: 1 passing, 0 failing → fo_harness_runs/invoicetool_s05_make_payments_wire_stripe_payment_processing_using_boi_BLOCK_B_20260402_061746/feature_state.json
+→ 
+→ ═══════════════════════════════════════════════════════════
+→ POST-QA POLISH - Generating missing optional files
+→ ═══════════════════════════════════════════════════════════
+→ → Generating business_config.json from intake...
+✓   ✓ business_config.json → business/frontend/config/business_config.json
+✓   ✓ business_config.json → business/backend/config/business_config.json
+→ → Missing optional files: README.md, .env.example, Tests (only 0 found), Docs (HLD + QUICKSTART)
+→ 
+→ → README.md missing - generating...
+→ → Calling Claude for README generation...
+→ [2026-04-02 06:20:30] → Claude API request sent
+→ [2026-04-02 06:20:49] ← Claude API response received (19.0s)
+✓ ✓ Generated README.md (1192 chars) in 19.0s
+→   → Saved to: iteration_02_artifacts/README.md
+→   → Cost: $0.0216
+→ 
+→ → .env.example missing - generating...
+→ → Calling Claude for .env.example generation...
+→ [2026-04-02 06:20:49] → Claude API request sent
+→ [2026-04-02 06:20:54] ← Claude API response received (5.3s)
+✓ ✓ Generated .env.example (1151 chars) in 5.4s
+→   → Saved to: iteration_02_artifacts/.env.example
+→   → Cost: $0.0069
+→ 
+→ → Only 0 test file(s) found - generating additional tests...
+→ → Calling Claude for test generation...
+→ [2026-04-02 06:20:54] → Claude API request sent
+→ [2026-04-02 06:21:55] ← Claude API response received (60.7s)
+✓ ✓ Generated 0 test file(s) in 60.7s
+→   → Saved to: iteration_02_artifacts/
+→   → Cost: $0.0924
+→ 
+→ → Calling Claude for docs generation...
+→ [2026-04-02 06:21:55] → Claude API request sent
+→ [2026-04-02 06:22:41] ← Claude API response received (46.6s)
+→ → Calling ChatGPT for testcase doc generation...
+→ [2026-04-02 06:22:41] → ChatGPT API request sent
+→ [2026-04-02 06:23:10] ← ChatGPT API response received (29.1s)
+✓ ✓ Generated testcase doc: fo_harness_runs/invoicetool_s05_make_payments_wire_stripe_payment_processing_using_boi_BLOCK_B_20260402_061746/build/iteration_02_artifacts/business/docs/TEST_CASES.md
+→   → Generated: artifact_manifest.json (16 files)
+✓ ✓ Post-QA polish complete
+→   → Generated 5 file(s)
+→   → Total polish cost: $0.2001
+→ ═══════════════════════════════════════════════════════════
+→ 
+→ 
+→ ═══════════════════════════════════════════════════════════
+→ FULL RUN COST ANALYSIS
+→ ═══════════════════════════════════════════════════════════
+→ Total iterations: 2
+→ Total Claude calls: 8 (2 builds + 6 continuations)
+→ 
+→ Cache performance:
+→   → Cache writes: 1
+→   → Cache hits: 2
+✓   → Cache hit rate: 25.0%
+✓   → Total tokens read from cache: 14,492 tokens
+→ 
+→ Token usage:
+→   → Cache write tokens: 7,246 tokens
+→   → Cache read tokens: 14,492 tokens
+→   → Non-cached input tokens: 41,435 tokens
+→   → Output tokens: 22,699 tokens
+→ 
+→ Cost breakdown:
+→   → Cache writes: $0.0272
+✓   → Cache reads: $0.0043
+→   → Non-cached input: $0.1243
+→   → Output: $0.3405
+→   → Total with caching: $0.4963
+→ 
+✓ Without caching: $0.5300
+✓ Total saved: $0.0337 (6% reduction)
+→ 
+→ Dynamic token limiting:
+→   → Estimated additional savings: $0.0511 (15% of output)
+✓   → Combined Claude savings: $0.0848
+→ 
+→ ChatGPT (QA) costs:
+→   → Total QA calls: 3
+→   → Input tokens: 58,409 tokens
+→   → Output tokens: 1,894 tokens
+→   → Input cost: $0.1460
+→   → Output cost: $0.0189
+→   → Total ChatGPT: $0.1650
+→ 
+✓ TOTAL COST (Claude + ChatGPT): $0.6613
+✓   → Claude: $0.4963
+✓   → ChatGPT: $0.1650
+✓ Total saved from caching: $0.0848
+→ ═══════════════════════════════════════════════════════════
+→ Run logged to: /Users/teebuphilip/Downloads/FO_TEST_HARNESS/fo_run_log.csv
+✓ Generated artifact manifest: artifact_manifest.json
+→ Packaging output ZIP: invoicetool_s05_make_payments_wire_stripe_payment_processing_using_boi_BLOCK_B_20260402_061746.zip
+→ Including boilerplate: /Users/teebuphilip/Documents/work/teebu-saas-platform
+✓ ZIP created: fo_harness_runs/invoicetool_s05_make_payments_wire_stripe_payment_processing_using_boi_BLOCK_B_20260402_061746.zip (0.74 MB)
+
+======================================================================
+EXECUTION SUMMARY
+======================================================================
+
+Startup:        invoicetool_s05_make_payments_wire_stripe_payment_processing_using_boi
+Block:          BLOCK_B
+Status:         ✓ SUCCESS
+Total time:     327.5s (5.5 minutes)
+Deployed:       No
+Claude cost:    $0.50
+ChatGPT cost:   $0.16
+Total cost:     $0.66
+ZIP output:     fo_harness_runs/invoicetool_s05_make_payments_wire_stripe_payment_processing_using_boi_BLOCK_B_20260402_061746.zip
+
+Run directory:  fo_harness_runs/invoicetool_s05_make_payments_wire_stripe_payment_processing_using_boi_BLOCK_B_20260402_061746
+
+Generated files:
+  - BUILD outputs:   63
+  - QA reports:      2
+  - DEPLOY outputs:  0
+  - Logs:            12
+
+✓ PIPELINE COMPLETED SUCCESSFULLY
+✓ Feature ZIP: fo_harness_runs/invoicetool_s05_make_payments_wire_stripe_payment_processing_using_boi_BLOCK_B_20260402_061746.zip
+
+▶ STEP 3 — Integration Check
+────────────────────────────────────────────────────────
+  Using artifacts dir: fo_harness_runs/invoicetool_s05_make_payments_wire_stripe_payment_processing_using_boi_BLOCK_B_20260402_061746/build/iteration_02_artifacts
+
+Loading artifacts...
+  10 file(s) loaded
+
+  Running Check 1: Route inventory...
+    → 0 issue(s)
+  Running Check 2: Model field refs...
+    → 0 issue(s)
+  Running Check 3: Spec compliance...
+    → 2 issue(s)
+  Running Check 4: Import chains...
+    → 0 issue(s)
+  Running Check 5: Route decorator double-path...
+    → 0 issue(s)
+  Running Check 6: Auth contract (route auth vs frontend headers)...
+    → 0 issue(s)
+  Running Check 7: Async misuse (await on non-async functions)...
+    → 0 issue(s)
+  Running Check 8: asyncio.gather with sync function args...
+    → 0 issue(s)
+  Running Check 9: npm package integrity (imports vs package.json)...
+    → 0 issue(s)
+  Running Check 10: Bare except / silent error swallow in services...
+    → 0 issue(s)
+  Running Check 11: Unbounded polling loops in frontend...
+    → 0 issue(s)
+  Running Check 12: Background task timeout vs intake SLA...
+    → 0 issue(s)
+  Running Check 13: Config object rendered as text in JSX...
+    → 0 issue(s)
+  Running Check 14: Dead buttons (no onClick / placeholder href)...
+    → 0 issue(s)
+  Running Check 15: Form state fields not in config form definition...
+    → 0 issue(s)
+  Running Check 16: Hollow service methods (no DB interaction)...
+    → 0 issue(s)
+  Running Check 17: Orphaned pages (UI with no backend coverage)...
+    → 0 issue(s)
+
+  Output written: fo_harness_runs/invoicetool_s05_make_payments_wire_stripe_payment_processing_using_boi_BLOCK_B_20260402_061746/integration_issues.json
+
+============================================================
+INTEGRATION CHECK COMPLETE
+============================================================
+  Total issues: 2  (HIGH: 0  MEDIUM: 2)
+  Verdict: INTEGRATION_REJECTED
+
+  Issues found:
+    [MEDIUM] INT-SPEC-KPI-MVP (SPEC_COMPLIANCE)
+           KPI 'MVP' defined in intake but not referenced anywhere in artifacts
+    [MEDIUM] INT-SPEC-KPI-HLD (SPEC_COMPLIANCE)
+           KPI 'HLD' defined in intake but not referenced anywhere in artifacts
+
+  Fix target files:
+    - business/services/ScoringService.py
+
+  Run harness fix pass:
+    python fo_test_harness.py <intake> --resume-run <run_dir> --resume-iteration <N> --integration-issues integration_issues.json
+============================================================
+
+ℹ Integration issues are MEDIUM-only — skipping fix pass
+✓ Integration check clean.
+
+▶ STEP 4 — Merge into new final ZIP
+────────────────────────────────────────────────────────
+  Layering (later source wins on conflict):
+    Base (repo) : /Users/teebuphilip/Documents/work/invoicetool.grilled
+    Feature     : fo_harness_runs/invoicetool_s05_make_payments_wire_stripe_payment_processing_using_boi_BLOCK_B_20260402_061746.zip
+========================================================
+  FEATURE ADD COMPLETE
+
+  Feature       : Wire Stripe payment processing using boilerplate stripe_lib for invoice payments
+  Base          : /Users/teebuphilip/Documents/work/invoicetool.grilled
+  Feature ZIP   : fo_harness_runs/invoicetool_s05_make_payments_wire_stripe_payment_processing_using_boi_BLOCK_B_20260402_061746.zip
+  FINAL ZIP     : fo_harness_runs/invoicetool_grilled_s05_make_payments_wire_stripe_payment_processing_using_boi_FINAL_20260402_062314.zip  (844K)
+========================================================
+
+Next step — deploy:
+  python deploy/zip_to_repo.py fo_harness_runs/invoicetool_grilled_s05_make_payments_wire_stripe_payment_processing_using_boi_FINAL_20260402_062314.zip
+```
+
 **What `check_block_b.py` does**
 - Deterministic Block B quality checker (no AI).
 - Validates passes 1–6, core fields, and basic coverage.
