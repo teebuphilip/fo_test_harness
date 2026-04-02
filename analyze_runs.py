@@ -111,6 +111,36 @@ def _qa_reports(run_dir: Path) -> List[Path]:
     return sorted(qa_dir.glob("iteration_*_qa_report.txt"))
 
 
+def _latest_build_state(run_dir: Path) -> Optional[Dict[str, Any]]:
+    build_dir = run_dir / "build"
+    if not build_dir.exists():
+        build_dir = run_dir / "_harness" / "build"
+    if not build_dir.exists():
+        return None
+    # Find highest iteration build_state.json
+    best_path = None
+    best_iter = -1
+    for p in build_dir.glob("iteration_*_artifacts/build_state.json"):
+        it = _parse_iteration_num(str(p.parent))
+        if it is None:
+            continue
+        if it > best_iter:
+            best_iter = it
+            best_path = p
+    if not best_path:
+        return None
+    return _read_json(best_path)
+
+
+def _status_from_build_state(state: Optional[Dict[str, Any]]) -> str:
+    if not state or not isinstance(state, dict):
+        return "UNKNOWN"
+    if state.get("state") == "COMPLETED_CLOSED":
+        return "COMPLETE"
+    if state.get("state") == "FAILED" or state.get("terminal") is True:
+        return "FAILED"
+    return "UNKNOWN"
+
 def _parse_qa_report(path: Path) -> Dict[str, Any]:
     text = path.read_text(encoding="utf-8", errors="ignore")
     defects = []
@@ -277,6 +307,8 @@ def parse_run_dirs(run_dirs: List[Path]) -> Dict[str, Any]:
         run_name = run_dir.name
         startup_id = _startup_id_from_run_dir(run_name)
         iters = _latest_iteration_num(run_dir)
+        build_state = _latest_build_state(run_dir)
+        status = _status_from_build_state(build_state)
 
         # Intake path (from integration_issues.json if present)
         intake_path = None
@@ -346,6 +378,7 @@ def parse_run_dirs(run_dirs: List[Path]) -> Dict[str, Any]:
             "run_type": run_type,
             "feature_slug": feature_slug,
             "iterations": iters,
+            "status": status,
             "qa_fail_iterations": qa_fail_iterations,
             "qa_defect_reasons": qa_defect_reasons,
             "integration_counts": integ_counts,
@@ -503,10 +536,13 @@ def main() -> int:
         elif r["run_type"] == "feature":
             per_idea[sid]["feature_iters"].append(r["iterations"])
 
-        # status/mode from riaf logs when available
+        # status/mode from riaf logs when available; fallback to build_state
         if sid in riaf_data:
             per_idea[sid]["status"] = riaf_data[sid].get("status", "UNKNOWN")
             per_idea[sid]["mode"] = riaf_data[sid].get("mode")
+        else:
+            if per_idea[sid]["status"] == "UNKNOWN":
+                per_idea[sid]["status"] = r.get("status", "UNKNOWN")
 
     summary_rows = []
     for sid, data in sorted(per_idea.items()):
