@@ -10,11 +10,14 @@ fi
 OUT_BASE="analysis_output/by_startup"
 mkdir -p "$OUT_BASE"
 
-ls fo_harness_runs 2>/dev/null \
-  | grep "^${PREFIX}" \
+# Only consider directories in fo_harness_runs
+find fo_harness_runs -maxdepth 1 -type d -name "${PREFIX}*" -print \
+  | sed 's#.*/##' \
+  | grep -v '\.' \
   | sed 's/_BLOCK_.*$//' \
   | sort -u \
   | while read -r SID; do
+      [[ -z "$SID" ]] && continue
       echo "=== $SID ==="
       python analyze_runs.py --startup-id "$SID" --output-dir "${OUT_BASE}/${SID}"
     done
