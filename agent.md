@@ -75,6 +75,26 @@ python integration_check.py \
   --intake intake/intake_runs/<startup>/<startup>.json
 ```
 
+## Run Analysis (Post-Build)
+
+After builds complete, use the analysis tooling to mine QA defects, integration issues, and
+iteration counts into summary reports.
+
+```
+# Global summary
+python analyze_runs.py
+
+# Per-startup summaries (prefix match)
+./analyze_by_prefix.sh invoicetool
+```
+
+Outputs:
+- `analysis_output/runs_summary.json`
+- `analysis_output/failure_patterns.txt`
+- `analysis_output/gate_breakdown.csv`
+- `analysis_output/iteration_heatmap.csv`
+- `analysis_output/qa_report.md`
+
 ## QA Gates (Summary)
 Five sequential gates inside `fo_test_harness.py`, then a post-build integration gate:
 1. COMPILE (deterministic AST parse)
