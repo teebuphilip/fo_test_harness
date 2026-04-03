@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-04-02 (session 24 — not-a-bug suppression + candidates)
+
+### feat: QA false-positive suppression via not_a_bug.json
+- Added `directives/not_a_bug.json` and injected it into the QA prompt.
+- Optional per-startup override file: `intake/intake_runs/<startup>/not_a_bug_override.json`.
+- Added `analysis_output/not_a_bug_candidates.json` from false-positive heuristic.
+
+Files: `directives/not_a_bug.json`, `directives/prompts/qa_prompt.md`, `fo_test_harness.py`, `analyze_runs.py`
+
 ## 2026-04-02 (session 23 — run analysis tooling)
 
 ### feat: run analysis tooling + per-startup reports

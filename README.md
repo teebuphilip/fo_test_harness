@@ -438,11 +438,13 @@ Outputs:
 - `analysis_output/gate_breakdown.csv`
 - `analysis_output/iteration_heatmap.csv`
 - `analysis_output/qa_report.md`
+- `analysis_output/not_a_bug_candidates.json`
 
 Notes:
 - If `riaf-logs/riaf_*.log` are missing, gate counts fall back to QA and integration signals.
 - Per-startup analysis writes to `analysis_output/by_startup/<startup_id>/` when using the prefix script.
 - Status falls back to the latest `build_state.json` if `riaf-logs/` are missing.
+ - `directives/not_a_bug.json` suppresses known false-positive QA patterns.
 
 ---
 

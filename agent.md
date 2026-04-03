@@ -94,6 +94,9 @@ Outputs:
 - `analysis_output/gate_breakdown.csv`
 - `analysis_output/iteration_heatmap.csv`
 - `analysis_output/qa_report.md`
+ - `analysis_output/not_a_bug_candidates.json`
+Notes:
+- `directives/not_a_bug.json` suppresses known false-positive QA patterns.
 
 ## QA Gates (Summary)
 Five sequential gates inside `fo_test_harness.py`, then a post-build integration gate:

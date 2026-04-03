@@ -33,8 +33,9 @@ If you pass `--deploy`, it deploys instead of zipping. But you probably don't wa
 - New `analyze_runs.py` mines `fo_harness_runs/` + QA reports into summary outputs.
 - New `analyze_by_prefix.sh` runs per-startup analysis and writes `analysis_output/by_startup/<startup_id>/`.
 - Outputs: `analysis_output/runs_summary.json`, `failure_patterns.txt`, `gate_breakdown.csv`,
-  `iteration_heatmap.csv`, `qa_report.md`.
+  `iteration_heatmap.csv`, `qa_report.md`, `not_a_bug_candidates.json`.
 - Gate breakdown falls back to QA + integration signals when `riaf-logs/` are missing.
+ - `directives/not_a_bug.json` suppresses known false-positive QA patterns.
 
 ## Latest Changes (2026-03-28)
 

@@ -430,6 +430,7 @@ class Config:
     TECH_STACK_OVERRIDE_FILE = Path('./fo_tech_stack_override.json')
     EXTERNAL_INTEGRATION_OVERRIDE_FILE = Path('./fo_external_integration_override.json')
     QA_OVERRIDE_FILE = Path('./fo_qa_override.json')
+    NOT_A_BUG_FILE = Path('./directives/not_a_bug.json')
     QA_POLISH_2_DIRECTIVE_FILE = Path('./directives/qa_polish_2_doc_recovery.md')
     QA_TESTCASE_DIRECTIVE_FILE = Path('./directives/qa_testcase_doc_directive.md')
     PROMPT_DIRECTIVES_DIR = Path('./directives/prompts')
@@ -721,6 +722,22 @@ def load_qa_override() -> dict:
             return json.load(f)
     except Exception as e:
         print_warning(f"Could not load QA override: {e}")
+        return {}
+
+
+def load_not_a_bug() -> dict:
+    """
+    Load known-good QA patterns to suppress false positives.
+    Returns empty dict if file doesn't exist.
+    """
+    path = Config.NOT_A_BUG_FILE
+    if not path.exists():
+        return {}
+    try:
+        with open(path, 'r') as f:
+            return json.load(f)
+    except Exception as e:
+        print_warning(f"Could not load not_a_bug.json: {e}")
         return {}
 
 
@@ -2382,7 +2399,7 @@ it will be considered DELETED. QA will flag it as missing and you'll loop foreve
         return (governance_section, dynamic_section)
 
     @staticmethod
-    def qa_prompt(build_output: str, intake_data: dict, block: str, tech_stack: str = 'custom', qa_override: dict = None, prohibitions_block: str = '', defect_history_block: str = '', resolved_defects_block: str = '', ubiquitous_language_block: str = '') -> str:
+    def qa_prompt(build_output: str, intake_data: dict, block: str, tech_stack: str = 'custom', qa_override: dict = None, prohibitions_block: str = '', defect_history_block: str = '', resolved_defects_block: str = '', ubiquitous_language_block: str = '', not_a_bug_block: str = '') -> str:
         """
         Generate QA prompt for ChatGPT.
 
@@ -2584,6 +2601,15 @@ or is it a reasonable implementation detail to support an existing feature?"
         if qa_override and 'prompt_injection' in qa_override:
             qa_override_context = "\n\n" + qa_override['prompt_injection'] + "\n\n"
 
+        # Inject known-good patterns
+        not_a_bug_context = ""
+        if not_a_bug_block:
+            not_a_bug_context = (
+                "\n\n**KNOWN GOOD PATTERNS — DO NOT FLAG THESE:**\n"
+                f"{not_a_bug_block}\n\n"
+                "If any defect matches a known good pattern above, remove it before outputting.\n"
+            )
+
         # Inject ubiquitous language into QA context
         ubiquitous_language_context = ""
         if ubiquitous_language_block:
@@ -2593,6 +2619,7 @@ or is it a reasonable implementation detail to support an existing feature?"
             'qa_prompt.md',
             tech_stack_context=tech_stack_context,
             qa_override_context=qa_override_context,
+            not_a_bug_context=not_a_bug_context,
             prohibitions_block=prohibitions_block,
             defect_history_block=defect_history_block,
             resolved_defects_block=resolved_defects_block,
@@ -2928,6 +2955,9 @@ class FOHarness:
         if self.qa_override:
             print_info("QA override loaded (tightened evaluation criteria)")
 
+        # Load not-a-bug patterns
+        self.not_a_bug_config = load_not_a_bug()
+
         # Resolve QA_POLISH_2 directive path (CLI override takes precedence)
         self.qa_polish_2_directive_path = self._resolve_qa_polish_2_directive_path()
         self.qa_polish_2_directive = load_text_file(self.qa_polish_2_directive_path)
@@ -3083,6 +3113,35 @@ class FOHarness:
             )
             return None
         return resolved
+
+    def _build_not_a_bug_block(self) -> str:
+        config = self.not_a_bug_config or {}
+        not_a_bug = []
+        if isinstance(config.get("not_a_bug"), list):
+            not_a_bug.extend(config.get("not_a_bug", []))
+
+        # Per-startup overrides from config
+        overrides = config.get("overrides", {})
+        if isinstance(overrides, dict):
+            if self.startup_id in overrides and isinstance(overrides[self.startup_id], list):
+                not_a_bug.extend(overrides[self.startup_id])
+
+        # Optional per-run override file next to intake
+        override_path = Path(self.intake_file).parent / "not_a_bug_override.json"
+        if override_path.exists():
+            try:
+                data = json.loads(override_path.read_text(encoding="utf-8"))
+                if isinstance(data, list):
+                    not_a_bug.extend(data)
+                elif isinstance(data, dict) and isinstance(data.get("not_a_bug"), list):
+                    not_a_bug.extend(data.get("not_a_bug"))
+            except Exception as e:
+                print_warning(f"Could not load not_a_bug_override.json: {e}")
+
+        if not not_a_bug:
+            return ""
+
+        return json.dumps({"not_a_bug": not_a_bug}, indent=2)
 
     def _log_claude_usage(self, response: dict, iteration: int, is_continuation: bool = False, continuation_num: int = 0) -> dict:
         """
@@ -8215,7 +8274,8 @@ End with: SHARPEN_COMPLETE"""
                         prohibitions_block=prohibitions_block,
                         defect_history_block=self._build_qa_defect_history(recurring_tracker),
                         resolved_defects_block=self._build_resolved_defects_block(resolved_tracker),
-                        ubiquitous_language_block=self.ubiquitous_language_block
+                        ubiquitous_language_block=self.ubiquitous_language_block,
+                        not_a_bug_block=self._build_not_a_bug_block()
                     )
 
                     self.artifacts.save_log(f'iteration_{iteration:02d}_qa_prompt', qa_prompt)

@@ -356,6 +356,7 @@ def parse_run_dirs(run_dirs: List[Path]) -> Dict[str, Any]:
         # False positive heuristic
         false_pos = 0
         false_pos_total = 0
+        false_pos_defects = []
         # Compare iteration N and N+1 if QA defects drop to 0
         qa_by_iter = {}
         for rpt_name, data in qa_summary:
@@ -371,6 +372,13 @@ def parse_run_dirs(run_dirs: List[Path]) -> Dict[str, Any]:
                 false_pos_total += 1
                 if _manifests_equal(m1, m2):
                     false_pos += 1
+                    for d in qa_by_iter[n].get("defects", []):
+                        if d.get("problem"):
+                            false_pos_defects.append({
+                                "startup_id": startup_id,
+                                "iteration": n,
+                                "problem": d.get("problem")
+                            })
 
         runs[run_name] = {
             "startup_id": startup_id,
@@ -386,6 +394,7 @@ def parse_run_dirs(run_dirs: List[Path]) -> Dict[str, Any]:
             "fix_pass": fix_pass,
             "false_pos_est": false_pos,
             "false_pos_total": false_pos_total,
+            "false_pos_defects": false_pos_defects,
             "intake_path": intake_path,
         }
 
@@ -560,6 +569,42 @@ def main() -> int:
     # Failure patterns
     patterns, gate_failures = build_failure_patterns(runs)
 
+    # Not-a-bug candidates (from false-positive heuristic)
+    cand_map: Dict[str, Dict[str, Any]] = {}
+    for r in runs.values():
+        for d in r.get("false_pos_defects", []):
+            problem = d.get("problem", "")
+            key = _normalize_reason(problem)
+            if key not in cand_map:
+                cand_map[key] = {
+                    "pattern": key,
+                    "count": 0,
+                    "ideas": set(),
+                    "examples": []
+                }
+            cand_map[key]["count"] += 1
+            cand_map[key]["ideas"].add(d.get("startup_id"))
+            if len(cand_map[key]["examples"]) < 5:
+                cand_map[key]["examples"].append({
+                    "startup_id": d.get("startup_id"),
+                    "iteration": d.get("iteration"),
+                    "problem": problem
+                })
+
+    not_a_bug_candidates = sorted(
+        [
+            {
+                "pattern": v["pattern"],
+                "count": v["count"],
+                "ideas": sorted(list(v["ideas"])),
+                "examples": v["examples"]
+            }
+            for v in cand_map.values()
+        ],
+        key=lambda x: (len(x["ideas"]), x["count"]),
+        reverse=True
+    )
+
     # Gate breakdown (include riaf data if any)
     for sid, d in riaf_data.items():
         gate_failures.update(d.get("gate_failures", {}))
@@ -627,6 +672,7 @@ def main() -> int:
         "patterns": patterns,
         "gate_failures": dict(gate_failures),
         "false_positive": {"estimated": fp_est, "checked": fp_total},
+        "not_a_bug_candidates": not_a_bug_candidates,
     }
     (output_dir / "runs_summary.json").write_text(json.dumps(runs_summary, indent=2), encoding="utf-8")
 
@@ -635,6 +681,18 @@ def main() -> int:
         for p in patterns:
             ideas = ", ".join(p["ideas"])
             f.write(f"{p['reason']} | {p['count']} | {p['gate']} | {ideas}\n")
+
+    # not_a_bug_candidates.json
+    (output_dir / "not_a_bug_candidates.json").write_text(
+        json.dumps(
+            {
+                "generated_at": datetime.utcnow().isoformat() + "Z",
+                "candidates": not_a_bug_candidates,
+            },
+            indent=2
+        ),
+        encoding="utf-8"
+    )
 
     # gate_breakdown.csv
     with (output_dir / "gate_breakdown.csv").open("w", encoding="utf-8", newline="") as f:
@@ -697,6 +755,16 @@ def main() -> int:
             f.write(f"- Features: {len(data['feature_iters'])} (avg {round((sum(data['feature_iters'])/len(data['feature_iters'])),2) if data['feature_iters'] else 0})\n")
             f.write(f"- Total iterations: {data['total_iters']}\n")
             f.write("\n")
+
+        if not_a_bug_candidates:
+            f.write("\n## Not-a-bug Candidates (Review Required)\n")
+            for idx, c in enumerate(not_a_bug_candidates[:10], start=1):
+                ideas = ", ".join(c["ideas"][:5]) + ("..." if len(c["ideas"]) > 5 else "")
+                f.write(f"{idx}. {c['pattern']} — {c['count']} occurrences\n")
+                f.write(f"   Ideas: {ideas}\n")
+                if c["examples"]:
+                    ex = c["examples"][0]
+                    f.write(f"   Example: {ex['startup_id']} iter {ex['iteration']}: {ex['problem']}\n")
 
     if args.failures_only:
         print("\nFailure patterns written to:", output_dir / "failure_patterns.txt")

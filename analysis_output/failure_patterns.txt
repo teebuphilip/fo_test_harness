@@ -1,0 +1,1174 @@
+Intake KPI 'MVP' has no implementation in any service or route. | 6 | G6 | invoicetool_s05_make_payments_wire_stripe_payment_processing_using_boi, invoicetool_s08_email_notifications_for_invoice_status, invoicetool_s08_email_notifications_for_invoice_status_wire_mailerlite_email_notifications_usin, wynwood_thoroughbreds_p1, wynwood_thoroughbreds_p1_contentpage
+The method `getAccessTokenSilently` is not destructured correctly in the incorrect location. However, note that the problem is actually elsewhere, see next defect. | 41 | G2 | ai_workforce_intelligence, invoicetool_s05_make_payments, wynwood_thoroughbreds_p1, wynwood_thoroughbreds_p1_member
+The presence of this compiled file is indicative of unnecessary artifacts in the deployment. | 8 | G2 | adversarial_ai_validator_integrate_anthropic_sdk_for_advocate_rol, ai_workforce_intelligence_downloadable_executive_report, wynwood_thoroughbreds_p1
+Intake KPI 'HLD' has no implementation in any service or route. | 3 | G6 | invoicetool_s05_make_payments_wire_stripe_payment_processing_using_boi, invoicetool_s08_email_notifications_for_invoice_status, invoicetool_s08_email_notifications_for_invoice_status_wire_mailerlite_email_notifications_usin
+The `owner_id` field is incorrectly included in the Assessment model. | 2 | G2 | ai_workforce_intelligence_kpi_scoring_engine, ai_workforce_intelligence_narrative_summary_generator
+`.tsx` or `.ts` frontend files are present instead of .jsx. | 16 | G2 | ai_workforce_intelligence
+The code attempts to use a method that doesn't exist on the user object. | 5 | G2 | ai_workforce_intelligence
+The description is too generic and does not provide a specific overview of the service. | 4 | G2 | adversarial_ai_validator_implement_stripe_pay_per_analysis_checko
+The inclusion of the `status` column implies new functionality not stated in the intake. | 4 | G2 | ai_workforce_intelligence
+The token is retrieved using the wrong method on the user object. | 4 | G2 | wynwood_thoroughbreds_p1
+The functionality of creating and managing client profiles is mismatched with intake specifications. | 3 | G2 | ai_workforce_intelligence
+The frontend page does not fulfill the requirement to be in `.jsx` format consistent with guidelines. | 3 | G2 | wynwood_thoroughbreds_p1
+The application attempts to use a method that doesn't exist on the user object. | 3 | G2 | ai_workforce_intelligence
+Missing `.env.example` file | 2 | G2 | wynwood_thoroughbreds
+Missing `.env.example` configuration file | 2 | G2 | wynwood_thoroughbreds
+Missing `artifact_manifest.json` | 2 | G2 | wynwood_thoroughbreds
+At least one `business/frontend/pages/*.jsx` file must be present as per spec. | 2 | G2 | wynwood_thoroughbreds_p1
+Missing required dependencies as outlined in the intake document. | 2 | G2 | wynwood_thoroughbreds_p1
+The horse fetching logic lacks error handling as defined in the intake requirements. | 2 | G2 | wynwood_thoroughbreds_p1
+Required backend endpoint implementations are missing. | 2 | G2 | wynwood_thoroughbreds_p1
+This file includes membership information and personalized greetings, which were not specified in the intake document. | 2 | G2 | wynwood_thoroughbreds_p1
+`business/README-INTEGRATION.md` file is missing. | 2 | G2 | ai_workforce_intelligence
+The file introduces a POST endpoint for creating clients, which exceeds the defined requirements in the intake. | 2 | G2 | ai_workforce_intelligence
+The analytics model introduces functionality for platform metrics not defined in the intake. | 2 | G2 | ai_workforce_intelligence
+The file includes a `GET` endpoint for listing clients and individual profile retrieval, which is not specified in the intake. | 2 | G2 | ai_workforce_intelligence
+The `GET` endpoint for listing clients introduces client management features not defined in the intake requirements. | 2 | G2 | ai_workforce_intelligence
+The assessment model has attributes that introduce complexity beyond what is specified in the intake. | 2 | G2 | ai_workforce_intelligence
+The file contains routes that introduce client management features not defined in the intake. | 2 | G2 | ai_workforce_intelligence
+`business/README-INTEGRATION.md` is missing | 2 | G2 | ai_workforce_intelligence
+The `status` property represents new functionality outside of the specified scope. | 2 | G2 | ai_workforce_intelligence
+Inclusion of the `status` column implies new functionality not stated in the intake. | 2 | G2 | ai_workforce_intelligence
+The Dashboard component diverges from the structure specified in the intake requirements. | 2 | G2 | ai_workforce_intelligence
+artifact_manifest.json file is missing. | 2 | G2 | wynwood_thoroughbreds
+The model includes an excess field property `status`, which is not covered by the intake specifications. | 2 | G2 | wynwood_thoroughbreds_p1
+The route does not specify a path. | 2 | G2 | wynwood_thoroughbreds_p1
+The inclusion of the `updated_at` attribute in the `Assessment` model was not specified in the intake as a required feature. | 2 | G2 | ai_workforce_intelligence
+Lack of unit tests violates expected test coverage for a production build. | 2 | G2 | ai_workforce_intelligence_narrative_summary_generator
+The addition of a `status` property in the Analysis model which was not outlined in the intake specifications. | 2 | G2 | adversarial_ai_validator_integrate_anthropic_sdk_for_advocate_rol
+Implementation of mock racing data service that simulates real-world racing data integration | 1 | G2 | wynwood_thoroughbreds
+Inconsistent handling of horse status - missing fallback for null or undefined values. | 1 | G2 | wynwood_thoroughbreds
+Setup/installation instructions are not provided. | 1 | G2 | wynwood_thoroughbreds
+File checksums for verification are not provided. | 1 | G2 | wynwood_thoroughbreds
+The file artifact_manifest.json is missing. | 1 | G2 | wynwood_thoroughbreds
+The file build_state.json is missing. | 1 | G2 | wynwood_thoroughbreds
+Implementation files have not been listed within an artifact manifest. | 1 | G2 | wynwood_thoroughbreds
+Functionality to delete a breeding record is not defined in the BreedingRepository class. | 1 | G2 | wynwood_thoroughbreds
+The artifact_manifest.json file is missing, which should list all the files with their SHA256 checksums. | 1 | G2 | wynwood_thoroughbreds
+The build_state.json file is missing, which should indicate the state as COMPLETED_CLOSED. | 1 | G2 | wynwood_thoroughbreds
+README with setup/installation instructions is missing for the overall project. | 1 | G2 | wynwood_thoroughbreds
+The `Member` class lacks an `updateProfile` method | 1 | G2 | wynwood_thoroughbreds
+The test cases for investment routes imply a feature (investments) that is not fully implemented in the provided files. | 1 | G2 | wynwood_thoroughbreds
+The file does not have complete information or checksums for all artifacts. | 1 | G2 | wynwood_thoroughbreds
+The required file `build_state.json` is missing. | 1 | G2 | wynwood_thoroughbreds
+Missing configuration setup file. | 1 | G2 | wynwood_thoroughbreds
+Investment feature is not part of the original intake requirements. | 1 | G2 | wynwood_thoroughbreds
+`includes` method usage on an object. | 1 | G2 | wynwood_thoroughbreds
+Tests reference properties like 'name' and 'email' that aren't in the `Member` model. | 1 | G2 | wynwood_thoroughbreds
+README file is missing from the provided outputs. | 1 | G2 | wynwood_thoroughbreds
+Missing from the build output. | 1 | G2 | wynwood_thoroughbreds
+Implementation includes a mock service; expectation was integration with real provider. | 1 | G2 | wynwood_thoroughbreds
+CATEGORIES implementation adds complexity by inferring multiple unused categories. | 1 | G2 | wynwood_thoroughbreds
+The `findByEmail` function is a mock implementation and does not perform an actual database query. | 1 | G2 | wynwood_thoroughbreds
+README.md file is missing setup/installation instructions. | 1 | G2 | wynwood_thoroughbreds
+InvestmentService and related tests are present, but investment tracking was not a specified feature in the intake. | 1 | G2 | wynwood_thoroughbreds
+`artifact_manifest.json` is missing from the provided files. | 1 | G2 | wynwood_thoroughbreds
+`build_state.json` is missing from the provided files. | 1 | G2 | wynwood_thoroughbreds
+Missing `build_state.json` | 1 | G2 | wynwood_thoroughbreds
+Test cases depend on server status but no setup or teardown ensures the server state; potential flakiness. | 1 | G2 | wynwood_thoroughbreds
+Implementing a mock data service without specific instruction in the intake. | 1 | G2 | wynwood_thoroughbreds
+Member-related APIs and business logic seem missing or not clearly demonstrated in the provided code samples. | 1 | G2 | wynwood_thoroughbreds
+The artifact_manifest.json file content was not provided, and consequently, I couldn't verify its presence or validate the checksums of included files. | 1 | G2 | wynwood_thoroughbreds
+The build_state.json content was not provided, making verification of the build state impossible. | 1 | G2 | wynwood_thoroughbreds
+The HRIS data submission includes a "data_source" field that isn't being accessed or used within the `AssessmentForm` component. This might cause unexpected behavior or data inconsistency. | 1 | G2 | ai_workforce_intelligence
+`README-INTEGRATION.md` lists BambooHR, Workday, and ADP integration placeholders, but these integrations are not fully implemented according to the intake requirements. | 1 | G2 | ai_workforce_intelligence
+Additional user-facing features such as "Performance Rating Distribution" and "Skills Gap Analysis" were identified, which were not explicitly mentioned in the intake. | 1 | G2 | ai_workforce_intelligence
+Missing dependency declaration for "fastapi" and "sqlalchemy", which are used in the backend routes. | 1 | G2 | ai_workforce_intelligence
+The presence of non-specified features such as "Performance Rating Distribution" and "Skills Gap Analysis" in the build output, though identified in PATCH_PLAN. | 1 | G2 | ai_workforce_intelligence
+There's an inconsistency in field names; in the client editing function, `client.employee_count` is being handled as a string instead of an integer. | 1 | G2 | ai_workforce_intelligence
+Incorrect assessment query method causing potential security flaw. | 1 | G2 | ai_workforce_intelligence
+The build is missing `package.json`, which is required for dependency management in the frontend. | 1 | G2 | ai_workforce_intelligence
+Usage of a database not configured through the lowcode boilerplate. | 1 | G2 | ai_workforce_intelligence
+No valid `business/frontend/pages/*.jsx` files present. | 1 | G2 | wynwood_thoroughbreds_p1
+The default monthly fee is also hardcoded rather than configurable. | 1 | G2 | wynwood_thoroughbreds_p1
+Horse listing is not filtered or sorted by the attributes expected in the intake spec. | 1 | G2 | wynwood_thoroughbreds_p1
+There is a missing implementation for member management routes as per the intake document. | 1 | G2 | wynwood_thoroughbreds_p1
+The requirement specifies that at least one backend route should be present. No valid routes found in the frontend build artifacts. | 1 | G2 | wynwood_thoroughbreds_p1
+The requirement specifies that at least one valid frontend page must be present, but it is in use in multiple places without proper handling as per the spec. | 1 | G2 | wynwood_thoroughbreds_p1
+This function is utilized but not aligned with specific member handling patterns in the intake. | 1 | G2 | wynwood_thoroughbreds_p1
+Required dependencies as outlined in the intake document are absent. | 1 | G2 | wynwood_thoroughbreds_p1
+Compliance analysis reports in the returned type structure do not match intake expectations. | 1 | G2 | wynwood_thoroughbreds_p1
+File includes a user-facing feature that was not specified in the intake document. | 1 | G2 | wynwood_thoroughbreds_p1
+Missing package.json details; the required configurations and dependencies per intake document. | 1 | G2 | wynwood_thoroughbreds_p1
+This file implements a "performance data" feature which may not be grounded in the original intake. | 1 | G2 | wynwood_thoroughbreds_p1
+This model implements a `marketing_tag` feature which may not be grounded in the original intake requirement. | 1 | G2 | wynwood_thoroughbreds_p1
+The user access token is being fetched incorrectly at multiple points. | 1 | G2 | wynwood_thoroughbreds_p1
+Missing required configurations and dependencies. | 1 | G2 | wynwood_thoroughbreds_p1
+The required fields are not being enforced on the horse creation form. | 1 | G2 | wynwood_thoroughbreds_p1
+The `regulatory_body` column is not correctly validated against the intake requirements. | 1 | G2 | wynwood_thoroughbreds_p1
+Generating reports that weren't specified as part of the deliverable. | 1 | G2 | wynwood_thoroughbreds_p1
+The `monthly_fee` attribute should be consistent with the scope defined in the intake document. | 1 | G2 | wynwood_thoroughbreds_p1
+Additional coverage for compliance checks that extend the initial scope. | 1 | G2 | wynwood_thoroughbreds_p1
+Introducing models with features beyond those anticipated in the SOW. | 1 | G2 | wynwood_thoroughbreds_p1
+Button at line 121 in Dashboard.jsx has no onClick handler — renders and looks clickable but does nothing. | 1 | G6 | wynwood_thoroughbreds_p1
+Button at line 125 in Dashboard.jsx has no onClick handler — renders and looks clickable but does nothing. | 1 | G6 | wynwood_thoroughbreds_p1
+Button at line 129 in Dashboard.jsx has no onClick handler — renders and looks clickable but does nothing. | 1 | G6 | wynwood_thoroughbreds_p1
+Button at line 133 in Dashboard.jsx has no onClick handler — renders and looks clickable but does nothing. | 1 | G6 | wynwood_thoroughbreds_p1
+Button at line 161 in Dashboard.jsx has no onClick handler — renders and looks clickable but does nothing. | 1 | G6 | wynwood_thoroughbreds_p1
+Test files are not present in the build output. | 1 | G2 | ai_workforce_intelligence
+Missing required artifact "artifact_manifest.json". | 1 | G2 | adversarial_ai_validator
+Missing required artifact "build_state.json". | 1 | G2 | adversarial_ai_validator
+Missing required artifact "execution_declaration.json". | 1 | G2 | adversarial_ai_validator
+Inclusion of functionalities for adversarial analysis and advocate analysis, which may not exactly align or could extend beyond the original high-level feature requirements. | 1 | G2 | adversarial_ai_validator
+The login and signup modals' display logic may not work as intended across all scenarios. | 1 | G2 | wynwood_thoroughbreds
+Incorrect reference or missing function continuation for `loadMemberDashboard`. | 1 | G2 | wynwood_thoroughbreds
+Missing `artifact_manifest.json` and `build_state.json` files with checksums and completion status as per governance. | 1 | G2 | wynwood_thoroughbreds
+Incomplete or missing specification for handling certain member interactions such as direct founder messaging. | 1 | G2 | wynwood_thoroughbreds
+Incorrect reference to `response.choices[0].message.content` without checking if `choices` is available. | 1 | G2 | adversarial_ai_validator
+Missing `artifact_manifest.json` file with checksums for build artifacts. | 1 | G2 | adversarial_ai_validator
+Missing `README.md` with setup/installation instructions. | 1 | G2 | adversarial_ai_validator
+Added refund functionality which was not part of the intake requirements. | 1 | G2 | adversarial_ai_validator
+The `artifact_manifest.json` file is absent from the build output. | 1 | G2 | adversarial_ai_validator
+The `build_state.json` file is not present in the provided build output. | 1 | G2 | adversarial_ai_validator
+The `README.md` file is absent from the build output. | 1 | G2 | adversarial_ai_validator
+The method `scheduleUpdates()` uses `setInterval` which is a synchronous approach and may not handle real-time updates effectively. | 1 | G2 | wynwood_thoroughbreds
+`mockPaymentProcess()` randomly fails with a 10% probability, but there is no error handling or user feedback mechanism if the payment fails. | 1 | G2 | wynwood_thoroughbreds
+The registration form includes a step for selecting "Membership Tier" but no integration with actual product feature for different access or services based on tiers. | 1 | G2 | wynwood_thoroughbreds
+Incomplete code snippet that ends mid-function, potentially leading to runtime errors. | 1 | G2 | wynwood_thoroughbreds
+Additional message urging users to upgrade is always displayed and not excluded when the member has a premium or elite status. | 1 | G2 | wynwood_thoroughbreds
+Payment handling and UI only mention traditional card payments without addressing "What backup payment methods should be supported?" from intake. | 1 | G2 | wynwood_thoroughbreds
+`getCurrentUser` and `setUserTier` functions serve debugging purposes which were not in the scope. | 1 | G2 | wynwood_thoroughbreds
+The textarea used for composing messages does not reset after a successful message send. | 1 | G2 | wynwood_thoroughbreds
+There is no evidence of a reporting dashboard or basic analytics for member engagement tracking as outlined in the HLD document from intake requirements. | 1 | G2 | wynwood_thoroughbreds
+The implemented solution does not mention compliance with member data privacy, which should have been addressed as per the QA report's risk register. | 1 | G2 | wynwood_thoroughbreds
+Incomplete User registration endpoint. The endpoint is cut off and not functional as intended. | 1 | G2 | wynwood_thoroughbreds
+Missing implementation of real-time updates for horse performance as frequent automated updates were a requirement. | 1 | G2 | wynwood_thoroughbreds
+Additional feature added - "Mobile-responsive design" as the intake doesn't mention this requirement. | 1 | G2 | wynwood_thoroughbreds
+The management page should have specific loading states and messages aligned with the user experience; it doesn’t align with the requirements in the intake about how to handle loading states. | 1 | G2 | wynwood_thoroughbreds
+This adds new user-facing features that were not specified in the intake. | 1 | G2 | wynwood_thoroughbreds
+The introduction of a `status` parameter in the get_members function was not in the intake specifications. | 1 | G2 | wynwood_thoroughbreds
+The addition of the `age` property in the Horse model which was not outlined in the intake specifications. | 1 | G2 | wynwood_thoroughbreds
+Unspecified forms and actions that manage horse data. | 1 | G2 | wynwood_thoroughbreds
+This service is performing email advocacy activities that are outside the intended scope of original project specifications. | 1 | G2 | wynwood_thoroughbreds
+Fetch logic in the Dashboard must ensure that all interactions require user authentication checks. | 1 | G2 | wynwood_thoroughbreds
+The inclusion of a `status` property in the Assessment model is not defined in the intake. | 1 | G2 | ai_workforce_intelligence_downloadable_executive_report
+The function for calculating KPIs adds significant complexity not outlined in the intake. | 1 | G2 | ai_workforce_intelligence_downloadable_executive_report
+At least one `business/frontend/pages/*.jsx` file MUST be present. | 1 | G2 | ai_workforce_intelligence_downloadable_executive_report
+At least one `business/backend/routes/*.py` file MUST be present. | 1 | G2 | ai_workforce_intelligence_downloadable_executive_report
+At least one `business/frontend/pages/*.jsx` file MUST be present — none were found in the output. | 1 | G2 | ai_workforce_intelligence_downloadable_executive_report
+At least one `business/frontend/pages/*.jsx` file MUST be present. The file is not present in the output. | 1 | G2 | ai_workforce_intelligence_downloadable_executive_report
+The inclusion of a `score` property in the Assessment model is not defined in the intake. | 1 | G2 | ai_workforce_intelligence_downloadable_executive_report
+The `calculate_kpis` function adds significant complexity not outlined in the intake. | 1 | G2 | ai_workforce_intelligence_downloadable_executive_report
+The code incorrectly attempts to use a non-existent method on the `user` object. | 1 | G2 | ai_workforce_intelligence_downloadable_executive_report
+No user-facing components are implemented within this file. | 1 | G2 | ai_workforce_intelligence_downloadable_executive_report
+The `score` field is not permitted according to the intake specifications. | 1 | G2 | ai_workforce_intelligence_downloadable_executive_report
+Calculation of KPIs not listed as required by the intake. | 1 | G2 | ai_workforce_intelligence_downloadable_executive_report
+The requirement specifies that at least one `business/frontend/pages/*.jsx` file must be present and functional as a page. | 1 | G2 | ai_workforce_intelligence_downloadable_executive_report
+The inclusion of unnecessary attributes like `responses` is not specified in the intake. | 1 | G2 | ai_workforce_intelligence_downloadable_executive_report
+Calculation of `IMV` (Investment Market Value) is not listed in the intake as a KPI to be calculated. | 1 | G2 | ai_workforce_intelligence_downloadable_executive_report
+The `ScoringService` includes functionality for calculating completion rates which are not specified as required metrics. | 1 | G2 | ai_workforce_intelligence_downloadable_executive_report
+The function `calculateScore` is not correctly updating the assessment’s status to "completed". | 1 | G2 | ai_workforce_intelligence
+The function `renderSummaryTab` seems incomplete or cut off. | 1 | G2 | ai_workforce_intelligence
+Attempt to use unsupported HRIS provider. | 1 | G2 | ai_workforce_intelligence
+Detailed risk factor breakdown, including categories not explicitly covered in intake. | 1 | G2 | ai_workforce_intelligence
+The integration guide specifies use of "Supabase PostgreSQL" for database integration, but there is no implementation detail or explicit code showing the connection or how it integrates with the boilerplate's ORM. | 1 | G2 | ai_workforce_intelligence
+Missing necessary scripts for testing. The current test script is a placeholder with no test command implemented. | 1 | G2 | ai_workforce_intelligence
+Function `createDefaultContent()` inserts content without checking for existing IDs. | 1 | G2 | wynwood_thoroughbreds
+The button text and state do not reflect correctly when there are no available shares. | 1 | G2 | wynwood_thoroughbreds
+The `find` method being used for querying the database appears to lack integration with the `supabase`, which is used elsewhere in the services. | 1 | G2 | wynwood_thoroughbreds
+The `find` method for querying the performance data appears inconsistent with the `supabase` usage seen in other service classes. | 1 | G2 | wynwood_thoroughbreds
+Membership tier options in the `createMemberSchema` and `updateMemberSchema` use 'basic', 'premium', 'vip', which are not aligned with 'elite', mentioned in the intake document. | 1 | G2 | wynwood_thoroughbreds
+Additional properties and methods that exceed initial HLD, such as 'form' and 'jockey' which are not specified in the intake requirements. | 1 | G2 | wynwood_thoroughbreds
+The `toDatabase` method does not include `created_at` and `updated_at`. | 1 | G2 | wynwood_thoroughbreds
+The performance creation test expects a `finishing_position` instead of `position`, causing test failures. | 1 | G2 | wynwood_thoroughbreds
+Lacks the endpoints for educational content access control per membership tier. | 1 | G2 | wynwood_thoroughbreds
+The app intended to use Supabase, but still relies on `sqlite3` for the database. | 1 | G2 | wynwood_thoroughbreds
+The `addRaceResult` method is updating `race_record` without ensuring `finishing_position` is within valid range (1, 2, 3). | 1 | G2 | wynwood_thoroughbreds
+The `authenticate` method documentation comments say "always succeeds for demo", which suggests incorrect authentication logic implementation. | 1 | G2 | wynwood_thoroughbreds
+The implementation of `getBreedingAnalysis` is not specified in the original intake requirements or HLD. | 1 | G2 | wynwood_thoroughbreds
+The test 'should create horse with correct properties' references `horse.race_history` which does not exist in `Horse` model. | 1 | G2 | wynwood_thoroughbreds
+The file implements a `MockRacingDataService` that should ideally utilize the boilerplate infrastructure for API integrations instead (e.g., external data source service patterns). | 1 | G2 | wynwood_thoroughbreds
+Test case references nonexistent `status` and `racing_record` properties of the Horse model. | 1 | G2 | wynwood_thoroughbreds
+`calculateHorseValue` method calls a nonexistent `getWinRate` method on Horse. | 1 | G2 | wynwood_thoroughbreds
+Events management (particularly non-horse related events) not specified in the intake document. | 1 | G2 | wynwood_thoroughbreds
+Tests are missing for the provided business logic | 1 | G2 | wynwood_thoroughbreds
+The method `generatePerformanceReport` involves advanced analytics features not explicitly mentioned in the intake | 1 | G2 | wynwood_thoroughbreds
+The BreedingAnalysis component provides advanced analytics that may not align precisely with intake requirements | 1 | G2 | wynwood_thoroughbreds
+The `package.json` file contains a generic description that doesn't align with the specific nature of the project as outlined in the intake. | 1 | G2 | adversarial_ai_validator_implement_stripe_pay_per_analysis_checko
+The presence of `SDK` and `MVP` related methods suggests an extension of functionality beyond what was requested. | 1 | G2 | adversarial_ai_validator_implement_stripe_pay_per_analysis_checko
+Presence of a cached Python file which should not be part of the deployed artifacts. | 1 | G2 | adversarial_ai_validator_implement_stripe_pay_per_analysis_checko
+Absence of required frontend files; must have at least one page implemented. | 1 | G2 | adversarial_ai_validator_implement_stripe_pay_per_analysis_checko
+The cost calculation includes a division by 1000, which is incorrect for the given rates. | 1 | G2 | adversarial_ai_validator_implement_stripe_pay_per_analysis_checko
+The payment status verification does not handle errors raised during session retrieval appropriately. | 1 | G2 | adversarial_ai_validator_implement_stripe_pay_per_analysis_checko
+The model’s column `"id"` was not outlined in the intake requirements. | 1 | G2 | adversarial_ai_validator_implement_stripe_pay_per_analysis_checko
+The `startup_idea` field was not specified in the intake. | 1 | G2 | adversarial_ai_validator_implement_stripe_pay_per_analysis_checko
+The introduction of AI scoring and detailed analysis response handling expands beyond the initial scope. | 1 | G2 | adversarial_ai_validator_implement_stripe_pay_per_analysis_checko
+The scoring metrics used to evaluate the analysis were not part of the intake request. | 1 | G2 | adversarial_ai_validator_implement_stripe_pay_per_analysis_checko
+The method assumes that the session will always return a payment status, failing to check if the session exists. | 1 | G2 | adversarial_ai_validator_implement_stripe_pay_per_analysis_checko
+The pricing configuration may not align with what was defined in the intake. | 1 | G2 | adversarial_ai_validator_implement_stripe_pay_per_analysis_checko
+This method may introduce additional capabilities not outlined in the intake. | 1 | G2 | adversarial_ai_validator_implement_stripe_pay_per_analysis_checko
+The addition of dynamic response handling is not included in the intake. | 1 | G2 | adversarial_ai_validator_implement_stripe_pay_per_analysis_checko
+This reporting seems excessive compared to the intake which requested only structured verdicts. | 1 | G2 | adversarial_ai_validator_implement_stripe_pay_per_analysis_checko
+The `description` field is too generic and does not provide a specific overview of the service. | 1 | G2 | adversarial_ai_validator_implement_stripe_pay_per_analysis_checko
+The method `verify_payment_completed` should check the payment status correctly. | 1 | G2 | adversarial_ai_validator_implement_stripe_pay_per_analysis_checko
+`.pyc` files are not applicable to the source code and should be excluded from deployment. | 1 | G2 | adversarial_ai_validator_implement_stripe_pay_per_analysis_checko
+These fields represent additional complexity outside of what was requested in the intake. | 1 | G2 | adversarial_ai_validator_implement_stripe_pay_per_analysis_checko
+The validity check for a paid session should handle any potential False return properly. | 1 | G2 | adversarial_ai_validator_implement_stripe_pay_per_analysis_checko
+The homepage as defined must utilize a specific file structure and content defined in the intake; this page lacks compliance. | 1 | G2 | adversarial_ai_validator_implement_stripe_pay_per_analysis_checko
+Methods performing extensive marketing analyses exceed the implementations required by the intake. | 1 | G2 | adversarial_ai_validator_implement_stripe_pay_per_analysis_checko
+No verification in the flow to ensure the payment session was processed correctly. | 1 | G2 | adversarial_ai_validator_implement_stripe_pay_per_analysis_checko
+The `create_checkout_session` method is creating a checkout session with an incorrect price of `$99.00`, but the analysis is defined as $8.00 in the frontend. | 1 | G2 | adversarial_ai_validator_implement_stripe_pay_per_analysis_checko
+The `generate_analysis_report` method incorrectly handles generated analysis if the processing status is not "completed." This indicates that it's incomplete and should signal a workflow error. | 1 | G2 | adversarial_ai_validator_implement_stripe_pay_per_analysis_checko
+The `market_size` and related metrics were not explicitly defined in the intake specifications. They imply additional analysis complexity that falls outside the outlined capabilities. | 1 | G2 | adversarial_ai_validator_implement_stripe_pay_per_analysis_checko
+The introduction of complexity scoring metrics suggests a change in the intended feature set that was not part of the original proposal and can lead to various expectations. | 1 | G2 | adversarial_ai_validator_implement_stripe_pay_per_analysis_checko
+The calculation of the payment amount is incorrect. | 1 | G2 | adversarial_ai_validator_implement_stripe_pay_per_analysis_checko
+The payment verification method does not handle errors correctly, which could cause failures. | 1 | G2 | adversarial_ai_validator_implement_stripe_pay_per_analysis_checko
+The methods introduced here for scoring metrics suggest new features not in the provided intake. | 1 | G2 | adversarial_ai_validator_implement_stripe_pay_per_analysis_checko
+The `competition_level` property represents additional complexity that was not explicitly defined in the intake. | 1 | G2 | adversarial_ai_validator_implement_stripe_pay_per_analysis_checko
+This input field suggests new integrations with features not specified in the intake. | 1 | G2 | adversarial_ai_validator_implement_stripe_pay_per_analysis_checko
+The adjusted logic for the report generation implies new user-facing features that were not included in the intake. | 1 | G2 | adversarial_ai_validator_implement_stripe_pay_per_analysis_checko
+Service AnalysisService.py accesses Analysis.advocate_response which does not exist on the model — will raise AttributeError at runtime. | 1 | G6 | adversarial_ai_validator_implement_stripe_pay_per_analysis_checko
+Service AnalysisService.py accesses Analysis.adversary_response which does not exist on the model — will raise AttributeError at runtime. | 1 | G6 | adversarial_ai_validator_implement_stripe_pay_per_analysis_checko
+Service AnalysisService.py accesses Analysis.structured_verdict which does not exist on the model — will raise AttributeError at runtime. | 1 | G6 | adversarial_ai_validator_implement_stripe_pay_per_analysis_checko
+There should be field validation checks for the `ManualInvoiceEntryForm` model before attempting to create a record in the database. | 1 | G2 | invoicetool_s07_manual_invoice_entry_form
+package.json is incomplete; it fails to specify critical modules or libraries that are essential for building, running, or deploying the application. | 1 | G2 | invoicetool_s04_view_invoices
+`README.md` with setup/installation instructions is missing. | 1 | G2 | adversarial_ai_validator
+The artifact file `prisma/schema.prisma` mentioned in the `artifact_manifest.json` is not listed in the provided files under BUILD OUTPUT FROM CLAUDE. Additionally, there is no mention of creating a Prisma schema or its usage in the build instructions. | 1 | G2 | adversarial_ai_validator
+The README.md is missing configuration guidance for development and production environments. | 1 | G2 | adversarial_ai_validator
+Environment configuration guidance is missing from `README.md`. | 1 | G2 | adversarial_ai_validator
+`.env.example` file is missing. | 1 | G2 | adversarial_ai_validator
+Incorrect cost calculation for OpenAI service tokens. | 1 | G2 | adversarial_ai_validator
+The payment verification functionality described in the build output references a `paymentService.js`, which seems to handle payment token verification, yet this file was not included in the actual implementation or the artifact manifest. | 1 | G2 | adversarial_ai_validator
+The file `business/src/pages/api/validate.js` is missing from the `artifact_manifest.json`. | 1 | G2 | adversarial_ai_validator
+Missing test files for the code implemented. | 1 | G2 | adversarial_ai_validator
+The `artifact_manifest.json` does not list test artifacts or potential missing artifact files that validate implementation (no references to test scripts or results). | 1 | G2 | adversarial_ai_validator
+Includes "Comparison" tab which offers features for side-by-side comparison of advocate and adversary views; while a thorough analysis was required, specific UI features for this comparison were not explicitly listed in intake. | 1 | G2 | adversarial_ai_validator
+Required README.md file with setup/installation instructions is missing. | 1 | G2 | adversarial_ai_validator
+The test cases in `test_assessments.py` are trying to access fields like "assessmentId" whereas the endpoint returns "id". | 1 | G2 | ai_workforce_intelligence
+The Client Data Input page allows the user to select a client arbitrarily without role-based access control. | 1 | G2 | ai_workforce_intelligence
+The integration guide mentions several HRIS providers and configuration steps which might indicate an external integration feature not clearly specified in the intake. | 1 | G2 | ai_workforce_intelligence
+There are no checks evident that ensure the file is in the required frontend format. | 1 | G2 | wynwood_thoroughbreds_p1_horseprofile
+There is no HTTP 204 No Content response when a horse profile is deleted; this is considered poor practice. | 1 | G2 | wynwood_thoroughbreds_p1_horseprofile
+No validation has been implemented for required fields when adding/updating horse profiles. | 1 | G2 | wynwood_thoroughbreds_p1_horseprofile
+The configuration of the response model doesn't align with what was in the intake that expects different properties. | 1 | G2 | wynwood_thoroughbreds_p1_horseprofile
+The `racing_record` field is included in the `HorseProfileResponse` schema but is undocumented in the intake. | 1 | G2 | wynwood_thoroughbreds_p1_horseprofile
+The `status` field is present in the `HorseProfileResponse` schema which was not specified in the intake. | 1 | G2 | wynwood_thoroughbreds_p1_horseprofile
+The `racing_record` field is included in the `HorseProfile` model which was not documented in the intake specifications. | 1 | G2 | wynwood_thoroughbreds_p1_horseprofile
+No unit tests are provided for the assessments frontend page. | 1 | G2 | ai_workforce_intelligence_kpi_scoring_engine
+The model includes an `owner_id` field, which is not permitted according to intake requirements. | 1 | G2 | ai_workforce_intelligence_kpi_scoring_engine
+Sequelize models have been added (`Client`, `KPI`, `Report`) which introduce user-facing features such as different company sizes and metric types not covered in the intake requirements. | 1 | G2 | ai_workforce_intelligence
+Extended API functionality for KPI analytics and report generation methods that aren't specified in the intake. | 1 | G2 | ai_workforce_intelligence
+Implemented unauthorized features related to AI readiness scoring and automation potential, which appear to be new features not in the intake requirements. | 1 | G2 | ai_workforce_intelligence
+Tests are marked as missing. Although auto-generated in post-QA polish step, it's essential to ensure that this functionality is confirmed. | 1 | G2 | ai_workforce_intelligence
+The implementation uses a `MockHRISService` instead of a real HRIS service. | 1 | G2 | ai_workforce_intelligence
+Hardcoded default values for assessment metadata (e.g., `"status": "draft"`, `"hris_data_status": "pending"`). | 1 | G2 | ai_workforce_intelligence
+The reports sharing function indicates a TODO for sending notification emails, which appears incomplete. | 1 | G2 | ai_workforce_intelligence
+Custom logic for benchmark score adjustments may be beyond specified scope if not explicit in intake. | 1 | G2 | ai_workforce_intelligence
+The `authenticate` method retrieves an OAuth token but does not verify if the token is expired before re-authenticating. | 1 | G2 | ai_workforce_intelligence
+Some navigation links do not correspond to documented intake functionality. | 1 | G2 | ai_workforce_intelligence
+The function `create_integration` does not enforce any input validation on the `data` dictionary. | 1 | G2 | ai_workforce_intelligence
+There is no validation or error handling when retrieving the assessment for a report. | 1 | G2 | ai_workforce_intelligence
+The function does not handle exceptions during database operations. | 1 | G2 | ai_workforce_intelligence
+Potential for `assessment` to be `None` isn't handled before trying to access its properties. | 1 | G2 | ai_workforce_intelligence
+Lack of robust error handling and validation for user data inputs. | 1 | G2 | ai_workforce_intelligence
+Complex reporting logic seems beyond the initial data processing and simple calculations detailed in intake. | 1 | G2 | ai_workforce_intelligence
+Error handling in `create_integration` function does not account for specific types of exceptions, leading to potential rollback failures. | 1 | G2 | ai_workforce_intelligence
+There is a missing None check for `assessment_id` in the `get_assessment` function. | 1 | G2 | ai_workforce_intelligence
+The method `calculate_kpi_scores` does not validate the presence of `assessment` after querying the database. | 1 | G2 | ai_workforce_intelligence
+The list of HRIS integrations does not filter by consultant_id, causing a breach of data isolation between consultants. | 1 | G2 | ai_workforce_intelligence
+HRIS integration creation does not set consultant_id, leading to potential data mix-ups. | 1 | G2 | ai_workforce_intelligence
+The assessment validation raises a generic ValueError rather than a specific exception that can be handled gracefully. | 1 | G2 | ai_workforce_intelligence
+The test assertion for the response status code in `test_create_consultant` uses `200` while it should be `201`. | 1 | G2 | ai_workforce_intelligence
+The test assertion for the response status code in `test_create_assessment` uses `200` while it should be `201`. | 1 | G2 | ai_workforce_intelligence
+Test for 200 status code instead of 201 in POST request tests for assessment creation. | 1 | G2 | ai_workforce_intelligence
+Inconsistent use of the status code for creation operations. | 1 | G2 | ai_workforce_intelligence
+The method `createInvoice` references fields like `amount`, `invoiceData.clientId`, `invoiceData.dueDate` that are not present in the constructor of the `Invoice` class. | 1 | G2 | freelance_invoice_tracker
+Test files are present with tests, however, there's no confirmation on whether they cover all required functionalities mentioned in the intake requirements. For a production build, thorough test coverage is essential. | 1 | G2 | freelance_invoice_tracker
+The `ReportService` provides comprehensive financial summary and client-specific reports which could be considered a new business capability not explicitly mentioned in the intake requirements. | 1 | G2 | freelance_invoice_tracker
+Function `createInvoice` tries to call `calculateTotal` but no method named `calculateTotal` exists in `Invoice` class. | 1 | G2 | freelance_invoice_tracker
+Function `addLineItem` attempts to access `invoice.lineItems` directly which does not exist as an array in the database schema design. | 1 | G2 | freelance_invoice_tracker
+Test files are missing entirely. | 1 | G2 | freelance_invoice_tracker
+Configuration for reminders grace period and uploadsDir is not specified in the intake requirements. | 1 | G2 | freelance_invoice_tracker
+Route `/dashboard/stats` provides information which implies a dashboard feature. Dashboard was not specified in the intake requirements. | 1 | G2 | freelance_invoice_tracker
+Dashboard component is implemented when not specified in the intake requirements. | 1 | G2 | freelance_invoice_tracker
+Invoice status defaults to 'pending', which is inconsistent with the Invoice model that uses 'unpaid'. | 1 | G2 | freelance_invoice_tracker
+The inclusion of configurable overdue reminders at 7, 14, and 30 days. | 1 | G2 | freelance_invoice_tracker
+The code uses a hardcoded test card number in the `createPaymentMethod` function. | 1 | G2 | wynwood_thoroughbreds
+Although tasks for email automation and merchandise store integration were mentioned in Pass 2 under component templates selected, there is no clear implementation or mention of tasks related to them in the output. | 1 | G2 | wynwood_thoroughbreds
+The payment processor uses placeholder values like 'pk_test_your_stripe_public_key' and mock endpoints such as '/api/*'. It's not clear if actual API keys or integration with backend services were set up as per requirements. | 1 | G2 | wynwood_thoroughbreds
+The README and content implementation suggests advanced analytics and performance trends, which appear to extend beyond the intake requirements for just providing membership access and updates. | 1 | G2 | wynwood_thoroughbreds
+Member dashboard does not appear to load correctly for authenticated users upon login. | 1 | G2 | wynwood_thoroughbreds
+Products from Shopify are static and do not fetch from a live Shopify endpoint. | 1 | G2 | wynwood_thoroughbreds
+Pricing and tiers stated do not match those provided in the intake requirements ($500-$2000 tiers). | 1 | G2 | wynwood_thoroughbreds
+No mention of mobile-responsive design, which was a question from the hero and assumed to be implemented. | 1 | G2 | wynwood_thoroughbreds
+Surprise features like search functionality were implemented, which were not part of original specifications. | 1 | G2 | wynwood_thoroughbreds
+Simulated API call responds with test users, which doesn't reflect an actual functional authentication system. | 1 | G2 | wynwood_thoroughbreds
+Pricing in README states Premium Tier is $29/month and Elite is $99/month, which doesn't match the intake requirement of $500-$2000. | 1 | G2 | wynwood_thoroughbreds
+The pricing and tiers in the membership section do not match the revised summarized BDR pricing plans mentioned in the intake ($500-$2000 tiers). | 1 | G2 | wynwood_thoroughbreds
+Authentication simulation is hardcoded without real verification against a backend API. | 1 | G2 | wynwood_thoroughbreds
+Login modal does not use secure sessions or depend on real session management. | 1 | G2 | wynwood_thoroughbreds
+Uses `localStorage` for storing potentially sensitive information. | 1 | G2 | wynwood_thoroughbreds
+Incorrect membership pricing listed under 'Membership Tiers' compared to the intake requirements. | 1 | G2 | wynwood_thoroughbreds
+Pricing text doesn't match the specified intake requirement for the Premium tier. | 1 | G2 | wynwood_thoroughbreds
+Simulated payment process uses hardcoded initiation, not actual Stripe integration. | 1 | G2 | wynwood_thoroughbreds
+Duplicate logout function; likely causes confusion and potential misbehavior in the logout process. | 1 | G2 | wynwood_thoroughbreds
+CSS variables such as `var(--primary-color)` are being used without being defined within the CSS file or a global style sheet. | 1 | G2 | wynwood_thoroughbreds
+The package description and some dependencies (e.g., project name as "mma-gym-website") related to a gym website are inappropriate for the horse ownership syndicate platform. | 1 | G2 | wynwood_thoroughbreds
+Describes features of an MMA gym website, not the Wynwood Thoroughbreds horse ownership syndicate. | 1 | G2 | wynwood_thoroughbreds
+Files and configuration are set up for a gym website, including references to MMA and associated data, which are not part of the intake requirements for Wynwood Thoroughbreds. | 1 | G2 | wynwood_thoroughbreds
+The sellShares function does not properly update the portfolio after shares are sold. | 1 | G2 | wynwood_thoroughbreds
+Error handling for invalid login credentials is not user-friendly. | 1 | G2 | wynwood_thoroughbreds
+The registration process should trigger a payment validation step after registration but before dashboard display. | 1 | G2 | wynwood_thoroughbreds
+Automated horse performance updates are not configurable as specified in the intake requirements. | 1 | G2 | wynwood_thoroughbreds
+Implementation includes styles related to performance charts which were not specified in the intake requirements. | 1 | G2 | wynwood_thoroughbreds
+The implemented code relies heavily on a placeholder API (VoiceAI Platform) which does not relate to the current intake requirements focusing on a Boutique Horse Ownership Syndicate. | 1 | G2 | wynwood_thoroughbreds
+Features unrelated to the horse ownership syndicate project (e.g., speech-to-text, voice cloning) are present. | 1 | G2 | wynwood_thoroughbreds
+Contains functions and UI components for a generic AI platform, not aligned with the syndicate project. | 1 | G2 | wynwood_thoroughbreds
+The README content completely deviates, discussing VoiceAI Platform setup and API. This does not correspond to Wynwood Thoroughbreds. | 1 | G2 | wynwood_thoroughbreds
+The button for selecting the 'Join Elite' membership tier lacks functionality to trigger the proper process. | 1 | G2 | wynwood_thoroughbreds
+Function `processPayment` does not redirect to payment confirmation page upon successful payment processing. | 1 | G2 | wynwood_thoroughbreds
+Error handling when fetching recent activity logs. | 1 | G2 | wynwood_thoroughbreds
+"License" section is included while no such requirement specified within the intake. | 1 | G2 | wynwood_thoroughbreds
+CSS includes styles for a modal with different specifications not aligned with the declared sections (e.g. 'Contact' that doesn't exist). | 1 | G2 | wynwood_thoroughbreds
+The variable `mobileMenuBtn` points to an element with the class `.mobile-menu-btn`, which is not present in the HTML structure. | 1 | G2 | wynwood_thoroughbreds
+The method `getBreedingAnalysis()` is called on `racingDataService`, but it's not defined anywhere in the mock services. | 1 | G2 | wynwood_thoroughbreds
+Requires environment validation but lacks detailed error-handling logic. The catch block in mock services doesn't cover proper error logs. | 1 | G2 | wynwood_thoroughbreds
+The README.md file describes a different website ("Hickory Ridge Stables") unrelated to Wynwood Thoroughbreds. | 1 | G2 | wynwood_thoroughbreds
+The `manifest.json` file indicates the app is named "Moonshadow Ranch", which doesn't align with the intake requirements for "Wynwood Thoroughbreds." | 1 | G2 | wynwood_thoroughbreds
+The README references features and branding for "Moonshadow Ranch," which were not stated in the intake requirements. Additionally, it mentions a PWA (Progressive Web App) capability, which was not part of the specified scope. | 1 | G2 | wynwood_thoroughbreds
+The primary headers are styled with Arial sans-serif instead of Georgia serif as specified in the README. | 1 | G2 | wynwood_thoroughbreds
+Inconsistent terminology is used for member communications, missing a prompt for compliance checking communication logs. | 1 | G2 | wynwood_thoroughbreds
+There is mention of contact and carousel features which were not included in the intake requirements. | 1 | G2 | wynwood_thoroughbreds
+`trackEvent` method shows tracked events only in the console, not sending data to an analytics endpoint. | 1 | G2 | wynwood_thoroughbreds
+"Responsive design for all devices" and "Offline functionality" are mentioned in the README, but were not specified in the intake requirements. | 1 | G2 | wynwood_thoroughbreds
+The system has a defined analytics and notification system, including real-time notifications and a detailed tracking structure, which goes beyond the intake scope. | 1 | G2 | wynwood_thoroughbreds
+Duplicate function `processPayment` is defined with inconsistent logic. | 1 | G2 | wynwood_thoroughbreds
+Membership tiers mentioned (Bronze, Gold, Platinum) do not correspond with tiers in the intake (Basic, Premium, Elite). | 1 | G2 | wynwood_thoroughbreds
+Describes features such as "Dark Mode Support", "Print Friendly", and "High DPI Displays" which were not part of the intake scope. | 1 | G2 | wynwood_thoroughbreds
+The 'toggleAuthForms()' function implementation assumes both the login and registration forms have the 'hidden' class initially, which may not always be the case if one is visible after an operation like user logout. | 1 | G2 | wynwood_thoroughbreds
+A file named 'config/racing' is referenced in the provided file list but is missing. | 1 | G2 | wynwood_thoroughbreds
+Duplicate class management for `WynwoodApp` | 1 | G2 | wynwood_thoroughbreds
+Incorrect project name and details related to a fitness club. | 1 | G2 | wynwood_thoroughbreds
+The CSS references unrelated elements like `events-grid` and `gallery-grid`. | 1 | G2 | wynwood_thoroughbreds
+Implementation includes excessive responsive and accessibility features not specified in the intake. | 1 | G2 | wynwood_thoroughbreds
+The payment handling in registration is mocked and does not simulate real Stripe payment validation. | 1 | G2 | wynwood_thoroughbreds
+The dashboard is displaying static content for horse updates instead of loading dynamic data. | 1 | G2 | wynwood_thoroughbreds
+The README file does not include instructions for setting up database migration or data initialization as per the stated need for dynamic data integration. | 1 | G2 | wynwood_thoroughbreds
+Overly simplistic design with no evident member engagement tracking, which was highlighted in the requirement document. | 1 | G2 | wynwood_thoroughbreds
+Contains additional responsive design features which were noted to be beyond scope. | 1 | G2 | wynwood_thoroughbreds
+`client_data` in `test_create_client()` function uses `size` instead of `employee_count`. | 1 | G2 | ai_workforce_intelligence
+`client_id` is hardcoded to 1 in `test_create_assessment()`. | 1 | G2 | ai_workforce_intelligence
+Incorrect test logic for `test_calculate_score()`, does not match implemented route structure. | 1 | G2 | ai_workforce_intelligence
+Default test client usage without authentication. | 1 | G2 | ai_workforce_intelligence
+The hardcoded URL `http://localhost:8000` in front-end components. | 1 | G2 | ai_workforce_intelligence
+Missing script for starting backend server. | 1 | G2 | ai_workforce_intelligence
+`success` attribute doesn't reflect realistic update endpoint response. | 1 | G2 | ai_workforce_intelligence
+The webhook handler doesn't properly handle all critical Stripe events; it only checks `checkout.session.completed` and `customer.subscription.deleted`. Missing other potential critical events like `payment_intent.succeeded`. | 1 | G2 | wynwood_thoroughbreds
+The callback URL on successful payment does not accurately verify the session's success, potentially leading to incorrect membership upgrades. | 1 | G2 | wynwood_thoroughbreds
+The `next` version specified as 14.0.0 is not released. | 1 | G2 | wynwood_thoroughbreds
+Horse update integration does not specify how updates are triggered (polling vs push), nor is there clarity around how accurate/consistent update timings are ensured. This was questioned in the initial intake if it is batch or real-time. | 1 | G2 | wynwood_thoroughbreds
+Error handling logic does not account for potential null session return from Stripe. | 1 | G2 | wynwood_thoroughbreds
+The system does not properly handle possible errors returned from Supabase queries. | 1 | G2 | wynwood_thoroughbreds
+The actual implementation mentions batch updates but does not provide real-time updates, which was a question in the intake. | 1 | G2 | wynwood_thoroughbreds
+The feature for synthesizing these analyses was not outlined in the intake specifications. | 1 | G2 | adversarial_ai_validator_p1
+The code uses Flask imports `Blueprint`, `request`, `jsonify` in what should be a FastAPI application. | 1 | G2 | ai_workforce_intelligence
+Flask is used to define the application instance in what should be a FastAPI application according to the boilerplate specification. | 1 | G2 | ai_workforce_intelligence
+The required file structure for front-end pages is missing; there are no valid `.jsx` files under `business/frontend/pages/` | 1 | G2 | ai_workforce_intelligence
+Potential lack of clarity in user feedback when handling errors. | 1 | G2 | ai_workforce_intelligence
+Missing required file for integration documentation. | 1 | G2 | ai_workforce_intelligence
+The code attempts to decode a JWT token but does not properly handle the `bearer` token scheme. | 1 | G2 | ai_workforce_intelligence
+No actual form submission handling logic beyond console log | 1 | G2 | wynwood_thoroughbreds
+Educational content access control based on membership tier is present, but actual access restriction logic is unclear or missing in snippets reviewed | 1 | G2 | wynwood_thoroughbreds
+Use of advanced icons and features not specified in intake requirements, particularly some UI features like newsletters and more advanced searching/filtering options | 1 | G2 | wynwood_thoroughbreds
+Contact form submission logic contains an incomplete implementation, causing form submissions to fail in certain conditions. | 1 | G2 | wynwood_thoroughbreds
+The `renderAccessDeniedMessage` function renders the access denied message even for members with appropriate access when the category is changed. | 1 | G2 | wynwood_thoroughbreds
+Default `isOwner` property which should determine ownership-related rendering logic is not being used correctly. | 1 | G2 | wynwood_thoroughbreds
+Social media links and additional footer content were not specified in the intake requirements. | 1 | G2 | wynwood_thoroughbreds
+The `getSharePercentage()` method is being invoked without providing a `memberId`. | 1 | G2 | wynwood_thoroughbreds
+Missing the required `package.json` file in the `business` directory. | 1 | G2 | adversarial_ai_validator_integrate_openai_sdk_for_adversary_role_
+Required fields were not being enforced on the client creation form. | 1 | G2 | adversarial_ai_validator_integrate_openai_sdk_for_adversary_role_
+The build includes a new endpoint for listing available integrations, which was not part of the intake specification. | 1 | G2 | adversarial_ai_validator_integrate_openai_sdk_for_adversary_role_
+The processing status should not include "completed" unless explicitly defined in the minimum viable product (MVP) criteria of the intake. | 1 | G2 | adversarial_ai_validator_integrate_openai_sdk_for_adversary_role_
+Missing provides for the assessments routing expose details on restrictions for data access and validation. | 1 | G2 | ai_workforce_intelligence
+Use of `status` to indicate workflow state for assessments is not included in intake requirements' features. | 1 | G2 | ai_workforce_intelligence
+Missing inclusion checks for the report status check, as well as client context. | 1 | G2 | ai_workforce_intelligence
+The intake requires a structured data input form for client assessments, but no direct call handling for generating assessments is visible in this specific file. | 1 | G2 | ai_workforce_intelligence
+The provided package.json file lacks essential scripts for build and test as per standard practices for the required functionalities. | 1 | G2 | ai_workforce_intelligence
+This model appears to introduce additional reporting capabilities that were not outlined in the intake. | 1 | G2 | ai_workforce_intelligence
+The file imports and uses components/logic associated with a client management system, which is not specified in the intake requirements. | 1 | G2 | ai_workforce_intelligence
+The implementation introduces an additional method (`to_dict`) for report objects, which provides serialization logic not specified in the intake. | 1 | G2 | ai_workforce_intelligence
+The intake does not specify the requirement for a client management feature as a deliverable. | 1 | G2 | ai_workforce_intelligence
+The intake does not specify the requirement for client listing features, indicating they are outside the defined MVP scope. | 1 | G2 | ai_workforce_intelligence
+The implementation introduces a `status` field that is not included in intake requirements. | 1 | G2 | ai_workforce_intelligence
+The report model contains logic and properties beyond what was described in the intake specifications. | 1 | G2 | ai_workforce_intelligence
+The file includes a client management feature that was not specified in the intake. | 1 | G2 | ai_workforce_intelligence
+Similar to the previous defect, this file introduces a standalone client management system not specified in the intake requirements. | 1 | G2 | ai_workforce_intelligence
+The generation of a workforce intelligence report from assessments seems to extend beyond the defined scope of features as per the intake. | 1 | G2 | ai_workforce_intelligence
+The analysis capabilities provided seem to extend beyond what's outlined in the intake specifications. | 1 | G2 | ai_workforce_intelligence
+There is a POST endpoint for creating client profiles, which exceeds the defined requirements in the intake. | 1 | G2 | ai_workforce_intelligence
+The implementation is using in-memory storage for reports, which was not described in the intake. | 1 | G2 | ai_workforce_intelligence
+The file contains a POST endpoint for creating clients, which exceeds the defined requirements in the intake. | 1 | G2 | ai_workforce_intelligence
+The provided package.json file does not have essential scripts for building and testing, deviating from expected standards. | 1 | G2 | ai_workforce_intelligence
+The report model contains additional fields and methods that introduce complexity not specified in the intake. | 1 | G2 | ai_workforce_intelligence
+The implementation is lacking a proper check for the `assessment` state after fetching. | 1 | G2 | ai_workforce_intelligence
+The implementation provides CRUD endpoints for clients, which exceeds what is specified in the intake. | 1 | G2 | ai_workforce_intelligence
+The addition of engagement functionality is unnecessary and not specified in the intake. | 1 | G2 | ai_workforce_intelligence
+The report model contains additional fields that introduce complexity not specified in the intake. | 1 | G2 | ai_workforce_intelligence
+The feature for report generation based on assessments is implemented, but this report generation feature is not found in the intake specifications. | 1 | G2 | ai_workforce_intelligence
+Report viewing functionality is implemented, but viewing reports is not defined in the intake requirements as a core feature. | 1 | G2 | ai_workforce_intelligence
+Status field is not part of the defined model expectations in the intake specifications. | 1 | G2 | ai_workforce_intelligence
+The API handling does not adequately manage error responses, which could lead to application crashes or unhandled failures in production. | 1 | G2 | ai_workforce_intelligence
+This endpoint introduces new functionality not defined within the intake — collection of workforce data. | 1 | G2 | ai_workforce_intelligence
+The analytics model introduces scope that wasn’t requested nor defined in the intake. | 1 | G2 | ai_workforce_intelligence
+Additional route for handling workforce data is not mentioned in the intake. | 1 | G2 | ai_workforce_intelligence
+The recommendations field is introduced while detailed recommendations were not specified. | 1 | G2 | ai_workforce_intelligence
+New charts are potentially added without mention in the intake. | 1 | G2 | ai_workforce_intelligence
+The status field introduces additional complexity not specified in the intake requirements which simply defined the report generation. | 1 | G2 | ai_workforce_intelligence
+The implementation provides PUT endpoints for updating clients, which exceed what is specified in the intake. | 1 | G2 | ai_workforce_intelligence
+The file introduces a GET endpoint for accessing individual clients, which is not requested in the intake. | 1 | G2 | ai_workforce_intelligence
+The introduction of an analytics model appears to extend beyond the scope specified in the intake. | 1 | G2 | ai_workforce_intelligence
+This endpoint introduces engagement functionality not specified in the intake. | 1 | G2 | ai_workforce_intelligence
+This endpoint introduces workforce data functionalities that exceed defined parameters in the intake. | 1 | G2 | ai_workforce_intelligence
+The report model suggests additional complexity not specified in the intake requirements which only outline basic outputs. | 1 | G2 | ai_workforce_intelligence
+The feature of individual client profile retrieval (`/client-profile`) is not specified in the intake. | 1 | G2 | ai_workforce_intelligence
+The feature only allowing listing of existing clients should not introduce functionality that implies individual client management or retrieval. | 1 | G2 | ai_workforce_intelligence
+The report model has a complexity in its definitions not specified in the intake that outlines simple output requirements. | 1 | G2 | ai_workforce_intelligence
+Specific scripts required for building and testing were not provided in the package.json. | 1 | G2 | ai_workforce_intelligence
+The code includes a `GET` endpoint for listing clients and individual profile retrieval, which is not specified in the intake. | 1 | G2 | ai_workforce_intelligence
+The code introduces engagement-related endpoints which are not part of the intake requirements. | 1 | G2 | ai_workforce_intelligence
+The code introduces a `GET` endpoint for listing clients that is not part of the intake requirements. | 1 | G2 | ai_workforce_intelligence
+The model has added complexity not defined in the intake that outlines simple output requirements. | 1 | G2 | ai_workforce_intelligence
+The endpoint introduces workforce data functionalities that exceed defined parameters in the intake. | 1 | G2 | ai_workforce_intelligence
+The behaviors and tracking required for workforce data exceed what was requested in the intake. | 1 | G2 | ai_workforce_intelligence
+The implementation introduces a `GET` endpoint for listing clients that is not part of the intake requirements. | 1 | G2 | ai_workforce_intelligence
+The `report.py` model has added complexity not defined in the intake that outlines simple output requirements. | 1 | G2 | ai_workforce_intelligence
+The `Engagement` model and related endpoints provide client management features not included in the scope. | 1 | G2 | ai_workforce_intelligence
+The intake specifies no need for client management as a feature. | 1 | G2 | ai_workforce_intelligence
+The implementation includes attributes that introduce complexity beyond what is specified in the intake. | 1 | G2 | ai_workforce_intelligence
+Attributes are introduced in the report model that are outside the basics outlined in the intake. | 1 | G2 | ai_workforce_intelligence
+The `client_id` field is not clearly specified in the intake requirements as necessary. | 1 | G2 | ai_workforce_intelligence
+The `POST` endpoint for creating clients introduces client management features not defined in the intake requirements. | 1 | G2 | ai_workforce_intelligence
+The `Engagement` model and related endpoints provide client management features not included in the intake. | 1 | G2 | ai_workforce_intelligence
+The `Report` model introduces complexities such as title and content that are outside the basics outlined in the intake. | 1 | G2 | ai_workforce_intelligence
+This file exists but does not implement any endpoints for client management, which is aligned with intake. | 1 | G2 | ai_workforce_intelligence
+The assessment model includes a `data` column which could imply complex nested data not specified in the intake. | 1 | G2 | ai_workforce_intelligence
+The intake does not specify any requirements for client engagement tracking functionalities. | 1 | G2 | ai_workforce_intelligence
+Intake definitions do not explicitly request any features for workforce data management. | 1 | G2 | ai_workforce_intelligence
+The `clients.py` file exists but should not have implemented any endpoints as this was not specified in intake. | 1 | G2 | ai_workforce_intelligence
+The implementation includes features and functionality associated with assessment management that were not outlined in the intake requirements. | 1 | G2 | ai_workforce_intelligence
+The workforce data model introduces functionalities that are not requested in the intake specifications. | 1 | G2 | ai_workforce_intelligence
+The code used to retrieve the access token from the Auth0 `user` object is incorrect. | 1 | G2 | ai_workforce_intelligence
+The workforce data model has functionalities not specified in the intake, leading to scope creep. | 1 | G2 | ai_workforce_intelligence
+The file contains engagement endpoints, which introduces engagement tracking functionality not specified in the intake. | 1 | G2 | ai_workforce_intelligence
+The implementation introduces functionality not specified in the intake requirements — specifically, workforce data management features. | 1 | G2 | ai_workforce_intelligence
+The model contains attributes that introduce complexity beyond what is specified in the intake. | 1 | G2 | ai_workforce_intelligence
+This file should not exist per intake requirements. There should be no client management endpoints, as this scope was explicitly excluded. | 1 | G2 | ai_workforce_intelligence
+This file should not exist as it introduces functionality not specified in the intake. | 1 | G2 | ai_workforce_intelligence
+This model introduces engagements functionality that is not defined in the intake. | 1 | G2 | ai_workforce_intelligence
+The Assessment model is improperly defined with additional fields that introduce complexity beyond what is specified in the intake. | 1 | G2 | ai_workforce_intelligence
+The file is present but contains no endpoints as client management is outside the intake. | 1 | G2 | ai_workforce_intelligence
+The file contains no endpoints as there are no client management requirements in the intake. | 1 | G2 | ai_workforce_intelligence
+The file is empty and does not conform to the intake requirements, which specify no client management functionality. | 1 | G2 | ai_workforce_intelligence
+Similar to `client.py`, this file is empty and redundant, not aligning with the intake requirements. | 1 | G2 | ai_workforce_intelligence
+The Analytics model adds additional complexity which is beyond the scope defined in the intake. Specifically, it adds metrics that are not explicitly required by the intake. | 1 | G2 | ai_workforce_intelligence
+The API for analytics seems to allow manipulations and measurements not included in the scope, specifically the addition of various metrics without justification from the intake. | 1 | G2 | ai_workforce_intelligence
+The tests are targeting a feature (analytics metrics) that exceeds the scope outlined in the intake. | 1 | G2 | ai_workforce_intelligence
+The implementation introduces features that were not mentioned in the intake, specifically about client management related to assessments. | 1 | G2 | ai_workforce_intelligence
+The Assessment model is introducing complexity with fields that are not specified in the intake. | 1 | G2 | ai_workforce_intelligence
+This file does not adhere to the intake requirements, which specify no client management functionality. | 1 | G2 | ai_workforce_intelligence
+The model introduces attributes such as `owner_id` and `data` that add unnecessary complexity outside the defined basic assessment tasks. | 1 | G2 | ai_workforce_intelligence
+The Analytics model should only contain fields and functionalities that are consistent with the intake requirements. | 1 | G2 | ai_workforce_intelligence
+Flask patterns and in-memory storage are used in the backend. | 1 | G2 | ai_workforce_intelligence
+Uses Flask, which is inconsistent with the FastAPI structure used in other parts of the backend. | 1 | G2 | ai_workforce_intelligence
+Missing .jsx frontend files in the `business/frontend/pages/` directory. | 1 | G2 | ai_workforce_intelligence
+Test cases are written for deleted models and incorrect attributes in the current build configuration. | 1 | G2 | ai_workforce_intelligence
+Test functions `test_calculate_readiness_score` use non-existent function in `ScoringService`. | 1 | G2 | ai_workforce_intelligence
+Function to create FastAPI app (`create_app`) is missing | 1 | G2 | ai_workforce_intelligence
+Test references `create_app` function not present in `business/backend/app.py` | 1 | G2 | ai_workforce_intelligence
+`normalize_kpi_score` function calls have incorrect parameters | 1 | G2 | ai_workforce_intelligence
+Tests depend on client IDs that are hard-coded | 1 | G2 | ai_workforce_intelligence
+The file defines a Report class and FastAPI routes within the same module | 1 | G2 | ai_workforce_intelligence
+There is no functionality for adding clients or generating reports | 1 | G2 | ai_workforce_intelligence
+Implementation of real-time scoring engine not specified in intake. | 1 | G2 | ai_workforce_intelligence
+Missing frontend functionality for "Narrative summary generator" | 1 | G2 | ai_workforce_intelligence
+Incorrect use of get_tenant_db without passing user's current tenant ID | 1 | G2 | ai_workforce_intelligence
+Multi-tenant architecture implemented instead of single-tenant as specified | 1 | G2 | ai_workforce_intelligence
+Missing relationship for reports in Client model leads to undefined report relationship | 1 | G2 | ai_workforce_intelligence
+Missing verification of report title before creating report | 1 | G2 | ai_workforce_intelligence
+Mishandled POST data `kpi_id` in test_create_assessment | 1 | G2 | ai_workforce_intelligence
+The README-INTEGRATION.md file mentions a multi-tenant architecture, which is not aligned with the single-tenant consultant MVP requirement specified in the intake. | 1 | G2 | ai_workforce_intelligence
+The test_calculate_composite_score function references a non-existent function calculate_composite_score. | 1 | G2 | ai_workforce_intelligence
+`business/README-INTEGRATION.md` must be present. | 1 | G2 | ai_workforce_intelligence
+Usage of custom normalization functions `normalize_ttc`, `normalize_pdpt`, `normalize_rpl`, `normalize_bci`, and `normalize_imv` that are not defined. | 1 | G2 | ai_workforce_intelligence
+The dashboard includes both client management and report management, which were not specified as separate user-facing features in the intake document. | 1 | G2 | ai_workforce_intelligence
+Hardcoded data instead of API fetch call alternatives should be used. | 1 | G2 | ai_workforce_intelligence
+Missing `business/README-INTEGRATION.md`. | 1 | G2 | ai_workforce_intelligence
+KPI `data_type` is missing. Each KPI should clearly define its type. | 1 | G2 | ai_workforce_intelligence
+The `normalize_kpi_score` and `calculate_composite_score` methods from `services.ScoringService` are called with incorrect parameters. | 1 | G2 | ai_workforce_intelligence
+The method `generate_narrative_summary` is called with three parameters, but it doesn't exist or match the implemented function parameters. | 1 | G2 | ai_workforce_intelligence
+The component hardcodes average performance metrics without pulling live data. | 1 | G2 | ai_workforce_intelligence
+The `README-INTEGRATION.md` does not specify the required presence of a `business/package.json`. | 1 | G2 | ai_workforce_intelligence
+The method `add_kpi_data` uses `Client` as a foreign key, which may result in incorrect foreign key constraint checks due to improper casing of the table name. | 1 | G2 | ai_workforce_intelligence
+Tests are using incorrect model import and variables `clients` that are not part of the API response. | 1 | G2 | ai_workforce_intelligence
+The method name `get_kpi_data` overlaps with the use of a GET route `/assessments/{assessment_id}/kpi-data`, which could lead to a name conflict and unclear purpose. | 1 | G2 | ai_workforce_intelligence
+The `calculate_composite_score` function isn’t defined anywhere in `ScoringService.py`, yet it's used in `business/backend/routes/scoring.py`. | 1 | G2 | ai_workforce_intelligence
+There is mention of assessments in backend routes, but there is no corresponding `Assessments.jsx` page in `business/frontend/pages/`. | 1 | G2 | ai_workforce_intelligence
+Business logic includes files such as `business/backend/__init__.py` and `business/tests/conftest.py` | 1 | G2 | ai_workforce_intelligence
+There are files such as `Assessments.jsx` and `Dashboard.jsx`, implying frontend logic mixing within business module. | 1 | G2 | ai_workforce_intelligence
+Some models contain additional fields that do not necessarily expand the business logic outlined, verging on over-scoping with same pattern present in multiple files. | 1 | G2 | ai_workforce_intelligence
+Redundant imports and field initializations that increase cognitive overload and potential issues. | 1 | G2 | ai_workforce_intelligence
+Test cases appear to be artificially constructed without effectively validating integrated services functionality. | 1 | G2 | ai_workforce_intelligence
+Hardcoded API endpoint in frontend. | 1 | G2 | ai_workforce_intelligence
+Missing authentication dependency in route. | 1 | G2 | ai_workforce_intelligence
+Duplicate model definition for KPIData. | 1 | G2 | ai_workforce_intelligence
+Test references non-existent endpoint '/api/reports/1/download'. | 1 | G2 | ai_workforce_intelligence
+Service for generating KPI visualizations and charts not requested in intake. | 1 | G2 | ai_workforce_intelligence
+Client ID is hardcoded in tests. | 1 | G2 | ai_workforce_intelligence
+Advanced analytics beyond the phase 1 scope. | 1 | G2 | ai_workforce_intelligence
+Redundant code in handling KPIData entries. | 1 | G2 | ai_workforce_intelligence
+Missing `business/frontend/pages/*.jsx` file | 1 | G2 | ai_workforce_intelligence
+Missing `business/backend/routes/*.py` file | 1 | G2 | ai_workforce_intelligence
+Incorrect use of `owner_id` hardcoded | 1 | G2 | ai_workforce_intelligence
+Custom implementation of JSON conversion | 1 | G2 | ai_workforce_intelligence
+There is a missing method that should handle the horse's breeding data, even though a method call is made to update it. | 1 | G2 | wynwood_thoroughbreds_p1
+Required frontend pages in the build output did not match the expected structure. | 1 | G2 | ai_workforce_intelligence
+The enhanced AI report generation is not within the scope outlined in the intake. | 1 | G2 | ai_workforce_intelligence
+Required validation fields are not enforced as per the intake requirements for creating clients. | 1 | G2 | ai_workforce_intelligence
+Addition of the `status` property represents new functionality outside of the specified scope. | 1 | G2 | ai_workforce_intelligence
+The `status` column represents new functionality not specified in the intake. | 1 | G2 | ai_workforce_intelligence
+SQLAlchemy and other standard library modules should not be included as external dependencies. | 1 | G2 | ai_workforce_intelligence
+The addition of `status` represents new functionality outside of the specified scope. | 1 | G2 | ai_workforce_intelligence
+The employee comparison component introduces new functionality not included in the initial intake. | 1 | G2 | ai_workforce_intelligence
+The inclusion of extensive fields in the model potentially exceeds intake specifications. | 1 | G2 | ai_workforce_intelligence
+The structure of the Assessment model includes excessive fields beyond the intake requirements. | 1 | G2 | ai_workforce_intelligence
+Inclusion of fields in the report model that don't align with the core required functionality specified in the intake. | 1 | G2 | ai_workforce_intelligence
+Generating detailed reports cannot be included as a feature beyond the scope of the intake. | 1 | G2 | ai_workforce_intelligence
+The Trend Analysis component implements features not outlined in the intake. | 1 | G2 | ai_workforce_intelligence
+The inclusion of the `status` column implies functionality that was not specified in the intake. | 1 | G2 | ai_workforce_intelligence
+Enhanced features related to KPI calculations are beyond the specified requirements in the intake. | 1 | G2 | ai_workforce_intelligence
+The Dashboard component structure does not align with the expected design as outlined in the intake. | 1 | G2 | ai_workforce_intelligence
+The inclusion of the `status` field constitutes additional functionality not required in the intake. | 1 | G2 | ai_workforce_intelligence
+The model includes fields that suggest additional functionality not specified in intake (e.g., a `description` field). | 1 | G2 | ai_workforce_intelligence
+Inclusion of `ttc_data`, `pdpt_data`, `rpl_data`, etc., implies additional reporting functionalities beyond the intake. | 1 | G2 | ai_workforce_intelligence
+The sync method is trying to use a non-existent `sync_data` function of the `HRISService`. | 1 | G2 | ai_workforce_intelligence
+The API ingestion is supposed to be formalized with more precision for HRIS data as per intake requirements. | 1 | G2 | ai_workforce_intelligence
+The build uses a simulated approach to sync HRIS data rather than directly integrating with specified APIs. | 1 | G2 | ai_workforce_intelligence
+Including `detailed_analysis` and `action_plan` templates for reports which was not specified in the intake. | 1 | G2 | ai_workforce_intelligence
+The absence of test files | 1 | G2 | property_manager_maintenance_scheduler
+The `generate_report` function does not handle scenarios where the report format is not specified or is null. | 1 | G2 | ai_workforce_intelligence
+The "ai_readiness" default value in `assessmentData` is set to 1, which may cause logical errors if the client does not progress beyond the first step. | 1 | G2 | ai_workforce_intelligence
+Recommendations endpoint (`/api/assessments/${assessmentId}/recommendations`) is used without verification of its availability or implementation in the backend. | 1 | G2 | ai_workforce_intelligence
+The function `create_assessment` does not validate AI readiness factors or calculate the `overall_score` correctly. | 1 | G2 | ai_workforce_intelligence
+The calculation for `overallScore` does not consider empty categories correctly when calculating averages. | 1 | G2 | ai_workforce_intelligence
+The KPI weights exceed the implied standard weight limits in the intake requirements. | 1 | G2 | ai_workforce_intelligence
+The inclusion of specific category scores (like productivity, engagement) not specified in the intake. | 1 | G2 | ai_workforce_intelligence
+Mock data is being returned instead of actual database queries. | 1 | G2 | ai_workforce_intelligence
+Division by zero check is incomplete; edge case where `totalWeight` is zero could crash the application if `validMetrics` is not zero. | 1 | G2 | ai_workforce_intelligence
+The weights in the KPI definition don't have a total exactly equal to 1.0. | 1 | G2 | ai_workforce_intelligence
+Multi-client data isolation requirement not enforced; services do not verify the client ID association with the consultant. | 1 | G2 | ai_workforce_intelligence
+The `sync_hris_data` function does not properly handle cases where HRIS data fetch might fail. | 1 | G2 | ai_workforce_intelligence
+In the `calculateOverallScore` function, the conditional check `validMetrics.length === 0` is unnecessary in the return statement as it's already checked and would avoid division by zero earlier. | 1 | G2 | ai_workforce_intelligence
+The Joi schema for `kpi_scores` allows minimal validation; properties like `actual_value` and `target_value` should potentially be mandatory to prevent logical errors. | 1 | G2 | ai_workforce_intelligence
+Mock ID generation adds 1 to the length of data, which can cause duplicate IDs. | 1 | G2 | ai_workforce_intelligence
+Fixed assessment ID is used in API call for submitting assessment data, which should be dynamic or at least validated. | 1 | G2 | ai_workforce_intelligence
+The mock scoring logic may not accurately represent the complexity needed for the KPI scoring engine. | 1 | G2 | ai_workforce_intelligence
+Assessment step uses hardcoded consultant ID. | 1 | G2 | ai_workforce_intelligence
+Reports are generated with a mock implementation and hardcoded data, which does not adhere to required report generation pipeline. | 1 | G2 | ai_workforce_intelligence
+Inclusion of extraneous dependencies related to UI enhancements that were not specified in the intake. | 1 | G2 | ai_workforce_intelligence
+The variable `ai_adoption_score` is used without declaration, potentially leading to an error. | 1 | G2 | ai_workforce_intelligence
+Some keys such as 'immediate_actions', 'short_term_priorities', and 'long_term_strategy' are not explicitly mentioned as required in the intake but are being generated. | 1 | G2 | ai_workforce_intelligence
+Test files are present, which were not explicitly mentioned in the current phase requirements. | 1 | G2 | ai_workforce_intelligence
+The implementation uses in-memory storage for reports (reports_db). | 1 | G2 | ai_workforce_intelligence
+Direct database connection setup and management. | 1 | G2 | ai_workforce_intelligence
+Direct usage of hardcoded client data for selection and workflows. | 1 | G2 | ai_workforce_intelligence
+The `tenant_id` string is incorrectly hardcoded instead of being passed from the user context. | 1 | G2 | wynwood_thoroughbreds_p1_member
+The route does not correctly match implementation expectations based on intake requirements. | 1 | G2 | wynwood_thoroughbreds_p1_member
+The presence of an extra state management system for the member model is not mentioned in the intake requirements. | 1 | G2 | wynwood_thoroughbreds_p1_member
+Non-compliance with expectations for defining all necessary dependencies explicitly mentioned in the intake requirements. | 1 | G2 | wynwood_thoroughbreds_p1_member
+The `submitPayment` function uses `this.currentUser.email`, but `this.currentUser` is not defined in the scope of the PaymentProcessor class. | 1 | G2 | wynwood_thoroughbreds
+The README document mentions a "horse adoption" theme, which seems out of context for the "Wynwood Thoroughbreds" project that centers around horse ownership syndicates. | 1 | G2 | wynwood_thoroughbreds
+Missing `README-INTEGRATION.md` file | 1 | G2 | ai_workforce_intelligence
+The models in the `business/backend/models` directory and route definitions in `business/backend/routes` are inconsistent. | 1 | G2 | ai_workforce_intelligence
+The `download_report` function directly returns a formatted string instead of generating a downloadable file. | 1 | G2 | ai_workforce_intelligence
+Duplicate `Client` class definitions and potential conflicts across files. | 1 | G2 | ai_workforce_intelligence
+The function definition references wrong endpoints or lacks proper data structure validations. | 1 | G2 | ai_workforce_intelligence
+Missing required frontend pages (.jsx files). | 1 | G2 | ai_workforce_intelligence
+The `README-INTEGRATION.md` file is missing. | 1 | G2 | ai_workforce_intelligence
+Temporary file used in the `download_report` function is not being deleted after use. | 1 | G2 | ai_workforce_intelligence
+`competency_rating_scores` is improperly handled as a string when converting JSON. | 1 | G2 | ai_workforce_intelligence
+No `*.jsx` files found in the specified directory for the frontend pages. | 1 | G2 | ai_workforce_intelligence
+One or more route files are present, but the routing pattern seems inconsistent. | 1 | G2 | ai_workforce_intelligence
+There is a test suite written for `workforce analysis`, which is not mentioned in the intake requirements. | 1 | G2 | ai_workforce_intelligence
+The `getAccessToken` function is currently returning a hardcoded "mock-token". | 1 | G2 | ai_workforce_intelligence
+Tests reference endpoints "/api/workforce-data" and "/api/kpi-insights" that do not exist in the backend routes provided. | 1 | G2 | ai_workforce_intelligence
+The function `calculateScore` does not handle the case where `getAccessToken()` might fail and return an error. | 1 | G2 | ai_workforce_intelligence
+Unexpected second package files were found outside the `business` folder, which may lead to confusion about the primary package configuration. | 1 | G2 | ai_workforce_intelligence
+The use of the variable `config.unit` is incorrect within the template literal. | 1 | G2 | ai_workforce_intelligence
+The API lacks an endpoint related to the creation and management of clients, assessments, and reports as implied by the intake for full integration with the front end. | 1 | G2 | ai_workforce_intelligence
+The main application component file (`App.jsx`) is not explicitly located within the `business/frontend` folder. | 1 | G2 | ai_workforce_intelligence
+The health check endpoint URL does not match with the test endpoint in `test_main.py` (`"/health"` is used in the test while `"/"` is defined in the implementation). | 1 | G2 | ai_workforce_intelligence
+The `business/README-INTEGRATION.md` file is missing, this does not affect functionality but fails to meet the required structure. | 1 | G2 | ai_workforce_intelligence
+The test is calling the wrong endpoint URL. | 1 | G2 | ai_workforce_intelligence
+There is no file in the `business/backend/routes/` directory, which is mandatory per the requirements. | 1 | G2 | ai_workforce_intelligence
+The test file includes unnecessary endpoints that are not part of the intake requirements. | 1 | G2 | ai_workforce_intelligence
+API endpoints used in the frontend (`/api/example/clients`, `/api/example/kpi-definitions`) need to be prefixed with actual base API path as defined in backend setup. | 1 | G2 | ai_workforce_intelligence
+Hardcoded KPI definitions in the endpoint. | 1 | G2 | ai_workforce_intelligence
+Tests are assuming non-existent authentication endpoints like `/auth/login`. | 1 | G2 | ai_workforce_intelligence
+Assumes `/kpis/` endpoint implementation which does not exist in the intake or routes. | 1 | G2 | ai_workforce_intelligence
+There is no KPI scoring engine logic as specified by intake. | 1 | G2 | ai_workforce_intelligence
+The required integration README file is absent. | 1 | G2 | ai_workforce_intelligence
+Hardcoded normalization rules in `normalize_score` function. | 1 | G2 | ai_workforce_intelligence
+Incorrect import statement for `get_db` and `Base`. | 1 | G2 | ai_workforce_intelligence
+README-INTEGRATION.md lacks detailed instructions on setting up Optional API Integrations from Phase 2. | 1 | G2 | ai_workforce_intelligence
+`devDependencies` are missing. | 1 | G2 | ai_workforce_intelligence
+The version field of `concurrently` should reflect its correct latest version, not `^7.6.0`. | 1 | G2 | ai_workforce_intelligence
+Excessive placeholder functionality suggests preliminary readiness for future features. | 1 | G2 | ai_workforce_intelligence
+The `normalize_score` function references the normalization rules directly with `rule.max_value` which assumes that this value will always be set, without any fallback or checks if it's missing. | 1 | G2 | ai_workforce_intelligence
+Incorrect import path `from core.database import Base, get_db`. | 1 | G2 | ai_workforce_intelligence
+Hardcoded KPI ID values in `kpiDefinitions` object. | 1 | G2 | ai_workforce_intelligence
+Tests related to `Dashboard` and `Analytics` suggest features like "Analytics Dashboard" or "Showing main sections" which go beyond the defined intake requirements. | 1 | G2 | ai_workforce_intelligence
+Missing `package.json` file from the build output. | 1 | G2 | freelance_invoice_tracker
+The implementation includes membership tier configurations, which specify different features and limitations per tier, such as "Professional" and "Enterprise" tiers with advanced features. | 1 | G2 | freelance_invoice_tracker
+The use of `nodemailer` for email delivery is not in compliance with the intake requirements. The intake specified the use of SendGrid for transactional emails. | 1 | G2 | freelance_invoice_tracker
+The import statement for the `Invoice` model uses incorrect syntax for a pure Node.js environment; `import` should not be used if not transpiled. | 1 | G2 | freelance_invoice_tracker
+Missing `teebu-saas-boilerplate` as a dependency. | 1 | G2 | freelance_invoice_tracker
+Models and services appear to be using `mongoose` based logic rather than `sequelize`. | 1 | G2 | freelance_invoice_tracker
+Uses `nodemailer` instead of `SendGrid` for email delivery. | 1 | G2 | freelance_invoice_tracker
+Payment method handling does not reflect integration with `Stripe`. | 1 | G2 | freelance_invoice_tracker
+Invoice generation logic is missing proper error handling around PDF generation. | 1 | G2 | freelance_invoice_tracker
+Test files for business logic and components are missing (though acceptable as POC). | 1 | G2 | freelance_invoice_tracker
+Using incorrect method `Client.findOne({ _id: clientId, userId })`. | 1 | G2 | freelance_invoice_tracker
+Incorrect logic in `Invoice.findById` which does not exist on the `Invoice` model. | 1 | G2 | freelance_invoice_tracker
+No test files found, which are required for production readiness. | 1 | G2 | freelance_invoice_tracker
+Stripe configuration is implemented where it was expected to be integrated using boilerplate. | 1 | G2 | freelance_invoice_tracker
+Database integration does not properly handle SQLite connection/global variable scope for concurrent requests. | 1 | G2 | wynwood_thoroughbreds
+Error handling of Stripe webhooks lacks robustness, as it does not verify the JSON payload before event construction. | 1 | G2 | wynwood_thoroughbreds
+Automated racing data updates are set to real-time frequency ("0 6 * * *" cron for daily scheduling) but should align with the intake requirement to provide a configuration between real-time and daily batch. | 1 | G2 | wynwood_thoroughbreds
+The createTransporter method is incorrectly used (`nodemailer.createTransporter` should be `nodemailer.createTransport`). | 1 | G2 | wynwood_thoroughbreds
+The `MEMBERSHIP_TIERS` array does not reflect the full starter prices ($500-2000 according to intake requirements). | 1 | G2 | wynwood_thoroughbreds
+Significant logic beyond specified foundational requirements for automation and reporting, including configurable racing data updates and Shopify discount creation. | 1 | G2 | wynwood_thoroughbreds
+Home route does not properly handle non-authenticated users and may result in leakage of user-specific views. | 1 | G2 | wynwood_thoroughbreds
+Breeding analysis retrieval does not differentiate by membership tier properly. | 1 | G2 | wynwood_thoroughbreds
+The node modules do not have "create-react-app" or any framework relating to mobile-responsive design. | 1 | G2 | wynwood_thoroughbreds
+There is introductory information about "investment strategies" and "syndicate management," which are not included in intake requirements. | 1 | G2 | wynwood_thoroughbreds
+The code attempts to retrieve users from an implied 'app' module but uses `require('../app').users || []`, which is not a suitable practice as it relies on the wrong approach for module sharing. | 1 | G2 | wynwood_thoroughbreds
+Incorrectly uses `req.session.userTier` which remains undefined due to lack of assignment at authenticated entry points. | 1 | G2 | wynwood_thoroughbreds
+The CSS contains styles enforced for font-family but lacks specific mention of multi-platform compatibility or special fonts potentially requested during intake. | 1 | G2 | wynwood_thoroughbreds
+The JavaScript code is incomplete and cuts off, causing potential runtime errors. | 1 | G2 | wynwood_thoroughbreds
+No implementation of report generation, payment failure handling, or member data privacy compliance mentioned. | 1 | G2 | wynwood_thoroughbreds
+The artifact manifest file is missing, which should include checksums for all build artifacts. | 1 | G2 | wynwood_thoroughbreds
+The file `build_state.json` is not specified as existing or correctly configured. | 1 | G2 | wynwood_thoroughbreds
+The build output includes features not described in the intake requirements, such as VIP race experiences and premium events, and advanced portfolio management that weren't specified in the requirements. There was no mention of these features in the intake's high-level design (HLD) or component templates. | 1 | G2 | wynwood_thoroughbreds
+The README.md mentions responsive design and full member dashboards, which are not specified in the intake documentation. | 1 | G2 | wynwood_thoroughbreds
+The code attempts to cancel all active subscriptions for a user, which might not be specific to the current membership tier. | 1 | G2 | wynwood_thoroughbreds
+The intake requirements suggest no discount for basic members, but a 10% discount is not explicitly necessary for premium members. This could imply an expectation not set in the requirements. | 1 | G2 | wynwood_thoroughbreds
+Missing required artifact `README.md` | 1 | G2 | adversarial_ai_validator
+Missing required artifact `package.json` | 1 | G2 | adversarial_ai_validator
+Missing required code files for features | 1 | G2 | adversarial_ai_validator
+Missing required test files | 1 | G2 | adversarial_ai_validator
+Incorrect state | 1 | G2 | adversarial_ai_validator
+Missing required README.md file with setup/installation instructions | 1 | G2 | adversarial_ai_validator
+Missing required package.json file with dependencies | 1 | G2 | adversarial_ai_validator
+Incorrect state; expected COMPLETED_CLOSED but found FAILED | 1 | G2 | adversarial_ai_validator
+Intake requirements (block_b) are empty; unable to verify scope compliance against any initial requirements. | 1 | G2 | adversarial_ai_validator
+The state should be COMPLETED_CLOSED but is set to FAILED. | 1 | G2 | adversarial_ai_validator
+Missing required artifacts as per the intake requirements. | 1 | G2 | adversarial_ai_validator
+The manifest indicates fewer than the required 7 artifacts. | 1 | G2 | adversarial_ai_validator
+The backend route for "stables" is missing required routes not adhering to intake. | 1 | G2 | wynwood_thoroughbreds_p1
+The backend route for "horses" is missing required routes not adhering to intake. | 1 | G2 | wynwood_thoroughbreds_p1
+There is a lacking schema integration within the update routes leading to improper data handling. | 1 | G2 | wynwood_thoroughbreds_p1
+The `status` field does not comply with intake requirements. | 1 | G2 | wynwood_thoroughbreds_p1
+The model includes excess field properties not covered by the intake. | 1 | G2 | wynwood_thoroughbreds_p1
+The `Horse` model contains a property `status` which is not specified in the intake. | 1 | G2 | wynwood_thoroughbreds_p1
+The `Update` model contains a property `status` which is not specified in the intake. | 1 | G2 | wynwood_thoroughbreds_p1
+The `Stable` model includes a default field `status` which is not specified in the intake. | 1 | G2 | wynwood_thoroughbreds_p1
+The `status` field is included in the Update model but is not defined in the intake specifications. | 1 | G2 | wynwood_thoroughbreds_p1
+The `status` column is present in the migration but is not specified in the intake requirements for the stable updates table. | 1 | G2 | wynwood_thoroughbreds_p1
+No test files were included in the build output. | 1 | G2 | ai_workforce_intelligence
+The file includes tier definitions for features not in the intake specification. | 1 | G2 | ai_workforce_intelligence
+The file includes integration logic for Workday and BambooHR, which are phase 2 features. | 1 | G2 | ai_workforce_intelligence
+Like the WorkdayService, this file includes integration logic for phase 2. | 1 | G2 | ai_workforce_intelligence
+Missing required file `README-INTEGRATION.md` | 1 | G2 | ai_workforce_intelligence
+Inconsistency in method for generating KPI IDs and keys. | 1 | G2 | ai_workforce_intelligence
+File placement should be inside `business/frontend/pages/` according to requirements. | 1 | G2 | ai_workforce_intelligence
+The integration guide references are not providing enough detail for the deployment setup given in-phase setup. | 1 | G2 | ai_workforce_intelligence
+Routing seems implied but is not specific on utilization within page components. | 1 | G2 | ai_workforce_intelligence
+Phase 2 API endpoint stubs are present but should not be until Phase 2 execution. | 1 | G2 | ai_workforce_intelligence
+Hardcoded access to `ai_result["content"]` without checking for key existence or error handling. | 1 | G2 | ai_workforce_intelligence
+Attempt to access a potentially nonexistent property `content` from `ai_result`. | 1 | G2 | ai_workforce_intelligence
+Critical missing `README-INTEGRATION.md` that should provide integration instructions. | 1 | G2 | ai_workforce_intelligence
+`business/package.json` file is missing. | 1 | G2 | ai_workforce_intelligence
+Potential null reference error if `ai_result` is not returned correctly. | 1 | G2 | ai_workforce_intelligence
+Integration status endpoints are included that were not mentioned in the intake requirements for Phase 1. | 1 | G2 | ai_workforce_intelligence
+Generates additional recommendations not explicitly detailed in the intake. | 1 | G2 | ai_workforce_intelligence
+Incomplete HTML tag causing syntax error and potential rendering issues due to abruptly ending line. | 1 | G2 | ai_workforce_intelligence
+The file `business/README-INTEGRATION.md` is present yet not formatted to align perfectly with high-level overview requirement. | 1 | G2 | ai_workforce_intelligence
+Missing null check for `data.get("assessment_data", {})` in `create_report` | 1 | G2 | ai_workforce_intelligence
+`_create_kpi_result` method calls `call_ai` without checking if `ai_result` is None | 1 | G2 | ai_workforce_intelligence
+Hardcoded date in `configure_integration` | 1 | G2 | ai_workforce_intelligence
+Direct manipulation of window location | 1 | G2 | ai_workforce_intelligence
+Document references future phase integrations in phase 1 | 1 | G2 | ai_workforce_intelligence
+`backend/tests/test_report_generator.py` appears in output but not in required tests | 1 | G2 | ai_workforce_intelligence
+In-memory `reports_db` is used for storing reports. | 1 | G2 | ai_workforce_intelligence
+In-memory `integration_configs` is used for storing integration configurations. | 1 | G2 | ai_workforce_intelligence
+Missing test files. While tests are optional for POC, their absence was noted. | 1 | G2 | ai_workforce_intelligence
+Narrative summary appears to be generated without leveraging the detailed AI-powered analysis or insights. | 1 | G2 | ai_workforce_intelligence
+`recommendations` and `narrative_content` fields in `Report` model not explicitly called out in intake. | 1 | G2 | ai_workforce_intelligence
+The README-INTEGRATION.md is present but does not contain a complete integration guide. | 1 | G2 | ai_workforce_intelligence
+The `package.json` does not include dependencies or scripts specific to the backend, which would be needed to run a complete build. | 1 | G2 | ai_workforce_intelligence
+Use of tenant ID directly from user data without additional verification or handling for authorization. | 1 | G2 | ai_workforce_intelligence
+The integration instructions in the `README-INTEGRATION.md` are incomplete. | 1 | G2 | ai_workforce_intelligence
+Missing essential script for building the frontend application. | 1 | G2 | ai_workforce_intelligence
+Implementation includes endpoints for future HR integrations. | 1 | G2 | ai_workforce_intelligence
+The service generates recommendations and insights that were not specified in the intake requirement. | 1 | G2 | ai_workforce_intelligence
+Attempting to access `undefined` properties such as `report.title` could lead to runtime errors. | 1 | G2 | ai_workforce_intelligence
+Client validation queries assessment instead of client. | 1 | G2 | ai_workforce_intelligence
+Caching and repetition of client data. | 1 | G2 | ai_workforce_intelligence
+Phase 2 code attempts exist that can create confusion. | 1 | G2 | ai_workforce_intelligence
+Inconsistently implemented features like AI readiness level which aren't specified in intake. | 1 | G2 | ai_workforce_intelligence
+No implementation of "KPI scoring engine" mentioned in must-have features. | 1 | G2 | ai_workforce_intelligence
+No implementation of "downloadable executive report" feature in must-have features. | 1 | G2 | ai_workforce_intelligence
+Incomplete documentation on setting up database tables. | 1 | G2 | ai_workforce_intelligence
+Incorrectly defined default return of an empty dictionary for `calculate_kpis` method. | 1 | G2 | ai_workforce_intelligence
+`generate_report` endpoint does not fetch required data to generate the report. | 1 | G2 | ai_workforce_intelligence
+No handling of KPI normalization descriptions from intake. | 1 | G2 | ai_workforce_intelligence
+The requirement states that all expected fields for breeding must be implemented. | 1 | G2 | wynwood_thoroughbreds_p1
+This is a standard requirement to validate essential horse information. | 1 | G2 | wynwood_thoroughbreds_p1
+Standard procedures for compliance dictate that all required fields are validated. | 1 | G2 | wynwood_thoroughbreds_p1
+The code does not properly retrieve and utilize the access token for making API fetch calls. | 1 | G2 | wynwood_thoroughbreds_p1
+The implementation does not check all necessary fields according to the intake specifications. | 1 | G2 | wynwood_thoroughbreds_p1
+The horse submission lacks comprehensive requirements, requiring full validation checks. | 1 | G2 | wynwood_thoroughbreds_p1
+Missing checks on essential fields may lead to incomplete data submissions within the platform. | 1 | G2 | wynwood_thoroughbreds_p1
+The code is correctly retrieving the access token but not using it optimally. | 1 | G2 | wynwood_thoroughbreds_p1
+There is no route specified in intake for listing members. | 1 | G2 | wynwood_thoroughbreds_p1
+The method is called without checking if the member exists before attempting to update it. | 1 | G2 | wynwood_thoroughbreds_p1
+Same as above; it does not check for the existence of the breeding record before operations. | 1 | G2 | wynwood_thoroughbreds_p1
+The `breeding_status` field in the model does not appear to be documented in the intake specifications. | 1 | G2 | wynwood_thoroughbreds_p1
+The model should not reimplement any core base expectations provided by the framework. | 1 | G2 | invoicetool_s05_make_payments_wire_stripe_payment_processing_using_boi
+Missing implementation of Shopify store connection for merchandise, as specified in the HLD document. | 1 | G2 | wynwood_thoroughbreds
+The Shopify store connection for merchandise is missing, which was explicitly mentioned in the intake requirements as task T006. | 1 | G2 | wynwood_thoroughbreds
+The `status` column defaults to `pending`, which was not specified in the intake as an allowed status. | 1 | G2 | adversarial_ai_validator_integrate_anthropic_sdk_for_advocate_rol
+Licensing to view analysis history was not specified in the intake. | 1 | G2 | adversarial_ai_validator_integrate_anthropic_sdk_for_advocate_rol
+The default status field introduces a value ("pending") that is not specified in the intake documentation. | 1 | G2 | adversarial_ai_validator_integrate_anthropic_sdk_for_advocate_rol
+The page fails to implement proper routing for analysis history as required by intake. | 1 | G2 | adversarial_ai_validator_integrate_anthropic_sdk_for_advocate_rol
+The default status field introduces a value "pending" that is not aligned with the intake document. | 1 | G2 | adversarial_ai_validator_integrate_anthropic_sdk_for_advocate_rol
+Incorrect instantiation of `Client` model. The `Client` model constructor expects an object with specific properties, but the `createClient()` method is passing parameters directly. | 1 | G2 | ai_workforce_intelligence
+While test coverage is considered a nice-to-have for a POC, it is still required according to the tighter QA guidelines provided for this build (marked as MEDIUM rather than HIGH due to POC nature). | 1 | G2 | ai_workforce_intelligence
+Missing unit and integration test files for implemented models and services. | 1 | G2 | ai_workforce_intelligence
+Includes functionality for Workday and BambooHR API integrations, currently not required by phase 1 of the intake. | 1 | G2 | ai_workforce_intelligence
+Intake KPI 'QA' has no implementation in any service or route. | 1 | G6 | invoicetool_s08_email_notifications_for_invoice_status
+Messaging system for the founder does not seem to work as intended. When a message is sent, there should be feedback or interaction with the backend for message storage. | 1 | G2 | wynwood_thoroughbreds
+The payment system uses a demo key which is not suitable for real transactions. This violates the need for a valid payment processor as per intake specifications. | 1 | G2 | wynwood_thoroughbreds
+The build output includes a README file with instructions for installing and running a local instance, but the intake requirements did not mention the need for user or developer documentation. | 1 | G2 | wynwood_thoroughbreds
+PaymentProcessor initialization is being attempted twice, causing potential redundant operations or errors. | 1 | G2 | wynwood_thoroughbreds
+Page title mentions "Wynwood Soccer League" instead of "Wynwood Thoroughbreds", which causes confusion. | 1 | G2 | wynwood_thoroughbreds
+References to "Wynwood Soccer League" instead of the correct project "Wynwood Thoroughbreds" throughout the code and documentation. | 1 | G2 | wynwood_thoroughbreds
+Additional rate limiting and helmet security configurations were added which are beyond the original intake document. | 1 | G2 | wynwood_thoroughbreds
+The implemented `MockRacingDataService` includes breeding insights which are not explicitly listed in the intake requirements. | 1 | G2 | wynwood_thoroughbreds
+The "Syndications" page includes syndication investment functionality, which is not detailed in the intake requirements. | 1 | G2 | wynwood_thoroughbreds
+Missing checksums for various files within the artifact_manifest.json. | 1 | G2 | wynwood_thoroughbreds
+Event management and registration are not part of the original intake scope. | 1 | G2 | wynwood_thoroughbreds
+The README.md file is missing from the list of artifacts. | 1 | G2 | wynwood_thoroughbreds
+README.md file is missing. | 1 | G2 | wynwood_thoroughbreds
+The artifact_manifest.json file listing all files with checksums and the build_state.json file showing the state as COMPLETED_CLOSED are missing. | 1 | G2 | wynwood_thoroughbreds
+The README.md file is missing from the build output. | 1 | G2 | wynwood_thoroughbreds
+Missing full list of checksums in artifact_manifest.json. Some files are in rolling builds, missing final entry. | 1 | G2 | wynwood_thoroughbreds
+The JSX code is incomplete as it seems to cut off content. | 1 | G2 | wynwood_thoroughbreds
+The mock data and implementation in services do not save data to or retrieve data from an actual database, which might be missing from tasks. | 1 | G2 | wynwood_thoroughbreds
+No mention or outline of shopify store integration for merchandise, although it was specified in the HLD. | 1 | G2 | wynwood_thoroughbreds
+Missing implementation to mock the Supabase client in member tests. | 1 | G2 | wynwood_thoroughbreds
+The expected output should include "tasks completed" and "artifacts generated" matching the intake requirements. | 1 | G2 | wynwood_thoroughbreds
+Implementing SMS notifications and exclusive access communication features. | 1 | G2 | wynwood_thoroughbreds
+No `.jsx` files found in the build output. | 1 | G2 | ai_workforce_intelligence_p1
+The intake explicitly states that no status field should be included in the models. | 1 | G2 | ai_workforce_intelligence_p1
+The intake explicitly states that no owner field should be included in the models. | 1 | G2 | ai_workforce_intelligence_p1
+Function `generate_benchmark_insights` is missing verification for `industry` input, leading to potential inconsistency in insights generation. | 1 | G2 | ai_workforce_intelligence
+The `generate_report` function attempts to generate reports in JSON format without proper condition checks or specification in intake. | 1 | G2 | ai_workforce_intelligence
+The calculation for the `overallScore` seems incorrect. The performance score is calculated using the workforce score instead of performance-specific metrics. | 1 | G2 | ai_workforce_intelligence
+The endpoint `/assessments` uses `flask_jwt_extended` which may not align with the `auth_rbac_template` from the boilerplate if JWT configuration is different. Specific compliance with role-based access requires verification. | 1 | G2 | ai_workforce_intelligence
+The method `generateActionPlan` introduces action plan generation which might not have been explicitly required for first release unless implied by "automated report generation." | 1 | G2 | ai_workforce_intelligence
+The `HRISIntegrationService` is incorrectly referenced as `HRIS` in the continuation part of the file. | 1 | G2 | ai_workforce_intelligence
+The usage of in-memory data stores (e.g., `clients_db` and `assessments_db`) instead of a database contradicts the boilerplate's infrastructure that includes database models, migrations, and ORM setup. | 1 | G2 | ai_workforce_intelligence
+Incorrect handling of cases where the client might not be found, causing the clientName to default to 'Unknown'. | 1 | G2 | ai_workforce_intelligence
+The function allows data import to start without checking again if the client is selected, which can lead to importing data to an unknown client. | 1 | G2 | ai_workforce_intelligence
+The `ClientAssessment.jsx` component does not have functionality to handle downloading of assessments as specified. | 1 | G2 | ai_workforce_intelligence
+The `package.json` seems redundant for business logic and lacks industry context for dependencies. | 1 | G2 | ai_workforce_intelligence
+The dashboard fails to load when there are more than 1000 assessments due to unoptimized loading and rendering. | 1 | G2 | ai_workforce_intelligence
+The assessment creation endpoint does not properly validate the 'assessment_data' field structure, potentially leading to incomplete or malformed data entries. | 1 | G2 | ai_workforce_intelligence
+Mock HRISService has placeholders for environmental variables which might not be set correctly, causing potential failures in a deployed environment. | 1 | G2 | ai_workforce_intelligence
+Incorrect pagination logic potentially calculating total_pages incorrectly. | 1 | G2 | ai_workforce_intelligence
+Insufficient logging for API failures; only base message logged without specific error details. | 1 | G2 | ai_workforce_intelligence
+Test cases include industry-specific expectations without these specifics being defined in the intake. | 1 | G2 | ai_workforce_intelligence
+The calculation of the overall score doesn't properly weigh KPI scores according to their weights. | 1 | G2 | ai_workforce_intelligence
+Fetch functions like `fetchEmployeeMetrics` appear to return static mock data, which might be acceptable during development, but not for production. | 1 | G2 | ai_workforce_intelligence
+"other" has been added as an option for HRIS systems which may not be supported or tested. | 1 | G2 | ai_workforce_intelligence
+Improper error handling when calling the ADP token endpoint. If the ADP token request fails, the error handling should capture this gracefully and not attempt further operations. | 1 | G2 | ai_workforce_intelligence
+The scoring thresholds for 'excellent', 'good', and 'fair' use fixed values. Intake requires adjustable risk indicators that may require a more dynamic configuration. | 1 | G2 | ai_workforce_intelligence
+Incorrect spelling for a variable ("hrисData" should be "hrisData") across multiple lines. | 1 | G2 | ai_workforce_intelligence
+The model includes `contact_person` and `contact_email` attributes, which were not specified in the HLD. | 1 | G2 | ai_workforce_intelligence
+The interface allows creation of custom assessments with a variety of question types and options, which extends beyond the specified form builder in HLD. | 1 | G2 | ai_workforce_intelligence
+There are no routing implementations that were specified within the intake, leading to extra functionality not in the scope. | 1 | G2 | ai_workforce_intelligence_downloadable_executive_report
+The service implements generating reports with content formats (CSV/JSON) and recommendations. | 1 | G2 | ai_workforce_intelligence_downloadable_executive_report
+`README-INTEGRATION.md` is missing. | 1 | G2 | ai_workforce_intelligence
+There is no clear mention or verification that all requirements from the intake, such as "Downloadable executive report," were fully implemented. | 1 | G2 | ai_workforce_intelligence
+Auth0 token is not retrieved correctly in the API helper. | 1 | G2 | ai_workforce_intelligence
+The build output does not demonstrate adherence to normalization rules for KPI calculations as specified in the intake. | 1 | G2 | ai_workforce_intelligence
+There is a possibility of breaking constraints specified for the AI task with possible data exhaustion or budget limits. | 1 | G2 | ai_workforce_intelligence
+`useContext` is used inside an async function `getAuthHeaders`, which is not supported as it should be used within a React component or hook. | 1 | G2 | ai_workforce_intelligence
+`business/package.json` was not mentioned in the output. | 1 | G2 | ai_workforce_intelligence
+The summarization in the existing build is incorrect, it misses mentioning data formats, interactions with frontend and backend parts, and expected JSON structures. | 1 | G2 | ai_workforce_intelligence
+Incorrect method usage on Auth0 user object. | 1 | G2 | ai_workforce_intelligence
+Incorrect method to obtain Auth0 access token. | 1 | G2 | ai_workforce_intelligence
+Missing detailed README-INTEGRATION.md file. | 1 | G2 | ai_workforce_intelligence
+The package.json file is missing. | 1 | G2 | ai_workforce_intelligence
+Uses Auth0 incorrectly in the frontend components. | 1 | G2 | ai_workforce_intelligence
+Normalization rules incorrectly implemented. | 1 | G2 | ai_workforce_intelligence
+Incorrect use of the Auth0 hook. | 1 | G2 | ai_workforce_intelligence
+The file `business/README-INTEGRATION.md` is missing, which is required for integration documentation. | 1 | G2 | ai_workforce_intelligence
+Incorrect method called on the Auth0 user profile object. | 1 | G2 | ai_workforce_intelligence
+Lack of `README-INTEGRATION.md` file to document integration aspects. | 1 | G2 | ai_workforce_intelligence
+Incorrect usage of Auth0 token method. | 1 | G2 | ai_workforce_intelligence
+Usage of inline SQL queries without ORM abstraction. | 1 | G2 | ai_workforce_intelligence
+Incorrect formatting of the Authorization header in `BambooHRService`. | 1 | G2 | ai_workforce_intelligence
+Incorrect handling of groupBy function that assumes all keys are strings, which might lead to errors if different data types are used. | 1 | G2 | ai_workforce_intelligence
+The `consultant_id` for new clients is hardcoded as `current_user`. | 1 | G2 | ai_workforce_intelligence
+The section "Phase 2 Roadmap" has items that could imply upcoming features that might not align with current intake specifications (e.g., Mobile executive dashboard, Real-time alerts and notifications). | 1 | G2 | ai_workforce_intelligence
+Hardcoded scores in `calculate_scores` function | 1 | G2 | ai_workforce_intelligence
+The integration flow described does not accurately reflect the implementation in `hris_integration.py` (i.e., no steps for credential validation and notifications are explicitly detailed in the code logic) | 1 | G2 | ai_workforce_intelligence
+The endpoint used for generating reports is incorrect. | 1 | G2 | ai_workforce_intelligence
+Missing actual implementation for test connections with HRIS providers. | 1 | G2 | ai_workforce_intelligence
+The calculation functions do not account for invalid or missing input scores, which may cause inaccurate calculations. | 1 | G2 | ai_workforce_intelligence
+The `generateReport` method endpoint lacks proper error handling for report generation failures. | 1 | G2 | ai_workforce_intelligence
+The `delete` method does not check if the client has associated assessments before deletion. | 1 | G2 | ai_workforce_intelligence
+The form does not have input validation for required fields like `name` and `contact_email`, affecting the user experience by possibly allowing incomplete submissions. | 1 | G2 | ai_workforce_intelligence
+The `consultant_id` is used without any validation or authentication check. | 1 | G2 | ai_workforce_intelligence
+Hardcoded `consultant_id` in formData. | 1 | G2 | ai_workforce_intelligence
+Missing documentation on integration with the HRIS systems. | 1 | G2 | ai_workforce_intelligence
+Inclusion of additional test coverage for functionalities not explicitly listed in the HLD. | 1 | G2 | ai_workforce_intelligence
+The method `isValid()` does not validate all required fields (`hrisData` assumes `employeeMetrics` structure). | 1 | G2 | ai_workforce_intelligence
+The exception block does not log the error details. | 1 | G2 | ai_workforce_intelligence
+There is no clear fallback or a way to handle failed HRIS connections affecting user flow. | 1 | G2 | ai_workforce_intelligence
+Missing ability to edit client details directly from the client management page. | 1 | G2 | ai_workforce_intelligence
+The `calculateScore` method does not handle division by zero when `headcount` is zero. | 1 | G2 | ai_workforce_intelligence
+The package.json file for the frontend does not list all necessary dependencies for React and its utilities, which may lead to issues during deployment. | 1 | G2 | ai_workforce_intelligence
+Lack of specific integrations with HRIS systems, which was a key component mentioned in the intake requirements. | 1 | G2 | ai_workforce_intelligence
+The logic for calculating `risk_score` incorrectly inverts the score. High-risk should have a lower score. | 1 | G2 | ai_workforce_intelligence
+The function `handleSubmit` logs assessment data but doesn't actually save it to the database. | 1 | G2 | ai_workforce_intelligence
+UI mentions "Data Mapping Configuration" but no actual functionality implemented for customization. | 1 | G2 | ai_workforce_intelligence
+The application is improperly using Flask for route management instead of FastAPI. | 1 | G2 | ai_workforce_intelligence
+At least one `business/frontend/pages/*.jsx` file must be present as per the intake requirement. | 1 | G2 | ai_workforce_intelligence
+There are no `.jsx` files in the specified location, which violates the requirement of having at least one frontend page. | 1 | G2 | ai_workforce_intelligence
+Missing routes for `assessments`, which were expected per the intake requirements. | 1 | G2 | ai_workforce_intelligence
+There are no valid frontend page files that meet the specification requirements for this path; thus, compliance is an issue. | 1 | G2 | ai_workforce_intelligence
+The inclusion of the `status` attribute in the `Assessment` model was not specified in the intake as a required or allowable field. | 1 | G2 | ai_workforce_intelligence
+The inclusion of the `data` attribute in the `Assessment` model was not specified in the intake as a required or allowed feature. | 1 | G2 | ai_workforce_intelligence
+The use of the `status` field in the `Report` model introduces a feature that was not specified in the intake. | 1 | G2 | ai_workforce_intelligence
+Required fields such as name do not enforce validation. | 1 | G2 | ai_workforce_intelligence
+The client model refers to a variable ("consultant_id") that could allow for unintended data flow if not controlled properly. | 1 | G2 | ai_workforce_intelligence
+The inclusion of the `updated_at` attribute in the `Assessment` model introduces functionality that was not specified in the intake requirements, thus it constitutes scope creep. | 1 | G2 | ai_workforce_intelligence
+The inclusion of the `status` field in the `Report` model introduces functionality that was not specified in the intake requirements, thus it constitutes scope creep. | 1 | G2 | ai_workforce_intelligence
+The inclusion of a `status` field introduces functionality not specified in the intake. | 1 | G2 | ai_workforce_intelligence
+The inclusion of a `pdf_url` field introduces functionality not specified in the intake. | 1 | G2 | ai_workforce_intelligence
+The implementation of getting the access token is mixed with the usage of the user object. | 1 | G2 | ai_workforce_intelligence
+The inclusion of the `data` attribute in the `Assessment` model was not specified in the intake as a required field. | 1 | G2 | ai_workforce_intelligence
+The `employee_count` field has a validation constraint that does not match the expected data structure as per the intake, which specifies structured data input forms. | 1 | G2 | ai_workforce_intelligence
+The inclusion of an `updated_at` timestamp field in the `Assessment` model introduces functionality not specified in the intake. | 1 | G2 | ai_workforce_intelligence
+The inclusion of the `title` field in the `Report` model introduces functionality that was not specified in the intake. | 1 | G2 | ai_workforce_intelligence
+The inclusion of the `data` attribute in the Report model was not specified in the intake as a required field. | 1 | G2 | ai_workforce_intelligence
+The inclusion of the contact_email field was not part of the intake specifications. | 1 | G2 | ai_workforce_intelligence
+The creation operation does not validate inputs from `payload` before creating a new content page. | 1 | G2 | wynwood_thoroughbreds_p1_contentpage
+Package.json includes unlisted dependencies required by the intake requirements. | 1 | G2 | wynwood_thoroughbreds_p1_contentpage
+The `slug` field is not specified in the intake. Optional fields must be included only if they are necessary. | 1 | G2 | wynwood_thoroughbreds_p1_contentpage
+Exception handling for content page not found could lead to uncaught errors if the query fails. | 1 | G2 | wynwood_thoroughbreds_p1_contentpage
+Required functionality for user interface interaction is missing from the frontend. | 1 | G2 | wynwood_thoroughbreds_p1
+Accessibility to update data relevant to user tiers is insufficient. | 1 | G2 | wynwood_thoroughbreds_p1
+The current code does not properly handle failing API calls. | 1 | G2 | wynwood_thoroughbreds_p1
+The current implementation does not enforce authorization well on update-related actions. | 1 | G2 | wynwood_thoroughbreds_p1
+Unhandled exceptions during the fetching process can cause crashes or unexpected behavior. | 1 | G2 | wynwood_thoroughbreds_p1
+The BreedingAnalysisService includes functionality for generating mock breeding records, which seems to stretch beyond the defined scope of the intake requirements. | 1 | G2 | wynwood_thoroughbreds
+Method `getWinPercentage` returns a string instead of a number. | 1 | G2 | wynwood_thoroughbreds
+Method does not handle user insertion errors correctly; it expects data to always be returned. | 1 | G2 | wynwood_thoroughbreds
+The `age` field in the horse form allows negative numbers. | 1 | G2 | wynwood_thoroughbreds
+Extra function `getPerformanceAnalytics` provides analytics beyond original scope. | 1 | G2 | wynwood_thoroughbreds
+Database query strings used directly without any input sanitation potentially expose SQL injection vulnerabilities. | 1 | G2 | wynwood_thoroughbreds
+The API response for fetching all horses does not paginate the results, which can lead to performance issues. | 1 | G2 | wynwood_thoroughbreds
+Additional scripts and dependencies related to testing libraries that were not specified in the intake requirements. | 1 | G2 | wynwood_thoroughbreds
+Test coverage includes functionalities like race winner announcements, which were not specified in the intake requirements. | 1 | G2 | wynwood_thoroughbreds
+Updates are not correctly filtered based on type and audience, potentially loading all updates due to improper logic. | 1 | G2 | wynwood_thoroughbreds
+The `save` method improperly uses `toJSON()` which does not include all necessary fields, potentially causing data loss or errors on server update. | 1 | G2 | wynwood_thoroughbreds
+Implementation of a subscription feature was not outlined in intake requirements, appears as an extra feature. | 1 | G2 | wynwood_thoroughbreds
+Horse model's `save` method improperly handles server response errors. | 1 | G2 | wynwood_thoroughbreds
+`remove` method doesn't check if the key exists before attempting removal. | 1 | G2 | wynwood_thoroughbreds
+Validation functions do not include checks for special characters in strings which may be critical for security. | 1 | G2 | wynwood_thoroughbreds
+Mention of features not included in the intake such as "Investment Leads," which introduce scope creep. | 1 | G2 | wynwood_thoroughbreds
+Unread message filter uses field `readAt` but Message model uses `status` to track read status. | 1 | G2 | wynwood_thoroughbreds
+The build lacks explicit test implementations for registration flow, payment processing, and data integration validation. | 1 | G2 | wynwood_thoroughbreds
+The POST request for creating a new horse uses the field `foalDate` but the `Horse.js` model and Joi schema refer to it as `foaledDate`. | 1 | G2 | wynwood_thoroughbreds
+The `status` field in the horse schema includes `breeding` as a possible status, but the Joi schema for horse management does not include the same option. | 1 | G2 | wynwood_thoroughbreds
+The theme customization with `createTheme` includes specific color options for palette that were not specified in the intake requirements. | 1 | G2 | wynwood_thoroughbreds
+The "createHorseSchema" defines a "foalDate" field, but the model uses "foaledDate". | 1 | G2 | wynwood_thoroughbreds
+The enum for "membershipTier" in the schema uses 'vip', but the model uses 'elite'. | 1 | G2 | wynwood_thoroughbreds
+Communication preferences do not include SMS update frequency although defined in test vectors. | 1 | G2 | wynwood_thoroughbreds
+Member.findOne is using an incomplete query object. | 1 | G2 | wynwood_thoroughbreds
+Uses Mongoose methods instead of Sequelize. | 1 | G2 | wynwood_thoroughbreds
+Test case uses direct mongoose queries instead of expected Sequelize practices. | 1 | G2 | wynwood_thoroughbreds
+Investments feature not specified in intake requirements. | 1 | G2 | wynwood_thoroughbreds
+Describes features such as "share tracking and management" not specified in intake. | 1 | G2 | wynwood_thoroughbreds
+Missing checks for successful suppression of redundant field transmission and validation after data updates. | 1 | G2 | wynwood_thoroughbreds
+Missing test for DELETE HTTP method to erase a pedigree record (related tests exist in other features but not for pedigree). | 1 | G2 | wynwood_thoroughbreds
+The method `calculateExpectedFoalDate` uses a fixed gestation period of 342 days, which lacks considerational flexibility if industry needs change. | 1 | G2 | wynwood_thoroughbreds
+Inconsistent mock setup using an assumption that the Horse model supports a `findAll` method without verification against ORM setup (boilerplate compliance). | 1 | G2 | wynwood_thoroughbreds
+Missing fields `internalNotes`, `systemFlags`, and `debugInfo` which are referenced for suppression but not formally defined. | 1 | G2 | wynwood_thoroughbreds
+Betting functionality (betService, bets endpoint) is not specified in intake. | 1 | G2 | wynwood_thoroughbreds
+Importing User from models should be using the boilerplate ORM setup. | 1 | G2 | wynwood_thoroughbreds
+Test cases for the horses API routes are missing. | 1 | G2 | wynwood_thoroughbreds
+Gestation period parameterization not adequately parameterizing expected foal date calculation. | 1 | G2 | wynwood_thoroughbreds
+Removed betting functionality was a deviation from the scoped business logic. | 1 | G2 | wynwood_thoroughbreds
+The use of optional chaining with non-null assertion outside of TypeScript is potentially problematic as it caters for undefined checks incorrectly due to lack of proper assignment in the query. | 1 | G2 | wynwood_thoroughbreds
+The `Horse.update` method within the PUT request is not defined in the Horse model, causing a potential issue while attempting to update horse data. | 1 | G2 | wynwood_thoroughbreds
+The schema does not contain fields for gestationStartDate, lastBreedingDate, or retirementDate, which are present in the Horse model. | 1 | G2 | wynwood_thoroughbreds
+Attempt to call `this.mapDbToModel` instead of `Horse.mapDbToModel`. | 1 | G2 | wynwood_thoroughbreds
+Missing `findAll` method in `RaceRecord` model. | 1 | G2 | wynwood_thoroughbreds
+Membership tier names and features do not fully match intake requirements. | 1 | G2 | wynwood_thoroughbreds
+MockRacingDataService mentioned but not included anywhere in the provided code. | 1 | G2 | wynwood_thoroughbreds
+The constructor signature for the `Horse` model in the test does not match the constructor in `Horse.js`. | 1 | G2 | wynwood_thoroughbreds
+The API endpoint implementation for `/api/breeding-records` does not check for membership tier before returning data. According to the intake description, this endpoint should deny access to users without proper authorization. | 1 | G2 | wynwood_thoroughbreds
+The constructor references `gender` and `color`, but these are not defined in the intake requirements or elsewhere in the build output. | 1 | G2 | wynwood_thoroughbreds
+The test cases for horse model use properties (`gender`, `color`, `status`) not defined in the class. | 1 | G2 | wynwood_thoroughbreds
+The `upgradeMembership` function does not check for any prior conditions or qualification criteria for upgrading a member's tier. | 1 | G2 | wynwood_thoroughbreds
+Incorrect validation of access features; tests suggest features not mapped to the membership tiers in the valid access list. | 1 | G2 | wynwood_thoroughbreds
+The service and tests list horse `age`, which was not specified in the original intake requirements. | 1 | G2 | wynwood_thoroughbreds
+Member model includes `communicationPreferences` init block, which wasn't a feature of the membership tier system specified. | 1 | G2 | wynwood_thoroughbreds
+The test file checks race properties (`races`, `performance data`) not defined in the original intake requirements. | 1 | G2 | wynwood_thoroughbreds
+The logic should appropriately handle and indicate no assessments or clients in a user-friendly manner. Further validation of the interface is required against specifications. | 1 | G2 | ai_workforce_intelligence
+The status does not incorporate the expected phases or conditions as per the intake specs. | 1 | G2 | ai_workforce_intelligence
+The AI narrative generator adds new functionality that was not outlined in the intake specifications. | 1 | G2 | ai_workforce_intelligence
+The introduction of specific scoring metrics is a feature not mentioned in the intake. | 1 | G2 | ai_workforce_intelligence
+New functionalities that extend beyond the defined client structure management were added. | 1 | G2 | ai_workforce_intelligence
+Certain fields may have been added that could be considered superfluous outside of the provided HLD. | 1 | G2 | ai_workforce_intelligence
+Frontend files should all use `.jsx` as stated in the intake requirements. | 1 | G2 | ai_workforce_intelligence
+`@auth0/auth0-react` is not present as a dependency in `package.json`. | 1 | G2 | ai_workforce_intelligence
+This implementation introduces new metrics not specified in the intake document. | 1 | G2 | ai_workforce_intelligence
+This feature extends the functionality beyond the original intake for the MVP. | 1 | G2 | ai_workforce_intelligence
+The intake specifies that integrations are part of future development (phase 2) and shouldn't be included in the current MVP scope. | 1 | G2 | ai_workforce_intelligence
+The `business/frontend/package.json` is absent. | 1 | G2 | ai_workforce_intelligence
+The POST route for creating a client does not exist as required by the intake. | 1 | G2 | ai_workforce_intelligence
+The model includes separate fields for competency and training metrics, which implies new features not specified in the intake. | 1 | G2 | ai_workforce_intelligence
+The implementation suggests new metrics that are not in scope according to the intake. | 1 | G2 | ai_workforce_intelligence
+The use of FastAPI patterns with Flask imports indicates incorrect design. | 1 | G2 | ai_workforce_intelligence
+The use of Tailwind CSS should comply with intake specifications on versions. | 1 | G2 | ai_workforce_intelligence
+The version does not align with specified project requirements as outlined in the intake. | 1 | G2 | ai_workforce_intelligence
+Implementation of new KPI metrics that are not within the original intake specification can be classified as scope creep. | 1 | G2 | ai_workforce_intelligence
+The `Assessment` model includes KPI fields that are not explicitly mentioned in the intake document as part of the data model, indicating potential scope creep. | 1 | G2 | ai_workforce_intelligence
+These KPI metrics are advanced features that were not mentioned in the intake as required, suggesting they may be considered as scope creep. | 1 | G2 | ai_workforce_intelligence
+The Dashboard includes functionality for features like average score tracking and insights that were not specified in the intake. | 1 | G2 | ai_workforce_intelligence
+These metrics are not defined in the intake as necessary for the initial MVP build. | 1 | G2 | ai_workforce_intelligence
+The intake did not specify a version for Next.js, but it is advisable to use the latest stable version when compliant versions are not constrained in the intake. | 1 | G2 | ai_workforce_intelligence
+The `assessment_data` structure allows for arbitrary JSON data, which could lead to data structure complexity not outlined in the intake requirements. | 1 | G2 | ai_workforce_intelligence
+The assessment data structure does not implement KPI scoring logic as defined in the intake. | 1 | G2 | ai_workforce_intelligence
+The included JSON structure allows for variable-length input beyond the specified ones in the intake requirements. | 1 | G2 | ai_workforce_intelligence
+There is no health check endpoint defined in the application. | 1 | G2 | ai_workforce_intelligence
+A feedback functionality is being implemented which was not specified in the intake requirements. | 1 | G2 | ai_workforce_intelligence
+The feedback structure in the model does not match the required specification, specifically regarding the feedback content type. | 1 | G2 | ai_workforce_intelligence
+The scoring logic for KPIs includes additional metrics and calculations not specified in the initial intake document. | 1 | G2 | ai_workforce_intelligence
+The feedback type is not validated against accepted types as specified in the intake — peer/manager/self/360. | 1 | G2 | ai_workforce_intelligence
+The employee_id should allow for references to the Employee table and must be foreign-key validated. | 1 | G2 | ai_workforce_intelligence
+The route should only return data that has been specified in the intake. The presence of API calls contradicts the MVP requirements for only manual input during phase 1. | 1 | G2 | ai_workforce_intelligence
+The `consultant_id` field is not being set through JWT from `current_user["sub"]`, leading to potential security risks. | 1 | G2 | ai_workforce_intelligence
+The Feedback model does not validate that the `feedback_type` is one of the allowed types when creating feedback, potentially leading to invalid data being stored. | 1 | G2 | ai_workforce_intelligence
+The `Assessment` model includes a `overall_score` field and a `kpi_scores` JSON field that are not mentioned in the intake requirements as part of the MVP. This introduces complexity not specified in the intake. | 1 | G2 | ai_workforce_intelligence
+The current intake states that phase 2 integrations will not be implemented in the MVP. The existence of an endpoint for integration status suggests feature creep beyond the defined scope. | 1 | G2 | ai_workforce_intelligence
+The interface does not reflect the intended function to display analysis history for the user. | 1 | G2 | adversarial_ai_validator_integrate_openai_sdk_for_adversary_role_
+The addition of the `responses` property in the Assessment model was not mentioned in the intake. | 1 | G2 | ai_workforce_intelligence_downloadable_executive_report
+The way reports data is accessed might lead to issues, and the error response based on `console.error()` is not handled as recommended in the intake guidance for providing user-oriented messages. | 1 | G2 | ai_workforce_intelligence_downloadable_executive_report
+The `id` attribute as `Integer` was suddenly presumed as a new feature; the type for the primary key wasn't specified in the intake. | 1 | G2 | ai_workforce_intelligence_downloadable_executive_report
+The explicit handling for an error state in report generation is not part of the initially defined scope as we only need to assess generating reports based on successful fetches, not managing errors as new capabilities. | 1 | G2 | ai_workforce_intelligence_downloadable_executive_report
+The scope indicates a focused MVP without expansive additions, which appears violated with "AI Workforce Intelligence Dashboard". | 1 | G2 | ai_workforce_intelligence_downloadable_executive_report
+Missing validation for required data fields at input might lead to inconsistent assessment entries. | 1 | G2 | ai_workforce_intelligence_downloadable_executive_report
+This implies a primary key with an Integer type, which introduces a standard that was not specified in the intake and should not be presumed. | 1 | G2 | ai_workforce_intelligence_downloadable_executive_report
+This introduces additional KPI calculations that were not mentioned in the intake. | 1 | G2 | ai_workforce_intelligence_downloadable_executive_report
+This implementation appears to introduce features that go beyond the request for a simple report download as per the intake. | 1 | G2 | ai_workforce_intelligence_downloadable_executive_report
+The score feature is not outlined in the intake requirements as a must-have feature, indicating a potential scope creep. | 1 | G2 | ai_workforce_intelligence_downloadable_executive_report
+The `score` field in the new assessment form implies an additional property that is not specified in the intake. | 1 | G2 | ai_workforce_intelligence_downloadable_executive_report
+Test files are not specified as a required part of the intake. | 1 | G2 | ai_workforce_intelligence_downloadable_executive_report
+No validation is being performed for the responses field based on the intake specification. | 1 | G2 | ai_workforce_intelligence_downloadable_executive_report
+KPI calculations are additional features that are not explicitly outlined in the intake. | 1 | G2 | ai_workforce_intelligence_downloadable_executive_report
+The intake specifies the need for role management, but the implementation does not include role-based access control. | 1 | G2 | wynwood_thoroughbreds
+DRF API key handling is insecure; API keys should not be handled directly in the client-side code. | 1 | G2 | wynwood_thoroughbreds
+No evidence of email automation platform integration as required by intake. | 1 | G2 | wynwood_thoroughbreds
+Stripe API key is shown as a placeholder ('pk_test_wynwood_thoroughbreds_key'), and actual configuration or environmental variables for managing live secrets are missing. | 1 | G2 | wynwood_thoroughbreds
+Role-based access control does not seem to function as expected. The roles and associated permissions are not consistently enforced across the application. | 1 | G2 | wynwood_thoroughbreds
+The application includes admin functionalities and features like admin panel and user management which are beyond the original scope specified in the intake requirements. | 1 | G2 | wynwood_thoroughbreds
+The page does not show real-time data for horse updates, payments, and user information due to missing integration with any backend service or API. | 1 | G2 | wynwood_thoroughbreds
+There is a discrepancy between the membership tier pricing in the README (`Basic - $500/month`, `Premium - $1,200/month`, `Elite - $2,000/month`) and the initial requirements (`Basic - $500/month`, `Premium - $1200/month`, `Elite - $2000/month`). It's slightly inconsistent, likely a formatting issue. | 1 | G2 | wynwood_thoroughbreds
+The opening tag for the HTML document is incomplete. | 1 | G2 | wynwood_thoroughbreds
+The initialization function `init();` in the last block of `DOMContentLoaded` uses an incorrect class name. | 1 | G2 | wynwood_thoroughbreds
+The README contains descriptions and structures related to a canine genetics platform instead of Wynwood Thoroughbreds. | 1 | G2 | wynwood_thoroughbreds
+References and functionality related to canine genetics are present. | 1 | G2 | wynwood_thoroughbreds
+`artifact_manifest.json` is missing, and verification of `build_state.json` is not mentioned. | 1 | G2 | wynwood_thoroughbreds
+Member data privacy compliance requirements mentioned in the intake are not enforced in the code. | 1 | G2 | wynwood_thoroughbreds
+Mentions unrelated "Customer Management Dashboard" instead of Wynwood Thoroughbreds context. | 1 | G2 | wynwood_thoroughbreds
+Contains code for a CRMApp that is not relevant to the Wynwood Thoroughbreds project. | 1 | G2 | wynwood_thoroughbreds
+Unplanned feature "Upcoming Races" with detailed entries not mentioned in intake requirements. | 1 | G2 | wynwood_thoroughbreds
+Presence of dashboard functionality unrelated to intake requirements for a horse ownership and racing syndicate. | 1 | G2 | wynwood_thoroughbreds
+The test case for registering a member with an existing email address is expected to return status 409, but it is checking for status 400. | 1 | G2 | wynwood_thoroughbreds
+Placeholder logic in `calculateOverallScore` function | 1 | G2 | ai_workforce_intelligence
+`analyze_assessment` function in `assessments_bp` uses undefined `analyze_assessment` method from `ScoringEngine`. | 1 | G2 | ai_workforce_intelligence
+Missing implementation of `ReportGenerator` as specified in the intake for generating executive reports and allowing downloads. | 1 | G2 | ai_workforce_intelligence
+Executive dashboard not implemented as per intake to display visualization components. | 1 | G2 | ai_workforce_intelligence
+The provided tests in `test_services.py` do not directly cover ScoringEngine and ReportService as standalone units. | 1 | G2 | ai_workforce_intelligence
+Supabase client is initialized inside ScoringEngine class. | 1 | G2 | ai_workforce_intelligence
+Assessment creation does not persist data using the boilerplate DB service. | 1 | G2 | ai_workforce_intelligence
+Client retrieval does not use the boilerplate's DB service. | 1 | G2 | ai_workforce_intelligence
+Placeholder logic for creating an assessment record. | 1 | G2 | ai_workforce_intelligence
+Placeholder logic for creating a client record. | 1 | G2 | ai_workforce_intelligence
+Report generation logic using placeholder logic. | 1 | G2 | ai_workforce_intelligence
+The `create_client` endpoint has placeholder comments for database operations instead of actual code. | 1 | G2 | ai_workforce_intelligence
+The `generate_report` endpoint has placeholder comments for database operations and PDF generation instead of actual code. | 1 | G2 | ai_workforce_intelligence
+The model includes additional properties like `hris_provider` and `assessment_frequency` not described in the intake requirements. | 1 | G2 | ai_workforce_intelligence
+Boilerplate database service call is missing for creating assessments. | 1 | G2 | ai_workforce_intelligence
+Boilerplate database service call is missing for querying reports. | 1 | G2 | ai_workforce_intelligence
+Unnecessary fields `hris_provider` and `assessment_frequency` are present. | 1 | G2 | ai_workforce_intelligence
+Placeholder comment for using boilerplate DB service in `get_clients` method | 1 | G2 | ai_workforce_intelligence
+Placeholder comment for using boilerplate DB service in `create_client` method | 1 | G2 | ai_workforce_intelligence
+Improper use of `boilerplate.db.reports.find_by_client_id` which does not exist as an available function | 1 | G2 | ai_workforce_intelligence
+Not specifying input validation for creating a client in test `test_create_client` leads to missing expected failures. | 1 | G2 | ai_workforce_intelligence
+Default KPI trend is set to 'neutral' | 1 | G2 | ai_workforce_intelligence
+Lack of error handling for `clientService.findById(client_id)` that could raise an exception if the client with `client_id` is not found. | 1 | G2 | ai_workforce_intelligence
+Syntax error due to missing comma in test case. | 1 | G2 | ai_workforce_intelligence
+Missing PDF generation logic | 1 | G2 | ai_workforce_intelligence
+Exception handling is too generic for findById | 1 | G2 | ai_workforce_intelligence
+Additional field `hris_integration` not mentioned in the intake documentation | 1 | G2 | ai_workforce_intelligence
+Usage of in-memory storage for clients data | 1 | G2 | ai_workforce_intelligence
+Usage of in-memory storage for reports data | 1 | G2 | ai_workforce_intelligence
+Fixed hard-coded endpoint for fetching clients and reports data | 1 | G2 | ai_workforce_intelligence
+Missing dependencies for running tests using Jest | 1 | G2 | ai_workforce_intelligence
+Incorrect endpoint defined in the test file | 1 | G2 | ai_workforce_intelligence
+Endpoint for fetching assessments is missing; the expected endpoint for the intake should be `/api/assessments` not `/api/clients/assessments`. | 1 | G2 | ai_workforce_intelligence_downloadable_executive_report
+Dashboard feature is relying on the `/api/assessments` without a provided interface in intake for dashboard metrics. | 1 | G2 | ai_workforce_intelligence_downloadable_executive_report
+Extra features such as downloading capabilities might be beyond the intake scope. | 1 | G2 | ai_workforce_intelligence_downloadable_executive_report
+This file includes report generation functionality that is not specified in the intake requirements, extending the project scope. | 1 | G2 | ai_workforce_intelligence_downloadable_executive_report
+Required fields are not being enforced on the client creation form. | 1 | G2 | ai_workforce_intelligence_downloadable_executive_report
+The frontend implementation lists the clients but does not enforce the required client creation prior to any assessment, leading to potential functionality gaps. | 1 | G2 | ai_workforce_intelligence_downloadable_executive_report
+This file lists clients without ensuring that a client is created before assessments are initiated. This constitutes non-compliance with intake specs that require enforcement of client existence. | 1 | G2 | ai_workforce_intelligence_downloadable_executive_report
+Total active assessments listing is not outlined in the intake requirements, leading to improper inclusion of features not required. | 1 | G2 | ai_workforce_intelligence_downloadable_executive_report
+Fields in the Report model may be introducing additional complexity that was not outlined in the intake. | 1 | G2 | ai_workforce_intelligence_downloadable_executive_report
+`generateReport` method references a `calculateScores` method in `KPIScoringService` that does not exist. | 1 | G2 | ai_workforce_intelligence
+Missing test files for implemented models and services. | 1 | G2 | ai_workforce_intelligence
+Implementation of a `KPIScoreCard` component displaying additional KPIs like productivity, efficiency, qualityOfWork, etc., which are not defined in the intake requirements or HLD. | 1 | G2 | ai_workforce_intelligence
+Missing test files for production build. | 1 | G2 | ai_workforce_intelligence
+package.json present, but missing production dependencies necessary for server-side operations (like express or node-specific utilities). | 1 | G2 | ai_workforce_intelligence
+Inclusion of a method `getClientWithRelatedData` that merges client, training program, and KPI data. This aggregation feature is not specified in the intake requirements. | 1 | G2 | ai_workforce_intelligence
+The integration for Workday and BambooHR APIs is present, but per the intake requirements, these should be phased in phase 2 and not part of the initial build output. | 1 | G2 | ai_workforce_intelligence
+The dependency "csv-parser": "^3.0.0" is present without apparent use in the provided files, which might suggest configuration for a feature not defined in the intake. | 1 | G2 | ai_workforce_intelligence
+Incorrect use of saving method in `createAssessment` and other CRUD operations use undefined method `save()`. | 1 | G2 | ai_workforce_intelligence
+There are no test files provided for unit testing or integration testing in this build, which is required for production builds. | 1 | G2 | ai_workforce_intelligence
+Inclusion of advanced KPIs ("change_management_score", "roi_potential", "risk_assessment", etc.) which were not specified in the intake requirements indicating new business capabilities. | 1 | G2 | ai_workforce_intelligence
+The `createAssessment` function is not using the `Assessment` class constructor correctly. | 1 | G2 | ai_workforce_intelligence
+`getClientById` is not a method in `ClientService` based on the provided implementation. | 1 | G2 | ai_workforce_intelligence
+Advanced KPIs not in intake specification were removed as per Claude's note, but there are elements still present in the logic outside the intake. | 1 | G2 | ai_workforce_intelligence
+Missing test file for `ReportService`. | 1 | G2 | ai_workforce_intelligence
+Some of the KPI calculation logic does not fully match the intake definitions. | 1 | G2 | ai_workforce_intelligence
+Unrequested advanced KPI calculations like AI readiness, Workforce Adaptability, Digital Maturity, etc., are present. | 1 | G2 | ai_workforce_intelligence
+The package.json includes dependencies such as `lodash`, which aren't directly necessary per the intake. | 1 | G2 | ai_workforce_intelligence
+Configuration files such as `membership-tiers.json` should be in a `proper config` directory. | 1 | G2 | ai_workforce_intelligence
+The current test coverage lacks integration tests for some of the combined business logic. | 1 | G2 | ai_workforce_intelligence
+`calculateIMV` includes division by zero check but does not account for null or undefined values for `internal_promotions` and `total_roles_filled`. | 1 | G2 | ai_workforce_intelligence
+Includes a dependency for `lodash` which is explicitly mentioned as removed in a defect fix (DEFECT-007), indicating potential misalignment with code base. | 1 | G2 | ai_workforce_intelligence
+Contains additional readiness metrics under `readiness_metrics`, `impact_metrics`, and `risk_factors` which go beyond the scope defined in the intake. | 1 | G2 | ai_workforce_intelligence
+Missing test files, which are required for production builds. | 1 | G2 | ai_workforce_intelligence
+Includes multiple subscription tiers with varying features, which could be considered a new user-facing feature not explicitly mentioned in the intake. | 1 | G2 | ai_workforce_intelligence
+The ExecutiveDashboard component tries to use KPICalculationService to calculate engagementRate, turnoverRate, and trainingEffectiveness, but these methods are not defined in KPICalculationService in the build output. | 1 | G2 | ai_workforce_intelligence
+Missing dependencies for KPI calculations since the ExecutiveDashboard references methods that don't exist in the provided KPICalculationService. | 1 | G2 | ai_workforce_intelligence
+The component includes methods for calculating engagement rate, turnover rate, and training effectiveness that are not specified in the intake requirements. | 1 | G2 | ai_workforce_intelligence
+The methods `calculateEngagementRate`, `calculateTurnoverRate`, and `calculateTrainingEffectiveness` were added to `KPICalculationService`. | 1 | G2 | ai_workforce_intelligence
+Incomplete dependencies for required features | 1 | G2 | ai_workforce_intelligence
+`recordKPIData` is not correctly saving data with distinct objects and data structure. | 1 | G2 | ai_workforce_intelligence
+No evidence of test coverage for core business logic. | 1 | G2 | ai_workforce_intelligence
+Required documentation is missing from the output. | 1 | G2 | invoicetool_s04_view_invoices
+`canAccessClient` method logic is incomplete | 1 | G2 | ai_workforce_intelligence
+No authorization headers in fetch requests | 1 | G2 | ai_workforce_intelligence
+Methods for database interaction are incomplete | 1 | G2 | ai_workforce_intelligence
+Placeholder error handling is not in compliance with API standard | 1 | G2 | ai_workforce_intelligence
+All API endpoints are raising HTTP 501 errors due to unfinished integration | 1 | G2 | ai_workforce_intelligence
+The `createUser` method is throwing an error because the database integration is pending. | 1 | G2 | ai_workforce_intelligence
+The function returns a `500` error because the database integration is pending. | 1 | G2 | ai_workforce_intelligence
+Functionality for retrieving a user by ID is not implemented, only a placeholder is present. | 1 | G2 | ai_workforce_intelligence
+Database service integration is not implemented; placeholders are used instead. | 1 | G2 | ai_workforce_intelligence
+Database integration is not implemented; placeholders are present in CRUD operations for Client data. | 1 | G2 | ai_workforce_intelligence
+Incorrect handling of HRIS data fetching upon client selection. | 1 | G2 | ai_workforce_intelligence
+Login simulation only checks for 'demo@wynwood.com' email. | 1 | G2 | wynwood_thoroughbreds
+The 'Breeding Analysis' dashboard card is always set to display: none even if the user is valid for this tier. | 1 | G2 | wynwood_thoroughbreds
+Payment processing is simulated rather than integrated with a real payment processor like Stripe, as noted in the intake requirements. | 1 | G2 | wynwood_thoroughbreds
+Featured membership tier has a label "POPULAR", not specified in intake requirements. | 1 | G2 | wynwood_thoroughbreds
+Invalid users can log in without correct email/password validation. | 1 | G2 | wynwood_thoroughbreds
+Missing Shopify store connection display. | 1 | G2 | wynwood_thoroughbreds
+Mocked Stripe API simulation deviates from the requirement of actual payment processing. | 1 | G2 | wynwood_thoroughbreds
+Incorrect card visibility for tier-based access. | 1 | G2 | wynwood_thoroughbreds
+The payment processing feedback does not display on failure. | 1 | G2 | wynwood_thoroughbreds
+Alerts indicating upcoming features not part of intake requirements. | 1 | G2 | wynwood_thoroughbreds
+The login function uses hardcoded user credentials, which is not secure and does not simulate a real authentication process. | 1 | G2 | wynwood_thoroughbreds
+The payment processing function simulates payment success/failure using random outcomes and does not integrate with an actual payment processor. | 1 | G2 | wynwood_thoroughbreds
+The inclusion of a breeding analysis feature is more detailed than the intake requirements specified. | 1 | G2 | wynwood_thoroughbreds
+Authentication does not hash passwords securely, missing error handling for bcrypt | 1 | G2 | wynwood_thoroughbreds
+Founder messaging functionality lacks actual implementation; it's just a console log | 1 | G2 | wynwood_thoroughbreds
+`createSubscription` function implementation is incomplete | 1 | G2 | wynwood_thoroughbreds
+Mobile-responsive design was not initially included in the requirements | 1 | G2 | wynwood_thoroughbreds
+Possible error in `createTransporter` function call; the method should be `nodemailer.createTransport` instead of `nodemailer.createTransporter`. | 1 | G2 | wynwood_thoroughbreds
+The addition of member discount code based on membership tier was not outlined in the original intake requirements. | 1 | G2 | wynwood_thoroughbreds
+The content of the welcome email includes features (like exclusive breeding reports) that suggest functionalities not clearly outlined in the intake document. | 1 | G2 | wynwood_thoroughbreds
+The SQLite database is initialized in-memory, which will not persist data across server restarts. | 1 | G2 | wynwood_thoroughbreds
+No mechanism to trigger automated horse performance updates as per frequency specified in intake. | 1 | G2 | wynwood_thoroughbreds
+Horse updates and content did not implement live racing data feed integration; this is a simulation with static data. | 1 | G2 | wynwood_thoroughbreds
+SQL query potentially allows for SQL injection due to absence of sanitization/parameterization in 'GET /api/horses/:id/updates'. | 1 | G2 | wynwood_thoroughbreds
+The "hero touchpoints" described in the intake requirements aren't implemented in a corresponding manifest or detailed in the build output description. | 1 | G2 | wynwood_thoroughbreds
+The front-end includes animations, styles, or design elements not specified in the intake requirements, which is outside the defined scope. | 1 | G2 | wynwood_thoroughbreds
+`createTransporter` is used instead of `createTransport` | 1 | G2 | wynwood_thoroughbreds
+The code continues abruptly at the end, resulting in incomplete functionality and missing logic for Shopify integration. | 1 | G2 | wynwood_thoroughbreds
+Execution mode mentions "hero touchpoints disabled," but intake required these touchpoints with a specific cadence. | 1 | G2 | wynwood_thoroughbreds
+Use of additional stylings (colors and layout), which were not defined in the intake scope. | 1 | G2 | wynwood_thoroughbreds
+The fetch request does not handle potential errors that may arise. | 1 | G2 | invoicetool_s03_view_all_invoices
+The file includes standard library modules that should not be listed as external dependencies. | 1 | G2 | ai_workforce_intelligence_narrative_summary_generator
+The client creation form does not validate that all required fields are filled before submission. | 1 | G2 | ai_workforce_intelligence_narrative_summary_generator
+The frontend files must adhere to the `.jsx` format. | 1 | G2 | adversarial_ai_validator_p1
+The `status` field seems to encode additional functionality not outlined in the intake. | 1 | G2 | adversarial_ai_validator_p1
+The addition of the `status` field in the `AnalysisRequest` model which was not outlined in the intake specifications. | 1 | G2 | adversarial_ai_validator_p1
+The intake did not specify any additional webhook handling beyond the provided payment integration. | 1 | G2 | adversarial_ai_validator_p1
+Simulates API call without actual user authentication | 1 | G2 | wynwood_thoroughbreds
+Payment processing is simulated and not integrated with a payment processor | 1 | G2 | wynwood_thoroughbreds
+File is missing | 1 | G2 | wynwood_thoroughbreds
+build_state.json does not indicate COMPLETED_CLOSED | 1 | G2 | wynwood_thoroughbreds
+Mobile-responsiveness seems not fully implemented | 1 | G2 | wynwood_thoroughbreds
+The responsive design provided in `styles.css` has not been fully verified across different screen sizes, especially for mobile devices. | 1 | G2 | wynwood_thoroughbreds
+Missing integration detail specifically about the requirement for racing data integration to be either real-time or batch update as documented in engineering questions. | 1 | G2 | wynwood_thoroughbreds
+Missing explicit mention and verification of `artifact_manifest.json` file along with checksums in deliverables. | 1 | G2 | wynwood_thoroughbreds
+Implemented a mobile-responsive design, which was not explicitly scoped in the intake document but included in hero questions. It signifies a change request as it was not originally documented as a requirement. | 1 | G2 | wynwood_thoroughbreds
+Implementation includes mobile-responsive elements, which was considered a scope change and was removed. | 1 | G2 | wynwood_thoroughbreds
+Contains plans for member engagement analytics tracking which implies a feature not specified in the INTIN Database. | 1 | G2 | wynwood_thoroughbreds
+The `userSection` style property is cut off, resulting in an incomplete display logic for either the login form or the homepage. | 1 | G2 | wynwood_thoroughbreds
+Attempting to send a message on 'Enter' press ignores the shift key, leading to inadvertent message sending. | 1 | G2 | wynwood_thoroughbreds
+Mobile responsiveness was included as a feature despite being noted for removal to ensure a desktop-first design. | 1 | G2 | wynwood_thoroughbreds
+Health endpoint returns "healthy" status without verifying all dependent services are operational. | 1 | G2 | wynwood_thoroughbreds
+Mobile responsiveness was removed as per the governance decision, but this conflicts with the hero's request in pass 6 to include a mobile-responsive design. | 1 | G2 | wynwood_thoroughbreds
+Indication of integration with Stripe payment but no actual functional code implementing the payment process. | 1 | G2 | wynwood_thoroughbreds
+The Stripe API key is hardcoded as 'sk_test_placeholder' | 1 | G2 | wynwood_thoroughbreds
+The artifact_manifest.json was not found, which is required for checksum validation. | 1 | G2 | wynwood_thoroughbreds
+The intake requirements indicate that breeding analysis reports should be formatted and delivered, but the implementation uses a generic placeholder function, `generateBreedingAnalysis`. | 1 | G2 | wynwood_thoroughbreds
+The `artifact_manifest.json` is not included, although mentioned in the ISSUE ADDRESSING section. | 1 | G2 | wynwood_thoroughbreds
+The intake requirements do not mention the inclusion of an analytics dashboard. | 1 | G2 | wynwood_thoroughbreds
+`nodemailer.createTransporter` is incorrect; should be `nodemailer.createTransport` | 1 | G2 | wynwood_thoroughbreds
+Missing `artifact_manifest.json` with SHA256 checksums | 1 | G2 | wynwood_thoroughbreds
+The test vectors provided in the QA HLT document do not account for race data integration, which is a critical aspect of the intake requirements. | 1 | G2 | wynwood_thoroughbreds
+The implementation includes a newsletter feature and associated email functionalities that were not specified in the intake requirements. | 1 | G2 | wynwood_thoroughbreds
+The `artifact_manifest.json` is missing. | 1 | G2 | wynwood_thoroughbreds
+The email transporter setup uses `nodemailer.createTransporter` which is incorrect. | 1 | G2 | wynwood_thoroughbreds
+Mobile-responsive design mentioned in hero questions was not part of intake but seems to be implied by statements in the documentation. | 1 | G2 | wynwood_thoroughbreds
+The request for a startup idea to be at least 50 characters long is not specified in the intake requirements. | 1 | G2 | adversarial_ai_validator_integrate_anthropic_sdk_for_advocate_rol
+The backend package file is missing required dependencies for functionality as outlined in previous design instructions. | 1 | G2 | adversarial_ai_validator_integrate_anthropic_sdk_for_advocate_rol
+The usage of a `status` column, which was not in the intake requirements for this project scope. | 1 | G2 | adversarial_ai_validator_integrate_anthropic_sdk_for_advocate_rol
+There are no API endpoints specified in the intake for listing analyses. | 1 | G2 | adversarial_ai_validator_integrate_anthropic_sdk_for_advocate_rol
+The file includes a utility function that appears to bypass expected boilerplate API calls. | 1 | G2 | adversarial_ai_validator_integrate_anthropic_sdk_for_advocate_rol
+This service adds new functionality that was not in the original specifications. | 1 | G2 | adversarial_ai_validator_integrate_anthropic_sdk_for_advocate_rol
+Additional input fields imply features not covered in the initial spec. | 1 | G2 | adversarial_ai_validator_integrate_anthropic_sdk_for_advocate_rol
+Dependencies need to adhere to the current standards shared in the intake. | 1 | G2 | adversarial_ai_validator_integrate_anthropic_sdk_for_advocate_rol
+There is no access to the token being fetched from `user`. | 1 | G2 | adversarial_ai_validator_integrate_anthropic_sdk_for_advocate_rol
+No documentation for Stripe integration or configuration for the payment service. | 1 | G2 | adversarial_ai_validator_integrate_anthropic_sdk_for_advocate_rol
+Using strings for `cost_usd` and `processing_time_seconds` is incorrect as they should be numeric types. | 1 | G2 | adversarial_ai_validator_integrate_anthropic_sdk_for_advocate_rol
+The file includes dependencies that are expected to be customized according to the intake. | 1 | G2 | adversarial_ai_validator_integrate_anthropic_sdk_for_advocate_rol
+The extraction of strengths as part of the synthesis which was not outlined in the intake specifications. | 1 | G2 | adversarial_ai_validator_integrate_anthropic_sdk_for_advocate_rol
+Usage of payment authorization initiation without adhering fully to the outlined process for user interaction and payment integration. | 1 | G2 | adversarial_ai_validator_integrate_anthropic_sdk_for_advocate_rol
+The addition of the `status` field is not mentioned in the intake specifications. | 1 | G2 | adversarial_ai_validator_integrate_anthropic_sdk_for_advocate_rol
+This functionality introduces new capabilities that were not specified in the project scope. | 1 | G2 | adversarial_ai_validator_integrate_anthropic_sdk_for_advocate_rol
+The invocation of the adversary service suggests additional output manipulations beyond the intake specifications. | 1 | G2 | adversarial_ai_validator_integrate_anthropic_sdk_for_advocate_rol
+Any methods that imply new user-facing outputs or logic not included in the specs. | 1 | G2 | adversarial_ai_validator_integrate_anthropic_sdk_for_advocate_rol
+The hardcoded amount for payment is defined in a way not consistent with potential fee structures that could change. | 1 | G2 | adversarial_ai_validator_integrate_anthropic_sdk_for_advocate_rol
