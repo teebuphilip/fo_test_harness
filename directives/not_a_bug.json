@@ -3,24 +3,8 @@
   "updated_at": "2026-04-02T00:00:00Z",
   "not_a_bug": [
     {
-      "pattern": "status field on any model",
-      "reason": "Infrastructure field — required on every SQLAlchemy model per build governance"
-    },
-    {
-      "pattern": "created_at field on any model",
-      "reason": "Infrastructure field — required on every SQLAlchemy model per build governance"
-    },
-    {
-      "pattern": "updated_at field on any model",
-      "reason": "Infrastructure field — required on every SQLAlchemy model per build governance"
-    },
-    {
       "pattern": "getAccessTokenSilently destructured from useAuth0",
       "reason": "Correct Auth0 pattern per boilerplate — never flag this"
-    },
-    {
-      "pattern": "owner_id field on models",
-      "reason": "Standard multi-tenancy field per boilerplate — not scope creep"
     }
   ],
   "overrides": {}
