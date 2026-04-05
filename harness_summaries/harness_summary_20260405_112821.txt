@@ -1,0 +1,37 @@
+Title: Building 70 SaaS products to stress-test my AI build harness — 20 down, 50 to go
+Body:
+I built a deterministic SaaS harness with 53 capabilities (auth, payments, fraud detection, GDPR compliance, the works). Now I need to know if it actually works at scale.
+So I'm building 70 different SaaS products through it. Real FastAPI + React + Stripe deployments. If the harness breaks, I fix it. If it holds, I know it's solid.
+Here's what the harness logged from builds 1-20:
+Product                          | Feat | Runs | Passes | Avg Cost | Total Cost | Main Failure Mode
+---------------------------------|------|------|--------|----------|------------|-------------------
+Adversarial AI Validator         |    5 |   29 |     13 |    $1.30 |     $40.59 | CTRL_C
+Wynwood Thoroughbreds            |    0 |   14 |      6 |    $1.22 |     $22.20 | MAX_ITERATIONS
+AI Workforce Intelligence        |    6 |   78 |     19 |    $1.78 |    $157.41 | NON_CONVERGING (15 iters, $5.4001)
+Freelance Invoice Tracker        |    0 |    2 |      1 |    $1.65 |      $5.64 | CTRL_C
+Property Manager Maintenance Sch |    0 |    1 |      1 |    $0.65 |      $0.65 | None
+Wynwood Thoroughbreds P1         |    0 |   10 |      3 |    $2.51 |     $23.05 | CTRL_C
+Wynwood Thoroughbreds P1 Horsepr |    0 |    1 |      1 |    $0.97 |      $0.97 | None
+Wynwood Thoroughbreds P1 Emailsu |    0 |    1 |      1 |    $0.51 |      $0.51 | None
+Wynwood Thoroughbreds P1 Educati |    0 |    1 |      1 |    $0.50 |      $0.50 | None
+Wynwood Thoroughbreds P1 Contact |    0 |    1 |      1 |    $0.24 |      $0.24 | None
+Wynwood Thoroughbreds P1 Member  |    0 |    1 |      1 |    $1.23 |      $1.23 | None
+Wynwood Thoroughbreds P1 Content |    0 |    1 |      1 |    $0.71 |      $0.71 | None
+Invoicetool S01 Manage Users     |    0 |    1 |      1 |    $0.79 |      $0.79 | None
+Invoicetool S02 Configure Settin |    0 |    1 |      1 |    $0.67 |      $0.67 | None
+Invoicetool S03 View All Invoice |    0 |    1 |      1 |    $0.60 |      $0.60 | None
+Invoicetool S04 View Invoices    |    0 |    1 |      1 |    $0.78 |      $0.78 | None
+Invoicetool S05 Make Payments    |    0 |    1 |      1 |    $0.65 |      $0.65 | None
+Invoicetool S06 Submit Invoices  |    0 |    1 |      1 |    $0.55 |      $0.55 | None
+Invoicetool S07 Manual Invoice E |    0 |    1 |      1 |    $0.92 |      $0.92 | None
+Invoicetool S08 Email Notificati |    0 |    1 |      1 |    $0.61 |      $0.61 | None
+
+Total: 148 runs, 57 clean builds (39% first-pass success), $259.28 spent
+What I learned:
+- High failure rates in AI Workforce Intelligence stem from non-convergence, impacting scalability and cost.
+- CTRL_C failures are prevalent across multiple products, indicating potential resource management issues.
+- Average costs vary significantly; AI Workforce Intelligence has the highest average cost at $1.78 per run.
+- Wynwood Thoroughbreds shows low pass rates, suggesting feature inadequacies or testing inefficiencies.
+- Non-convergence leads to excessive costs; one run reached $5.40 with 15 iterations before failure.
+
+Following this for the next 6 months. Will post failures and edge cases as I find them.
